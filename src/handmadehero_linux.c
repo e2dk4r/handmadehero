@@ -65,7 +65,7 @@ static uint8_t mem_alloc(struct mem *mem, size_t len) {
 /*****************************************************************
  * structures
  *****************************************************************/
-struct my_state {
+struct linux_state {
   struct wl_compositor *wl_compositor;
   struct wl_shm *wl_shm;
   struct wl_seat *wl_seat;
@@ -116,10 +116,9 @@ static void draw_frame(struct game_backbuffer *backbuffer, int offsetX,
  * input handling
  *****************************************************************/
 
-static void global_wl_keyboard_keymap_handle(void *data,
-                                                struct wl_keyboard *wl_keyboard,
-                                                u32 format, i32 fd, u32 size) {
-  struct my_state *state = data;
+static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
+                               u32 format, i32 fd, u32 size) {
+  struct linux_state *state = data;
   debugf("[wl_keyboard::keymap] format: %d fd: %d size: %d\n", format, fd,
          size);
 
@@ -141,11 +140,9 @@ static void global_wl_keyboard_keymap_handle(void *data,
   state->xkb_state = xkb_state;
 }
 
-static void global_wl_keyboard_key_handle(void *data,
-                                             struct wl_keyboard *wl_keyboard,
-                                             u32 serial, u32 time, u32 key,
-                                             u32 state) {
-  struct my_state *client_state = data;
+static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
+                            u32 serial, u32 time, u32 key, u32 state) {
+  struct linux_state *client_state = data;
   debugf("[wl_keyboard::key] serial: %d time: %d key: %d state: %d\n", serial,
          time, key, state);
 
@@ -153,19 +150,19 @@ static void global_wl_keyboard_key_handle(void *data,
   xkb_keysym_t keysym =
       xkb_state_key_get_one_sym(client_state->xkb_state, keycode);
 
-  char buf[128];
-  xkb_keysym_get_name(keysym, buf, sizeof(buf));
-  debugf("[wl_keyboard::key] keysym: %s\n", buf);
-
-  if (keysym == XKB_KEY_q) {
+  switch (keysym) {
+  case XKB_KEY_q: {
     client_state->running = 0;
+  } break;
   }
 }
 
-static void global_wl_keyboard_modifiers_handle(
-    void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 mods_depressed,
-    u32 mods_latched, u32 mods_locked, u32 group) {
-  struct my_state *state = data;
+static void wl_keyboard_modifiers_handle(void *data,
+                                         struct wl_keyboard *wl_keyboard,
+                                         u32 serial, u32 mods_depressed,
+                                         u32 mods_latched, u32 mods_locked,
+                                         u32 group) {
+  struct linux_state *state = data;
   debugf("[wl_keyboard::modifiers] serial: %d depressed: %d latched: %d "
          "locked: %d group: %d\n",
          serial, mods_depressed, mods_latched, mods_locked, group);
@@ -174,63 +171,57 @@ static void global_wl_keyboard_modifiers_handle(
                         mods_locked, 0, 0, group);
 }
 
-static void global_wl_keyboard_repeat_info_handle(
-    void *data, struct wl_keyboard *wl_keyboard, i32 rate, i32 delay) {
+static void wl_keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
+                                    i32 rate, i32 delay) {
   // struct my_state *state = data;
   debugf("[wl_keyboard::repeat_info] rate: %d delay: %d\n", rate, delay);
 }
 
-static void global_wl_keyboard_enter_handle(void *data,
-                                               struct wl_keyboard *wl_keyboard,
-                                               uint32_t serial,
-                                               struct wl_surface *surface,
-                                               struct wl_array *keys) {
+static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard,
+                              uint32_t serial, struct wl_surface *surface,
+                              struct wl_array *keys) {
   // struct my_state *state = data;
   debugf("[wl_keyboard::enter] serial: %d\n", serial);
 }
 
-static void global_wl_keyboard_leave_handle(void *data,
-                                               struct wl_keyboard *wl_keyboard,
-                                               uint32_t serial,
-                                               struct wl_surface *surface) {
+static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard,
+                              uint32_t serial, struct wl_surface *surface) {
   // struct my_state *state = data;
   debugf("[wl_keyboard::leave] serial: %d\n", serial);
 }
 
-comptime struct wl_keyboard_listener global_wl_keyboard_listener = {
-    .enter = global_wl_keyboard_enter_handle,
-    .leave = global_wl_keyboard_leave_handle,
-    .keymap = global_wl_keyboard_keymap_handle,
-    .key = global_wl_keyboard_key_handle,
-    .modifiers = global_wl_keyboard_modifiers_handle,
-    .repeat_info = global_wl_keyboard_repeat_info_handle,
+comptime struct wl_keyboard_listener wl_keyboard_listener = {
+    .enter = wl_keyboard_enter,
+    .leave = wl_keyboard_leave,
+    .keymap = wl_keyboard_keymap,
+    .key = wl_keyboard_key,
+    .modifiers = wl_keyboard_modifiers_handle,
+    .repeat_info = wl_keyboard_repeat_info,
 };
 
-static void global_wl_seat_capabilities_handle(void *data,
-                                                  struct wl_seat *wl_seat,
-                                                  uint32_t capabilities) {
-  struct my_state *state = data;
+static void wl_seat_capabilities(void *data, struct wl_seat *wl_seat,
+                                 uint32_t capabilities) {
+  struct linux_state *state = data;
   debugf("[wl_seat::capabilities] capabilities: %d\n", capabilities);
 
   uint8_t have_keyboard = capabilities & WL_SEAT_CAPABILITY_KEYBOARD;
   if (have_keyboard && !state->wl_keyboard) {
     state->wl_keyboard = wl_seat_get_keyboard(wl_seat);
-    wl_keyboard_add_listener(state->wl_keyboard, &global_wl_keyboard_listener,
-                             state);
+    wl_keyboard_add_listener(state->wl_keyboard, &wl_keyboard_listener, state);
   } else if (!have_keyboard && state->wl_keyboard) {
     wl_keyboard_release(state->wl_keyboard);
     state->wl_keyboard = 0;
   }
 }
 
-static void global_wl_seat_name_handle(void *data, struct wl_seat *wl_seat,
-                                          const char *name) {
+static void wl_seat_name_handle(void *data, struct wl_seat *wl_seat,
+                                const char *name) {
   debugf("[wl_seat::name] name: %s\n", name);
 }
 
-comptime struct wl_seat_listener global_wl_seat_listener = {
-    .capabilities = global_wl_seat_capabilities_handle,
-    .name = global_wl_seat_name_handle,
+comptime struct wl_seat_listener wl_seat_listener = {
+    .capabilities = wl_seat_capabilities,
+    .name = wl_seat_name_handle,
 };
 
 /*****************************************************************
@@ -258,23 +249,22 @@ static i32 create_shared_memory(off_t size) {
 /*****************************************************************
  * frame_callback events
  *****************************************************************/
-static void global_wl_surface_frame_done_handle(void *data,
-                                                struct wl_callback *wl_callback,
-                                                u32 time);
+static void wl_surface_frame_done_handle(void *data,
+                                         struct wl_callback *wl_callback,
+                                         u32 time);
 
-static const struct wl_callback_listener global_wl_surface_frame_listener = {
-    .done = global_wl_surface_frame_done_handle,
+static const struct wl_callback_listener wl_surface_frame_listener = {
+    .done = wl_surface_frame_done_handle,
 };
 
-static void global_wl_surface_frame_done_handle(void *data,
-                                                struct wl_callback *wl_callback,
-                                                u32 time) {
+static void wl_surface_frame_done_handle(void *data,
+                                         struct wl_callback *wl_callback,
+                                         u32 time) {
   wl_callback_destroy(wl_callback);
-  struct my_state *state = data;
+  struct linux_state *state = data;
 
   wl_callback = wl_surface_frame(state->wl_surface);
-  wl_callback_add_listener(wl_callback, &global_wl_surface_frame_listener,
-                           data);
+  wl_callback_add_listener(wl_callback, &wl_surface_frame_listener, data);
 
   u32 elapsed = time - state->frame;
   f32 second_in_milliseconds = 1000;
@@ -300,30 +290,30 @@ static void global_wl_surface_frame_done_handle(void *data,
 /*****************************************************************
  * xdg_wm_base events
  *****************************************************************/
-static void global_xdg_wm_base_ping_handle(void *data,
-                                              struct xdg_wm_base *xdg_wm_base,
-                                              u32 serial) {
+static void xdg_wm_base_ping_handle(void *data, struct xdg_wm_base *xdg_wm_base,
+                                    u32 serial) {
   xdg_wm_base_pong(xdg_wm_base, serial);
   debugf("[xdg_wm_base::ping] pong(serial: %d)\n", serial);
 }
 
-static const struct xdg_wm_base_listener global_xdg_wm_base_listener = {
-    .ping = global_xdg_wm_base_ping_handle,
+static const struct xdg_wm_base_listener xdg_wm_base_listener = {
+    .ping = xdg_wm_base_ping_handle,
 };
 
 /*****************************************************************
  * xdg_toplevel events
  *****************************************************************/
 
-static void global_xdg_toplevel_configure_handle(
-    void *data, struct xdg_toplevel *xdg_toplevel, i32 screen_width,
-    i32 screen_height, struct wl_array *states) {
+static void xdg_toplevel_configure_handle(void *data,
+                                          struct xdg_toplevel *xdg_toplevel,
+                                          i32 screen_width, i32 screen_height,
+                                          struct wl_array *states) {
   debugf("[xdg_toplevel::configure] screen width: %d height: %d\n",
          screen_width, screen_height);
   if (screen_width == 0 || screen_height == 0)
     return;
 
-  struct my_state *state = data;
+  struct linux_state *state = data;
 
   if (state->wp_viewport) {
     wp_viewport_destroy(state->wp_viewport);
@@ -337,25 +327,24 @@ static void global_xdg_toplevel_configure_handle(
   wl_surface_commit(state->wl_surface);
 }
 
-static void
-global_xdg_toplevel_close_handle(void *data,
-                                 struct xdg_toplevel *xdg_toplevel) {
-  struct my_state *state = data;
+static void xdg_toplevel_close_handle(void *data,
+                                      struct xdg_toplevel *xdg_toplevel) {
+  struct linux_state *state = data;
   state->running = 0;
 }
 
-comptime struct xdg_toplevel_listener global_xdg_toplevel_listener = {
-    .configure = global_xdg_toplevel_configure_handle,
-    .close = global_xdg_toplevel_close_handle,
+comptime struct xdg_toplevel_listener xdg_toplevel_listener = {
+    .configure = xdg_toplevel_configure_handle,
+    .close = xdg_toplevel_close_handle,
 };
 
 /*****************************************************************
  * xdg_surface events
  *****************************************************************/
-static void
-global_xdg_surface_configure_handle(void *data, struct xdg_surface *xdg_surface,
-                                    u32 serial) {
-  struct my_state *state = data;
+static void xdg_surface_configure_handle(void *data,
+                                         struct xdg_surface *xdg_surface,
+                                         u32 serial) {
+  struct linux_state *state = data;
 
   /* ack */
   xdg_surface_ack_configure(xdg_surface, serial);
@@ -365,8 +354,8 @@ global_xdg_surface_configure_handle(void *data, struct xdg_surface *xdg_surface,
   wl_surface_commit(state->wl_surface);
 }
 
-comptime struct xdg_surface_listener global_xdg_surface_listener = {
-    .configure = global_xdg_surface_configure_handle,
+comptime struct xdg_surface_listener xdg_surface_listener = {
+    .configure = xdg_surface_configure_handle,
 };
 
 /*****************************************************************
@@ -379,10 +368,9 @@ comptime struct xdg_surface_listener global_xdg_surface_listener = {
 #define XDG_WM_BASE_MINIMUM_REQUIRED_VERSION 2
 #define WP_VIEWPORTER_MINIMUM_REQUIRED_VERSION 1
 
-static void global_registry_handle(void *data,
-                                      struct wl_registry *wl_registry, u32 name,
-                                      const char *interface, u32 version) {
-  struct my_state *state = data;
+static void registry_handle(void *data, struct wl_registry *wl_registry,
+                            u32 name, const char *interface, u32 version) {
+  struct linux_state *state = data;
 
   if (strcmp(interface, wl_compositor_interface.name) == 0) {
     state->wl_compositor =
@@ -418,19 +406,15 @@ static void global_registry_handle(void *data,
   }
 }
 
-static void global_registry_remove_handle(void *data,
-                                             struct wl_registry *wl_registry,
-                                             u32 name) {}
-comptime struct wl_registry_listener global_registry_listener = {
-    .global = global_registry_handle,
-    .global_remove = global_registry_remove_handle,
+comptime struct wl_registry_listener registry_listener = {
+    .global = registry_handle,
 };
 
 /*****************************************************************
  * starting point
  *****************************************************************/
 int main() {
-  struct my_state state = {
+  struct linux_state state = {
       .running = 1,
   };
 
@@ -463,7 +447,7 @@ int main() {
   }
 
   /* get globals */
-  wl_registry_add_listener(registry, &global_registry_listener, &state);
+  wl_registry_add_listener(registry, &registry_listener, &state);
   wl_display_roundtrip(display);
 
   debugf("backbuffer: @%p\n", state.backbuffer);
@@ -486,8 +470,7 @@ int main() {
   state.wl_surface = wl_compositor_create_surface(state.wl_compositor);
 
   /* application window */
-  xdg_wm_base_add_listener(state.xdg_wm_base, &global_xdg_wm_base_listener,
-                           &state);
+  xdg_wm_base_add_listener(state.xdg_wm_base, &xdg_wm_base_listener, &state);
 
   state.xdg_surface =
       xdg_wm_base_get_xdg_surface(state.xdg_wm_base, state.wl_surface);
@@ -495,18 +478,15 @@ int main() {
   state.xdg_toplevel = xdg_surface_get_toplevel(state.xdg_surface);
   xdg_toplevel_set_title(state.xdg_toplevel, "handmadehero");
   xdg_toplevel_set_maximized(state.xdg_toplevel);
-  xdg_toplevel_add_listener(state.xdg_toplevel, &global_xdg_toplevel_listener,
-                            &state);
-  xdg_surface_add_listener(state.xdg_surface, &global_xdg_surface_listener,
-                           &state);
+  xdg_toplevel_add_listener(state.xdg_toplevel, &xdg_toplevel_listener, &state);
+  xdg_surface_add_listener(state.xdg_surface, &xdg_surface_listener, &state);
   wl_surface_commit(state.wl_surface);
 
   /* register frame callback */
   struct wl_callback *frame_callback = wl_surface_frame(state.wl_surface);
-  wl_callback_add_listener(frame_callback, &global_wl_surface_frame_listener,
-                           &state);
+  wl_callback_add_listener(frame_callback, &wl_surface_frame_listener, &state);
 
-  wl_seat_add_listener(state.wl_seat, &global_wl_seat_listener, &state);
+  wl_seat_add_listener(state.wl_seat, &wl_seat_listener, &state);
 
   /* mem allocation */
   if (mem_alloc(&state.memory, 8 * MEGABYTES)) {
