@@ -29,11 +29,19 @@ vulkan = dependency('vulkan')
 
 subdir('protocol')
 
+sources = [
+  'src/handmadehero_linux.c',
+  'src/handmadehero.c',
+]
+
+if get_option('buildtype').startswith('debug')
+  add_project_arguments('-DHANDMADEHERO_DEBUG=1', language : 'c')
+  sources += 'src/debug.c'
+endif
+
 executable(
 	'handmadehero',
-	sources: [
-		'src/handmadehero_linux.c',
-	] + wl_protocols_src,
+	sources: sources + wl_protocols_src,
 	include_directories: [
 		'include',
 		'protocol',

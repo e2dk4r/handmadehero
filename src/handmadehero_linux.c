@@ -85,32 +85,11 @@ struct linux_state {
 
   struct mem memory;
   struct game_backbuffer *backbuffer;
+  struct game_input *input;
 
   u32 frame;
   u8 running : 1;
 };
-
-static void draw_frame(struct game_backbuffer *backbuffer, int offsetX,
-                          int offsetY) {
-  u8 *row = backbuffer->memory;
-  for (u32 y = 0; y < backbuffer->height; y++) {
-    u8 *pixel = row;
-    for (u32 x = 0; x < backbuffer->width; x++) {
-      *pixel = (u8)(x + offsetX);
-      pixel++;
-
-      *pixel = (u8)(y + offsetY);
-      pixel++;
-
-      *pixel = 0x00;
-      pixel++;
-
-      *pixel = 0x00;
-      pixel++;
-    }
-    row += backbuffer->stride;
-  }
-}
 
 /*****************************************************************
  * input handling
@@ -141,18 +120,35 @@ static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
 }
 
 static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
-                            u32 serial, u32 time, u32 key, u32 state) {
-  struct linux_state *client_state = data;
+                            u32 serial, u32 time, u32 key,
+                            enum wl_keyboard_key_state keystate) {
+  struct linux_state *state = data;
   debugf("[wl_keyboard::key] serial: %d time: %d key: %d state: %d\n", serial,
-         time, key, state);
+         time, key, keystate);
 
   u32 keycode = key + 8;
-  xkb_keysym_t keysym =
-      xkb_state_key_get_one_sym(client_state->xkb_state, keycode);
+  xkb_keysym_t keysym = xkb_state_key_get_one_sym(state->xkb_state, keycode);
 
+  struct game_controller_input *controller = &state->input->controllers[0];
   switch (keysym) {
   case XKB_KEY_q: {
-    client_state->running = 0;
+    state->running = 0;
+  } break;
+
+  case XKB_KEY_a: {
+    controller->left.pressed = keystate;
+  } break;
+
+  case XKB_KEY_d: {
+    controller->right.pressed = keystate;
+  } break;
+
+  case XKB_KEY_w: {
+    controller->up.pressed = keystate;
+  } break;
+
+  case XKB_KEY_s: {
+    controller->down.pressed = keystate;
   } break;
   }
 }
@@ -263,6 +259,10 @@ static void wl_surface_frame_done_handle(void *data,
   wl_callback_destroy(wl_callback);
   struct linux_state *state = data;
 
+  static struct game_input inputs[2] = {};
+  struct game_input *newInput = &inputs[0];
+  struct game_input *oldInput = &inputs[1];
+
   wl_callback = wl_surface_frame(state->wl_surface);
   wl_callback_add_listener(wl_callback, &wl_surface_frame_listener, data);
 
@@ -271,17 +271,20 @@ static void wl_surface_frame_done_handle(void *data,
   f32 frames_per_second = 24;
 
   f32 frame_unit = (f32)elapsed * (second_in_milliseconds / frames_per_second);
-  static i32 offsetX = 0;
   if (frame_unit > 1.0f) {
-    draw_frame(state->backbuffer, offsetX, 0);
-    offsetX++;
+    state->input = newInput;
 
+    GameUpdateAndRender(newInput, state->backbuffer);
     wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
     wl_surface_damage_buffer(state->wl_surface, 0, 0,
                              (i32)state->backbuffer->width,
                              (i32)state->backbuffer->height);
 
     state->frame = time;
+
+    struct game_input *tempInput = newInput;
+    newInput = oldInput;
+    oldInput = tempInput;
   }
 
   wl_surface_commit(state->wl_surface);
