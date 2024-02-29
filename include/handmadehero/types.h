@@ -17,7 +17,5 @@ typedef float f32;
 typedef double f64;
 
 #define comptime static const
-#define globalvar static
-#define privatefn static
 
 #endif /* HANDMADEHERO_TYPES_H */
