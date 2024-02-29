@@ -12,9 +12,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: install packages
-      run: sudo apt-get install -y
+      run: sudo apt-get install -y --no-install-recommends --no-install-suggests
            meson ninja-build
-           libvulkan-dev libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev
+           libudev-dev libvulkan-dev libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev
     - name: configure
       run: meson setup build
     - name: ninja
