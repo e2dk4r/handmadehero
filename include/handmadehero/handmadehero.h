@@ -9,7 +9,7 @@ struct game_backbuffer {
   u32 stride;
   /* how much bytes required for one pixel */
   u32 bytes_per_pixel;
-  void*memory;
+  void *memory;
 };
 
 #endif
