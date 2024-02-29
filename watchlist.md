@@ -67,13 +67,13 @@
 - [x] Handmade Hero Day 010 - QueryPerformanceCounter and RDTSC
       https://www.youtube.com/watch?v=tAcUIEoy2Yk
 
-- [ ] Handmade Hero Day 011 - The Basics of Platform API Design
+- [x] Handmade Hero Day 011 - The Basics of Platform API Design
       https://www.youtube.com/watch?v=_4vnV2Eng7M
 
-- [ ] Handmade Hero Day 012 - Platform-independent Sound Output
+- [x] Handmade Hero Day 012 - Platform-independent Sound Output
       https://www.youtube.com/watch?v=5YhR2zAkQmo
 
-- [ ] Handmade Hero Day 013 - Platform-independent User Input
+- [x] Handmade Hero Day 013 - Platform-independent User Input
       https://www.youtube.com/watch?v=Lt9DfMzZ9sI
 
 - [ ] Handmade Hero Day 014 - Platform-independent Game Memory
