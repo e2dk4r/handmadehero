@@ -72,6 +72,7 @@ struct my_state {
   struct xdg_wm_base *xdg_wm_base;
 
   struct wp_viewporter *wp_viewporter;
+  struct wp_viewport *wp_viewport;
   struct wl_surface *wl_surface;
   struct xdg_surface *xdg_surface;
   struct xdg_toplevel *xdg_toplevel;
@@ -323,10 +324,14 @@ privatefn void global_xdg_toplevel_configure_handle(
 
   struct my_state *state = data;
 
-  struct wp_viewport *wp_viewport =
-      wp_viewporter_get_viewport(state->wp_viewporter, state->wl_surface);
+  if (state->wp_viewport) {
+    wp_viewport_destroy(state->wp_viewport);
+    state->wp_viewport = 0;
+  }
 
-  wp_viewport_set_destination(wp_viewport, screen_width, screen_height);
+  state->wp_viewport =
+      wp_viewporter_get_viewport(state->wp_viewporter, state->wl_surface);
+  wp_viewport_set_destination(state->wp_viewport, screen_width, screen_height);
 
   wl_surface_commit(state->wl_surface);
 }
