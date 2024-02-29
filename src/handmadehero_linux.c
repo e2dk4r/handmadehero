@@ -86,30 +86,29 @@ struct my_state {
   struct mem memory;
   struct game_backbuffer *backbuffer;
 
-  uint32_t frame;
-  uint8_t running : 1;
+  u32 frame;
+  u8 running : 1;
 };
 
-privatefn void draw_frame(struct game_backbuffer *backbuffer, u32 frame) {
-  u32 square_width = 20;
-  u32 offset = frame % backbuffer->width;
-
-  /* src: https://tailwindcss.com/docs/customizing-colors */
-  u32 color_zinc_800 = 0x0027272a;
-  u32 color_emeral_500 = 0x0010b981;
-
-  u32 *pixels = (u32 *)backbuffer->memory;
+privatefn void draw_frame(struct game_backbuffer *backbuffer, int offsetX,
+                          int offsetY) {
+  u8 *row = backbuffer->memory;
   for (u32 y = 0; y < backbuffer->height; y++) {
+    u8 *pixel = row;
     for (u32 x = 0; x < backbuffer->width; x++) {
+      *pixel = (u8)(x + offsetX);
+      pixel++;
 
-      u32 square_x = (x + offset) / square_width;
-      u32 square_y = (y + offset) / square_width;
+      *pixel = (u8)(y + offsetY);
+      pixel++;
 
-      if (((square_x + square_y) & 1) == 0)
-        pixels[y * backbuffer->width + x] = color_zinc_800;
-      else
-        pixels[y * backbuffer->width + x] = color_emeral_500;
+      *pixel = 0x00;
+      pixel++;
+
+      *pixel = 0x00;
+      pixel++;
     }
+    row += backbuffer->stride;
   }
 }
 
@@ -282,8 +281,10 @@ static void global_wl_surface_frame_done_handle(void *data,
   f32 frames_per_second = 24;
 
   f32 frame_unit = (f32)elapsed * (second_in_milliseconds / frames_per_second);
+  static i32 offsetX = 0;
   if (frame_unit > 1.0f) {
-    draw_frame(state->backbuffer, state->frame);
+    draw_frame(state->backbuffer, offsetX, 0);
+    offsetX++;
 
     wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
     wl_surface_damage_buffer(state->wl_surface, 0, 0,
