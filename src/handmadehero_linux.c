@@ -1,6 +1,9 @@
+/* system */
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
+#include <linux/input.h>
+#include <poll.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -10,11 +13,16 @@
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 
+/* generated */
 #include "viewporter-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
+
+/* handmadehero */
 #include <handmadehero/assert.h>
 #include <handmadehero/debug.h>
 #include <handmadehero/handmadehero.h>
+
+#include "joystick_linux.h"
 
 /*****************************************************************
  * memory bank
@@ -87,6 +95,9 @@ struct linux_state {
   struct game_backbuffer *backbuffer;
   struct game_input *input;
 
+  struct Joystick joysticks[2];
+  u8 joystickCount;
+
   u32 frame;
   u8 running : 1;
 };
@@ -94,6 +105,33 @@ struct linux_state {
 /*****************************************************************
  * input handling
  *****************************************************************/
+
+static void joystick_event(struct linux_state *state,
+                           struct input_event *event) {
+  struct game_controller_input *controller = &state->input->controllers[0];
+
+  /*
+        __u16 type;
+        __u16 code;
+        __s32 value;
+  */
+  debugf("joystick_event time: type: %d code: %d value: %d\n", event->type,
+         event->code, event->value);
+
+  if (event->type == 0)
+    return;
+
+  if (event->code == ABS_HAT0Y || event->code == ABS_HAT1Y ||
+      event->code == ABS_HAT2Y || event->code == ABS_HAT3Y) {
+    controller->up.pressed = event->value < 0;
+    controller->down.pressed = event->value > 0;
+  }
+  if (event->code == ABS_HAT0X || event->code == ABS_HAT1X ||
+      event->code == ABS_HAT2X || event->code == ABS_HAT3X) {
+    controller->left.pressed = event->value < 0;
+    controller->right.pressed = event->value > 0;
+  }
+}
 
 static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
                                u32 format, i32 fd, u32 size) {
@@ -435,14 +473,14 @@ int main() {
 
   int error_code = 0;
 
-  struct wl_display *display = wl_display_connect(0);
-  if (!display) {
+  struct wl_display *wl_display = wl_display_connect(0);
+  if (!wl_display) {
     fprintf(stderr, "error: cannot connect wayland display!\n");
     error_code = 1;
     goto exit;
   }
 
-  struct wl_registry *registry = wl_display_get_registry(display);
+  struct wl_registry *registry = wl_display_get_registry(wl_display);
   if (!registry) {
     fprintf(stderr, "error: cannot get registry!\n");
     error_code = 2;
@@ -451,11 +489,11 @@ int main() {
 
   /* get globals */
   wl_registry_add_listener(registry, &registry_listener, &state);
-  wl_display_roundtrip(display);
+  wl_display_roundtrip(wl_display);
 
   debugf("backbuffer: @%p\n", state.backbuffer);
   debugf("memory: @%p\n", state.memory);
-  debugf("wl_display: @%p\n", display);
+  debugf("wl_display: @%p\n", wl_display);
   debugf("wl_registry: @%p\n", registry);
   debugf("wl_compositor: @%p\n", state.wl_compositor);
   debugf("wl_shm: @%p\n", state.wl_shm);
@@ -528,16 +566,82 @@ int main() {
   wl_surface_attach(state.wl_surface, state.wl_buffer, 0, 0);
   wl_shm_pool_destroy(pool);
 
-  /* evloop */
-  while (wl_display_dispatch(display) && state.running) {
+  struct pollfd fds[3];
+  u8 fdsCount = 1;
+  int fd_wl_display = wl_display_get_fd(wl_display);
+  fds[0].fd = fd_wl_display;
+  fds[0].events = POLLIN;
+
+  int hasJoystick = enumarateJoysticks(&state.joystickCount, 0);
+  debugf("has joystick: %d %d\n", hasJoystick, state.joystickCount);
+  if (hasJoystick && state.joystickCount > 0) {
+    if (state.joystickCount > 2)
+      state.joystickCount = 2;
+    enumarateJoysticks(&state.joystickCount,
+                       (struct Joystick *)&state.joysticks);
+
+    for (u8 joystickIndex = 0; joystickIndex < state.joystickCount;
+         joystickIndex++) {
+      struct Joystick *joystick = &state.joysticks[joystickIndex];
+      joystick->fd = open(joystick->path, O_RDONLY);
+      if (joystick->fd < 0) {
+        fprintf(stderr, "error: cannot open joystick %s\n", joystick->path);
+        error_code = 7;
+        goto joystick_exit;
+      }
+
+      fds[1 + joystickIndex].fd = joystick->fd;
+      fds[1 + joystickIndex].events = POLLIN;
+      fdsCount++;
+    }
+  }
+
+  /* main loop */
+  while (state.running) {
+    while (wl_display_prepare_read(wl_display) != 0)
+      wl_display_dispatch_pending(wl_display);
+    wl_display_flush(wl_display);
+
+    int ret = ppoll(fds, fdsCount, 0, 0);
+    if (ret < 0)
+      break;
+
+    if (fds[0].revents & POLLIN) {
+      wl_display_read_events(wl_display);
+    } else {
+      wl_display_cancel_read(wl_display);
+    }
+
+    for (u8 joystickIndex = 0; joystickIndex < state.joystickCount;
+         joystickIndex++) {
+
+      if (!(fds[1 + joystickIndex].revents & POLLIN)) {
+        continue;
+      }
+
+      struct Joystick *joystick = &state.joysticks[joystickIndex];
+      struct input_event event = {0};
+      ssize_t bytesRead = read(joystick->fd, &event, sizeof(event));
+      assert(bytesRead > 0);
+
+      joystick_event(&state, &event);
+    }
   }
 
   /* finished */
+joystick_exit:
+  for (u8 joystickIndex = 0; joystickIndex < state.joystickCount;
+       joystickIndex++) {
+    struct Joystick *joystick = &state.joysticks[joystickIndex];
+    if (joystick->fd >= 0) {
+      close(joystick->fd);
+    }
+  }
 shm_exit:
   close(shm_fd);
 
 wl_exit:
-  wl_display_disconnect(display);
+  wl_display_disconnect(wl_display);
 
 exit:
   return error_code;
