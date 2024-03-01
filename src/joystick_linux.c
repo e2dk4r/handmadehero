@@ -49,5 +49,5 @@ u8 enumarateJoysticks(u8 *pCount, struct Joystick *joysticks) {
 exit:
   udev_enumerate_unref(udev_enumerate);
   udev_unref(udev);
-  return joystickCount != 0;
+  return joystickCount;
 }
