@@ -3,6 +3,24 @@
 #include "types.h"
 #include "assert.h"
 
+/****************************************************************
+ * Platform Layer
+ ****************************************************************/
+#if HANDMADEHERO_INTERNAL
+
+struct read_file_result {
+  u64 size;
+  void *data;
+};
+struct read_file_result PlatformReadEntireFile(char *path);
+u8 PlatformWriteEntireFile(char *path, u64 size, void *data);
+void PlatformFreeMemory(void *address);
+
+#endif
+
+/****************************************************************
+ * Game Layer
+ ****************************************************************/
 struct game_backbuffer {
   u32 width;
   u32 height;

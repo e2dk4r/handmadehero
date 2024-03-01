@@ -38,6 +38,7 @@ sources = [
 
 if get_option('buildtype').startswith('debug')
   add_project_arguments('-DHANDMADEHERO_DEBUG=1', language : 'c')
+  add_project_arguments('-DHANDMADEHERO_INTERNAL=1', language : 'c')
   sources += 'src/debug.c'
 endif
 

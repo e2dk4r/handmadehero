@@ -5,6 +5,7 @@
 #include <linux/input.h>
 #include <poll.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -23,6 +24,53 @@
 #include <handmadehero/handmadehero.h>
 
 #include "joystick_linux.h"
+
+/*****************************************************************
+ * platform layer implementation
+ *****************************************************************/
+
+struct read_file_result PlatformReadEntireFile(char *path) {
+  int fd = open(path, O_RDONLY);
+  if (fd < 0)
+    return (struct read_file_result){};
+
+  struct stat stat;
+  if (fstat(fd, &stat))
+    return (struct read_file_result){};
+  ;
+
+  assert(S_ISREG(stat.st_mode));
+  void *data = malloc(stat.st_size);
+  assert(data != 0);
+
+  ssize_t bytesRead = read(fd, data, stat.st_size);
+  assert(bytesRead > 0);
+
+  close(fd);
+
+  return (struct read_file_result){
+      .size = stat.st_size,
+      .data = data,
+  };
+}
+
+u8 PlatformWriteEntireFile(char *path, u64 size, void *data) {
+  int fd = open(path, O_WRONLY);
+  if (fd < 0)
+    return 0;
+
+  ssize_t bytesWritten = write(fd, data, size);
+  assert(bytesWritten > 0);
+
+  close(fd);
+
+  return 1;
+}
+
+void PlatformFreeMemory(void *address) {
+  free(address);
+  address = 0;
+}
 
 /*****************************************************************
  * memory bank
