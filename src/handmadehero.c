@@ -28,25 +28,28 @@ void GameUpdateAndRender(struct game_input *input,
   static int blueOffset = 0;
   static int greenOffset = 0;
 
-  struct game_controller_input *controller = &input->controllers[0];
-  if (controller->isAnalog) {
-    blueOffset += (int)(4.0f * controller->endY);
-  }
+  for (u8 controllerIndex = 0; controllerIndex < 2; controllerIndex++) {
+    struct game_controller_input *controller =
+        &input->controllers[controllerIndex];
+    if (controller->isAnalog) {
+      blueOffset += (int)(4.0f * controller->endY);
+    }
 
-  if (controller->left.pressed) {
-    blueOffset -= 1;
-  }
+    if (controller->left.pressed) {
+      blueOffset -= 1;
+    }
 
-  if (controller->right.pressed) {
-    blueOffset += 1;
-  }
+    if (controller->right.pressed) {
+      blueOffset += 1;
+    }
 
-  if (controller->down.pressed) {
-    greenOffset += 1;
-  }
+    if (controller->down.pressed) {
+      greenOffset += 1;
+    }
 
-  if (controller->up.pressed) {
-    greenOffset -= 1;
+    if (controller->up.pressed) {
+      greenOffset -= 1;
+    }
   }
 
   draw_frame(backbuffer, blueOffset, greenOffset);
