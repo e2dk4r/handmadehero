@@ -108,28 +108,30 @@ static void *mem_push(struct mem *mem, size_t size) {
  * @param mem destionation structure
  * @param len length of allocated area
  */
-static uint8_t mem_alloc(struct mem *mem, size_t len) {
+static u8 mem_alloc(struct mem *mem, size_t len) {
   mem->capacity = len;
   mem->current = 0;
   mem->data =
       mmap(0, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
-  uint8_t is_allocation_failed = mem->data == (void *)-1;
+  u8 is_allocation_failed = mem->data == (void *)-1;
   return is_allocation_failed;
 }
 
-static uint8_t game_memory_allocation(struct game_memory *memory, u64 permanentStorageSize, u64 transientStorageSize) {
+static u8 game_memory_allocation(struct game_memory *memory,
+                                 u64 permanentStorageSize,
+                                 u64 transientStorageSize) {
   memory->permanentStorageSize = permanentStorageSize;
   memory->transientStorageSize = transientStorageSize;
   u64 len = memory->permanentStorageSize + memory->transientStorageSize;
 
-  void *data=
+  void *data =
       mmap(0, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
   memory->permanentStorage = data;
   memory->transientStorage = data + permanentStorageSize;
 
-  uint8_t is_allocation_failed = data == (void *)-1;
+  u8 is_allocation_failed = data == (void *)-1;
   return is_allocation_failed;
 }
 /*****************************************************************
@@ -275,14 +277,14 @@ static void wl_keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
 }
 
 static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard,
-                              uint32_t serial, struct wl_surface *surface,
+                              u32 serial, struct wl_surface *surface,
                               struct wl_array *keys) {
   // struct my_state *state = data;
   debugf("[wl_keyboard::enter] serial: %d\n", serial);
 }
 
 static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard,
-                              uint32_t serial, struct wl_surface *surface) {
+                              u32 serial, struct wl_surface *surface) {
   // struct my_state *state = data;
   debugf("[wl_keyboard::leave] serial: %d\n", serial);
 }
@@ -297,11 +299,11 @@ comptime struct wl_keyboard_listener wl_keyboard_listener = {
 };
 
 static void wl_seat_capabilities(void *data, struct wl_seat *wl_seat,
-                                 uint32_t capabilities) {
+                                 u32 capabilities) {
   struct linux_state *state = data;
   debugf("[wl_seat::capabilities] capabilities: %d\n", capabilities);
 
-  uint8_t have_keyboard = capabilities & WL_SEAT_CAPABILITY_KEYBOARD;
+  u8 have_keyboard = capabilities & WL_SEAT_CAPABILITY_KEYBOARD;
   if (have_keyboard && !state->wl_keyboard) {
     state->wl_keyboard = wl_seat_get_keyboard(wl_seat);
     wl_keyboard_add_listener(state->wl_keyboard, &wl_keyboard_listener, state);
