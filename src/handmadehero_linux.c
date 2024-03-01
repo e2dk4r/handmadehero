@@ -70,6 +70,20 @@ static uint8_t mem_alloc(struct mem *mem, size_t len) {
   return is_allocation_failed;
 }
 
+static uint8_t game_memory_allocation(struct game_memory *memory, u64 permanentStorageSize, u64 transientStorageSize) {
+  memory->permanentStorageSize = permanentStorageSize;
+  memory->transientStorageSize = transientStorageSize;
+  u64 len = memory->permanentStorageSize + memory->transientStorageSize;
+
+  void *data=
+      mmap(0, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+  memory->permanentStorage = data;
+  memory->transientStorage = data + permanentStorageSize;
+
+  uint8_t is_allocation_failed = data == (void *)-1;
+  return is_allocation_failed;
+}
 /*****************************************************************
  * structures
  *****************************************************************/
@@ -92,6 +106,7 @@ struct linux_state {
   struct xkb_state *xkb_state;
 
   struct mem memory;
+  struct game_memory *game_memory;
   struct game_backbuffer *backbuffer;
   struct game_input *input;
 
@@ -312,7 +327,7 @@ static void wl_surface_frame_done_handle(void *data,
   if (frame_unit > 1.0f) {
     state->input = newInput;
 
-    GameUpdateAndRender(newInput, state->backbuffer);
+    GameUpdateAndRender(state->game_memory, newInput, state->backbuffer);
     wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
     wl_surface_damage_buffer(state->wl_surface, 0, 0,
                              (i32)state->backbuffer->width,
@@ -462,6 +477,7 @@ int main() {
   {
     state.xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 
+    /* ~3.53M single, ~7.32M with double buffering */
     struct game_backbuffer backbuffer = {
         .width = 1280,
         .height = 720,
@@ -530,6 +546,14 @@ int main() {
   wl_seat_add_listener(state.wl_seat, &wl_seat_listener, &state);
 
   /* mem allocation */
+  struct game_memory game_memory;
+  if (game_memory_allocation(&game_memory, 8 * MEGABYTES, 2 * MEGABYTES)) {
+    fprintf(stderr, "error: cannot allocate memory!\n");
+    error_code = 4;
+    goto wl_exit;
+  }
+  state.game_memory = &game_memory;
+
   if (mem_alloc(&state.memory, 8 * MEGABYTES)) {
     fprintf(stderr, "error: cannot allocate memory!\n");
     error_code = 4;

@@ -1,6 +1,7 @@
 #ifndef HANDMADEHERO_H
 
 #include "types.h"
+#include "assert.h"
 
 struct game_backbuffer {
   u32 width;
@@ -45,11 +46,32 @@ struct game_controller_input {
   };
 };
 
+#define HANDMADEHERO_CONTROLLER_COUNT 2U
 struct game_input {
-  struct game_controller_input controllers[4];
+  struct game_controller_input controllers[HANDMADEHERO_CONTROLLER_COUNT];
 };
 
-void GameUpdateAndRender(struct game_input *input,
+static inline struct game_controller_input * GetController(struct game_input *input, u8 index) {
+  assert(index < sizeof(input->controllers) / sizeof(*input->controllers));
+  return &input->controllers[index];
+}
+
+struct game_memory {
+  u8 initialized : 1;
+
+  u64 permanentStorageSize;
+  void *permanentStorage;
+
+  u64 transientStorageSize;
+  void *transientStorage;
+};
+
+struct game_state {
+  i32 greenOffset;
+  i32 blueOffset;
+};
+
+void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
                          struct game_backbuffer *backbuffer);
 
 #endif
