@@ -27,16 +27,18 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
                          struct game_backbuffer *backbuffer) {
 
   struct game_state *state = memory->permanentStorage;
-  if (!memory->initialized)  {
+  if (!memory->initialized) {
     state->blueOffset = 0;
     state->greenOffset = 0;
-    memory->initialized =1;
+    memory->initialized = 1;
   }
 
   for (u8 controllerIndex = 0; controllerIndex < 2; controllerIndex++) {
-    struct game_controller_input *controller = GetController(input, controllerIndex);
+    struct game_controller_input *controller =
+        GetController(input, controllerIndex);
     if (controller->isAnalog) {
-      state->blueOffset += (int)(4.0f * controller->endY);
+      state->blueOffset += (int)(4.0f * controller->endX);
+      state->greenOffset += (int)(4.0f * controller->endY);
     }
 
     if (controller->left.pressed) {

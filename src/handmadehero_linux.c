@@ -171,30 +171,47 @@ struct linux_state {
  * input handling
  *****************************************************************/
 
-static void joystick_event(struct linux_state *state,
-                           struct input_event *event) {
-  struct game_controller_input *controller = &state->input->controllers[0];
+static void joystick_event(struct linux_state *state, u16 type, u16 code,
+                           i32 value) {
+  struct game_controller_input *controller = &state->input->controllers[1];
 
-  /*
-        __u16 type;
-        __u16 code;
-        __s32 value;
-  */
-  debugf("joystick_event time: type: %d code: %d value: %d\n", event->type,
-         event->code, event->value);
+  debugf("joystick_event time: type: %d code: %d value: %d\n", type, code,
+         value);
+  controller->isAnalog = 1;
 
-  if (event->type == 0)
+  if (type == 0) {
+    controller->startX = controller->endX;
+    controller->startY = controller->endY;
     return;
-
-  if (event->code == ABS_HAT0Y || event->code == ABS_HAT1Y ||
-      event->code == ABS_HAT2Y || event->code == ABS_HAT3Y) {
-    controller->up.pressed = event->value < 0;
-    controller->down.pressed = event->value > 0;
   }
-  if (event->code == ABS_HAT0X || event->code == ABS_HAT1X ||
-      event->code == ABS_HAT2X || event->code == ABS_HAT3X) {
-    controller->left.pressed = event->value < 0;
-    controller->right.pressed = event->value > 0;
+
+  if (code == ABS_HAT0Y || code == ABS_HAT1Y || code == ABS_HAT2Y ||
+      code == ABS_HAT3Y) {
+    controller->up.pressed = value < 0;
+    controller->down.pressed = value > 0;
+  }
+  if (code == ABS_HAT0X || code == ABS_HAT1X || code == ABS_HAT2X ||
+      code == ABS_HAT3X) {
+    controller->left.pressed = value < 0;
+    controller->right.pressed = value > 0;
+  }
+
+  // normal of X values
+  if (code == ABS_X) {
+    static const f32 MAX_LEFT = 32768.0f;
+    static const f32 MAX_RIGHT = 32767.0f;
+    f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
+    f32 x = value / max;
+    controller->minX = controller->maxX = controller->endX = x;
+  }
+
+  // normal of Y values
+  if (code == ABS_Y) {
+    static const f32 MAX_LEFT = 32768.0f;
+    static const f32 MAX_RIGHT = 32767.0f;
+    f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
+    f32 y = value / max;
+    controller->minY = controller->maxY = controller->endY = y;
   }
 }
 
@@ -348,17 +365,15 @@ static i32 create_shared_memory(off_t size) {
 /*****************************************************************
  * frame_callback events
  *****************************************************************/
-static void wl_surface_frame_done_handle(void *data,
-                                         struct wl_callback *wl_callback,
-                                         u32 time);
+static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
+                                  u32 time);
 
 static const struct wl_callback_listener wl_surface_frame_listener = {
-    .done = wl_surface_frame_done_handle,
+    .done = wl_surface_frame_done,
 };
 
-static void wl_surface_frame_done_handle(void *data,
-                                         struct wl_callback *wl_callback,
-                                         u32 time) {
+static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
+                                  u32 time) {
   wl_callback_destroy(wl_callback);
   struct linux_state *state = data;
 
@@ -385,6 +400,7 @@ static void wl_surface_frame_done_handle(void *data,
 
     state->frame = time;
 
+    // swap inputs
     struct game_input *tempInput = newInput;
     newInput = oldInput;
     oldInput = tempInput;
@@ -698,7 +714,7 @@ int main() {
       ssize_t bytesRead = read(joystick->fd, &event, sizeof(event));
       assert(bytesRead > 0);
 
-      joystick_event(&state, &event);
+      joystick_event(&state, event.type, event.code, event.value);
     }
   }
 
