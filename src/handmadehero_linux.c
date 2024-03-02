@@ -251,23 +251,31 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 
   struct game_controller_input *controller = &state->input->controllers[0];
   switch (keysym) {
-  case XKB_KEY_q: {
+  case 'q': {
     state->running = 0;
   } break;
 
-  case XKB_KEY_a: {
+  case 'A':
+  case 'a': {
+    assert(controller->left.pressed != keystate);
     controller->left.pressed = keystate;
   } break;
 
-  case XKB_KEY_d: {
+  case 'D':
+  case 'd': {
+    assert(controller->right.pressed != keystate);
     controller->right.pressed = keystate;
   } break;
 
-  case XKB_KEY_w: {
+  case 'W':
+  case 'w': {
+    assert(controller->up.pressed != keystate);
     controller->up.pressed = keystate;
   } break;
 
-  case XKB_KEY_s: {
+  case 'S':
+  case 's': {
+    assert(controller->down.pressed != keystate);
     controller->down.pressed = keystate;
   } break;
   }
