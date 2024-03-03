@@ -32,7 +32,6 @@ subdir('protocol')
 
 sources = [
   'src/handmadehero_linux.c',
-  'src/handmadehero.c',
   'src/joystick_linux.c',
 ]
 
@@ -40,6 +39,13 @@ if get_option('buildtype').startswith('debug')
   add_project_arguments('-DHANDMADEHERO_DEBUG=1', language : 'c')
   add_project_arguments('-DHANDMADEHERO_INTERNAL=1', language : 'c')
   sources += 'src/debug.c'
+endif
+
+# debug builds have handmadehero as dynamic library
+if get_option('buildtype').startswith('debug')
+  handmadeheroLib = library('handmadehero', sources: ['src/handmadehero.c', 'src/debug.c',], include_directories: 'include')
+else
+  sources += 'src/handmadehero.c'
 endif
 
 executable(

@@ -23,9 +23,7 @@ static void draw_frame(struct game_backbuffer *backbuffer, int offsetX,
   }
 }
 
-void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
-                         struct game_backbuffer *backbuffer) {
-
+GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
   if (!memory->initialized) {
     state->blueOffset = 0;

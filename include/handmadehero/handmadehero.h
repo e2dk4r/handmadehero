@@ -89,7 +89,10 @@ struct game_state {
   i32 blueOffset;
 };
 
-void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
-                         struct game_backbuffer *backbuffer);
+#define GAMEUPDATEANDRENDER(name)                                              \
+  void name(struct game_memory *memory, struct game_input *input,              \
+            struct game_backbuffer *backbuffer)
+GAMEUPDATEANDRENDER(GameUpdateAndRender);
+typedef GAMEUPDATEANDRENDER(pfnGameUpdateAndRender);
 
 #endif

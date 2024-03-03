@@ -134,6 +134,64 @@ static u8 game_memory_allocation(struct game_memory *memory,
   u8 is_allocation_failed = data == (void *)-1;
   return is_allocation_failed;
 }
+
+/***************************************************************
+ * hot game code reloading
+ ***************************************************************/
+
+struct game_code {
+#ifdef HANDMADEHERO_DEBUG
+  time_t time;
+  void *module;
+#endif
+
+  pfnGameUpdateAndRender *GameUpdateAndRender;
+};
+
+#ifdef HANDMADEHERO_DEBUG
+#include <dlfcn.h>
+
+void ReloadGameCode(struct game_code *lib) {
+  static const char *path = "build/libhandmadehero.so";
+  struct stat sb;
+
+  int fail = stat(path, &sb);
+  if (fail) {
+    debugf("[ReloadGameCode] failed to stat\n");
+    return;
+  }
+
+  if (sb.st_mtime == lib->time) {
+    return;
+  }
+
+  // unload shared lib
+  if (lib->module) {
+    dlclose(lib->module);
+    lib->module = 0;
+  }
+
+  // load shared lib
+  lib->module = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+  if (!lib->module) {
+    debugf("[ReloadGameCode] failed to open\n");
+    return;
+  }
+
+  // get function pointer
+  void *fn = dlsym(lib->module, "GameUpdateAndRender");
+  assert(fn != 0 && "wrong module format");
+
+  // set function pointer
+  lib->GameUpdateAndRender = fn;
+
+  // update module time
+  lib->time = sb.st_mtime;
+  debugf("[ReloadGameCode] reloaded @%d\n", lib->time);
+}
+
+#endif
+
 /*****************************************************************
  * structures
  *****************************************************************/
@@ -155,6 +213,7 @@ struct linux_state {
   struct xkb_keymap *xkb_keymap;
   struct xkb_state *xkb_state;
 
+  struct game_code *lib;
   struct mem memory;
   struct game_memory *game_memory;
   struct game_backbuffer *backbuffer;
@@ -400,7 +459,8 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
   if (frame_unit > 1.0f) {
     state->input = newInput;
 
-    GameUpdateAndRender(state->game_memory, newInput, state->backbuffer);
+    state->lib->GameUpdateAndRender(state->game_memory, newInput,
+                                    state->backbuffer);
     wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
     wl_surface_damage_buffer(state->wl_surface, 0, 0,
                              (i32)state->backbuffer->width,
@@ -412,6 +472,11 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
     struct game_input *tempInput = newInput;
     newInput = oldInput;
     oldInput = tempInput;
+
+    // load
+#if HANDMADEHERO_DEBUG
+    ReloadGameCode(state->lib);
+#endif
   }
 
   wl_surface_commit(state->wl_surface);
@@ -548,6 +613,15 @@ int main() {
       .running = 1,
   };
 
+  /* game code */
+  state.lib = &(struct game_code){};
+#if HANDMADEHERO_DEBUG
+  ReloadGameCode(state.lib);
+#else
+  state.lib->GameUpdateAndRender = GameUpdateAndRender;
+#endif
+
+  /* xkb */
   {
     state.xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 
