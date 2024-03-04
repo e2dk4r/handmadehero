@@ -7,10 +7,10 @@ static void draw_frame(struct game_backbuffer *backbuffer, int offsetX,
   for (u32 y = 0; y < backbuffer->height; y++) {
     u8 *pixel = row;
     for (u32 x = 0; x < backbuffer->width; x++) {
-      *pixel = (u8)(x + offsetX);
+      *pixel = (u8)((int)x + offsetX);
       pixel++;
 
-      *pixel = (u8)(y + offsetY);
+      *pixel = (u8)((int)y + offsetY);
       pixel++;
 
       *pixel = 0x00;

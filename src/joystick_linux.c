@@ -32,7 +32,7 @@ u8 enumarateJoysticks(u8 *pCount, struct Joystick *joysticks) {
       while (devnode[devnode_length] && devnode_length < JOYSTICK_PATH_MAX)
         devnode_length++;
 
-      joystick->path_length = devnode_length;
+      joystick->path_length = (u8)devnode_length;
       for (size_t index = 0;
            index < devnode_length && index < JOYSTICK_PATH_MAX; index++) {
         joystick->path[index] = devnode[index];

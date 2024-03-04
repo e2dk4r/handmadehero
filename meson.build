@@ -15,6 +15,7 @@ add_project_arguments(
 		'-funroll-loops',
 		'-fomit-frame-pointer',
 
+		'-Wconversion',
 		'-Wno-unused-parameter',
 		'-Wno-unused-result',
 		'-Wno-missing-braces',

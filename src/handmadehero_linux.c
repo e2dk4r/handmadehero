@@ -40,16 +40,16 @@ struct read_file_result PlatformReadEntireFile(char *path) {
   ;
 
   assert(S_ISREG(stat.st_mode));
-  void *data = malloc(stat.st_size);
+  void *data = malloc((size_t)stat.st_size);
   assert(data != 0);
 
-  ssize_t bytesRead = read(fd, data, stat.st_size);
+  ssize_t bytesRead = read(fd, data, (size_t)stat.st_size);
   assert(bytesRead > 0);
 
   close(fd);
 
   return (struct read_file_result){
-      .size = stat.st_size,
+      .size = (u64)stat.st_size,
       .data = data,
   };
 }
@@ -260,7 +260,7 @@ static void joystick_event(struct linux_state *state, u16 type, u16 code,
     static const f32 MAX_LEFT = 32768.0f;
     static const f32 MAX_RIGHT = 32767.0f;
     f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
-    f32 x = value / max;
+    f32 x = (f32)value / max;
     controller->minX = controller->maxX = controller->endX = x;
   }
 
@@ -269,7 +269,7 @@ static void joystick_event(struct linux_state *state, u16 type, u16 code,
     static const f32 MAX_LEFT = 32768.0f;
     static const f32 MAX_RIGHT = 32767.0f;
     f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
-    f32 y = value / max;
+    f32 y = (f32)value / max;
     controller->minY = controller->maxY = controller->endY = y;
   }
 }
