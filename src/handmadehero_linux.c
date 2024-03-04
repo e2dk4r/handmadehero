@@ -626,7 +626,7 @@ int main() {
     state.xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 
     /* ~3.53M single, ~7.32M with double buffering */
-    struct game_backbuffer backbuffer = {
+    static struct game_backbuffer backbuffer = {
         .width = 1280,
         .height = 720,
         .bytes_per_pixel = 4,
@@ -694,7 +694,7 @@ int main() {
   wl_seat_add_listener(state.wl_seat, &wl_seat_listener, &state);
 
   /* mem allocation */
-  struct game_memory game_memory;
+  static struct game_memory game_memory;
   if (game_memory_allocation(&game_memory, 8 * MEGABYTES, 2 * MEGABYTES)) {
     fprintf(stderr, "error: cannot allocate memory!\n");
     error_code = 4;
