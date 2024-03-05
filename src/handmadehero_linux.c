@@ -317,25 +317,25 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
   case 'A':
   case 'a': {
     assert(controller->left.pressed != keystate);
-    controller->left.pressed = keystate;
+    controller->left.pressed = (u8)keystate;
   } break;
 
   case 'D':
   case 'd': {
     assert(controller->right.pressed != keystate);
-    controller->right.pressed = keystate;
+    controller->right.pressed = (u8)keystate;
   } break;
 
   case 'W':
   case 'w': {
     assert(controller->up.pressed != keystate);
-    controller->up.pressed = keystate;
+    controller->up.pressed = (u8)keystate;
   } break;
 
   case 'S':
   case 's': {
     assert(controller->down.pressed != keystate);
-    controller->down.pressed = keystate;
+    controller->down.pressed = (u8)keystate;
   } break;
   }
 }
