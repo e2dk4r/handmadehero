@@ -24,7 +24,7 @@ add_project_arguments(
 )
 
 wayland_client = dependency('wayland-client')
-wayland_protocols = dependency('wayland-protocols')
+wayland_protocols = dependency('wayland-protocols', native: true)
 xkbcommon = dependency('xkbcommon')
 libudev = dependency('libudev')
 vulkan = dependency('vulkan')
