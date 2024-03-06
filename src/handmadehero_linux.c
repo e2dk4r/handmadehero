@@ -145,6 +145,7 @@ static u8 game_memory_allocation(struct game_memory *memory,
 
 struct game_code {
 #ifdef HANDMADEHERO_DEBUG
+  char path[255];
   time_t time;
   void *module;
 #endif
@@ -156,10 +157,9 @@ struct game_code {
 #include <dlfcn.h>
 
 void ReloadGameCode(struct game_code *lib) {
-  static const char *path = "build/libhandmadehero.so";
   struct stat sb;
 
-  int fail = stat(path, &sb);
+  int fail = stat(lib->path, &sb);
   if (fail) {
     debugf("[ReloadGameCode] failed to stat\n");
     return;
@@ -176,7 +176,7 @@ void ReloadGameCode(struct game_code *lib) {
   }
 
   // load shared lib
-  lib->module = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+  lib->module = dlopen(lib->path, RTLD_NOW | RTLD_LOCAL);
   if (!lib->module) {
     debugf("[ReloadGameCode] failed to open\n");
     return;
@@ -612,7 +612,7 @@ comptime struct wl_registry_listener registry_listener = {
 /*****************************************************************
  * starting point
  *****************************************************************/
-int main() {
+int main(int argc, char *argv[]) {
   struct linux_state state = {
       .running = 1,
   };
@@ -620,6 +620,25 @@ int main() {
   /* game code */
   state.lib = &(struct game_code){};
 #if HANDMADEHERO_DEBUG
+  {
+    /* assumes libhandmadehero.so in same directory as executable */
+    static const char libpath[] = "libhandmadehero.so";
+    static const u64 libpath_length = sizeof(libpath) - 1;
+    char *exepath = argv[0];
+    char *output = state.lib->path;
+    u64 index = 0;
+    for (char *c = exepath; *c; c++) {
+      if (*c == '/')
+        index = (u64)(c - exepath);
+    }
+    u64 length = index;
+    memcpy(output, exepath, length);
+    output[length++] = '/';
+    memcpy(output + length, libpath, libpath_length);
+    length += libpath_length;
+    assert(length < 255);
+  }
+
   ReloadGameCode(state.lib);
 #else
   state.lib->GameUpdateAndRender = GameUpdateAndRender;
