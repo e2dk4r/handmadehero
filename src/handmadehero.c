@@ -35,23 +35,23 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct game_controller_input *controller =
         GetController(input, controllerIndex);
     if (controller->isAnalog) {
-      state->blueOffset += (int)(4.0f * controller->endX);
-      state->greenOffset += (int)(4.0f * controller->endY);
+      state->blueOffset += (int)(4.0f * controller->stickAverageX);
+      state->greenOffset += (int)(4.0f * controller->stickAverageY);
     }
 
-    if (controller->left.pressed) {
+    if (controller->moveLeft.pressed) {
       state->blueOffset -= 1;
     }
 
-    if (controller->right.pressed) {
+    if (controller->moveRight.pressed) {
       state->blueOffset += 1;
     }
 
-    if (controller->down.pressed) {
+    if (controller->moveDown.pressed) {
       state->greenOffset += 1;
     }
 
-    if (controller->up.pressed) {
+    if (controller->moveUp.pressed) {
       state->greenOffset -= 1;
     }
   }

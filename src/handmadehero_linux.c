@@ -236,45 +236,68 @@ struct linux_state {
 
 static void joystick_event(struct linux_state *state, u16 type, u16 code,
                            i32 value) {
-  struct game_controller_input *controller = &state->input->controllers[1];
+  struct game_controller_input *controller = GetController(state->input, 1);
 
   debugf("joystick_event time: type: %d code: %d value: %d\n", type, code,
          value);
   controller->isAnalog = 1;
 
   if (type == 0) {
-    controller->startX = controller->endX;
-    controller->startY = controller->endY;
     return;
   }
 
-  if (code == ABS_HAT0Y || code == ABS_HAT1Y || code == ABS_HAT2Y ||
-      code == ABS_HAT3Y) {
-    controller->up.pressed = value < 0;
-    controller->down.pressed = value > 0;
+  else if (code == ABS_HAT0Y || code == ABS_HAT1Y || code == ABS_HAT2Y ||
+           code == ABS_HAT3Y) {
+    controller->moveUp.pressed = value < 0;
+    controller->moveDown.pressed = value > 0;
   }
-  if (code == ABS_HAT0X || code == ABS_HAT1X || code == ABS_HAT2X ||
-      code == ABS_HAT3X) {
-    controller->left.pressed = value < 0;
-    controller->right.pressed = value > 0;
+
+  else if (code == ABS_HAT0X || code == ABS_HAT1X || code == ABS_HAT2X ||
+           code == ABS_HAT3X) {
+    controller->moveLeft.pressed = value < 0;
+    controller->moveRight.pressed = value > 0;
+  }
+
+  else if (code == BTN_START) {
+    controller->start.pressed = value < 0;
+  }
+
+  else if (code == BTN_SELECT) {
+    controller->back.pressed = value < 0;
   }
 
   // normal of X values
-  if (code == ABS_X) {
+  else if (code == ABS_X) {
     static const f32 MAX_LEFT = 32768.0f;
     static const f32 MAX_RIGHT = 32767.0f;
     f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
     f32 x = (f32)value / max;
-    controller->minX = controller->maxX = controller->endX = x;
+    controller->stickAverageX = x;
   }
 
   // normal of Y values
-  if (code == ABS_Y) {
+  else if (code == ABS_Y) {
     static const f32 MAX_LEFT = 32768.0f;
     static const f32 MAX_RIGHT = 32767.0f;
     f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
     f32 y = (f32)value / max;
-    controller->minY = controller->maxY = controller->endY = y;
+    controller->stickAverageY = y;
+  }
+
+  else if (code == BTN_NORTH) {
+    controller->actionUp.pressed = (u8)value;
+  }
+
+  else if (code == BTN_SOUTH) {
+    controller->actionDown.pressed = (u8)value;
+  }
+
+  else if (code == BTN_WEST) {
+    controller->actionLeft.pressed = (u8)value;
+  }
+
+  else if (code == BTN_EAST) {
+    controller->actionRight.pressed = (u8)value;
   }
 }
 
@@ -312,7 +335,7 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
   u32 keycode = key + 8;
   xkb_keysym_t keysym = xkb_state_key_get_one_sym(state->xkb_state, keycode);
 
-  struct game_controller_input *controller = &state->input->controllers[0];
+  struct game_controller_input *controller = GetController(state->input, 0);
   switch (keysym) {
   case 'q': {
     state->running = 0;
@@ -320,26 +343,26 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 
   case 'A':
   case 'a': {
-    assert(controller->left.pressed != keystate);
-    controller->left.pressed = (u8)keystate;
+    assert(controller->moveLeft.pressed != keystate);
+    controller->moveLeft.pressed = (u8)keystate;
   } break;
 
   case 'D':
   case 'd': {
-    assert(controller->right.pressed != keystate);
-    controller->right.pressed = (u8)keystate;
+    assert(controller->moveRight.pressed != keystate);
+    controller->moveRight.pressed = (u8)keystate;
   } break;
 
   case 'W':
   case 'w': {
-    assert(controller->up.pressed != keystate);
-    controller->up.pressed = (u8)keystate;
+    assert(controller->moveUp.pressed != keystate);
+    controller->moveUp.pressed = (u8)keystate;
   } break;
 
   case 'S':
   case 's': {
-    assert(controller->down.pressed != keystate);
-    controller->down.pressed = (u8)keystate;
+    assert(controller->moveDown.pressed != keystate);
+    controller->moveDown.pressed = (u8)keystate;
   } break;
   }
 }
