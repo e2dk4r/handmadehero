@@ -357,19 +357,19 @@ static void joystick_key(struct linux_state *state, u16 type, u16 code,
   }
 
   else if (code == BTN_NORTH) {
-    controller->actionUp.pressed = (u8)value;
+    controller->actionUp.pressed = (u8)(value & 0x1);
   }
 
   else if (code == BTN_SOUTH) {
-    controller->actionDown.pressed = (u8)value;
+    controller->actionDown.pressed = (u8)(value & 0x1);
   }
 
   else if (code == BTN_WEST) {
-    controller->actionLeft.pressed = (u8)value;
+    controller->actionLeft.pressed = (u8)(value & 0x1);
   }
 
   else if (code == BTN_EAST) {
-    controller->actionRight.pressed = (u8)value;
+    controller->actionRight.pressed = (u8)(value & 0x1);
   }
 }
 
@@ -432,25 +432,25 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
   case 'A':
   case 'a': {
     assert(controller->moveLeft.pressed != keystate);
-    controller->moveLeft.pressed = (u8)keystate;
+    controller->moveLeft.pressed = (u8)(keystate & 0x1);
   } break;
 
   case 'D':
   case 'd': {
     assert(controller->moveRight.pressed != keystate);
-    controller->moveRight.pressed = (u8)keystate;
+    controller->moveRight.pressed = (u8)(keystate & 0x1);
   } break;
 
   case 'W':
   case 'w': {
     assert(controller->moveUp.pressed != keystate);
-    controller->moveUp.pressed = (u8)keystate;
+    controller->moveUp.pressed = (u8)(keystate & 0x1);
   } break;
 
   case 'S':
   case 's': {
     assert(controller->moveDown.pressed != keystate);
-    controller->moveDown.pressed = (u8)keystate;
+    controller->moveDown.pressed = (u8)(keystate & 0x1);
   } break;
   }
 }
