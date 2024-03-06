@@ -306,11 +306,11 @@ begin:
  * input handling
  *****************************************************************/
 
-static void joystick_event(struct linux_state *state, u16 type, u16 code,
-                           i32 value) {
+static void joystick_key(struct linux_state *state, u16 type, u16 code,
+                         i32 value) {
   struct game_controller_input *controller = GetController(state->input, 1);
 
-  debugf("joystick_event time: type: %d code: %d value: %d\n", type, code,
+  debugf("[joystick_event] time: type: %d code: %d value: %d\n", type, code,
          value);
   controller->isAnalog = 1;
 
@@ -938,7 +938,7 @@ int main(int argc, char *argv[]) {
       ssize_t bytesRead = read(joystick->fd, &event, sizeof(event));
       assert(bytesRead > 0);
 
-      joystick_event(&state, event.type, event.code, event.value);
+      joystick_key(&state, event.type, event.code, event.value);
     }
   }
 
