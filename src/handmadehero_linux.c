@@ -226,9 +226,81 @@ struct linux_state {
   struct Joystick joysticks[2];
   u8 joystickCount;
 
+  u8 recordInputIndex;
+  int recordInputFd;
+  u8 playbackInputIndex;
+  int playbackInputFd;
+
   u32 frame;
   u8 running : 1;
 };
+
+/***************************************************************
+ * recording & playback inputs
+ ***************************************************************/
+#ifdef HANDMADEHERO_DEBUG
+
+static const char recordPath[] = "input.rec";
+
+static inline u8 RecordInputStarted(struct linux_state *state) {
+  return state->recordInputIndex;
+}
+
+static void RecordInputBegin(struct linux_state *state, u8 index) {
+  debug("[RecordInput] begin\n");
+  state->recordInputIndex = index;
+  state->recordInputFd = open(recordPath, O_CREAT | O_WRONLY, 0644);
+  assert(state->recordInputFd >= 0);
+}
+
+static void RecordInputEnd(struct linux_state *state) {
+  debug("[RecordInput] end\n");
+  state->recordInputIndex = 0;
+  if (state->recordInputFd > 0)
+    close(state->recordInputFd);
+  state->recordInputFd = -1;
+}
+
+static void RecordInput(struct linux_state *state, struct game_input *input) {
+  write(state->recordInputFd, input, sizeof(*input));
+}
+
+static inline u8 PlaybackInputStarted(struct linux_state *state) {
+  return state->playbackInputIndex;
+}
+
+static void PlaybackInputBegin(struct linux_state *state, u8 index) {
+  debug("[PlaybackInput] begin\n");
+  state->playbackInputIndex = index;
+  state->playbackInputFd = open(recordPath, O_RDONLY);
+  assert(state->playbackInputFd >= 0);
+}
+
+static void PlaybackInputEnd(struct linux_state *state) {
+  debug("[PlaybackInput] end\n");
+  state->playbackInputIndex = 0;
+  if (state->playbackInputFd > 0)
+    close(state->playbackInputFd);
+  state->playbackInputFd = -1;
+}
+
+static void PlaybackInput(struct linux_state *state, struct game_input *input) {
+  ssize_t bytesRead;
+
+begin:
+  bytesRead = read(state->playbackInputFd, input, sizeof(*input));
+  // error happened
+  assert(bytesRead >= 0);
+
+  // end of file
+  if (bytesRead == 0) {
+    off_t result = lseek(state->playbackInputFd, 0, SEEK_SET);
+    assert(result >= 0);
+    goto begin;
+  }
+}
+
+#endif
 
 /*****************************************************************
  * input handling
@@ -339,6 +411,22 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
   switch (keysym) {
   case 'q': {
     state->running = 0;
+  } break;
+
+  case 'L':
+  case 'l': {
+    /* if key is not pressed, exit */
+    if (keystate == WL_KEYBOARD_KEY_STATE_RELEASED)
+      break;
+
+    /* if key is pressed, toggle between record and playback */
+    if (!RecordInputStarted(state)) {
+      PlaybackInputEnd(state);
+      RecordInputBegin(state, 1);
+    } else {
+      RecordInputEnd(state);
+      PlaybackInputBegin(state, 1);
+    }
   } break;
 
   case 'A':
@@ -485,6 +573,14 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
   f32 frame_unit = (f32)elapsed * (second_in_milliseconds / frames_per_second);
   if (frame_unit > 1.0f) {
     state->input = newInput;
+
+    if (RecordInputStarted(state)) {
+      RecordInput(state, state->input);
+    }
+
+    if (PlaybackInputStarted(state)) {
+      PlaybackInput(state, state->input);
+    }
 
     state->lib->GameUpdateAndRender(state->game_memory, newInput,
                                     state->backbuffer);

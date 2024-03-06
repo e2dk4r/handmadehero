@@ -87,6 +87,9 @@ struct game_memory {
 struct game_state {
   i32 greenOffset;
   i32 blueOffset;
+
+  i32 playerX;
+  i32 playerY;
 };
 
 #define GAMEUPDATEANDRENDER(name)                                              \
