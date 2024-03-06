@@ -93,6 +93,6 @@ struct game_state {
   void name(struct game_memory *memory, struct game_input *input,              \
             struct game_backbuffer *backbuffer)
 GAMEUPDATEANDRENDER(GameUpdateAndRender);
-typedef GAMEUPDATEANDRENDER(pfnGameUpdateAndRender);
+typedef GAMEUPDATEANDRENDER((*pfnGameUpdateAndRender));
 
 #endif

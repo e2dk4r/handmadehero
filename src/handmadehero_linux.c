@@ -150,7 +150,7 @@ struct game_code {
   void *module;
 #endif
 
-  pfnGameUpdateAndRender *GameUpdateAndRender;
+  pfnGameUpdateAndRender GameUpdateAndRender;
 };
 
 #ifdef HANDMADEHERO_DEBUG
