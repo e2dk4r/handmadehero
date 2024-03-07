@@ -844,14 +844,14 @@ int main(int argc, char *argv[]) {
   }
   state.game_memory = &game_memory;
 
-  if (mem_alloc(&state.memory, 8 * MEGABYTES)) {
+  if (mem_alloc(&state.memory, 4 * MEGABYTES)) {
     fprintf(stderr, "error: cannot allocate memory!\n");
     error_code = 4;
     goto wl_exit;
   }
 
   /* create buffer */
-  u32 backbuffer_multiplier = 2;
+  u32 backbuffer_multiplier = 1;
   u32 backbuffer_size = state.backbuffer->height * state.backbuffer->stride *
                         backbuffer_multiplier;
 
