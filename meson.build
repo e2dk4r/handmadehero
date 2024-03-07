@@ -49,6 +49,8 @@ else
   sources += 'src/handmadehero.c'
 endif
 
+subdir('tool')
+
 executable(
 	'handmadehero',
 	sources: sources + wl_protocols_src,
