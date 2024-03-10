@@ -2,8 +2,9 @@
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
+#include <libudev.h>
+#include <liburing.h>
 #include <linux/input.h>
-#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,8 @@
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 
+#define POLLIN 0x001 /* There is data to read.  */
+
 /* generated */
 #include "viewporter-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
@@ -21,9 +24,8 @@
 /* handmadehero */
 #include <handmadehero/assert.h>
 #include <handmadehero/debug.h>
+#include <handmadehero/errors.h>
 #include <handmadehero/handmadehero.h>
-
-#include "joystick_linux.h"
 
 /*****************************************************************
  * platform layer implementation
@@ -222,9 +224,6 @@ struct linux_state {
   struct game_memory *game_memory;
   struct game_backbuffer *backbuffer;
   struct game_input *input;
-
-  struct Joystick joysticks[2];
-  u8 joystickCount;
 
   u8 recordInputIndex;
   int recordInputFd;
@@ -731,12 +730,33 @@ comptime struct wl_registry_listener registry_listener = {
 /*****************************************************************
  * starting point
  *****************************************************************/
+
+#define OP_WAYLAND (1 << 0)
+#define OP_UDEV_MONITOR (1 << 1)
+#define OP_JOYSTICK_POLL (1 << 2)
+#define OP_JOYSTICK_READ (1 << 3)
+
+struct op {
+  u8 type;
+  int fd;
+};
+
+struct op_joystick_read {
+  u8 type;
+  int fd;
+  struct input_event event;
+};
+
+#define ACTION_ADD (1 << 0)
+#define ACTION_REMOVE (1 << 1)
+
 int main(int argc, char *argv[]) {
+  int error_code = 0;
   struct linux_state state = {
       .running = 1,
   };
 
-  /* game code */
+  /* game: hot reload game code on debug version */
   state.lib = &(struct game_code){};
 #if HANDMADEHERO_DEBUG
   {
@@ -764,9 +784,14 @@ int main(int argc, char *argv[]) {
 #endif
 
   /* xkb */
-  {
-    state.xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+  state.xkb_context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+  if (!state.xkb_context) {
+    error_code = HANDMADEHERO_ERROR_XKB;
+    goto exit;
+  }
 
+  /* game: backbuffer */
+  {
     /* ~3.53M single, ~7.32M with double buffering */
     static struct game_backbuffer backbuffer = {
         .width = 1280,
@@ -777,23 +802,22 @@ int main(int argc, char *argv[]) {
     state.backbuffer = &backbuffer;
   }
 
-  int error_code = 0;
-
+  /* wayland */
   struct wl_display *wl_display = wl_display_connect(0);
   if (!wl_display) {
     fprintf(stderr, "error: cannot connect wayland display!\n");
-    error_code = 1;
-    goto exit;
+    error_code = HANDMADEHERO_ERROR_WAYLAND_CONNECT;
+    goto xkb_context_exit;
   }
 
   struct wl_registry *registry = wl_display_get_registry(wl_display);
   if (!registry) {
     fprintf(stderr, "error: cannot get registry!\n");
-    error_code = 2;
+    error_code = HANDMADEHERO_ERROR_WAYLAND_REGISTRY;
     goto wl_exit;
   }
 
-  /* get globals */
+  /* wayland: get globals */
   wl_registry_add_listener(registry, &registry_listener, &state);
   wl_display_roundtrip(wl_display);
 
@@ -809,14 +833,14 @@ int main(int argc, char *argv[]) {
   if (!state.wl_compositor || !state.wl_shm || !state.wl_seat ||
       !state.xdg_wm_base || !state.wp_viewporter) {
     fprintf(stderr, "error: cannot get wayland globals!\n");
-    error_code = 3;
+    error_code = HANDMADEHERO_ERROR_WAYLAND_EXTENSIONS;
     goto wl_exit;
   }
 
-  /* create surface */
+  /* wayland: create surface */
   state.wl_surface = wl_compositor_create_surface(state.wl_compositor);
 
-  /* application window */
+  /* wayland: application window */
   xdg_wm_base_add_listener(state.xdg_wm_base, &xdg_wm_base_listener, &state);
 
   state.xdg_surface =
@@ -829,28 +853,28 @@ int main(int argc, char *argv[]) {
   xdg_surface_add_listener(state.xdg_surface, &xdg_surface_listener, &state);
   wl_surface_commit(state.wl_surface);
 
-  /* register frame callback */
+  /* wayland: register frame callback */
   struct wl_callback *frame_callback = wl_surface_frame(state.wl_surface);
   wl_callback_add_listener(frame_callback, &wl_surface_frame_listener, &state);
 
   wl_seat_add_listener(state.wl_seat, &wl_seat_listener, &state);
 
-  /* mem allocation */
+  /* game: mem allocation */
   static struct game_memory game_memory;
   if (game_memory_allocation(&game_memory, 8 * MEGABYTES, 2 * MEGABYTES)) {
     fprintf(stderr, "error: cannot allocate memory!\n");
-    error_code = 4;
+    error_code = HANDMADEHERO_ERROR_ALLOCATION;
     goto wl_exit;
   }
   state.game_memory = &game_memory;
 
   if (mem_alloc(&state.memory, 4 * MEGABYTES)) {
     fprintf(stderr, "error: cannot allocate memory!\n");
-    error_code = 4;
+    error_code = HANDMADEHERO_ERROR_ALLOCATION;
     goto wl_exit;
   }
 
-  /* create buffer */
+  /* wayland: create buffer */
   u32 backbuffer_multiplier = 1;
   u32 backbuffer_size = state.backbuffer->height * state.backbuffer->stride *
                         backbuffer_multiplier;
@@ -858,7 +882,7 @@ int main(int argc, char *argv[]) {
   i32 shm_fd = create_shared_memory(backbuffer_size);
   if (shm_fd == 0) {
     fprintf(stderr, "error: cannot create shared memory!\n");
-    error_code = 5;
+    error_code = HANDMADEHERO_ERROR_SHARED_MEMORY;
     goto wl_exit;
   }
 
@@ -868,94 +892,282 @@ int main(int argc, char *argv[]) {
            PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, shm_fd, 0);
   if (state.backbuffer->memory == MAP_FAILED) {
     fprintf(stderr, "error: cannot create shared memory!\n");
-    error_code = 6;
+    error_code = HANDMADEHERO_ERROR_ALLOCATION;
     goto shm_exit;
   }
 
   struct wl_shm_pool *pool =
       wl_shm_create_pool(state.wl_shm, shm_fd, (i32)backbuffer_size);
+  if (!pool) {
+    wl_shm_pool_destroy(pool);
+    error_code = HANDMADEHERO_ERROR_WAYLAND_SHM_POOL;
+    goto shm_exit;
+  }
   state.wl_buffer = wl_shm_pool_create_buffer(
       pool, 0, (i32)state.backbuffer->width, (i32)state.backbuffer->height,
       (i32)state.backbuffer->stride, WL_SHM_FORMAT_XRGB8888);
+  if (!state.wl_buffer) {
+    wl_shm_pool_destroy(pool);
+    error_code = HANDMADEHERO_ERROR_WAYLAND_SHM_POOL;
+    goto shm_exit;
+  }
   wl_surface_attach(state.wl_surface, state.wl_buffer, 0, 0);
   wl_shm_pool_destroy(pool);
 
-  struct pollfd fds[3];
-  u8 fdsCount = 1;
-  int fd_wl_display = wl_display_get_fd(wl_display);
-  fds[0].fd = fd_wl_display;
-  fds[0].events = POLLIN;
-
-  int hasJoystick = enumarateJoysticks(&state.joystickCount, 0);
-  debugf("has joystick: %d %d\n", hasJoystick, state.joystickCount);
-  if (hasJoystick && state.joystickCount > 0) {
-    if (state.joystickCount > 2)
-      state.joystickCount = 2;
-    enumarateJoysticks(&state.joystickCount,
-                       (struct Joystick *)&state.joysticks);
-
-    for (u8 joystickIndex = 0; joystickIndex < state.joystickCount;
-         joystickIndex++) {
-      struct Joystick *joystick = &state.joysticks[joystickIndex];
-      joystick->fd = open(joystick->path, O_RDONLY);
-      if (joystick->fd < 0) {
-        fprintf(stderr, "error: cannot open joystick %s\n", joystick->path);
-        error_code = 7;
-        goto joystick_exit;
-      }
-
-      fds[1 + joystickIndex].fd = joystick->fd;
-      fds[1 + joystickIndex].events = POLLIN;
-      fdsCount++;
-    }
+  /* io_uring */
+  struct io_uring_sqe *sqe;
+  struct io_uring ring;
+  if (io_uring_queue_init(4, &ring, 0)) {
+    error_code = HANDMADEHERO_ERROR_IO_URING_SETUP;
+    goto shm_exit;
   }
 
-  /* main loop */
+  /* io_uring: poll on wl_display */
+  int fd_wl_display = wl_display_get_fd(wl_display);
+  if (fd_wl_display < 0) {
+    error_code = HANDMADEHERO_ERROR_ALLOCATION;
+    goto io_uring_exit;
+  }
+
+  sqe = io_uring_get_sqe(&ring);
+  io_uring_prep_poll_multishot(sqe, fd_wl_display, POLLIN);
+  io_uring_sqe_set_data(sqe,
+                        &(struct op){.type = OP_WAYLAND, .fd = fd_wl_display});
+
+  /* udev */
+  struct udev *udev = udev_new();
+  if (!udev) {
+    error_code = HANDMADEHERO_ERROR_UDEV_SETUP;
+    goto io_uring_exit;
+  }
+
+  struct udev_monitor *udev_monitor =
+      udev_monitor_new_from_netlink(udev, "udev");
+  if (!udev_monitor) {
+    error_code = HANDMADEHERO_ERROR_UDEV_SETUP;
+    goto udev_exit;
+  }
+
+  if (udev_monitor_enable_receiving(udev_monitor) < 0) {
+    error_code = HANDMADEHERO_ERROR_UDEV_SETUP;
+    goto udev_monitor_exit;
+  }
+
+  if (udev_monitor_filter_add_match_subsystem_devtype(udev_monitor, "input",
+                                                      0) < 0) {
+    error_code = HANDMADEHERO_ERROR_UDEV_SETUP;
+    goto udev_monitor_exit;
+  }
+
+  /* io_uring: poll on udev_monitor */
+  int fd_udev = udev_monitor_get_fd(udev_monitor);
+  if (fd_udev < 0) {
+    error_code = HANDMADEHERO_ERROR_UDEV_SETUP;
+    goto udev_monitor_exit;
+  }
+
+  sqe = io_uring_get_sqe(&ring);
+  io_uring_prep_poll_multishot(sqe, fd_udev, POLLIN);
+  io_uring_sqe_set_data(sqe,
+                        &(struct op){.type = OP_UDEV_MONITOR, .fd = fd_udev});
+
+  /* udev: add already connected joysticks to queue */
+  struct udev_enumerate *udev_enumerate = udev_enumerate_new(udev);
+  udev_enumerate_add_match_subsystem(udev_enumerate, "input");
+  udev_enumerate_add_match_property(udev_enumerate, "ID_INPUT_JOYSTICK", "1");
+
+  if (udev_enumerate_scan_devices(udev_enumerate) >= 0) {
+    struct udev_list_entry *devices =
+        udev_enumerate_get_list_entry(udev_enumerate);
+    struct udev_list_entry *entry;
+
+    for (entry = devices; entry; entry = udev_list_entry_get_next(entry)) {
+      const char *syspath = udev_list_entry_get_name(entry);
+      struct udev_device *udev_device =
+          udev_device_new_from_syspath(udev, syspath);
+      if (!udev_device)
+        continue;
+      const char *devnode = udev_device_get_devnode(udev_device);
+
+      /* /dev/input/eventXX not found */
+      if (!devnode) {
+        udev_device_unref(udev_device);
+        continue;
+      }
+
+      struct op_joystick_read *op = &(struct op_joystick_read){
+          .type = OP_JOYSTICK_READ,
+      };
+
+      op->fd = open(devnode, O_RDONLY | O_NONBLOCK);
+      if (op->fd < 0)
+        return 1;
+
+      sqe = io_uring_get_sqe(&ring);
+      io_uring_prep_read(sqe, op->fd, &op->event, sizeof(op->event), 0);
+      io_uring_sqe_set_data(sqe, op);
+
+      udev_device_unref(udev_device);
+    }
+  }
+  udev_enumerate_unref(udev_enumerate);
+  udev_enumerate = 0;
+
+  /* submit any work */
+  io_uring_submit(&ring);
+
+  /* event loop */
+  struct io_uring_cqe *cqe;
   while (state.running) {
     while (wl_display_prepare_read(wl_display) != 0)
       wl_display_dispatch_pending(wl_display);
     wl_display_flush(wl_display);
 
-    int ret = ppoll(fds, fdsCount, 0, 0);
-    if (ret < 0)
+    int error = io_uring_wait_cqe(&ring, &cqe);
+    if (error) {
+      error_code = HANDMADEHERO_ERROR_IO_URING_WAIT;
       break;
-
-    if (fds[0].revents & POLLIN) {
-      wl_display_read_events(wl_display);
-    } else {
-      wl_display_cancel_read(wl_display);
     }
 
-    for (u8 joystickIndex = 0; joystickIndex < state.joystickCount;
-         joystickIndex++) {
+    struct op *op = io_uring_cqe_get_data(cqe);
+    if (op == 0)
+      goto cqe_seen;
 
-      if (!(fds[1 + joystickIndex].revents & POLLIN)) {
-        continue;
+    /* on wayland events */
+    if (op->type & OP_WAYLAND) {
+      int revents = cqe->res;
+
+      if (revents & POLLIN) {
+        wl_display_read_events(wl_display);
+      } else {
+        wl_display_cancel_read(wl_display);
+      }
+    }
+
+    /* on udev events */
+    else if (op->type & OP_UDEV_MONITOR) {
+      wl_display_cancel_read(wl_display);
+      /* on udev monitor error, finish the program */
+      if (cqe->res < 0) {
+        error_code = HANDMADEHERO_ERROR_UDEV_MONITOR;
+        break;
       }
 
-      struct Joystick *joystick = &state.joysticks[joystickIndex];
-      struct input_event event = {0};
-      ssize_t bytesRead = read(joystick->fd, &event, sizeof(event));
-      assert(bytesRead > 0);
+      int revents = cqe->res;
 
-      joystick_key(&state, event.type, event.code, event.value);
-    }
+      if (!(revents & POLLIN)) {
+        error_code = HANDMADEHERO_ERROR_UDEV_MONITOR;
+        break;
+      }
+
+      struct udev_device *udev_device =
+          udev_monitor_receive_device(udev_monitor);
+      if (!udev_device)
+        goto cqe_seen;
+
+      if (!udev_device_get_is_initialized(udev_device)) {
+        goto op_monitor_exit;
+      }
+
+      const char *devnode = udev_device_get_devnode(udev_device);
+      if (!devnode)
+        goto op_monitor_exit;
+
+      struct udev_list_entry *properties =
+          udev_device_get_properties_list_entry(udev_device);
+      struct udev_list_entry *property;
+
+      u8 isJoystick = 0;
+      u8 action = 0;
+      udev_list_entry_foreach(property, properties) {
+        const char *name = udev_list_entry_get_name(property);
+        const char *value = udev_list_entry_get_value(property);
+
+        if (strcmp(name, "ACTION") == 0 && strcmp(value, "add") == 0) {
+          action = ACTION_ADD;
+        }
+
+        if (strcmp(name, "ACTION") == 0 && strcmp(value, "remove") == 0) {
+          action = ACTION_REMOVE;
+        }
+
+        if (strcmp(name, "ID_INPUT_JOYSTICK") == 0 && strcmp(value, "1") == 0) {
+          isJoystick = 1;
+        }
+      }
+
+      if (!isJoystick)
+        goto op_monitor_exit;
+
+      if (action & ACTION_ADD) {
+        struct op_joystick_read *op = &(struct op_joystick_read){
+            .type = OP_JOYSTICK_READ,
+        };
+
+        op->fd = open(devnode, O_RDONLY | O_NONBLOCK);
+        if (op->fd < 0) {
+          goto op_monitor_exit;
+        }
+
+        /* added joystick device */
+        sqe = io_uring_get_sqe(&ring);
+        io_uring_prep_read(sqe, op->fd, &op->event, sizeof(op->event), 0);
+        io_uring_sqe_set_data(sqe, op);
+        io_uring_submit(&ring);
+        debug("added\n");
+      } else if (action & ACTION_REMOVE) {
+        /* removed joystick device */
+        debug("removed\n");
+        /* TODO: reset analog controllers buttons if any pressed */
+      }
+
+    op_monitor_exit:
+      udev_device_unref(udev_device);
+    } /* on udev events finish */
+
+    /* on joystick events */
+    else if (op->type & OP_JOYSTICK_READ) {
+      wl_display_cancel_read(wl_display);
+      /* on joystick read error (eg. joystick removed), close the fd */
+      if (cqe->res < 0) {
+        if (op->fd >= 0)
+          close(op->fd);
+        goto cqe_seen;
+      }
+
+      struct op_joystick_read *op = io_uring_cqe_get_data(cqe);
+      struct input_event *event = &op->event;
+
+      joystick_key(&state, event->type, event->code, event->value);
+
+      sqe = io_uring_get_sqe(&ring);
+      io_uring_prep_read(sqe, op->fd, &op->event, sizeof(op->event), 0);
+      io_uring_sqe_set_data(sqe, op);
+      io_uring_submit(&ring);
+    } /* on joystick events finish */
+
+  cqe_seen:
+    io_uring_cqe_seen(&ring, cqe);
   }
 
   /* finished */
-joystick_exit:
-  for (u8 joystickIndex = 0; joystickIndex < state.joystickCount;
-       joystickIndex++) {
-    struct Joystick *joystick = &state.joysticks[joystickIndex];
-    if (joystick->fd >= 0) {
-      close(joystick->fd);
-    }
-  }
+udev_monitor_exit:
+  udev_monitor_unref(udev_monitor);
+
+udev_exit:
+  udev_unref(udev);
+
+io_uring_exit:
+  io_uring_queue_exit(&ring);
+
 shm_exit:
   close(shm_fd);
 
 wl_exit:
   wl_display_disconnect(wl_display);
+
+xkb_context_exit:
+  xkb_context_unref(state.xkb_context);
 
 exit:
   return error_code;

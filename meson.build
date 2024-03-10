@@ -27,13 +27,13 @@ wayland_client = dependency('wayland-client')
 wayland_protocols = dependency('wayland-protocols', native: true)
 xkbcommon = dependency('xkbcommon')
 libudev = dependency('libudev')
+liburing = dependency('liburing')
 vulkan = dependency('vulkan')
 
 subdir('protocol')
 
 sources = [
   'src/handmadehero_linux.c',
-  'src/joystick_linux.c',
 ]
 
 if get_option('buildtype').startswith('debug')
@@ -62,6 +62,7 @@ executable(
 		wayland_client,
 		xkbcommon,
 		libudev,
+		liburing,
 		vulkan,
 	]
 )
