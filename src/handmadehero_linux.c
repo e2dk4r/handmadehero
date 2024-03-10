@@ -309,7 +309,7 @@ static void joystick_key(struct linux_state *state, u16 type, u16 code,
                          i32 value) {
   struct game_controller_input *controller = GetController(state->input, 1);
 
-  debugf("[joystick_event] time: type: %d code: %d value: %d\n", type, code,
+  debugf("[joystick_key] time: type: %d code: %d value: %d\n", type, code,
          value);
   controller->isAnalog = 1;
 
