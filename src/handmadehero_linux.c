@@ -412,6 +412,7 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
     state->running = 0;
   } break;
 
+#ifdef HANDMADEHERO_DEBUG
   case 'L':
   case 'l': {
     /* if key is not pressed, exit */
@@ -427,6 +428,7 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
       PlaybackInputBegin(state, 1);
     }
   } break;
+#endif
 
   case 'A':
   case 'a': {
@@ -573,6 +575,7 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
   if (frame_unit > 1.0f) {
     state->input = newInput;
 
+#ifdef HANDMADEHERO_DEBUG
     if (RecordInputStarted(state)) {
       RecordInput(state, state->input);
     }
@@ -580,6 +583,7 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
     if (PlaybackInputStarted(state)) {
       PlaybackInput(state, state->input);
     }
+#endif
 
     state->lib->GameUpdateAndRender(state->game_memory, newInput,
                                     state->backbuffer);
