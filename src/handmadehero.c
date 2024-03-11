@@ -161,7 +161,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   f32 playerB = 0.0f;
   f32 playerWidth = tileWidth * 0.75f;
   f32 playerHeight = tileHeight;
-  f32 playerLeft = state->playerX - 0.5f * playerWidth / 2;
+  f32 playerLeft = state->playerX - 0.5f * playerWidth;
   f32 playerTop = state->playerY - playerHeight;
   draw_rectangle(backbuffer, playerLeft, playerTop, playerLeft + playerWidth,
                  playerTop + playerHeight, playerR, playerG, playerB);
