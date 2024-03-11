@@ -76,28 +76,28 @@
 - [x] Handmade Hero Day 013 - Platform-independent User Input
       https://www.youtube.com/watch?v=Lt9DfMzZ9sI
 
-- [ ] Handmade Hero Day 014 - Platform-independent Game Memory
+- [x] Handmade Hero Day 014 - Platform-independent Game Memory
       https://www.youtube.com/watch?v=tcENxzeTjbI
 
-- [ ] Handmade Hero Day 015 - Platform-independent Debug File I/O
+- [x] Handmade Hero Day 015 - Platform-independent Debug File I/O
       https://www.youtube.com/watch?v=kdAte9pdLv8
 
 - [ ] Handmade Hero Day 016 - VisualStudio Compiler Switches
       https://www.youtube.com/watch?v=zN7llTrMMBU
 
-- [ ] Handmade Hero Day 017 - Unified Keyboard and Gamepad Input
+- [x] Handmade Hero Day 017 - Unified Keyboard and Gamepad Input
       https://www.youtube.com/watch?v=WDB718JId4M
 
-- [ ] Handmade Hero Day 018 - Enforcing a Video Frame Rate
+- [x] Handmade Hero Day 018 - Enforcing a Video Frame Rate
       https://www.youtube.com/watch?v=TPpn2fee77M
 
-- [ ] Handmade Hero Day 019 - Improving Audio Synchronization
+- [x] Handmade Hero Day 019 - Improving Audio Synchronization
       https://www.youtube.com/watch?v=qFl62ka51Mc
 
 - [ ] Handmade Hero Day 020 - Debugging the Audio Sync
       https://www.youtube.com/watch?v=hELF8KRqSIs
 
-- [ ] Handmade Hero Day 021 - Loading Game Code Dynamically
+- [x] Handmade Hero Day 021 - Loading Game Code Dynamically
       https://www.youtube.com/watch?v=WMSBRk5WG58
 
 - [ ] Basic Emacs Tutorial
@@ -106,7 +106,7 @@
 - [ ] Handmade Hero Day 022 - Instantaneous Live Code Editing
       https://www.youtube.com/watch?v=oijEnriqqcs
 
-- [ ] Handmade Hero Day 023 - Looped Live Code Editing
+- [x] Handmade Hero Day 023 - Looped Live Code Editing
       https://www.youtube.com/watch?v=xrUSrVvB21c
 
 - [ ] Handmade Hero Day 024 - Win32 Platform Layer Cleanup
@@ -115,10 +115,10 @@
 - [ ] Handmade Hero Day 025 - Finishing the Win32 Prototyping Layer
       https://www.youtube.com/watch?v=es-Bou2dIdY
 
-- [ ] Handmade Hero Day 026 - Introduction to Game Architecture
+- [x] Handmade Hero Day 026 - Introduction to Game Architecture
       https://www.youtube.com/watch?v=rPJfadFSCyQ
 
-- [ ] Handmade Hero Day 027 - Exploration-based Architecture
+- [x] Handmade Hero Day 027 - Exploration-based Architecture
       https://www.youtube.com/watch?v=Mi98zVBb6Wk
 
 - [ ] Handmade Hero Day 028 - Drawing a Tile Map
