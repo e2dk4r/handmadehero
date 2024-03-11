@@ -10,6 +10,7 @@ project(
 )
 
 is_build_debug = get_option('buildtype').startswith('debug')
+cc = meson.get_compiler('c')
 
 add_project_arguments(
 	[
@@ -31,6 +32,7 @@ xkbcommon = dependency('xkbcommon')
 libudev = dependency('libudev')
 liburing = dependency('liburing')
 vulkan = dependency('vulkan')
+libm = cc.find_library('m')
 
 subdir('protocol')
 
@@ -63,7 +65,8 @@ if is_build_debug
         'src/handmadehero.c',
         'src/debug.c',
       ],
-    include_directories: 'include'
+    include_directories: 'include',
+    dependencies: libm,
   )
 else
   sources += 'src/handmadehero.c'
