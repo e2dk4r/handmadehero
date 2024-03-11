@@ -121,7 +121,7 @@
 - [x] Handmade Hero Day 027 - Exploration-based Architecture
       https://www.youtube.com/watch?v=Mi98zVBb6Wk
 
-- [ ] Handmade Hero Day 028 - Drawing a Tile Map
+- [x] Handmade Hero Day 028 - Drawing a Tile Map
       https://www.youtube.com/watch?v=QGmQ714rlAc
 
 - [ ] Handmade Hero Day 029 - Basic Tile Map Collision Checking
