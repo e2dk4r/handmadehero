@@ -1004,8 +1004,12 @@ int main(int argc, char *argv[]) {
       };
 
       op->fd = open(devnode, O_RDONLY | O_NONBLOCK);
-      if (op->fd < 0)
-        return 1;
+      if (op->fd < 0) {
+        udev_device_unref(udev_device);
+        udev_enumerate_unref(udev_enumerate);
+        error_code = HANDMADEHERO_ERROR_UDEV_MONITOR;
+        goto udev_monitor_exit;
+      }
 
       sqe = io_uring_get_sqe(&ring);
       io_uring_prep_read(sqe, op->fd, &op->event, sizeof(op->event), 0);
