@@ -378,9 +378,8 @@ static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
   debugf("[wl_keyboard::keymap] format: %d fd: %d size: %d\n", format, fd,
          size);
 
-  char *keymap_str = mem_push(&state->memory, size);
-  keymap_str =
-      mmap(keymap_str, size, PROT_READ, MAP_FIXED | MAP_PRIVATE, fd, 0);
+  void *keymap_str = mem_push(&state->memory, size);
+  keymap_str = mmap(keymap_str, size, PROT_READ, MAP_PRIVATE, fd, 0);
   close(fd);
   assert(keymap_str != MAP_FAILED);
 
