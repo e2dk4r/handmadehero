@@ -797,10 +797,13 @@ int main(int argc, char *argv[]) {
 
   /* game: backbuffer */
   {
-    /* ~3.53M single, ~7.32M with double buffering */
+    /*
+     *  960x540x4 ~1.10M single, ~3.98M with double buffering
+     * 1280x720x4 ~3.53M single, ~7.32M with double buffering
+     */
     static struct game_backbuffer backbuffer = {
-        .width = 1280,
-        .height = 720,
+        .width = 960,
+        .height = 540,
         .bytes_per_pixel = 4,
     };
     backbuffer.stride = backbuffer.width * backbuffer.bytes_per_pixel;

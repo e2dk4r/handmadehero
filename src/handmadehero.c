@@ -16,39 +16,62 @@ static void draw_frame(struct game_backbuffer *backbuffer, int blueOffset,
   }
 }
 
-static void draw_player(struct game_backbuffer *backbuffer, i32 playerX,
-                        i32 playerY) {
-  u32 height = 10;
-  u32 top = (u32)playerY;
-  u32 bottom = top + height;
+static inline i32 roundf32toi32(f32 value) {
+  return (i32)__builtin_round(value);
+}
+static inline u32 roundf32tou32(f32 value) {
+  return (u32)__builtin_round(value);
+}
 
-  u32 width = 10;
-  u32 left = (u32)playerX;
-  u32 right = left + width;
+static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
+                           f32 realMinY, f32 realMaxX, f32 realMaxY, f32 r,
+                           f32 g, f32 b) {
+  assert(realMinX < realMaxX);
+  assert(realMinY < realMaxY);
 
-  u32 color = 0xffffff;
+  u32 minX = roundf32tou32(realMinX);
+  u32 minY = roundf32tou32(realMinY);
+  u32 maxX = roundf32tou32(realMaxX);
+  u32 maxY = roundf32tou32(realMaxY);
 
-  for (u32 x = left; x < right; x++) {
-    u8 *pixel = (backbuffer->memory
-                 /* x offset */
-                 + (x * backbuffer->bytes_per_pixel)
-                 /* y offset */
-                 + (top * backbuffer->stride));
-    for (u32 y = top; y < bottom; y++) {
-      *(u32 *)pixel = color;
-      pixel += backbuffer->stride;
+  if (minX > backbuffer->width)
+    minX = 0;
+
+  if (minY > backbuffer->height)
+    minY = 0;
+
+  if (maxX > backbuffer->width)
+    minX = backbuffer->width;
+
+  if (maxY > backbuffer->height)
+    maxY = backbuffer->height;
+
+  u8 *row = backbuffer->memory
+            /* x offset */
+            + (minX * backbuffer->bytes_per_pixel)
+            /* y offset */
+            + (minY * backbuffer->stride);
+
+  u32 color = /* red */
+      roundf32tou32(r * 255.0f) << 16
+      /* green */
+      | roundf32tou32(g * 255.0f) << 8
+      /* blue */
+      | roundf32tou32(b * 255.0f) << 0;
+
+  for (u32 y = minY; y < maxY; y++) {
+    u32 *pixel = (u32 *)row;
+    for (u32 x = minX; x < maxX; x++) {
+      *pixel = color;
+      pixel++;
     }
+    row += backbuffer->stride;
   }
 }
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
   if (!memory->initialized) {
-    state->blueOffset = 0;
-    state->greenOffset = 0;
-    state->playerX = 100;
-    state->playerY = 100;
-
     memory->initialized = 1;
   }
 
@@ -56,38 +79,28 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct game_controller_input *controller =
         GetController(input, controllerIndex);
     if (controller->isAnalog) {
-      state->blueOffset += (int)(4.0f * controller->stickAverageX);
-      state->greenOffset += (int)(4.0f * controller->stickAverageY);
     }
 
     if (controller->moveLeft.pressed) {
-      state->blueOffset -= 1;
     }
 
     if (controller->moveRight.pressed) {
-      state->blueOffset += 1;
     }
 
     if (controller->moveDown.pressed) {
-      state->greenOffset += 1;
     }
 
     if (controller->moveUp.pressed) {
-      state->greenOffset -= 1;
     }
 
     if (controller->actionUp.pressed) {
-      state->playerX = 0;
     }
 
-    state->playerX += (int)(4.0f * controller->stickAverageX);
-    state->playerY += (int)(4.0f * controller->stickAverageY);
-
     if (controller->actionDown.pressed) {
-      state->playerY -= 10;
     }
   }
 
-  draw_frame(backbuffer, state->blueOffset, state->greenOffset);
-  draw_player(backbuffer, state->playerX, state->playerY);
+  draw_rectangle(backbuffer, 0, 0, (f32)backbuffer->width,
+                 (f32)backbuffer->height, 0.0f, 0.0f, 0.0f);
+  draw_rectangle(backbuffer, -10, 10, 100, 100, 1.0f, 1.0f, 1.0f);
 }
