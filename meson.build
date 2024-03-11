@@ -40,15 +40,31 @@ sources = [
 
 
 if is_build_debug
-  add_project_arguments('-DHANDMADEHERO_DEBUG=1', language : 'c')
-  add_project_arguments('-DHANDMADEHERO_INTERNAL=1', language : 'c')
-  add_project_arguments('-Wno-unused-function', language : 'c')
+  add_project_arguments(
+    [
+      '-DHANDMADEHERO_DEBUG=1',
+      '-DHANDMADEHERO_INTERNAL=1',
+
+      '-Wno-unused-function',
+      '-Wno-unused-variable',
+    ],
+    language : 'c'
+  )
   sources += 'src/debug.c'
 endif
 
 # debug builds have handmadehero as dynamic library
+# and does not need to link with because of hot reload logic
 if is_build_debug
-  handmadeheroLib = library('handmadehero', sources: ['src/handmadehero.c', 'src/debug.c',], include_directories: 'include')
+  handmadeheroLib = library(
+    'handmadehero',
+    sources:
+      [
+        'src/handmadehero.c',
+        'src/debug.c',
+      ],
+    include_directories: 'include'
+  )
 else
   sources += 'src/handmadehero.c'
 endif
