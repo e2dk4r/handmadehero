@@ -41,7 +41,7 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
     minY = 0;
 
   if (maxX > backbuffer->width)
-    minX = backbuffer->width;
+    maxX = backbuffer->width;
 
   if (maxY > backbuffer->height)
     maxY = backbuffer->height;
