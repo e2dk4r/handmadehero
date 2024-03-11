@@ -342,6 +342,8 @@ static void joystick_key(struct linux_state *state, u16 type, u16 code,
     static const f32 MAX_LEFT = 32768.0f;
     static const f32 MAX_RIGHT = 32767.0f;
     f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
+    if (value >= -129 && value <= 128)
+      value = 0;
     f32 x = (f32)value / max;
     controller->stickAverageX = x;
   }
@@ -351,6 +353,8 @@ static void joystick_key(struct linux_state *state, u16 type, u16 code,
     static const f32 MAX_LEFT = 32768.0f;
     static const f32 MAX_RIGHT = 32767.0f;
     f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
+    if (value >= -129 && value <= 128)
+      value = 0;
     f32 y = (f32)value / max;
     controller->stickAverageY = y;
   }
