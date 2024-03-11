@@ -124,10 +124,10 @@
 - [x] Handmade Hero Day 028 - Drawing a Tile Map
       https://www.youtube.com/watch?v=QGmQ714rlAc
 
-- [ ] Handmade Hero Day 029 - Basic Tile Map Collision Checking
+- [x] Handmade Hero Day 029 - Basic Tile Map Collision Checking
       https://www.youtube.com/watch?v=EwhVulgF16g
 
-- [ ] Handmade Hero Day 030 - Moving Between Tile Maps
+- [x] Handmade Hero Day 030 - Moving Between Tile Maps
       https://www.youtube.com/watch?v=J7suWih0ITQ
 
 - [ ] Handmade Hero Day 031 - Tilemap Coordinate Systems
