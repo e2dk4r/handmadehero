@@ -1,7 +1,7 @@
 #ifndef HANDMADEHERO_H
 
-#include "types.h"
 #include "assert.h"
+#include "types.h"
 
 /****************************************************************
  * Platform Layer
@@ -43,7 +43,7 @@ struct game_controller_input {
   f32 stickAverageY;
 
   union {
-#define GAME_CONTROLLER_BUTTON_COUNT 12 
+#define GAME_CONTROLLER_BUTTON_COUNT 12
     struct game_button_state buttons[GAME_CONTROLLER_BUTTON_COUNT];
     struct {
       struct game_button_state moveDown;
@@ -71,7 +71,8 @@ struct game_input {
   struct game_controller_input controllers[HANDMADEHERO_CONTROLLER_COUNT];
 };
 
-static inline struct game_controller_input * GetController(struct game_input *input, u8 index) {
+static inline struct game_controller_input *
+GetController(struct game_input *input, u8 index) {
   assert(index < sizeof(input->controllers) / sizeof(*input->controllers));
   return &input->controllers[index];
 }
