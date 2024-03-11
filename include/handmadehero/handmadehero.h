@@ -67,6 +67,7 @@ struct game_controller_input {
 
 #define HANDMADEHERO_CONTROLLER_COUNT 2U
 struct game_input {
+  f32 secondsToAdvanceOverUpdate;
   struct game_controller_input controllers[HANDMADEHERO_CONTROLLER_COUNT];
 };
 
