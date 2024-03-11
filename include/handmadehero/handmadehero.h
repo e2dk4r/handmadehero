@@ -86,9 +86,52 @@ struct game_memory {
   void *transientStorage;
 };
 
+struct tilemap {
+  u32 *tiles;
+};
+
+struct world {
+  f32 upperLeftX;
+  f32 upperLeftY;
+  f32 tileWidth;
+  f32 tileHeight;
+  i32 tilemapWidth;
+  i32 tilemapHeight;
+
+  i32 width;
+  i32 height;
+  struct tilemap *tilemaps;
+};
+
+struct position_correct {
+  i32 tilemapX;
+  i32 tilemapY;
+
+  i32 tileX;
+  i32 tileY;
+
+  /* tile relative x */
+  f32 x;
+  /* tile relative y */
+  f32 y;
+};
+
+struct position_raw {
+  i32 tilemapX;
+  i32 tilemapY;
+
+  /* tilemap relative x */
+  f32 x;
+  /* tilemap relative y */
+  f32 y;
+};
+
 struct game_state {
   f32 playerX;
   f32 playerY;
+
+  i32 playerTilemapX;
+  i32 playerTilemapY;
 };
 
 #define GAMEUPDATEANDRENDER(name)                                              \
