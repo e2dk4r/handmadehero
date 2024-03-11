@@ -29,28 +29,28 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
   assert(realMinX < realMaxX);
   assert(realMinY < realMaxY);
 
-  u32 minX = roundf32tou32(realMinX);
-  u32 minY = roundf32tou32(realMinY);
-  u32 maxX = roundf32tou32(realMaxX);
-  u32 maxY = roundf32tou32(realMaxY);
+  i32 minX = roundf32toi32(realMinX);
+  i32 minY = roundf32toi32(realMinY);
+  i32 maxX = roundf32toi32(realMaxX);
+  i32 maxY = roundf32toi32(realMaxY);
 
-  if (minX > backbuffer->width)
+  if (minX < 0)
     minX = 0;
 
-  if (minY > backbuffer->height)
+  if (minY < 0)
     minY = 0;
 
-  if (maxX > backbuffer->width)
-    maxX = backbuffer->width;
+  if (maxX > (i32)backbuffer->width)
+    maxX = (i32)backbuffer->width;
 
-  if (maxY > backbuffer->height)
-    maxY = backbuffer->height;
+  if (maxY > (i32)backbuffer->height)
+    maxY = (i32)backbuffer->height;
 
   u8 *row = backbuffer->memory
             /* x offset */
-            + (minX * backbuffer->bytes_per_pixel)
+            + ((u32)minX * backbuffer->bytes_per_pixel)
             /* y offset */
-            + (minY * backbuffer->stride);
+            + ((u32)minY * backbuffer->stride);
 
   u32 color = /* red */
       roundf32tou32(r * 255.0f) << 16
@@ -59,9 +59,9 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
       /* blue */
       | roundf32tou32(b * 255.0f) << 0;
 
-  for (u32 y = minY; y < maxY; y++) {
+  for (i32 y = minY; y < maxY; y++) {
     u32 *pixel = (u32 *)row;
-    for (u32 x = minX; x < maxX; x++) {
+    for (i32 x = minX; x < maxX; x++) {
       *pixel = color;
       pixel++;
     }
