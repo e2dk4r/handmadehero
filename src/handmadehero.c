@@ -19,9 +19,12 @@ static void draw_frame(struct game_backbuffer *backbuffer, int blueOffset,
 static inline i32 roundf32toi32(f32 value) {
   return (i32)__builtin_round(value);
 }
+
 static inline u32 roundf32tou32(f32 value) {
   return (u32)__builtin_round(value);
 }
+
+static inline i32 truncatef32toi32(f32 value) { return (i32)value; }
 
 static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
                            f32 realMinY, f32 realMaxX, f32 realMaxY, f32 r,
@@ -69,8 +72,75 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
   }
 }
 
+struct tilemap {
+  f32 upperLeftX;
+  f32 upperLeftY;
+  f32 tileWidth;
+  f32 tileHeight;
+  i32 width;
+  i32 height;
+  u32 *tiles;
+};
+
+static struct tilemap TILEMAP_DEFAULT = {
+    .upperLeftX = -30.0f,
+    .upperLeftY = 0.0f,
+
+    .tileWidth = 60.0f,
+    .tileHeight = 60.0f,
+
+    .width = 17,
+    .height = 9,
+    // clang-format off
+    .tiles = (u32[]){
+      1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+      1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
+      1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1,
+      1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1,
+      0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+      1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1,
+      1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1,
+      1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
+      1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+    },
+    // clang-format on
+};
+
+static inline u32 TilemapGetTileValue(struct tilemap *tilemap, i32 row,
+                                      i32 column) {
+  return tilemap->tiles[row * tilemap->width + column];
+}
+
+static u8 TilemapIsPointEmpty(struct tilemap *tilemap, f32 testX, f32 testY) {
+  i32 playerTileX =
+      truncatef32toi32((testX - tilemap->upperLeftX) / tilemap->tileWidth);
+  i32 playerTileY =
+      truncatef32toi32((testY - tilemap->upperLeftY) / tilemap->tileHeight);
+
+  u8 isValid = 0;
+  if (/* horizontal */
+      playerTileX > 0 &&
+      playerTileX < tilemap->width
+      /* vertical */
+      && playerTileY > 0 && playerTileY < tilemap->height) {
+    return TilemapGetTileValue(tilemap, playerTileY, playerTileX) == 0;
+  }
+
+  return 0;
+}
+
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
+  struct tilemap *tilemap = &TILEMAP_DEFAULT;
   struct game_state *state = memory->permanentStorage;
+
+  f32 playerR = 1.0f;
+  f32 playerG = 1.0f;
+  f32 playerB = 0.0f;
+  f32 playerWidth = tilemap->tileWidth * 0.75f;
+  f32 playerHeight = tilemap->tileHeight;
+  f32 playerLeft = state->playerX - 0.5f * playerWidth;
+  f32 playerTop = state->playerY - playerHeight;
+
   if (!memory->initialized) {
     state->playerX = 150.0f;
     state->playerY = 150.0f;
@@ -111,8 +181,16 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     dPlayerX *= 128.0f;
     dPlayerY *= 128.0f;
 
-    state->playerX += input->dtPerFrame * dPlayerX;
-    state->playerY += input->dtPerFrame * dPlayerY;
+    f32 newPlayerX = state->playerX + input->dtPerFrame * dPlayerX;
+    f32 newPlayerY = state->playerY + input->dtPerFrame * dPlayerY;
+
+    if (TilemapIsPointEmpty(tilemap, newPlayerX + playerWidth * 0.5f,
+                            newPlayerY) &&
+        TilemapIsPointEmpty(tilemap, newPlayerX - playerWidth * 0.5f,
+                            newPlayerY)) {
+      state->playerX = newPlayerX;
+      state->playerY = newPlayerY;
+    }
 
     if (controller->actionUp.pressed) {
     }
@@ -121,48 +199,24 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
   }
 
-  u32 tilemap[9][17] = {
-      {1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-      {1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
-      {1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1},
-      {1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-      {0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-      {1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1},
-      {1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1},
-      {1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
-      {1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-  };
-
   draw_rectangle(backbuffer, 0, 0, (f32)backbuffer->width,
                  (f32)backbuffer->height, 1.0f, 0.0f, 0.0f);
 
-  f32 upperLeftX = -30.0f;
-  f32 upperLeftY = 0.0f;
-  f32 tileWidth = 60.0f;
-  f32 tileHeight = 60.0f;
-
-  for (u8 row = 0; row < 9; row++) {
-    for (u8 column = 0; column < 17; column++) {
-      u32 tileid = tilemap[row][column];
+  for (u8 row = 0; row < tilemap->height; row++) {
+    for (u8 column = 0; column < tilemap->width; column++) {
+      u32 tileid = TilemapGetTileValue(tilemap, row, column);
       f32 gray = 0.5f;
       if (tileid != 0)
         gray = 1.0f;
 
-      f32 minX = upperLeftX + (f32)column * tileWidth;
-      f32 minY = upperLeftY + (f32)row * tileHeight;
-      f32 maxX = minX + tileWidth;
-      f32 maxY = minY + tileHeight;
+      f32 minX = tilemap->upperLeftX + (f32)column * tilemap->tileWidth;
+      f32 minY = tilemap->upperLeftY + (f32)row * tilemap->tileHeight;
+      f32 maxX = minX + tilemap->tileWidth;
+      f32 maxY = minY + tilemap->tileHeight;
       draw_rectangle(backbuffer, minX, minY, maxX, maxY, gray, gray, gray);
     }
   }
 
-  f32 playerR = 1.0f;
-  f32 playerG = 1.0f;
-  f32 playerB = 0.0f;
-  f32 playerWidth = tileWidth * 0.75f;
-  f32 playerHeight = tileHeight;
-  f32 playerLeft = state->playerX - 0.5f * playerWidth;
-  f32 playerTop = state->playerY - playerHeight;
   draw_rectangle(backbuffer, playerLeft, playerTop, playerLeft + playerWidth,
                  playerTop + playerHeight, playerR, playerG, playerB);
 }
