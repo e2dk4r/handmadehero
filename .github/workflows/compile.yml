@@ -14,7 +14,8 @@ jobs:
     - name: install packages
       run: sudo apt-get install -y --no-install-recommends --no-install-suggests
            meson ninja-build
-           libudev-dev libvulkan-dev libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev
+           libudev-dev liburing-dev
+           libvulkan-dev libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev
     - name: configure
       run: meson setup build
     - name: ninja
