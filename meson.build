@@ -9,6 +9,8 @@ project(
   ],
 )
 
+is_build_debug = get_option('buildtype').startswith('debug')
+
 add_project_arguments(
 	[
 		'-march=x86-64-v3',
@@ -36,14 +38,16 @@ sources = [
   'src/handmadehero_linux.c',
 ]
 
-if get_option('buildtype').startswith('debug')
+
+if is_build_debug
   add_project_arguments('-DHANDMADEHERO_DEBUG=1', language : 'c')
   add_project_arguments('-DHANDMADEHERO_INTERNAL=1', language : 'c')
+  add_project_arguments('-Wno-unused-function', language : 'c')
   sources += 'src/debug.c'
 endif
 
 # debug builds have handmadehero as dynamic library
-if get_option('buildtype').startswith('debug')
+if is_build_debug
   handmadeheroLib = library('handmadehero', sources: ['src/handmadehero.c', 'src/debug.c',], include_directories: 'include')
 else
   sources += 'src/handmadehero.c'
