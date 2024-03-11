@@ -72,26 +72,47 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
   if (!memory->initialized) {
+    state->playerX = 150.0f;
+    state->playerY = 150.0f;
+
     memory->initialized = 1;
   }
 
   for (u8 controllerIndex = 0; controllerIndex < 2; controllerIndex++) {
     struct game_controller_input *controller =
         GetController(input, controllerIndex);
+
+    /* pixels/second */
+    f32 dPlayerX = 0.0f;
+    /* pixels/second */
+    f32 dPlayerY = 0.0f;
+
     if (controller->isAnalog) {
+      dPlayerX += 2 * controller->stickAverageX;
+      dPlayerY += 2 * controller->stickAverageY;
     }
 
     if (controller->moveLeft.pressed) {
+      dPlayerX = -1.0f;
     }
 
     if (controller->moveRight.pressed) {
+      dPlayerX = 1.0f;
     }
 
     if (controller->moveDown.pressed) {
+      dPlayerY = 1.0f;
     }
 
     if (controller->moveUp.pressed) {
+      dPlayerY = -1.0f;
     }
+
+    dPlayerX *= 128.0f;
+    dPlayerY *= 128.0f;
+
+    state->playerX += input->dtPerFrame * dPlayerX;
+    state->playerY += input->dtPerFrame * dPlayerY;
 
     if (controller->actionUp.pressed) {
     }
@@ -134,4 +155,14 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       draw_rectangle(backbuffer, minX, minY, maxX, maxY, gray, gray, gray);
     }
   }
+
+  f32 playerR = 1.0f;
+  f32 playerG = 1.0f;
+  f32 playerB = 0.0f;
+  f32 playerWidth = tileWidth * 0.75f;
+  f32 playerHeight = tileHeight;
+  f32 playerLeft = state->playerX - 0.5f * playerWidth / 2;
+  f32 playerTop = state->playerY - playerHeight;
+  draw_rectangle(backbuffer, playerLeft, playerTop, playerLeft + playerWidth,
+                 playerTop + playerHeight, playerR, playerG, playerB);
 }

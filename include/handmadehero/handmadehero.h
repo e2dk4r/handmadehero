@@ -67,7 +67,7 @@ struct game_controller_input {
 
 #define HANDMADEHERO_CONTROLLER_COUNT 2U
 struct game_input {
-  f32 secondsToAdvanceOverUpdate;
+  f32 dtPerFrame;
   struct game_controller_input controllers[HANDMADEHERO_CONTROLLER_COUNT];
 };
 
@@ -87,6 +87,8 @@ struct game_memory {
 };
 
 struct game_state {
+  f32 playerX;
+  f32 playerY;
 };
 
 #define GAMEUPDATEANDRENDER(name)                                              \

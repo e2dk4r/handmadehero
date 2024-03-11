@@ -573,7 +573,7 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
   u32 elapsed = time - state->frame;
   f32 second_in_milliseconds = 1000;
   f32 frames_per_second = 24;
-  newInput->secondsToAdvanceOverUpdate = frames_per_second / second_in_milliseconds;
+  newInput->dtPerFrame = frames_per_second / second_in_milliseconds;
 
   f32 frame_unit = (f32)elapsed * second_in_milliseconds / frames_per_second;
   if (frame_unit > 1.0f) {
