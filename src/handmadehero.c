@@ -100,7 +100,38 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
   }
 
+  u32 tilemap[9][17] = {
+      {1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+      {1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
+      {1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1},
+      {1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+      {0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0},
+      {1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1},
+      {1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1},
+      {1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
+      {1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1},
+  };
+
   draw_rectangle(backbuffer, 0, 0, (f32)backbuffer->width,
-                 (f32)backbuffer->height, 0.0f, 0.0f, 0.0f);
-  draw_rectangle(backbuffer, -10, 10, 100, 100, 1.0f, 1.0f, 1.0f);
+                 (f32)backbuffer->height, 1.0f, 0.0f, 0.0f);
+
+  f32 upperLeftX = -30.0f;
+  f32 upperLeftY = 0.0f;
+  f32 tileWidth = 60.0f;
+  f32 tileHeight = 60.0f;
+
+  for (u8 row = 0; row < 9; row++) {
+    for (u8 column = 0; column < 17; column++) {
+      u32 tileid = tilemap[row][column];
+      f32 gray = 0.5f;
+      if (tileid != 0)
+        gray = 1.0f;
+
+      f32 minX = upperLeftX + (f32)column * tileWidth;
+      f32 minY = upperLeftY + (f32)row * tileHeight;
+      f32 maxX = minX + tileWidth;
+      f32 maxY = minY + tileHeight;
+      draw_rectangle(backbuffer, minX, minY, maxX, maxY, gray, gray, gray);
+    }
+  }
 }
