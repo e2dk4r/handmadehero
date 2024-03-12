@@ -76,15 +76,18 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
   }
 }
 
+static const f32 TILE_SIDE_IN_METERS = 1.4f;
+static const u32 TILE_SIDE_IN_PIXELS = 60;
 static struct world WORLD_DEFAULT = {
     .width = 2,
     .height = 2,
 
-    .upperLeftX = -30.0f,
-    .upperLeftY = 0.0f,
+    .tileSideInMeters = TILE_SIDE_IN_METERS,
+    .tileSideInPixels = TILE_SIDE_IN_PIXELS,
+    .metersToPixels = (f32)TILE_SIDE_IN_PIXELS / TILE_SIDE_IN_METERS,
 
-    .tileWidth = 60.0f,
-    .tileHeight = 60.0f,
+    .upperLeftX = -(f32)TILE_SIDE_IN_PIXELS * 0.5f,
+    .upperLeftY = 0.0f,
 
     .tilemapWidth = 17,
     .tilemapHeight = 9,
@@ -190,53 +193,41 @@ static inline struct tilemap *WorldGetTilemap(struct world *world, i32 tilemapX,
   return &world->tilemaps[tilemapY * world->height + tilemapX];
 }
 
-static struct position_correct PositionCorrect(struct world *world,
-                                               struct position_raw pos) {
-  struct position_correct result;
+static inline void PositionCorrectCoord(struct world *world, i32 tileCount,
+                                        i32 *tilemap, i32 *tile, f32 *tileRel) {
+  i32 offset = floorf32toi32(*tileRel / world->tileSideInMeters);
+  *tile += offset;
+  *tileRel -= (f32)offset * world->tileSideInMeters;
 
-  result.tilemapX = pos.tilemapX;
-  result.tilemapY = pos.tilemapY;
+  assert(*tileRel >= 0);
+  assert(*tileRel < world->tileSideInMeters);
 
-  f32 x = pos.x - world->upperLeftX;
-  f32 y = pos.y - world->upperLeftY;
-
-  result.tileX = floorf32toi32(x / world->tileWidth);
-  result.tileY = floorf32toi32(y / world->tileHeight);
-
-  result.x = x - ((f32)result.tileX * world->tileWidth);
-  result.y = y - ((f32)result.tileY * world->tileHeight);
-
-  assert(result.x >= 0);
-  assert(result.y >= 0);
-  assert(result.x < world->tileWidth);
-  assert(result.y < world->tileHeight);
-
-  if (result.tileX < 0) {
-    result.tileX += world->tilemapWidth;
-    result.tilemapX--;
+  if (*tile < 0) {
+    *tile += tileCount;
+    *tilemap -= 1;
   }
 
-  if (result.tileY < 0) {
-    result.tileY += world->tilemapHeight;
-    result.tilemapY--;
+  if (*tile >= tileCount) {
+    *tile -= tileCount;
+    *tilemap += 1;
   }
+}
 
-  if (result.tileX >= world->tilemapWidth) {
-    result.tileX -= world->tilemapWidth;
-    result.tilemapX++;
-  }
+static struct position PositionCorrect(struct world *world,
+                                       struct position pos) {
+  struct position result = pos;
 
-  if (result.tileY >= world->tilemapHeight) {
-    result.tileY -= world->tilemapHeight;
-    result.tilemapY++;
-  }
+  PositionCorrectCoord(world, world->tilemapWidth, &result.tilemapX,
+                       &result.tileX, &result.tileRelX);
+  PositionCorrectCoord(world, world->tilemapHeight, &result.tilemapY,
+                       &result.tileY, &result.tileRelY);
 
   return result;
 }
 
-static u8 WorldIsPointEmpty(struct world *world, struct position_raw testPos) {
+static u8 WorldIsPointEmpty(struct world *world, struct position testPos) {
 
-  struct position_correct correctPos = PositionCorrect(world, testPos);
+  struct position correctPos = PositionCorrect(world, testPos);
   struct tilemap *tilemap =
       WorldGetTilemap(world, correctPos.tilemapX, correctPos.tilemapY);
   assert(tilemap);
@@ -249,25 +240,24 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
 
   if (!memory->initialized) {
-    state->playerX = 150.0f;
-    state->playerY = 150.0f;
-    state->playerTilemapX = 0;
-    state->playerTilemapY = 0;
+    state->playerPos.tilemapX = 0;
+    state->playerPos.tilemapY = 0;
+    state->playerPos.tileX = 3;
+    state->playerPos.tileY = 3;
+    state->playerPos.tileRelX = 5.0f;
+    state->playerPos.tileRelY = 5.0f;
 
     memory->initialized = 1;
   }
 
-  struct tilemap *tilemap =
-      WorldGetTilemap(world, state->playerTilemapX, state->playerTilemapY);
+  struct tilemap *tilemap = WorldGetTilemap(world, state->playerPos.tilemapX,
+                                            state->playerPos.tilemapY);
   assert(tilemap && "tilemap not exits at player tilemap location");
 
-  f32 playerR = 1.0f;
-  f32 playerG = 1.0f;
-  f32 playerB = 0.0f;
-  f32 playerWidth = world->tileWidth * 0.75f;
-  f32 playerHeight = world->tileHeight;
-  f32 playerLeft = state->playerX - 0.5f * playerWidth;
-  f32 playerTop = state->playerY - playerHeight;
+  /* unit: meters */
+  f32 playerHeight = 1.4f;
+  /* unit: meters */
+  f32 playerWidth = playerHeight * 0.75f;
 
   for (u8 controllerIndex = 0; controllerIndex < 2; controllerIndex++) {
     struct game_controller_input *controller =
@@ -299,32 +289,25 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       dPlayerY = -1.0f;
     }
 
-    dPlayerX *= 128.0f;
-    dPlayerY *= 128.0f;
+    static const f32 playerSpeed = 2.0f;
+    dPlayerX *= playerSpeed;
+    dPlayerY *= playerSpeed;
 
-    f32 newPlayerX = state->playerX + input->dtPerFrame * dPlayerX;
-    f32 newPlayerY = state->playerY + input->dtPerFrame * dPlayerY;
+    struct position newPlayerPos = state->playerPos;
+    newPlayerPos.tileRelX += input->dtPerFrame * dPlayerX;
+    newPlayerPos.tileRelY += input->dtPerFrame * dPlayerY;
+    newPlayerPos = PositionCorrect(world, newPlayerPos);
 
-    struct position_raw center = {
-        .tilemapX = state->playerTilemapX,
-        .tilemapY = state->playerTilemapY,
-        .x = newPlayerX,
-        .y = newPlayerY,
-    };
-    struct position_raw left = center;
-    left.x -= playerWidth * 0.5f;
-    struct position_raw right = center;
-    right.x += playerWidth * 0.5f;
+    struct position left = newPlayerPos;
+    left.tileRelX -= playerWidth * 0.5f;
+    left = PositionCorrect(world, left);
+
+    struct position right = newPlayerPos;
+    right.tileRelX += playerWidth * 0.5f;
+    right = PositionCorrect(world, right);
 
     if (WorldIsPointEmpty(world, left) && WorldIsPointEmpty(world, right)) {
-      struct position_correct newPos = PositionCorrect(world, center);
-      state->playerTilemapX = newPos.tilemapX;
-      state->playerTilemapY = newPos.tilemapY;
-
-      state->playerX =
-          newPos.x + (f32)newPos.tileX * world->tileWidth + world->upperLeftX;
-      state->playerY =
-          newPos.y + (f32)newPos.tileY * world->tileHeight + world->upperLeftY;
+      state->playerPos = newPlayerPos;
     }
 
     if (controller->actionUp.pressed) {
@@ -344,14 +327,50 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       if (tileid != 0)
         gray = 1.0f;
 
-      f32 minX = world->upperLeftX + (f32)column * world->tileWidth;
-      f32 minY = world->upperLeftY + (f32)row * world->tileHeight;
-      f32 maxX = minX + world->tileWidth;
-      f32 maxY = minY + world->tileHeight;
+      /* player tile x, y */
+      if (state->playerPos.tileX == column && state->playerPos.tileY == row) {
+        gray = 0.0f;
+      }
+
+      f32 minX = world->upperLeftX + (f32)column * (f32)world->tileSideInPixels;
+      f32 minY = world->upperLeftY + (f32)row * (f32)world->tileSideInPixels;
+      f32 maxX = minX + (f32)world->tileSideInPixels;
+      f32 maxY = minY + (f32)world->tileSideInPixels;
       draw_rectangle(backbuffer, minX, minY, maxX, maxY, gray, gray, gray);
     }
   }
 
-  draw_rectangle(backbuffer, playerLeft, playerTop, playerLeft + playerWidth,
-                 playerTop + playerHeight, playerR, playerG, playerB);
+  f32 playerR = 1.0f;
+  f32 playerG = 1.0f;
+  f32 playerB = 0.0f;
+
+  f32 playerLeft =
+      /* screen offset */
+      world->upperLeftX
+      /* tile */
+      + (f32)state->playerPos.tileX * (f32)world->tileSideInPixels
+      /* relative to tile */
+      + state->playerPos.tileRelX * world->metersToPixels
+      /* offset */
+      - 0.5f * playerWidth * world->metersToPixels;
+
+  f32 playerTop =
+      /* screen offset */
+      world->upperLeftY
+      /* tile */
+      + (f32)state->playerPos.tileY * (f32)world->tileSideInPixels
+      /* relative to tile */
+      + state->playerPos.tileRelY * world->metersToPixels
+      /* offset */
+      - playerHeight * world->metersToPixels;
+
+  draw_rectangle(backbuffer,
+                 /* min x, y */
+                 playerLeft, playerTop,
+                 /* max x */
+                 playerLeft + playerWidth * world->metersToPixels,
+                 /* max y */
+                 playerTop + playerHeight * world->metersToPixels,
+                 /* color */
+                 playerR, playerG, playerB);
 }

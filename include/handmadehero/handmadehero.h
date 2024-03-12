@@ -92,10 +92,13 @@ struct tilemap {
 };
 
 struct world {
+  f32 tileSideInMeters;
+  u32 tileSideInPixels;
+  f32 metersToPixels;
+
   f32 upperLeftX;
   f32 upperLeftY;
-  f32 tileWidth;
-  f32 tileHeight;
+
   i32 tilemapWidth;
   i32 tilemapHeight;
 
@@ -104,35 +107,19 @@ struct world {
   struct tilemap *tilemaps;
 };
 
-struct position_correct {
+struct position {
   i32 tilemapX;
   i32 tilemapY;
 
   i32 tileX;
   i32 tileY;
 
-  /* tile relative x */
-  f32 x;
-  /* tile relative y */
-  f32 y;
-};
-
-struct position_raw {
-  i32 tilemapX;
-  i32 tilemapY;
-
-  /* tilemap relative x */
-  f32 x;
-  /* tilemap relative y */
-  f32 y;
+  f32 tileRelX;
+  f32 tileRelY;
 };
 
 struct game_state {
-  f32 playerX;
-  f32 playerY;
-
-  i32 playerTilemapX;
-  i32 playerTilemapY;
+  struct position playerPos;
 };
 
 #define GAMEUPDATEANDRENDER(name)                                              \
