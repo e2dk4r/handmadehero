@@ -130,7 +130,7 @@
 - [x] Handmade Hero Day 030 - Moving Between Tile Maps
       https://www.youtube.com/watch?v=J7suWih0ITQ
 
-- [ ] Handmade Hero Day 031 - Tilemap Coordinate Systems
+- [x] Handmade Hero Day 031 - Tilemap Coordinate Systems
       https://www.youtube.com/watch?v=lDp4rqcigZs
 
 - [ ] Handmade Hero Day 032 - Unified Position Representation
