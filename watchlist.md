@@ -133,7 +133,7 @@
 - [x] Handmade Hero Day 031 - Tilemap Coordinate Systems
       https://www.youtube.com/watch?v=lDp4rqcigZs
 
-- [ ] Handmade Hero Day 032 - Unified Position Representation
+- [x] Handmade Hero Day 032 - Unified Position Representation
       https://www.youtube.com/watch?v=vI39C4iR8P0
 
 - [ ] Handmade Hero Day 033 - Virtualized Tile Maps
