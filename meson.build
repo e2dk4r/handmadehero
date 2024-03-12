@@ -1,11 +1,11 @@
 project(
-	'handmadehero',
-	'c',
-	version: '0.1-dev',
-	default_options: [
-		'c_std=c99',
-		'warning_level=2',
-		'werror=true',
+  'handmadehero',
+  'c',
+  version: '0.1-dev',
+  default_options: [
+    'c_std=c99',
+    'warning_level=2',
+    'werror=true',
   ],
 )
 
@@ -13,17 +13,17 @@ is_build_debug = get_option('buildtype').startswith('debug')
 cc = meson.get_compiler('c')
 
 add_project_arguments(
-	[
-		'-march=x86-64-v3',
-		'-funroll-loops',
-		'-fomit-frame-pointer',
+  [
+    '-march=x86-64-v3',
+    '-funroll-loops',
+    '-fomit-frame-pointer',
 
-		'-Wconversion',
-		'-Wno-unused-parameter',
-		'-Wno-unused-result',
-		'-Wno-missing-braces',
-	],
-	language: 'c',
+    '-Wconversion',
+    '-Wno-unused-parameter',
+    '-Wno-unused-result',
+    '-Wno-missing-braces',
+  ],
+  language: 'c',
 )
 
 wayland_client = dependency('wayland-client')
@@ -75,17 +75,17 @@ endif
 subdir('tool')
 
 executable(
-	'handmadehero',
-	sources: sources + wl_protocols_src,
-	include_directories: [
-		'include',
-		'protocol',
-	],
-	dependencies: [
-		wayland_client,
-		xkbcommon,
-		libudev,
-		liburing,
-		vulkan,
-	]
+  'handmadehero',
+  sources: sources + wl_protocols_src,
+  include_directories: [
+    'include',
+    'protocol',
+  ],
+  dependencies: [
+    wayland_client,
+    xkbcommon,
+    libudev,
+    liburing,
+    vulkan,
+  ]
 )

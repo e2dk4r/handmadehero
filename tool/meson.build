@@ -1,9 +1,9 @@
 executable(
-	'hh_record_read',
+  'hh_record_read',
   sources: [
     'hh_record_read/main.c'
   ],
-	include_directories: [
-		'../include',
-	],
+  include_directories: [
+    '../include',
+  ],
 )
