@@ -431,7 +431,8 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 
     /* if key is pressed, toggle between record and playback */
     if (!RecordInputStarted(state)) {
-      memset(state->input->controllers, 0, HANDMADEHERO_CONTROLLER_COUNT * sizeof(state->input->controllers));
+      memset(state->input->controllers, 0,
+             HANDMADEHERO_CONTROLLER_COUNT * sizeof(state->input->controllers));
       PlaybackInputEnd(state);
       RecordInputBegin(state, 1);
     } else {
@@ -443,25 +444,25 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 
   case 'A':
   case 'a': {
-    //assert(controller->moveLeft.pressed != keystate);
+    // assert(controller->moveLeft.pressed != keystate);
     controller->moveLeft.pressed = (u8)(keystate & 0x1);
   } break;
 
   case 'D':
   case 'd': {
-    //assert(controller->moveRight.pressed != keystate);
+    // assert(controller->moveRight.pressed != keystate);
     controller->moveRight.pressed = (u8)(keystate & 0x1);
   } break;
 
   case 'W':
   case 'w': {
-    //assert(controller->moveUp.pressed != keystate);
+    // assert(controller->moveUp.pressed != keystate);
     controller->moveUp.pressed = (u8)(keystate & 0x1);
   } break;
 
   case 'S':
   case 's': {
-    //assert(controller->moveDown.pressed != keystate);
+    // assert(controller->moveDown.pressed != keystate);
     controller->moveDown.pressed = (u8)(keystate & 0x1);
   } break;
   }
