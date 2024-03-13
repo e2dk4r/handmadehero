@@ -96,8 +96,8 @@ struct world {
   u32 tileSideInPixels;
   f32 metersToPixels;
 
-  f32 upperLeftX;
-  f32 upperLeftY;
+  f32 lowerLeftX;
+  f32 lowerLeftY;
 
   i32 tilemapWidth;
   i32 tilemapHeight;

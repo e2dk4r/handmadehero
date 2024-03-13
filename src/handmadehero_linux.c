@@ -363,7 +363,7 @@ static void joystick_key(struct linux_state *state, u16 type, u16 code,
     if (value >= -129 && value <= 128)
       value = 0;
     f32 y = (f32)value / max;
-    controller->stickAverageY = y;
+    controller->stickAverageY = -y;
   }
 
   else if (code == BTN_NORTH) {

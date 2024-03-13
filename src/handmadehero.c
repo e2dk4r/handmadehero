@@ -86,8 +86,8 @@ static struct world WORLD_DEFAULT = {
     .tileSideInPixels = TILE_SIDE_IN_PIXELS,
     .metersToPixels = (f32)TILE_SIDE_IN_PIXELS / TILE_SIDE_IN_METERS,
 
-    .upperLeftX = -(f32)TILE_SIDE_IN_PIXELS * 0.5f,
-    .upperLeftY = 0.0f,
+    .lowerLeftX = -(f32)TILE_SIDE_IN_PIXELS * 0.5f,
+    .lowerLeftY = 0.0f,
 
     .tilemapWidth = 17,
     .tilemapHeight = 9,
@@ -238,6 +238,7 @@ static u8 WorldIsPointEmpty(struct world *world, struct position testPos) {
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct world *world = &WORLD_DEFAULT;
   struct game_state *state = memory->permanentStorage;
+  world->lowerLeftY = (f32)backbuffer->height;
 
   if (!memory->initialized) {
     state->playerPos.tilemapX = 0;
@@ -282,11 +283,11 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     if (controller->moveDown.pressed) {
-      dPlayerY = 1.0f;
+      dPlayerY = -1.0f;
     }
 
     if (controller->moveUp.pressed) {
-      dPlayerY = -1.0f;
+      dPlayerY = 1.0f;
     }
 
     static const f32 playerSpeed = 2.0f;
@@ -332,11 +333,11 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         gray = 0.0f;
       }
 
-      f32 minX = world->upperLeftX + (f32)column * (f32)world->tileSideInPixels;
-      f32 minY = world->upperLeftY + (f32)row * (f32)world->tileSideInPixels;
-      f32 maxX = minX + (f32)world->tileSideInPixels;
-      f32 maxY = minY + (f32)world->tileSideInPixels;
-      draw_rectangle(backbuffer, minX, minY, maxX, maxY, gray, gray, gray);
+      f32 left = world->lowerLeftX + (f32)column * (f32)world->tileSideInPixels;
+      f32 bottom = world->lowerLeftY - (f32)row * (f32)world->tileSideInPixels;
+      f32 right = left + (f32)world->tileSideInPixels;
+      f32 top = bottom - (f32)world->tileSideInPixels;
+      draw_rectangle(backbuffer, left, top, right, bottom, gray, gray, gray);
     }
   }
 
@@ -346,7 +347,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
   f32 playerLeft =
       /* screen offset */
-      world->upperLeftX
+      world->lowerLeftX
       /* tile */
       + (f32)state->playerPos.tileX * (f32)world->tileSideInPixels
       /* relative to tile */
@@ -356,11 +357,11 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
   f32 playerTop =
       /* screen offset */
-      world->upperLeftY
+      world->lowerLeftY
       /* tile */
-      + (f32)state->playerPos.tileY * (f32)world->tileSideInPixels
+      - (f32)state->playerPos.tileY * (f32)world->tileSideInPixels
       /* relative to tile */
-      + state->playerPos.tileRelY * world->metersToPixels
+      - state->playerPos.tileRelY * world->metersToPixels
       /* offset */
       - playerHeight * world->metersToPixels;
 
