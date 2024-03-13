@@ -136,7 +136,7 @@
 - [x] Handmade Hero Day 032 - Unified Position Representation
       https://www.youtube.com/watch?v=vI39C4iR8P0
 
-- [ ] Handmade Hero Day 033 - Virtualized Tile Maps
+- [x] Handmade Hero Day 033 - Virtualized Tile Maps
       https://www.youtube.com/watch?v=iHSAOSYOt9E
 
 - [ ] Handmade Hero Day 034 - Tile Map Memory
