@@ -1,13 +1,15 @@
 /* system */
 #define _GNU_SOURCE
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <libudev.h>
+#include <libevdev/libevdev.h>
 #include <liburing.h>
 #include <linux/input.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/inotify.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -16,6 +18,10 @@
 #include <xkbcommon/xkbcommon.h>
 
 #define POLLIN 0x001 /* There is data to read.  */
+
+#ifndef DT_CHR
+#define DT_CHR 2
+#endif
 
 /* generated */
 #include "viewporter-client-protocol.h"
@@ -742,7 +748,7 @@ comptime struct wl_registry_listener registry_listener = {
  *****************************************************************/
 
 #define OP_WAYLAND (1 << 0)
-#define OP_UDEV_MONITOR (1 << 1)
+#define OP_INOTIFY_WATCH (1 << 1)
 #define OP_JOYSTICK_POLL (1 << 2)
 #define OP_JOYSTICK_READ (1 << 3)
 
@@ -759,6 +765,11 @@ struct op_joystick_read {
 
 #define ACTION_ADD (1 << 0)
 #define ACTION_REMOVE (1 << 1)
+
+static inline u8 libevdev_is_joystick(struct libevdev *evdev) {
+  return libevdev_has_event_type(evdev, EV_ABS) &&
+         libevdev_has_event_code(evdev, EV_ABS, ABS_X);
+}
 
 int main(int argc, char *argv[]) {
   int error_code = 0;
@@ -947,89 +958,95 @@ int main(int argc, char *argv[]) {
   io_uring_sqe_set_data(sqe,
                         &(struct op){.type = OP_WAYLAND, .fd = fd_wl_display});
 
-  /* udev */
-  struct udev *udev = udev_new();
-  if (!udev) {
-    error_code = HANDMADEHERO_ERROR_UDEV_SETUP;
+  /* inotify: notify when a new input added */
+  int fd_inotify = inotify_init1(IN_NONBLOCK);
+  if (fd_inotify < 0) {
+    error_code = HANDMADEHERO_ERROR_INOTIFY_SETUP;
     goto io_uring_exit;
   }
 
-  struct udev_monitor *udev_monitor =
-      udev_monitor_new_from_netlink(udev, "udev");
-  if (!udev_monitor) {
-    error_code = HANDMADEHERO_ERROR_UDEV_SETUP;
-    goto udev_exit;
-  }
-
-  if (udev_monitor_enable_receiving(udev_monitor) < 0) {
-    error_code = HANDMADEHERO_ERROR_UDEV_SETUP;
-    goto udev_monitor_exit;
-  }
-
-  if (udev_monitor_filter_add_match_subsystem_devtype(udev_monitor, "input",
-                                                      0) < 0) {
-    error_code = HANDMADEHERO_ERROR_UDEV_SETUP;
-    goto udev_monitor_exit;
-  }
-
-  /* io_uring: poll on udev_monitor */
-  int fd_udev = udev_monitor_get_fd(udev_monitor);
-  if (fd_udev < 0) {
-    error_code = HANDMADEHERO_ERROR_UDEV_SETUP;
-    goto udev_monitor_exit;
+  int fd_watch =
+      inotify_add_watch(fd_inotify, "/dev/input", IN_CREATE | IN_DELETE);
+  if (fd_watch < 0) {
+    error_code = HANDMADEHERO_ERROR_INOTIFY_WATCH_SETUP;
+    goto inotify_exit;
   }
 
   sqe = io_uring_get_sqe(&ring);
-  io_uring_prep_poll_multishot(sqe, fd_udev, POLLIN);
-  io_uring_sqe_set_data(sqe,
-                        &(struct op){.type = OP_UDEV_MONITOR, .fd = fd_udev});
+  struct op *op = &(struct op){.type = OP_INOTIFY_WATCH, .fd = fd_inotify};
+  io_uring_prep_poll_multishot(sqe, op->fd, POLLIN);
+  io_uring_sqe_set_data(sqe, op);
 
-  /* udev: add already connected joysticks to queue */
-  struct udev_enumerate *udev_enumerate = udev_enumerate_new(udev);
-  udev_enumerate_add_match_subsystem(udev_enumerate, "input");
-  udev_enumerate_add_match_property(udev_enumerate, "ID_INPUT_JOYSTICK", "1");
-
-  if (udev_enumerate_scan_devices(udev_enumerate) >= 0) {
-    struct udev_list_entry *devices =
-        udev_enumerate_get_list_entry(udev_enumerate);
-    struct udev_list_entry *entry;
-
-    for (entry = devices; entry; entry = udev_list_entry_get_next(entry)) {
-      const char *syspath = udev_list_entry_get_name(entry);
-      struct udev_device *udev_device =
-          udev_device_new_from_syspath(udev, syspath);
-      if (!udev_device)
-        continue;
-      const char *devnode = udev_device_get_devnode(udev_device);
-
-      /* /dev/input/eventXX not found */
-      if (!devnode) {
-        udev_device_unref(udev_device);
-        continue;
-      }
-
-      struct op_joystick_read *op = &(struct op_joystick_read){
-          .type = OP_JOYSTICK_READ,
-      };
-
-      op->fd = open(devnode, O_RDONLY | O_NONBLOCK);
-      if (op->fd < 0) {
-        udev_device_unref(udev_device);
-        udev_enumerate_unref(udev_enumerate);
-        error_code = HANDMADEHERO_ERROR_UDEV_MONITOR;
-        goto udev_monitor_exit;
-      }
-
-      sqe = io_uring_get_sqe(&ring);
-      io_uring_prep_read(sqe, op->fd, &op->event, sizeof(op->event), 0);
-      io_uring_sqe_set_data(sqe, op);
-
-      udev_device_unref(udev_device);
-    }
+  /* add already connected joysticks to queue */
+  DIR *dir = opendir("/dev/input");
+  if (dir == 0) {
+    error_code = HANDMADEHERO_ERROR_DEV_INPUT_DIR_OPEN;
+    goto inotify_watch_exit;
   }
-  udev_enumerate_unref(udev_enumerate);
-  udev_enumerate = 0;
 
+  struct dirent *dirent;
+  u32 dirent_max = 1024;
+  while (dirent_max--) {
+    errno = 0;
+    dirent = readdir(dir);
+
+    /* error occured */
+    if (errno != 0) {
+      error_code = HANDMADEHERO_ERROR_DEV_INPUT_DIR_READ;
+      closedir(dir);
+      goto inotify_watch_exit;
+    }
+
+    /* end of directory stream is reached */
+    if (dirent == 0)
+      break;
+
+    if (dirent->d_type != DT_CHR)
+      continue;
+
+    /* get full path */
+    char path[32] = "/dev/input/";
+    for (char *dest = path + 11, *src = dirent->d_name; *src; src++, dest++) {
+      *dest = *src;
+    }
+
+    struct op_joystick_read *op = &(struct op_joystick_read){
+        .type = OP_JOYSTICK_READ,
+    };
+
+    op->fd = open(path, O_RDONLY | O_NONBLOCK);
+    if (op->fd < 0)
+      continue;
+
+    struct libevdev *evdev;
+    int rc = libevdev_new_from_fd(op->fd, &evdev);
+    if (rc < 0) {
+      debug("libevdev failed\n");
+      close(op->fd);
+      if (evdev)
+        libevdev_free(evdev);
+      continue;
+    }
+
+    /* detect joystick */
+    if (!libevdev_is_joystick(evdev)) {
+      close(op->fd);
+      libevdev_free(evdev);
+      continue;
+    }
+
+    debugf("Input device name: \"%s\"\n", libevdev_get_name(evdev));
+    debugf("Input device ID: bus %#x vendor %#x product %#x\n",
+           libevdev_get_id_bustype(evdev), libevdev_get_id_vendor(evdev),
+           libevdev_get_id_product(evdev));
+
+    struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
+    io_uring_prep_read(sqe, op->fd, &op->event, sizeof(op->event), 0);
+    io_uring_sqe_set_data(sqe, op);
+
+    libevdev_free(evdev);
+  }
+  closedir(dir);
   /* submit any work */
   io_uring_submit(&ring);
 
@@ -1061,86 +1078,106 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    /* on udev events */
-    else if (op->type & OP_UDEV_MONITOR) {
+    /* on inotify events */
+    if (op->type & OP_INOTIFY_WATCH) {
       wl_display_cancel_read(wl_display);
-      /* on udev monitor error, finish the program */
+
+      /* on inotify watch error, finish the program */
       if (cqe->res < 0) {
-        error_code = HANDMADEHERO_ERROR_UDEV_MONITOR;
+        debug("inotify watch\n");
+        error_code = HANDMADEHERO_ERROR_INOTIFY_WATCH;
         break;
       }
 
       int revents = cqe->res;
-
       if (!(revents & POLLIN)) {
-        error_code = HANDMADEHERO_ERROR_UDEV_MONITOR;
+        error_code = HANDMADEHERO_ERROR_INOTIFY_WATCH_POLL;
         break;
       }
 
-      struct udev_device *udev_device =
-          udev_monitor_receive_device(udev_monitor);
-      if (!udev_device)
+      /* note: reading one inotify_event (16 bytes) fails */
+      u8 buf[32];
+      ssize_t readBytes = read(op->fd, buf, sizeof(buf));
+      if (readBytes < 0) {
+        goto cqe_seen;
+      }
+
+      struct inotify_event *event = (struct inotify_event *)buf;
+      if (event->len <= 0)
         goto cqe_seen;
 
-      if (!udev_device_get_is_initialized(udev_device)) {
-        goto op_monitor_exit;
-      }
-
-      const char *devnode = udev_device_get_devnode(udev_device);
-      if (!devnode)
-        goto op_monitor_exit;
-
-      struct udev_list_entry *properties =
-          udev_device_get_properties_list_entry(udev_device);
-      struct udev_list_entry *property;
-
-      u8 isJoystick = 0;
       u8 action = 0;
-      udev_list_entry_foreach(property, properties) {
-        const char *name = udev_list_entry_get_name(property);
-        const char *value = udev_list_entry_get_value(property);
+      if (event->mask & IN_CREATE)
+        action = ACTION_ADD;
+      else if (event->mask & IN_DELETE)
+        action = ACTION_REMOVE;
 
-        if (strcmp(name, "ACTION") == 0 && strcmp(value, "add") == 0) {
-          action = ACTION_ADD;
-        }
+      if (event->mask & IN_ISDIR)
+        goto cqe_seen;
 
-        if (strcmp(name, "ACTION") == 0 && strcmp(value, "remove") == 0) {
-          action = ACTION_REMOVE;
-        }
-
-        if (strcmp(name, "ID_INPUT_JOYSTICK") == 0 && strcmp(value, "1") == 0) {
-          isJoystick = 1;
-        }
+      /* get full path */
+      char path[32] = "/dev/input/";
+      for (char *dest = path + 11, *src = event->name; *src; src++, dest++) {
+        *dest = *src;
       }
 
-      if (!isJoystick)
-        goto op_monitor_exit;
+      if (action & ACTION_REMOVE)
+        goto cqe_seen;
 
-      if (action & ACTION_ADD) {
-        struct op_joystick_read *op = &(struct op_joystick_read){
-            .type = OP_JOYSTICK_READ,
-        };
+      struct op_joystick_read *op = &(struct op_joystick_read){
+          .type = OP_JOYSTICK_READ,
+      };
 
-        op->fd = open(devnode, O_RDONLY | O_NONBLOCK);
-        if (op->fd < 0) {
-          goto op_monitor_exit;
+      /* try loop for opening file until is ready.
+       *
+       * if we try to open file that is not ready,
+       * we get errno 13 EACCESS.
+       */
+      u32 try = 1 << 17;
+      while (1) {
+        if (try == 0) {
+          debug("open failed\n");
+          goto cqe_seen;
         }
 
-        /* added joystick device */
-        sqe = io_uring_get_sqe(&ring);
-        io_uring_prep_read(sqe, op->fd, &op->event, sizeof(op->event), 0);
-        io_uring_sqe_set_data(sqe, op);
-        io_uring_submit(&ring);
-        debug("added\n");
-      } else if (action & ACTION_REMOVE) {
-        /* removed joystick device */
-        debug("removed\n");
-        /* TODO: reset analog controllers buttons if any pressed */
+        op->fd = open(path, O_RDONLY | O_NONBLOCK);
+        if (op->fd >= 0) {
+          break;
+        }
+
+        try--;
       }
 
-    op_monitor_exit:
-      udev_device_unref(udev_device);
-    } /* on udev events finish */
+      struct libevdev *evdev;
+      int rc = libevdev_new_from_fd(op->fd, &evdev);
+      if (rc < 0) {
+        debug("libevdev failed\n");
+        close(op->fd);
+        if (evdev)
+          libevdev_free(evdev);
+        goto cqe_seen;
+      }
+
+      /* detect joystick */
+      if (!libevdev_is_joystick(evdev)) {
+        debug("This device does not look like a joystick\n");
+        close(op->fd);
+        libevdev_free(evdev);
+        goto cqe_seen;
+      }
+
+      printf("Input device name: \"%s\"\n", libevdev_get_name(evdev));
+      printf("Input device ID: bus %#x vendor %#x product %#x\n",
+             libevdev_get_id_bustype(evdev), libevdev_get_id_vendor(evdev),
+             libevdev_get_id_product(evdev));
+
+      sqe = io_uring_get_sqe(&ring);
+      io_uring_prep_read(sqe, op->fd, &op->event, sizeof(op->event), 0);
+      io_uring_sqe_set_data(sqe, op);
+      io_uring_submit(&ring);
+
+      libevdev_free(evdev);
+    }
 
     /* on joystick events */
     else if (op->type & OP_JOYSTICK_READ) {
@@ -1168,11 +1205,11 @@ int main(int argc, char *argv[]) {
   }
 
   /* finished */
-udev_monitor_exit:
-  udev_monitor_unref(udev_monitor);
+inotify_watch_exit:
+  close(fd_watch);
 
-udev_exit:
-  udev_unref(udev);
+inotify_exit:
+  close(fd_inotify);
 
 io_uring_exit:
   io_uring_queue_exit(&ring);

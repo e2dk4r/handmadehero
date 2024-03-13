@@ -29,7 +29,7 @@ add_project_arguments(
 wayland_client = dependency('wayland-client')
 wayland_protocols = dependency('wayland-protocols', native: true)
 xkbcommon = dependency('xkbcommon')
-libudev = dependency('libudev')
+libevdev = dependency('libevdev')
 liburing = dependency('liburing')
 vulkan = dependency('vulkan')
 libm = cc.find_library('m')
@@ -84,7 +84,7 @@ executable(
   dependencies: [
     wayland_client,
     xkbcommon,
-    libudev,
+    libevdev,
     liburing,
     vulkan,
   ]
