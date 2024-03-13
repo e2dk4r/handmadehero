@@ -87,7 +87,7 @@ struct game_memory {
   void *transientStorage;
 };
 
-struct tilemap {
+struct tile_chunk {
   u32 *tiles;
 };
 
@@ -96,26 +96,37 @@ struct world {
   u32 tileSideInPixels;
   f32 metersToPixels;
 
-  f32 lowerLeftX;
-  f32 lowerLeftY;
+  u32 chunkShift;
+  u32 chunkMask;
+  u32 chunkDim;
 
-  i32 tilemapWidth;
-  i32 tilemapHeight;
-
-  i32 width;
-  i32 height;
-  struct tilemap *tilemaps;
+  u32 tileChunkCountX;
+  u32 tileChunkCountY;
+  struct tile_chunk *tileChunks;
 };
 
 struct position {
-  i32 tilemapX;
-  i32 tilemapY;
-
-  i32 tileX;
-  i32 tileY;
+  /* packad into
+   *   24-bit for tile map x,
+   *    8-bit for tile x
+   */
+  u32 absTileX;
+  /* packad into
+   *   24-bit for tile map y,
+   *    8-bit for tile y
+   */
+  u32 absTileY;
 
   f32 tileRelX;
   f32 tileRelY;
+};
+
+struct position_tile_chunk {
+  u32 tileChunkX;
+  u32 tileChunkY;
+
+  u32 relTileX;
+  u32 relTileY;
 };
 
 struct game_state {
