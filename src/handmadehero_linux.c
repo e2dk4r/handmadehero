@@ -1184,6 +1184,7 @@ int main(int argc, char *argv[]) {
       wl_display_cancel_read(wl_display);
       /* on joystick read error (eg. joystick removed), close the fd */
       if (cqe->res < 0) {
+        /* TODO: when joystick disconnected reset controller */
         if (op->fd >= 0)
           close(op->fd);
         goto cqe_seen;
