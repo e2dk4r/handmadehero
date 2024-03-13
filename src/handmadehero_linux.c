@@ -254,8 +254,7 @@ static inline u8 RecordInputStarted(struct linux_state *state) {
 static void RecordInputBegin(struct linux_state *state, u8 index) {
   debug("[RecordInput] begin\n");
   state->recordInputIndex = index;
-  unlink(recordPath);
-  state->recordInputFd = open(recordPath, O_CREAT | O_WRONLY, 0644);
+  state->recordInputFd = open(recordPath, O_CREAT | O_WRONLY | O_TRUNC, 0644);
   assert(state->recordInputFd >= 0);
 }
 
