@@ -768,7 +768,7 @@ struct op_joystick_read {
 
 static inline u8 libevdev_is_joystick(struct libevdev *evdev) {
   return libevdev_has_event_type(evdev, EV_ABS) &&
-         libevdev_has_event_code(evdev, EV_ABS, ABS_X);
+         libevdev_has_event_code(evdev, EV_ABS, ABS_RX);
 }
 
 int main(int argc, char *argv[]) {
