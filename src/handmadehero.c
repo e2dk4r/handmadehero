@@ -1,21 +1,6 @@
 #include <handmadehero/assert.h>
 #include <handmadehero/handmadehero.h>
 
-static void draw_frame(struct game_backbuffer *backbuffer, int blueOffset,
-                       int greenOffset) {
-  u8 *row = backbuffer->memory;
-  for (u32 y = 0; y < backbuffer->height; y++) {
-    u32 *pixel = (u32 *)row;
-    for (u32 x = 0; x < backbuffer->width; x++) {
-      u8 blue = (u8)((int)x + blueOffset);
-      u8 green = (u8)((int)y + greenOffset);
-
-      *pixel++ = (u32)((green << 8) | blue);
-    }
-    row += backbuffer->stride;
-  }
-}
-
 static inline i32 roundf32toi32(f32 value) {
   return (i32)__builtin_round(value);
 }
@@ -200,9 +185,6 @@ static u8 WorldIsPointEmpty(struct world *world, struct position *testPos) {
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct world *world = &WORLD_DEFAULT;
   struct game_state *state = memory->permanentStorage;
-
-  const f32 lowerLeftX = -(f32)world->tileSideInPixels / 2;
-  const f32 lowerLeftY = (f32)backbuffer->height;
 
   if (!memory->initialized) {
     state->playerPos.absTileX = 3;
