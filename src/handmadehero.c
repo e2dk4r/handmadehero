@@ -248,7 +248,11 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       dPlayerY = 1.0f;
     }
 
-    static const f32 playerSpeed = 2.0f;
+    f32 playerSpeed = 2.0f;
+    if (controller->actionDown.pressed) {
+      playerSpeed = 10.0f;
+    }
+
     dPlayerX *= playerSpeed;
     dPlayerY *= playerSpeed;
 
