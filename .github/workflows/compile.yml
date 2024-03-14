@@ -11,12 +11,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
     - name: install packages
       run: sudo apt-get install -y --no-install-recommends --no-install-suggests
            meson ninja-build
            libevdev-dev liburing-dev
            libvulkan-dev libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev
+
     - name: configure
       run: meson setup build
+
     - name: ninja
       run: ninja -C build
+
+    - name: release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      if: ${{ startsWith(github.event.head_commit.message, 'watchlist:') }}
+      continue-on-error: true
+      run: |
+        day=$(echo ${{ github.event.head_commit.message }} | tr ' ' '\n' | tail -n 1)
+        output=handmadehero-day-$day
+        file=$output.tar.zst
+
+        mkdir $output
+        cp build/handmadehero build/libhandmadehero.so $output
+        tar cf - $output | zstd --ultra -22 -T0 -o $file
+
+        gh release create day-$day $file
