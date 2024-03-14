@@ -139,7 +139,7 @@
 - [x] Handmade Hero Day 033 - Virtualized Tile Maps
       https://www.youtube.com/watch?v=iHSAOSYOt9E
 
-- [ ] Handmade Hero Day 034 - Tile Map Memory
+- [x] Handmade Hero Day 034 - Tile Map Memory
       https://www.youtube.com/watch?v=IJYTwhqfKLg
 
 - [ ] Handmade Hero Day 035 - Basic Sparse Tilemap Storage
