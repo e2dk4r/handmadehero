@@ -308,8 +308,20 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         gray = 0.0f;
       }
 
-      f32 left = centerX + (f32)relColumn * (f32)world->tileSideInPixels;
-      f32 bottom = centerY - (f32)relRow * (f32)world->tileSideInPixels;
+      f32 left =
+          /* screen offset */
+          centerX
+          /* player offset */
+          - state->playerPos.tileRelX * world->metersToPixels
+          /* tile offset */
+          + (f32)relColumn * (f32)world->tileSideInPixels;
+      f32 bottom =
+          /* screen offset */
+          centerY
+          /* player offset */
+          + state->playerPos.tileRelY * world->metersToPixels
+          /* tile offset */
+          - (f32)relRow * (f32)world->tileSideInPixels;
       f32 right = left + (f32)world->tileSideInPixels;
       f32 top = bottom - (f32)world->tileSideInPixels;
       draw_rectangle(backbuffer, left, top, right, bottom, gray, gray, gray);
@@ -323,16 +335,12 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   f32 playerLeft =
       /* screen offset */
       centerX
-      /* relative to tile */
-      + state->playerPos.tileRelX * world->metersToPixels
       /* offset */
       - 0.5f * playerWidth * world->metersToPixels;
 
   f32 playerTop =
       /* screen offset */
       centerY
-      /* relative to tile */
-      - state->playerPos.tileRelY * world->metersToPixels
       /* offset */
       - playerHeight * world->metersToPixels;
 
