@@ -1,26 +1,10 @@
 #ifndef HANDMADEHERO_H
 
 #include "assert.h"
+#include "memory_arena.h"
+#include "tile.h"
 #include "types.h"
 
-/****************************************************************
- * Platform Layer
- ****************************************************************/
-#if HANDMADEHERO_INTERNAL
-
-struct read_file_result {
-  u64 size;
-  void *data;
-};
-struct read_file_result PlatformReadEntireFile(char *path);
-u8 PlatformWriteEntireFile(char *path, u64 size, void *data);
-void PlatformFreeMemory(void *address);
-
-#endif
-
-/****************************************************************
- * Game Layer
- ****************************************************************/
 struct game_backbuffer {
   u32 width;
   u32 height;
@@ -87,50 +71,15 @@ struct game_memory {
   void *transientStorage;
 };
 
-struct tile_chunk {
-  u32 *tiles;
-};
-
 struct world {
-  f32 tileSideInMeters;
-  u32 tileSideInPixels;
-  f32 metersToPixels;
-
-  u32 chunkShift;
-  u32 chunkMask;
-  u32 chunkDim;
-
-  u32 tileChunkCountX;
-  u32 tileChunkCountY;
-  struct tile_chunk *tileChunks;
-};
-
-struct position {
-  /* packad into
-   *   24-bit for tile map x,
-   *    8-bit for tile x
-   */
-  u32 absTileX;
-  /* packad into
-   *   24-bit for tile map y,
-   *    8-bit for tile y
-   */
-  u32 absTileY;
-
-  f32 tileRelX;
-  f32 tileRelY;
-};
-
-struct position_tile_chunk {
-  u32 tileChunkX;
-  u32 tileChunkY;
-
-  u32 relTileX;
-  u32 relTileY;
+  struct tile_map *tileMap;
 };
 
 struct game_state {
-  struct position playerPos;
+  struct memory_arena worldArena;
+  struct world *world;
+
+  struct position_tile_map playerPos;
 };
 
 #define GAMEUPDATEANDRENDER(name)                                              \

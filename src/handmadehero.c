@@ -1,19 +1,6 @@
 #include <handmadehero/assert.h>
 #include <handmadehero/handmadehero.h>
-
-static inline i32 roundf32toi32(f32 value) {
-  return (i32)__builtin_round(value);
-}
-
-static inline u32 roundf32tou32(f32 value) {
-  return (u32)__builtin_round(value);
-}
-
-static inline i32 truncatef32toi32(f32 value) { return (i32)value; }
-
-static inline i32 floorf32toi32(f32 value) {
-  return (i32)__builtin_floor(value);
-}
+#include <handmadehero/math.h>
 
 static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
                            f32 realMinY, f32 realMaxX, f32 realMaxY, f32 r,
@@ -61,139 +48,83 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
   }
 }
 
-static const f32 TILE_SIDE_IN_METERS = 1.4f;
-static const u32 TILE_SIDE_IN_PIXELS = 60;
-static const u32 CHUNK_BITS = 8;
-
-static struct world WORLD_DEFAULT = {
-    /* NOTE: this is set to using 256x256 tile chunks */
-    .chunkShift = CHUNK_BITS,
-    .chunkMask = (1 << CHUNK_BITS) - 1,
-    .chunkDim = (1 << CHUNK_BITS),
-
-    .tileSideInMeters = TILE_SIDE_IN_METERS,
-    .tileSideInPixels = TILE_SIDE_IN_PIXELS,
-    .metersToPixels = (f32)TILE_SIDE_IN_PIXELS / TILE_SIDE_IN_METERS,
-
-    .tileChunkCountX = 1,
-    .tileChunkCountY = 1,
-    .tileChunks =
-        (struct tile_chunk[]){
-            {
-                // clang-format off
-                .tiles = (u32*)(u32[256][256]){
-                  { 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1, },
-                  { 1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0, },
-                  { 1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1, },
-                  { 1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1, },
-                  { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1, },
-                  { 1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1, },
-                },
-
-                // clang-format on
-            },
-        },
-};
-
-static inline u32 TileChunkGetTileValue(struct world *world,
-                                        struct tile_chunk *tileChunk, u32 x,
-                                        u32 y) {
-  assert(tileChunk);
-  assert(x < world->chunkDim);
-  assert(y < world->chunkDim);
-  return tileChunk->tiles[y * world->chunkDim + x];
-}
-
-static inline struct tile_chunk *
-WorldGetTileChunk(struct world *world, u32 tileChunkX, u32 tileChunkY) {
-  if (tileChunkX > world->chunkDim)
-    return 0;
-
-  if (tileChunkY > world->chunkDim)
-    return 0;
-
-  return &world->tileChunks[tileChunkY * world->chunkDim + tileChunkY];
-}
-
-static inline void PositionCorrectCoord(struct world *world, u32 *tile,
-                                        f32 *tileRel) {
-  /* NOTE: World is assumed to be toroidal topology, if you step off one end
-   * you come back on other.
-   */
-
-  i32 offset = roundf32toi32(*tileRel / world->tileSideInMeters);
-  *tile += (u32)offset;
-  *tileRel -= (f32)offset * world->tileSideInMeters;
-
-  assert(*tileRel >= -0.5f * world->tileSideInMeters);
-  assert(*tileRel < 0.5f * world->tileSideInMeters);
-}
-
-static struct position PositionCorrect(struct world *world,
-                                       struct position *pos) {
-  struct position result = *pos;
-
-  PositionCorrectCoord(world, &result.absTileX, &result.tileRelX);
-  PositionCorrectCoord(world, &result.absTileY, &result.tileRelY);
-
-  return result;
-}
-
-static inline struct position_tile_chunk
-PositionTileChunkGet(struct world *world, u32 absTileX, u32 absTileY) {
-  struct position_tile_chunk result;
-
-  result.tileChunkX = absTileX >> world->chunkShift;
-  result.tileChunkY = absTileY >> world->chunkShift;
-
-  result.relTileX = absTileX & world->chunkMask;
-  result.relTileY = absTileY & world->chunkMask;
-
-  return result;
-}
-
-static inline u32 TileGetValue(struct world *world, u32 absTileX,
-                               u32 absTileY) {
-  struct position_tile_chunk chunkPos =
-      PositionTileChunkGet(world, absTileX, absTileY);
-  struct tile_chunk *tileChunk =
-      WorldGetTileChunk(world, chunkPos.tileChunkX, chunkPos.tileChunkY);
-  assert(tileChunk);
-  u32 value = TileChunkGetTileValue(world, tileChunk, chunkPos.relTileX,
-                                    chunkPos.relTileY);
-
-  return value;
-}
-
-static u8 WorldIsPointEmpty(struct world *world, struct position *testPos) {
-  u32 value = TileGetValue(world, testPos->absTileX, testPos->absTileY);
+static inline u8 WorldIsPointEmpty(struct tile_map *tileMap,
+                                   struct position_tile_map *testPos) {
+  u32 value = TileGetValue(tileMap, testPos->absTileX, testPos->absTileY);
   return value == 0;
 }
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
-  struct world *world = &WORLD_DEFAULT;
   struct game_state *state = memory->permanentStorage;
 
   if (!memory->initialized) {
-    state->playerPos.absTileX = 3;
+    state->playerPos.absTileX = 1;
     state->playerPos.absTileY = 3;
     state->playerPos.tileRelX = 5.0f;
     state->playerPos.tileRelY = 5.0f;
 
+    /* world creation */
+    void *data = memory->permanentStorage + sizeof(*state);
+    memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
+    MemoryArenaInit(&state->worldArena, data, size);
+
+    struct world *world = MemoryArenaPush(&state->worldArena, sizeof(*world));
+    state->world = world;
+    struct tile_map *tileMap =
+        MemoryArenaPush(&state->worldArena, sizeof(*tileMap));
+    world->tileMap = tileMap;
+
+    tileMap->chunkShift = 4;
+    tileMap->chunkDim = (u32)(1 << tileMap->chunkShift);
+    tileMap->chunkMask = (u32)(1 << tileMap->chunkShift) - 1;
+
+    tileMap->tileSideInMeters = 1.4f;
+    tileMap->tileSideInPixels = 60;
+    tileMap->metersToPixels =
+        (f32)tileMap->tileSideInPixels / tileMap->tileSideInMeters;
+
+    tileMap->tileChunkCountX = 128;
+    tileMap->tileChunkCountY = 128;
+    tileMap->tileChunks =
+        MemoryArenaPush(&state->worldArena, sizeof(struct tile_chunk) *
+                                                tileMap->tileChunkCountX *
+                                                tileMap->tileChunkCountY);
+    for (u32 x = 0; x < tileMap->tileChunkCountX; x++) {
+      for (u32 y = 0; y < tileMap->tileChunkCountY; y++) {
+        tileMap->tileChunks[y * tileMap->tileChunkCountX + x].tiles =
+            MemoryArenaPush(&state->worldArena, sizeof(u32) *
+                                                    tileMap->chunkDim *
+                                                    tileMap->chunkDim);
+      }
+    }
+
+    /* generate procedural tile map */
+    u32 screenDim = 32;
+    u32 tilesPerWidth = 17;
+    u32 tilesPerHeight = 9;
+
+    for (u32 screenY = 0; screenY < screenDim; screenY++) {
+      for (u32 screenX = 0; screenX < screenDim; screenX++) {
+        for (u32 tileY = 0; tileY < tilesPerHeight; tileY++) {
+          for (u32 tileX = 0; tileX < tilesPerWidth; tileX++) {
+
+            u32 absTileX = screenX * tilesPerWidth + tileX;
+            u32 absTileY = screenY * tilesPerHeight + tileY;
+
+            u32 value = tileX == tileY && tileY & 1;
+            TileSetValue(tileMap, absTileX, absTileY, value);
+          }
+        }
+      }
+    }
+
     memory->initialized = 1;
   }
+
+  struct world *world = state->world;
+  assert(world);
+  struct tile_map *tileMap = world->tileMap;
+  assert(tileMap);
 
   /* unit: meters */
   f32 playerHeight = 1.4f;
@@ -238,20 +169,21 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     dPlayerX *= playerSpeed;
     dPlayerY *= playerSpeed;
 
-    struct position newPlayerPos = state->playerPos;
+    struct position_tile_map newPlayerPos = state->playerPos;
     newPlayerPos.tileRelX += input->dtPerFrame * dPlayerX;
     newPlayerPos.tileRelY += input->dtPerFrame * dPlayerY;
-    newPlayerPos = PositionCorrect(world, &newPlayerPos);
+    newPlayerPos = PositionCorrect(tileMap, &newPlayerPos);
 
-    struct position left = newPlayerPos;
+    struct position_tile_map left = newPlayerPos;
     left.tileRelX -= playerWidth * 0.5f;
-    left = PositionCorrect(world, &left);
+    left = PositionCorrect(tileMap, &left);
 
-    struct position right = newPlayerPos;
+    struct position_tile_map right = newPlayerPos;
     right.tileRelX += playerWidth * 0.5f;
-    right = PositionCorrect(world, &right);
+    right = PositionCorrect(tileMap, &right);
 
-    if (WorldIsPointEmpty(world, &left) && WorldIsPointEmpty(world, &right)) {
+    if (WorldIsPointEmpty(tileMap, &left) &&
+        WorldIsPointEmpty(tileMap, &right)) {
       state->playerPos = newPlayerPos;
     }
   }
@@ -262,7 +194,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   f32 screenCenterX = 0.5f * (f32)backbuffer->width;
   f32 screenCenterY = 0.5f * (f32)backbuffer->height;
 
-  struct position *playerPos = &state->playerPos;
+  struct position_tile_map *playerPos = &state->playerPos;
 
   for (i32 relRow = -10; relRow < 10; relRow++) {
     for (i32 relColumn = -20; relColumn < 20; relColumn++) {
@@ -277,7 +209,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       u32 column = (u32)testColumn;
       u32 row = (u32)testRow;
 
-      u32 tileid = TileGetValue(world, column, row);
+      u32 tileid = TileGetValue(tileMap, column, row);
       f32 gray = 0.5f;
       if (tileid != 0)
         gray = 1.0f;
@@ -292,21 +224,21 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
           /* screen offset */
           screenCenterX
           /* player offset */
-          - state->playerPos.tileRelX * world->metersToPixels
+          - state->playerPos.tileRelX * tileMap->metersToPixels
           /* tile offset */
-          + (f32)relColumn * (f32)world->tileSideInPixels;
+          + (f32)relColumn * (f32)tileMap->tileSideInPixels;
       f32 centerY =
           /* screen offset */
           screenCenterY
           /* player offset */
-          + state->playerPos.tileRelY * world->metersToPixels
+          + state->playerPos.tileRelY * tileMap->metersToPixels
           /* tile offset */
-          - (f32)relRow * (f32)world->tileSideInPixels;
+          - (f32)relRow * (f32)tileMap->tileSideInPixels;
 
-      f32 left = centerX - 0.5f * (f32)world->tileSideInPixels;
-      f32 bottom = centerY + 0.5f * (f32)world->tileSideInPixels;
-      f32 right = left + (f32)world->tileSideInPixels;
-      f32 top = bottom - (f32)world->tileSideInPixels;
+      f32 left = centerX - 0.5f * (f32)tileMap->tileSideInPixels;
+      f32 bottom = centerY + 0.5f * (f32)tileMap->tileSideInPixels;
+      f32 right = left + (f32)tileMap->tileSideInPixels;
+      f32 top = bottom - (f32)tileMap->tileSideInPixels;
       draw_rectangle(backbuffer, left, top, right, bottom, gray, gray, gray);
     }
   }
@@ -319,21 +251,21 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       /* screen offset */
       screenCenterX
       /* offset */
-      - 0.5f * playerWidth * world->metersToPixels;
+      - 0.5f * playerWidth * tileMap->metersToPixels;
 
   f32 playerTop =
       /* screen offset */
       screenCenterY
       /* offset */
-      - playerHeight * world->metersToPixels;
+      - playerHeight * tileMap->metersToPixels;
 
   draw_rectangle(backbuffer,
                  /* min x, y */
                  playerLeft, playerTop,
                  /* max x */
-                 playerLeft + playerWidth * world->metersToPixels,
+                 playerLeft + playerWidth * tileMap->metersToPixels,
                  /* max y */
-                 playerTop + playerHeight * world->metersToPixels,
+                 playerTop + playerHeight * tileMap->metersToPixels,
                  /* color */
                  playerR, playerG, playerB);
 }

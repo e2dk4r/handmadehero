@@ -32,6 +32,7 @@
 #include <handmadehero/debug.h>
 #include <handmadehero/errors.h>
 #include <handmadehero/handmadehero.h>
+#include <handmadehero/platform.h>
 
 /*****************************************************************
  * platform layer implementation
@@ -90,45 +91,6 @@ void PlatformFreeMemory(void *address) {
 const u64 KILOBYTES = 1024;
 const u64 MEGABYTES = 1024 * KILOBYTES;
 const u64 GIGABYTES = 1024 * MEGABYTES;
-
-struct mem {
-  u64 current;
-  u64 capacity;
-  void *data;
-};
-
-static void *mem_push(struct mem *mem, size_t size) {
-  void *ptr;
-
-  assert(mem->current + size <= mem->capacity && "capacity overloaded");
-  ptr = mem->data + mem->current;
-  mem->current += size;
-
-  return ptr;
-}
-
-#define mem_push_array(mem, type, count) mem_push(mem, sizeof(type) * count)
-
-/*
- * allocates bytes on ram.
- *
- * @return int 1 if allocation failed, 0 otherwise
- * @example
- *   int failed = mem_alloc(memory, 1);
- *   if (failed)
- *     fail();
- * @param mem destionation structure
- * @param len length of allocated area
- */
-static u8 mem_alloc(struct mem *mem, size_t len) {
-  mem->capacity = len;
-  mem->current = 0;
-  mem->data =
-      mmap(0, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-
-  u8 is_allocation_failed = mem->data == (void *)-1;
-  return is_allocation_failed;
-}
 
 static u8 game_memory_allocation(struct game_memory *memory,
                                  u64 permanentStorageSize,
@@ -226,7 +188,8 @@ struct linux_state {
   struct xkb_state *xkb_state;
 
   struct game_code *lib;
-  struct mem memory;
+  struct memory_arena wayland_arena;
+  struct memory_arena xkb_arena;
   struct game_memory *game_memory;
   struct game_backbuffer *backbuffer;
   struct game_input *input;
@@ -388,7 +351,7 @@ static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
   debugf("[wl_keyboard::keymap] format: %d fd: %d size: %d\n", format, fd,
          size);
 
-  void *keymap_str = mem_push(&state->memory, size);
+  void *keymap_str = MemoryArenaPush(&state->xkb_arena, size);
   keymap_str = mmap(keymap_str, size, PROT_READ, MAP_PRIVATE, fd, 0);
   close(fd);
   assert(keymap_str != MAP_FAILED);
@@ -463,6 +426,29 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
   case 's': {
     // assert(controller->moveDown.pressed != keystate);
     controller->moveDown.pressed = (u8)(keystate & 0x1);
+  } break;
+
+  case 'H':
+  case 'h': {
+    // assert(controller-actionLeft.pressed != keystate);
+    controller->actionLeft.pressed = (u8)(keystate & 0x1);
+  } break;
+
+  case ';': {
+    // assert(controller-actionRight.pressed != keystate);
+    controller->actionRight.pressed = (u8)(keystate & 0x1);
+  } break;
+
+  case 'J':
+  case 'j': {
+    // assert(controller-actionDown.pressed != keystate);
+    controller->actionDown.pressed = (u8)(keystate & 0x1);
+  } break;
+
+  case 'K':
+  case 'k': {
+    // assert(controller-actionUp.pressed != keystate);
+    controller->actionUp.pressed = (u8)(keystate & 0x1);
   } break;
   }
 }
@@ -846,7 +832,6 @@ int main(int argc, char *argv[]) {
   wl_display_roundtrip(wl_display);
 
   debugf("backbuffer: @%p\n", state.backbuffer);
-  debugf("memory: @%p\n", state.memory);
   debugf("wl_display: @%p\n", wl_display);
   debugf("wl_registry: @%p\n", registry);
   debugf("wl_compositor: @%p\n", state.wl_compositor);
@@ -885,23 +870,37 @@ int main(int argc, char *argv[]) {
 
   /* game: mem allocation */
   static struct game_memory game_memory;
-  if (game_memory_allocation(&game_memory, 8 * MEGABYTES, 2 * MEGABYTES)) {
+  if (game_memory_allocation(&game_memory, 1 * GIGABYTES, 2 * MEGABYTES)) {
     fprintf(stderr, "error: cannot allocate memory!\n");
     error_code = HANDMADEHERO_ERROR_ALLOCATION;
     goto wl_exit;
   }
   state.game_memory = &game_memory;
 
-  if (mem_alloc(&state.memory, 4 * MEGABYTES)) {
-    fprintf(stderr, "error: cannot allocate memory!\n");
-    error_code = HANDMADEHERO_ERROR_ALLOCATION;
-    goto wl_exit;
-  }
-
   /* wayland: create buffer */
   u32 backbuffer_multiplier = 1;
   u32 backbuffer_size = state.backbuffer->height * state.backbuffer->stride *
                         backbuffer_multiplier;
+  /* setup arenas */
+  {
+    u64 used = 0;
+    u64 size;
+
+    // for wayland allocations
+    size = 2 * MEGABYTES;
+    MemoryArenaInit(&state.wayland_arena, game_memory.permanentStorage + used, size);
+    used += size;
+
+    // for xkb keyboard allocations
+    size = 1 * MEGABYTES;
+    MemoryArenaInit(&state.xkb_arena, game_memory.permanentStorage + used,
+                    size);
+    used += size;
+
+    // decrease permanent storage
+    game_memory.permanentStorage += used;
+    game_memory.permanentStorageSize -= used;
+  }
 
   i32 shm_fd = create_shared_memory(backbuffer_size);
   if (shm_fd == 0) {
@@ -910,10 +909,11 @@ int main(int argc, char *argv[]) {
     goto wl_exit;
   }
 
-  state.backbuffer->memory = mem_push(&state.memory, (size_t)backbuffer_size);
+  state.backbuffer->memory =
+      MemoryArenaPush(&state.wayland_arena, (size_t)backbuffer_size);
   state.backbuffer->memory =
       mmap(state.backbuffer->memory, (size_t)backbuffer_size,
-           PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, shm_fd, 0);
+           PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   if (state.backbuffer->memory == MAP_FAILED) {
     fprintf(stderr, "error: cannot create shared memory!\n");
     error_code = HANDMADEHERO_ERROR_ALLOCATION;

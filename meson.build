@@ -36,10 +36,13 @@ libm = cc.find_library('m')
 
 subdir('protocol')
 
-sources = [
-  'src/handmadehero_linux.c',
+common_src = [
+  'src/handmadehero_memory_arena.c'
 ]
 
+platform_src = [
+  'src/handmadehero_linux.c',
+]
 
 if is_build_debug
   add_project_arguments(
@@ -52,31 +55,36 @@ if is_build_debug
     ],
     language : 'c'
   )
-  sources += 'src/debug.c'
+  platform_src += 'src/debug.c'
 endif
 
 # debug builds have handmadehero as dynamic library
 # and does not need to link with because of hot reload logic
+handmadehero_sources = [
+  'src/handmadehero_tile.c',
+  'src/handmadehero.c',
+]
+
 if is_build_debug
   handmadeheroLib = library(
     'handmadehero',
-    sources:
-      [
-        'src/handmadehero.c',
-        'src/debug.c',
-      ],
+    sources: common_src + handmadehero_sources + [
+      'src/debug.c',
+    ],
     include_directories: 'include',
-    dependencies: libm,
+    dependencies: [
+      libm,
+    ]
   )
 else
-  sources += 'src/handmadehero.c'
+  platform_src += handmadehero_sources
 endif
 
 subdir('tool')
 
 executable(
   'handmadehero',
-  sources: sources + wl_protocols_src,
+  sources: common_src + platform_src + wl_protocols_src,
   include_directories: [
     'include',
     'protocol',
@@ -87,5 +95,6 @@ executable(
     libevdev,
     liburing,
     vulkan,
+    libm,
   ]
 )
