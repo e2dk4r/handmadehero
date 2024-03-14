@@ -148,12 +148,12 @@ static inline void PositionCorrectCoord(struct world *world, u32 *tile,
    * you come back on other.
    */
 
-  i32 offset = floorf32toi32(*tileRel / world->tileSideInMeters);
+  i32 offset = roundf32toi32(*tileRel / world->tileSideInMeters);
   *tile += (u32)offset;
   *tileRel -= (f32)offset * world->tileSideInMeters;
 
-  assert(*tileRel >= 0);
-  assert(*tileRel < world->tileSideInMeters);
+  assert(*tileRel >= -0.5f * world->tileSideInMeters);
+  assert(*tileRel < 0.5f * world->tileSideInMeters);
 }
 
 static struct position PositionCorrect(struct world *world,
@@ -268,19 +268,13 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     if (WorldIsPointEmpty(world, &left) && WorldIsPointEmpty(world, &right)) {
       state->playerPos = newPlayerPos;
     }
-
-    if (controller->actionUp.pressed) {
-    }
-
-    if (controller->actionDown.pressed) {
-    }
   }
 
   draw_rectangle(backbuffer, 0, 0, (f32)backbuffer->width,
                  (f32)backbuffer->height, 1.0f, 0.0f, 0.0f);
 
-  f32 centerX = 0.5f * (f32)backbuffer->width;
-  f32 centerY = 0.5f * (f32)backbuffer->height;
+  f32 screenCenterX = 0.5f * (f32)backbuffer->width;
+  f32 screenCenterY = 0.5f * (f32)backbuffer->height;
 
   struct position *playerPos = &state->playerPos;
 
@@ -308,20 +302,23 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         gray = 0.0f;
       }
 
-      f32 left =
+      f32 centerX =
           /* screen offset */
-          centerX
+          screenCenterX
           /* player offset */
           - state->playerPos.tileRelX * world->metersToPixels
           /* tile offset */
           + (f32)relColumn * (f32)world->tileSideInPixels;
-      f32 bottom =
+      f32 centerY =
           /* screen offset */
-          centerY
+          screenCenterY
           /* player offset */
           + state->playerPos.tileRelY * world->metersToPixels
           /* tile offset */
           - (f32)relRow * (f32)world->tileSideInPixels;
+
+      f32 left = centerX - 0.5f * (f32)world->tileSideInPixels;
+      f32 bottom = centerY + 0.5f * (f32)world->tileSideInPixels;
       f32 right = left + (f32)world->tileSideInPixels;
       f32 top = bottom - (f32)world->tileSideInPixels;
       draw_rectangle(backbuffer, left, top, right, bottom, gray, gray, gray);
@@ -334,13 +331,13 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
   f32 playerLeft =
       /* screen offset */
-      centerX
+      screenCenterX
       /* offset */
       - 0.5f * playerWidth * world->metersToPixels;
 
   f32 playerTop =
       /* screen offset */
-      centerY
+      screenCenterY
       /* offset */
       - playerHeight * world->metersToPixels;
 
