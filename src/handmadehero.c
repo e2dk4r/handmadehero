@@ -91,7 +91,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                                                 tileMap->tileChunkCountX *
                                                 tileMap->tileChunkCountY);
     /* generate procedural tile map */
-    u32 screenDim = 32;
     u32 tilesPerWidth = 17;
     u32 tilesPerHeight = 9;
     u32 screenX = 0;
