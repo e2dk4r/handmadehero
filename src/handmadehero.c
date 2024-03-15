@@ -113,10 +113,12 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
             u32 value = 0;
 
-            if (tileX == 0 || tileX == tilesPerWidth - 1)
+            if (tileY != tilesPerHeight / 2 &&
+                (tileX == 0 || tileX == tilesPerWidth - 1))
               value = 1;
 
-            if (tileY == 0 || tileY == tilesPerHeight - 1)
+            if (tileX != tilesPerWidth / 2 &&
+                (tileY == 0 || tileY == tilesPerHeight - 1))
               value = 1;
 
             TileSetValue(tileMap, absTileX, absTileY, value);
