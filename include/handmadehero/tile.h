@@ -3,6 +3,10 @@
 
 #include "types.h"
 
+#define TILE_INVALID  0
+#define TILE_WALKABLE (1 << 0)
+#define TILE_BLOCKED  (1 << 1)
+
 struct tile_chunk {
   u32 *tiles;
 };

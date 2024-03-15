@@ -1,6 +1,7 @@
 #include <handmadehero/assert.h>
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/math.h>
+#include <handmadehero/random.h>
 
 static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
                            f32 realMinY, f32 realMaxX, f32 realMaxY, f32 r,
@@ -51,7 +52,7 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
 static inline u8 WorldIsPointEmpty(struct tile_map *tileMap,
                                    struct position_tile_map *testPos) {
   u32 value = TileGetValue(tileMap, testPos->absTileX, testPos->absTileY);
-  return value == 0;
+  return value & TILE_WALKABLE;
 }
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
@@ -79,7 +80,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     tileMap->chunkMask = (u32)(1 << tileMap->chunkShift) - 1;
 
     tileMap->tileSideInMeters = 1.4f;
-    tileMap->tileSideInPixels = 60;
+    tileMap->tileSideInPixels = 6;
     tileMap->metersToPixels =
         (f32)tileMap->tileSideInPixels / tileMap->tileSideInMeters;
 
@@ -102,29 +103,34 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     u32 screenDim = 32;
     u32 tilesPerWidth = 17;
     u32 tilesPerHeight = 9;
+    u32 screenX = 0;
+    u32 screenY = 0;
+    for (u32 screenIndex = 0; screenIndex < 100; screenIndex++) {
+      for (u32 tileY = 0; tileY < tilesPerHeight; tileY++) {
+        for (u32 tileX = 0; tileX < tilesPerWidth; tileX++) {
 
-    for (u32 screenY = 0; screenY < screenDim; screenY++) {
-      for (u32 screenX = 0; screenX < screenDim; screenX++) {
-        for (u32 tileY = 0; tileY < tilesPerHeight; tileY++) {
-          for (u32 tileX = 0; tileX < tilesPerWidth; tileX++) {
+          u32 absTileX = screenX * tilesPerWidth + tileX;
+          u32 absTileY = screenY * tilesPerHeight + tileY;
 
-            u32 absTileX = screenX * tilesPerWidth + tileX;
-            u32 absTileY = screenY * tilesPerHeight + tileY;
+          u32 value = TILE_WALKABLE;
 
-            u32 value = 0;
+          if (tileY != tilesPerHeight / 2 &&
+              (tileX == 0 || tileX == tilesPerWidth - 1))
+            value = TILE_BLOCKED;
 
-            if (tileY != tilesPerHeight / 2 &&
-                (tileX == 0 || tileX == tilesPerWidth - 1))
-              value = 1;
+          if (tileX != tilesPerWidth / 2 &&
+              (tileY == 0 || tileY == tilesPerHeight - 1))
+            value = TILE_BLOCKED;
 
-            if (tileX != tilesPerWidth / 2 &&
-                (tileY == 0 || tileY == tilesPerHeight - 1))
-              value = 1;
-
-            TileSetValue(tileMap, absTileX, absTileY, value);
-          }
+          TileSetValue(tileMap, absTileX, absTileY, value);
         }
       }
+
+      u32 randomValue = RandomNumber() & 1;
+      if (randomValue == 0)
+        screenX += 1;
+      else
+        screenY += 1;
     }
 
     memory->initialized = 1;
@@ -205,8 +211,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
   struct position_tile_map *playerPos = &state->playerPos;
 
-  for (i32 relRow = -10; relRow < 10; relRow++) {
-    for (i32 relColumn = -20; relColumn < 20; relColumn++) {
+  for (i32 relRow = -100; relRow < 100; relRow++) {
+    for (i32 relColumn = -200; relColumn < 200; relColumn++) {
       i32 testColumn = (i32)playerPos->absTileX + relColumn;
       i32 testRow = (i32)playerPos->absTileY + relRow;
 
@@ -219,8 +225,15 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       u32 row = (u32)testRow;
 
       u32 tileid = TileGetValue(tileMap, column, row);
-      f32 gray = 0.5f;
-      if (tileid != 0)
+      f32 gray = 0.0f;
+
+      if (tileid == TILE_INVALID)
+        continue;
+
+      else if (tileid & TILE_WALKABLE)
+        gray = 0.5f;
+
+      else if (tileid & TILE_BLOCKED)
         gray = 1.0f;
 
       /* player tile x, y */
