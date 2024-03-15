@@ -80,9 +80,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     tileMap->chunkMask = (u32)(1 << tileMap->chunkShift) - 1;
 
     tileMap->tileSideInMeters = 1.4f;
-    tileMap->tileSideInPixels = 60;
-    tileMap->metersToPixels =
-        (f32)tileMap->tileSideInPixels / tileMap->tileSideInMeters;
 
     tileMap->tileChunkCountX = 128;
     tileMap->tileChunkCountY = 128;
@@ -159,6 +156,11 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   f32 playerHeight = 1.4f;
   /* unit: meters */
   f32 playerWidth = playerHeight * 0.75f;
+
+  /* unit: pixels */
+  u32 tileSideInPixels = 60;
+  /* unit: meters/pixels */
+  f32 metersToPixels = (f32)tileSideInPixels / tileMap->tileSideInMeters;
 
   for (u8 controllerIndex = 0; controllerIndex < 2; controllerIndex++) {
     struct game_controller_input *controller =
@@ -260,21 +262,21 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
           /* screen offset */
           screenCenterX
           /* player offset */
-          - state->playerPos.tileRelX * tileMap->metersToPixels
+          - state->playerPos.tileRelX * metersToPixels
           /* tile offset */
-          + (f32)relColumn * (f32)tileMap->tileSideInPixels;
+          + (f32)relColumn * (f32)tileSideInPixels;
       f32 centerY =
           /* screen offset */
           screenCenterY
           /* player offset */
-          + state->playerPos.tileRelY * tileMap->metersToPixels
+          + state->playerPos.tileRelY * metersToPixels
           /* tile offset */
-          - (f32)relRow * (f32)tileMap->tileSideInPixels;
+          - (f32)relRow * (f32)tileSideInPixels;
 
-      f32 left = centerX - 0.5f * (f32)tileMap->tileSideInPixels;
-      f32 bottom = centerY + 0.5f * (f32)tileMap->tileSideInPixels;
-      f32 right = left + (f32)tileMap->tileSideInPixels;
-      f32 top = bottom - (f32)tileMap->tileSideInPixels;
+      f32 left = centerX - 0.5f * (f32)tileSideInPixels;
+      f32 bottom = centerY + 0.5f * (f32)tileSideInPixels;
+      f32 right = left + (f32)tileSideInPixels;
+      f32 top = bottom - (f32)tileSideInPixels;
       draw_rectangle(backbuffer, left, top, right, bottom, gray, gray, gray);
     }
   }
@@ -287,21 +289,21 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       /* screen offset */
       screenCenterX
       /* offset */
-      - 0.5f * playerWidth * tileMap->metersToPixels;
+      - 0.5f * playerWidth * metersToPixels;
 
   f32 playerTop =
       /* screen offset */
       screenCenterY
       /* offset */
-      - playerHeight * tileMap->metersToPixels;
+      - playerHeight * metersToPixels;
 
   draw_rectangle(backbuffer,
                  /* min x, y */
                  playerLeft, playerTop,
                  /* max x */
-                 playerLeft + playerWidth * tileMap->metersToPixels,
+                 playerLeft + playerWidth * metersToPixels,
                  /* max y */
-                 playerTop + playerHeight * tileMap->metersToPixels,
+                 playerTop + playerHeight * metersToPixels,
                  /* color */
                  playerR, playerG, playerB);
 }

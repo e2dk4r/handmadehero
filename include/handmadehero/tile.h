@@ -14,8 +14,6 @@ struct tile_chunk {
 
 struct tile_map {
   f32 tileSideInMeters;
-  u32 tileSideInPixels;
-  f32 metersToPixels;
 
   u32 chunkShift;
   u32 chunkMask;
