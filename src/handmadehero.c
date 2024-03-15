@@ -96,7 +96,20 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     u32 tilesPerHeight = 9;
     u32 screenX = 0;
     u32 screenY = 0;
+
+    u8 isDoorLeft = 0;
+    u8 isDoorRight = 0;
+    u8 isDoorTop = 0;
+    u8 isDoorBottom = 0;
+
     for (u32 screenIndex = 0; screenIndex < 100; screenIndex++) {
+      u32 randomValue = RandomNumber() & 1;
+
+      if (randomValue == 0)
+        isDoorRight = 1;
+      else
+        isDoorTop = 1;
+
       for (u32 tileY = 0; tileY < tilesPerHeight; tileY++) {
         for (u32 tileX = 0; tileX < tilesPerWidth; tileX++) {
 
@@ -105,19 +118,29 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
           u32 value = TILE_WALKABLE;
 
-          if (tileY != tilesPerHeight / 2 &&
-              (tileX == 0 || tileX == tilesPerWidth - 1))
+          if (tileX == 0 && (!isDoorLeft || tileY != tilesPerHeight / 2))
             value = TILE_BLOCKED;
 
-          if (tileX != tilesPerWidth / 2 &&
-              (tileY == 0 || tileY == tilesPerHeight - 1))
+          if (tileX == tilesPerWidth - 1 &&
+              (!isDoorRight || tileY != tilesPerHeight / 2))
+            value = TILE_BLOCKED;
+
+          if (tileY == 0 && (!isDoorBottom || tileX != tilesPerWidth / 2))
+            value = TILE_BLOCKED;
+
+          if (tileY == tilesPerHeight - 1 && (!isDoorTop || tileX != tilesPerWidth / 2))
             value = TILE_BLOCKED;
 
           TileSetValue(&state->worldArena, tileMap, absTileX, absTileY, value);
         }
       }
 
-      u32 randomValue = RandomNumber() & 1;
+      isDoorLeft = isDoorRight;
+      isDoorBottom = isDoorTop;
+
+      isDoorRight = 0;
+      isDoorTop = 0;
+
       if (randomValue == 0)
         screenX += 1;
       else
