@@ -142,7 +142,7 @@
 - [x] Handmade Hero Day 034 - Tile Map Memory
       https://www.youtube.com/watch?v=IJYTwhqfKLg
 
-- [ ] Handmade Hero Day 035 - Basic Sparse Tilemap Storage
+- [x] Handmade Hero Day 035 - Basic Sparse Tilemap Storage
       https://www.youtube.com/watch?v=i5-oY8EHkzw
 
 - [ ] Handmade Hero Day 036 - Loading BMPs
