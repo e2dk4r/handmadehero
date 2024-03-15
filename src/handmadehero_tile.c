@@ -19,7 +19,8 @@ WorldGetTileChunk(struct tile_map *tileMap, u32 tileChunkX, u32 tileChunkY) {
   if (tileChunkY > tileMap->tileChunkCountY)
     return 0;
 
-  return &tileMap->tileChunks[tileChunkY * tileMap->tileChunkCountX + tileChunkX];
+  return &tileMap
+              ->tileChunks[tileChunkY * tileMap->tileChunkCountX + tileChunkX];
 }
 
 static inline void PositionCorrectCoord(struct tile_map *tileMap, u32 *tile,
@@ -65,6 +66,10 @@ inline u32 TileGetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY) {
   struct tile_chunk *tileChunk =
       WorldGetTileChunk(tileMap, chunkPos.tileChunkX, chunkPos.tileChunkY);
   assert(tileChunk);
+
+  if (!tileChunk->tiles)
+    return TILE_INVALID;
+
   u32 value = TileChunkGetTileValue(tileMap, tileChunk, chunkPos.relTileX,
                                     chunkPos.relTileY);
 
@@ -81,13 +86,23 @@ static inline void TileChunkSetTileValue(struct tile_map *tileMap,
   tileChunk->tiles[y * tileMap->chunkDim + x] = value;
 }
 
-inline void TileSetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY,
-                         u32 value) {
+void TileSetValue(struct memory_arena *arena, struct tile_map *tileMap,
+                  u32 absTileX, u32 absTileY, u32 value) {
   struct position_tile_chunk chunkPos =
       PositionTileChunkGet(tileMap, absTileX, absTileY);
   struct tile_chunk *tileChunk =
       WorldGetTileChunk(tileMap, chunkPos.tileChunkX, chunkPos.tileChunkY);
   assert(tileChunk);
+
+  /* allocate tiles for new location. sparse tile storage */
+  if (!tileChunk->tiles) {
+    u32 tileCount = tileMap->chunkDim * tileMap->chunkDim;
+    tileChunk->tiles = MemoryArenaPush(arena, sizeof(u32) * tileCount);
+    for (u32 tileIndex = 0; tileIndex < tileCount; tileIndex++) {
+      tileChunk->tiles[tileIndex] = TILE_WALKABLE;
+    }
+  }
+
   TileChunkSetTileValue(tileMap, tileChunk, chunkPos.relTileX,
                         chunkPos.relTileY, value);
 }

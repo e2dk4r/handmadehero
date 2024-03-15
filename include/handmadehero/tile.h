@@ -1,11 +1,12 @@
 #ifndef HANDMADEHERO_TILE_H
 #define HANDMADEHERO_TILE_H
 
+#include "memory_arena.h"
 #include "types.h"
 
-#define TILE_INVALID  0
+#define TILE_INVALID 0
 #define TILE_WALKABLE (1 << 0)
-#define TILE_BLOCKED  (1 << 1)
+#define TILE_BLOCKED (1 << 1)
 
 struct tile_chunk {
   u32 *tiles;
@@ -44,8 +45,8 @@ struct position_tile_chunk {
 };
 
 u32 TileGetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY);
-void TileSetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY,
-                  u32 value);
+void TileSetValue(struct memory_arena *arena, struct tile_map *tileMap,
+                  u32 absTileX, u32 absTileY, u32 value);
 struct position_tile_map PositionCorrect(struct tile_map *tileMap,
                                          struct position_tile_map *pos);
 #endif /* HANDMADEHERO_TILE_H */

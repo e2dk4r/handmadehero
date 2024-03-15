@@ -90,15 +90,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         MemoryArenaPush(&state->worldArena, sizeof(struct tile_chunk) *
                                                 tileMap->tileChunkCountX *
                                                 tileMap->tileChunkCountY);
-    for (u32 x = 0; x < tileMap->tileChunkCountX; x++) {
-      for (u32 y = 0; y < tileMap->tileChunkCountY; y++) {
-        tileMap->tileChunks[y * tileMap->tileChunkCountX + x].tiles =
-            MemoryArenaPush(&state->worldArena, sizeof(u32) *
-                                                    tileMap->chunkDim *
-                                                    tileMap->chunkDim);
-      }
-    }
-
     /* generate procedural tile map */
     u32 screenDim = 32;
     u32 tilesPerWidth = 17;
@@ -122,7 +113,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
               (tileY == 0 || tileY == tilesPerHeight - 1))
             value = TILE_BLOCKED;
 
-          TileSetValue(tileMap, absTileX, absTileY, value);
+          TileSetValue(&state->worldArena, tileMap, absTileX, absTileY, value);
         }
       }
 
