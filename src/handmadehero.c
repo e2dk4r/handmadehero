@@ -80,7 +80,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     tileMap->chunkMask = (u32)(1 << tileMap->chunkShift) - 1;
 
     tileMap->tileSideInMeters = 1.4f;
-    tileMap->tileSideInPixels = 6;
+    tileMap->tileSideInPixels = 60;
     tileMap->metersToPixels =
         (f32)tileMap->tileSideInPixels / tileMap->tileSideInMeters;
 
@@ -127,7 +127,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
           if (tileY == 0 && (!isDoorBottom || tileX != tilesPerWidth / 2))
             value = TILE_BLOCKED;
 
-          if (tileY == tilesPerHeight - 1 && (!isDoorTop || tileX != tilesPerWidth / 2))
+          if (tileY == tilesPerHeight - 1 &&
+              (!isDoorTop || tileX != tilesPerWidth / 2))
             value = TILE_BLOCKED;
 
           TileSetValue(&state->worldArena, tileMap, absTileX, absTileY, value);
@@ -224,8 +225,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
   struct position_tile_map *playerPos = &state->playerPos;
 
-  for (i32 relRow = -100; relRow < 100; relRow++) {
-    for (i32 relColumn = -200; relColumn < 200; relColumn++) {
+  for (i32 relRow = -10; relRow < 10; relRow++) {
+    for (i32 relColumn = -20; relColumn < 20; relColumn++) {
       i32 testColumn = (i32)playerPos->absTileX + relColumn;
       i32 testRow = (i32)playerPos->absTileY + relRow;
 
