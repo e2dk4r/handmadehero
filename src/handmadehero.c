@@ -111,7 +111,14 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
             u32 absTileX = screenX * tilesPerWidth + tileX;
             u32 absTileY = screenY * tilesPerHeight + tileY;
 
-            u32 value = tileX == tileY && tileY & 1;
+            u32 value = 0;
+
+            if (tileX == 0 || tileX == tilesPerWidth - 1)
+              value = 1;
+
+            if (tileY == 0 || tileY == tilesPerHeight - 1)
+              value = 1;
+
             TileSetValue(tileMap, absTileX, absTileY, value);
           }
         }
