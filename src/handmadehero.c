@@ -51,7 +51,8 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
 
 static inline u8 WorldIsPointEmpty(struct tile_map *tileMap,
                                    struct position_tile_map *testPos) {
-  u32 value = TileGetValue(tileMap, testPos->absTileX, testPos->absTileY);
+  u32 value = TileGetValue(tileMap, testPos->absTileX, testPos->absTileY,
+                           testPos->absTileZ);
   return value & TILE_WALKABLE;
 }
 
@@ -83,25 +84,41 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
     tileMap->tileChunkCountX = 128;
     tileMap->tileChunkCountY = 128;
+    tileMap->tileChunkCountZ = 2;
     tileMap->tileChunks =
         MemoryArenaPush(&state->worldArena, sizeof(struct tile_chunk) *
+                                                /* x . y . z */
                                                 tileMap->tileChunkCountX *
-                                                tileMap->tileChunkCountY);
+                                                tileMap->tileChunkCountY *
+                                                tileMap->tileChunkCountZ);
     /* generate procedural tile map */
     u32 tilesPerWidth = 17;
     u32 tilesPerHeight = 9;
     u32 screenX = 0;
     u32 screenY = 0;
+    u32 absTileZ = 0;
 
     u8 isDoorLeft = 0;
     u8 isDoorRight = 0;
     u8 isDoorTop = 0;
     u8 isDoorBottom = 0;
+    u8 isDoorUp = 0;
+    u8 isDoorDown = 0;
 
     for (u32 screenIndex = 0; screenIndex < 100; screenIndex++) {
-      u32 randomValue = RandomNumber() & 1;
+      u32 randomValue;
 
-      if (randomValue == 0)
+      if (isDoorUp || isDoorDown)
+        randomValue = RandomNumber() % 2;
+      else
+        randomValue = RandomNumber() % 3;
+
+      if (randomValue == 2)
+        if (absTileZ == 0)
+          isDoorUp = 1;
+        else
+          isDoorDown = 0;
+      else if (randomValue == 0)
         isDoorRight = 1;
       else
         isDoorTop = 1;
@@ -128,7 +145,16 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
               (!isDoorTop || tileX != tilesPerWidth / 2))
             value = TILE_BLOCKED;
 
-          TileSetValue(&state->worldArena, tileMap, absTileX, absTileY, value);
+          if (tileX == 10 && tileY == 6) {
+            if (isDoorUp)
+              value = TILE_LADDER_UP;
+
+            if (isDoorDown)
+              value = TILE_LADDER_UP;
+          }
+
+          TileSetValue(&state->worldArena, tileMap, absTileX, absTileY,
+                       absTileZ, value);
         }
       }
 
@@ -138,7 +164,23 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       isDoorRight = 0;
       isDoorTop = 0;
 
-      if (randomValue == 0)
+      if (isDoorUp) {
+        isDoorDown = 1;
+        isDoorUp = 0;
+      } else if (isDoorDown) {
+        isDoorUp = 1;
+        isDoorDown = 0;
+      } else {
+        isDoorUp = 0;
+        isDoorDown = 0;
+      }
+
+      if (randomValue == 2)
+        if (absTileZ == 0)
+          absTileZ = 1;
+        else
+          absTileZ = 0;
+      else if (randomValue == 0)
         screenX += 1;
       else
         screenY += 1;
@@ -240,8 +282,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
       u32 column = (u32)testColumn;
       u32 row = (u32)testRow;
+      u32 plane = playerPos->absTileZ;
 
-      u32 tileid = TileGetValue(tileMap, column, row);
+      u32 tileid = TileGetValue(tileMap, column, row, plane);
       f32 gray = 0.0f;
 
       if (tileid == TILE_INVALID)
@@ -252,6 +295,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
       else if (tileid & TILE_BLOCKED)
         gray = 1.0f;
+
+      else if (tileid & (TILE_LADDER_UP | TILE_LADDER_DOWN))
+        gray = 0.25f;
 
       /* player tile x, y */
       if (state->playerPos.absTileX == column &&

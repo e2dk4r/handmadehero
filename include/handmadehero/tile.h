@@ -7,6 +7,8 @@
 #define TILE_INVALID 0
 #define TILE_WALKABLE (1 << 0)
 #define TILE_BLOCKED (1 << 1)
+#define TILE_LADDER_UP (1 << 2)
+#define TILE_LADDER_DOWN (1 << 3)
 
 struct tile_chunk {
   u32 *tiles;
@@ -21,6 +23,7 @@ struct tile_map {
 
   u32 tileChunkCountX;
   u32 tileChunkCountY;
+  u32 tileChunkCountZ;
   struct tile_chunk *tileChunks;
 };
 
@@ -29,6 +32,8 @@ struct position_tile_map {
   u32 absTileX;
   /* packed. high bits for tile map y, low bits for tile y */
   u32 absTileY;
+  /* packed. high bits for tile map y, low bits for tile y */
+  u32 absTileZ;
 
   f32 tileRelX;
   f32 tileRelY;
@@ -37,14 +42,16 @@ struct position_tile_map {
 struct position_tile_chunk {
   u32 tileChunkX;
   u32 tileChunkY;
+  u32 tileChunkZ;
 
   u32 relTileX;
   u32 relTileY;
 };
 
-u32 TileGetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY);
+u32 TileGetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY,
+                 u32 absTileZ);
 void TileSetValue(struct memory_arena *arena, struct tile_map *tileMap,
-                  u32 absTileX, u32 absTileY, u32 value);
+                  u32 absTileX, u32 absTileY, u32 absTileZ, u32 value);
 struct position_tile_map PositionCorrect(struct tile_map *tileMap,
                                          struct position_tile_map *pos);
 #endif /* HANDMADEHERO_TILE_H */

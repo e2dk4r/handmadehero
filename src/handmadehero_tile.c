@@ -11,16 +11,26 @@ static inline u32 TileChunkGetTileValue(struct tile_map *tileMap,
   return tileChunk->tiles[y * tileMap->chunkDim + x];
 }
 
-static inline struct tile_chunk *
-WorldGetTileChunk(struct tile_map *tileMap, u32 tileChunkX, u32 tileChunkY) {
+static inline struct tile_chunk *WorldGetTileChunk(struct tile_map *tileMap,
+                                                   u32 tileChunkX,
+                                                   u32 tileChunkY,
+                                                   u32 tileChunkZ) {
   if (tileChunkX > tileMap->tileChunkCountX)
     return 0;
 
   if (tileChunkY > tileMap->tileChunkCountY)
     return 0;
 
-  return &tileMap
-              ->tileChunks[tileChunkY * tileMap->tileChunkCountX + tileChunkX];
+  if (tileChunkZ > tileMap->tileChunkCountZ)
+    return 0;
+
+  return &tileMap->tileChunks[
+      /* z offset */
+      tileChunkZ * tileMap->tileChunkCountY * tileMap->tileChunkCountX
+      /* y offset */
+      + tileChunkY * tileMap->tileChunkCountX
+      /* x offset */
+      + tileChunkX];
 }
 
 static inline void PositionCorrectCoord(struct tile_map *tileMap, u32 *tile,
@@ -48,11 +58,13 @@ struct position_tile_map PositionCorrect(struct tile_map *tileMap,
 }
 
 static inline struct position_tile_chunk
-PositionTileChunkGet(struct tile_map *tileMap, u32 absTileX, u32 absTileY) {
+PositionTileChunkGet(struct tile_map *tileMap, u32 absTileX, u32 absTileY,
+                     u32 absTileZ) {
   struct position_tile_chunk result;
 
   result.tileChunkX = absTileX >> tileMap->chunkShift;
   result.tileChunkY = absTileY >> tileMap->chunkShift;
+  result.tileChunkZ = absTileZ;
 
   result.relTileX = absTileX & tileMap->chunkMask;
   result.relTileY = absTileY & tileMap->chunkMask;
@@ -60,11 +72,12 @@ PositionTileChunkGet(struct tile_map *tileMap, u32 absTileX, u32 absTileY) {
   return result;
 }
 
-inline u32 TileGetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY) {
+inline u32 TileGetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY,
+                        u32 absTileZ) {
   struct position_tile_chunk chunkPos =
-      PositionTileChunkGet(tileMap, absTileX, absTileY);
-  struct tile_chunk *tileChunk =
-      WorldGetTileChunk(tileMap, chunkPos.tileChunkX, chunkPos.tileChunkY);
+      PositionTileChunkGet(tileMap, absTileX, absTileY, absTileZ);
+  struct tile_chunk *tileChunk = WorldGetTileChunk(
+      tileMap, chunkPos.tileChunkX, chunkPos.tileChunkY, chunkPos.tileChunkZ);
   assert(tileChunk);
 
   if (!tileChunk->tiles)
@@ -87,11 +100,11 @@ static inline void TileChunkSetTileValue(struct tile_map *tileMap,
 }
 
 void TileSetValue(struct memory_arena *arena, struct tile_map *tileMap,
-                  u32 absTileX, u32 absTileY, u32 value) {
+                  u32 absTileX, u32 absTileY, u32 absTileZ, u32 value) {
   struct position_tile_chunk chunkPos =
-      PositionTileChunkGet(tileMap, absTileX, absTileY);
-  struct tile_chunk *tileChunk =
-      WorldGetTileChunk(tileMap, chunkPos.tileChunkX, chunkPos.tileChunkY);
+      PositionTileChunkGet(tileMap, absTileX, absTileY, absTileZ);
+  struct tile_chunk *tileChunk = WorldGetTileChunk(
+      tileMap, chunkPos.tileChunkX, chunkPos.tileChunkY, chunkPos.tileChunkZ);
   assert(tileChunk);
 
   /* allocate tiles for new location. sparse tile storage */
