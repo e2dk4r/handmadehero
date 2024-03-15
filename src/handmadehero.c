@@ -227,6 +227,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
   struct position_tile_map *playerPos = &state->playerPos;
 
+  /* render tiles relative to player position */
   for (i32 relRow = -10; relRow < 10; relRow++) {
     for (i32 relColumn = -20; relColumn < 20; relColumn++) {
       i32 testColumn = (i32)playerPos->absTileX + relColumn;
@@ -281,6 +282,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
   }
 
+  /* render player in center of screen */
   f32 playerR = 1.0f;
   f32 playerG = 1.0f;
   f32 playerB = 0.0f;
