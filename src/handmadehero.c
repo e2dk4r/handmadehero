@@ -113,8 +113,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
           isDoorUp = 1;
         else
           isDoorDown = 1;
-      }
-      else if (randomValue == 1)
+      } else if (randomValue == 1)
         isDoorRight = 1;
       else
         isDoorTop = 1;
