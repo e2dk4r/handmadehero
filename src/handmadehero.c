@@ -62,16 +62,17 @@ struct __attribute__((packed)) bitmap_header {
   u16 bitsPerPixel;
 };
 
-static void LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
-                    char *filename, u32 **out) {
+static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
+                             char *filename) {
+  struct bitmap result = {0};
+
   struct read_file_result readResult = PlatformReadEntireFile(filename);
   if (readResult.size == 0) {
-    return;
+    return result;
   }
 
   struct bitmap_header *header = readResult.data;
   u32 *pixels = readResult.data + header->bitmapOffset;
-  *out = pixels;
 
   u32 *srcDest = pixels;
   for (i32 y = 0; y < header->height; y++) {
@@ -80,15 +81,26 @@ static void LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
       srcDest++;
     }
   }
+
+  result.pixels = pixels;
+
+  result.width = (u32)header->width;
+  if (header->width < 0)
+    result.width = (u32)-header->width;
+
+  result.height = (u32)header->height;
+  if (header->height < 0)
+    result.height = (u32)-header->height;
+
+  return result;
 }
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
 
   if (!memory->initialized) {
-    state->bitmap = 0;
-    LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp",
-            &state->bitmap);
+    state->bitmapBackground =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
 
     state->playerPos.absTileX = 1;
     state->playerPos.absTileY = 3;
@@ -312,18 +324,18 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /****************************************************************
    * RENDERING
    ****************************************************************/
-  u32 bitmapWidth = 1024;
-  u32 bitmapHeight = 576;
+  struct bitmap *bitmapBackground = &state->bitmapBackground;
 
-  u32 blitWidth = bitmapWidth;
+  u32 blitWidth = bitmapBackground->width;
   if (blitWidth > backbuffer->width)
     blitWidth = backbuffer->width;
 
-  u32 blitHeight = bitmapHeight;
+  u32 blitHeight = bitmapBackground->height;
   if (blitHeight > backbuffer->height)
     blitHeight = backbuffer->height;
 
-  u32 *srcRow = state->bitmap + (bitmapHeight - 1) * bitmapWidth;
+  u32 *srcRow = bitmapBackground->pixels +
+                (bitmapBackground->height - 1) * bitmapBackground->width;
   u8 *dstRow = backbuffer->memory;
   for (u32 y = 0; y < blitHeight; y++) {
     u32 *src = (u32 *)srcRow;
@@ -336,7 +348,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     dstRow += backbuffer->stride;
-    srcRow -= bitmapWidth;
+    srcRow -= bitmapBackground->width;
   }
 
   f32 screenCenterX = 0.5f * (f32)backbuffer->width;

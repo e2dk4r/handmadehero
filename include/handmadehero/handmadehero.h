@@ -8,12 +8,18 @@ struct world {
   struct tile_map *tileMap;
 };
 
+struct bitmap {
+  u32 width;
+  u32 height;
+  u32 *pixels;
+};
+
 struct game_state {
   struct memory_arena worldArena;
   struct world *world;
 
   struct position_tile_map playerPos;
-  u32 *bitmap;
+  struct bitmap bitmapBackground;
 };
 
 #define GAMEUPDATEANDRENDER(name)                                              \
