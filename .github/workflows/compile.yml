@@ -39,5 +39,6 @@ jobs:
         tar cf - $output | zstd --ultra -22 -T0 -o $file
 
         echo **Workflow run**: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID >> notes
+        echo DO NOT FORGET to extract art archive >> notes
 
         gh release create day-$day --notes-file notes $file
