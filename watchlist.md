@@ -148,7 +148,7 @@
 - [x] Handmade Hero Day 036 - Loading BMPs
       https://www.youtube.com/watch?v=USFTH9mcaKw
 
-- [ ] Handmade Hero Day 037 - Basic Bitmap Rendering
+- [x] Handmade Hero Day 037 - Basic Bitmap Rendering
       https://www.youtube.com/watch?v=ofMJUSchXwo
 
 - [ ] Handmade Hero Day 038 - Basic Linear Bitmap Blending
