@@ -53,7 +53,7 @@ static inline u8 WorldIsPointEmpty(struct tile_map *tileMap,
                                    struct position_tile_map *testPos) {
   u32 value = TileGetValue(tileMap, testPos->absTileX, testPos->absTileY,
                            testPos->absTileZ);
-  return value & TILE_WALKABLE;
+  return value & (TILE_WALKABLE | TILE_LADDER_UP | TILE_LADDER_DOWN);
 }
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
@@ -257,6 +257,21 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
     if (WorldIsPointEmpty(tileMap, &left) &&
         WorldIsPointEmpty(tileMap, &right)) {
+
+      if (!PositionTileMapSameTile(&state->playerPos, &newPlayerPos)) {
+        u32 newTileValue = TileGetValue2(tileMap, &newPlayerPos);
+
+        if (newTileValue & TILE_LADDER_UP) {
+          newPlayerPos.absTileZ++;
+        }
+
+        if (newTileValue & TILE_LADDER_DOWN) {
+          newPlayerPos.absTileZ--;
+        }
+
+        assert(newPlayerPos.absTileZ < tileMap->tileChunkCountZ);
+      }
+
       state->playerPos = newPlayerPos;
     }
   }

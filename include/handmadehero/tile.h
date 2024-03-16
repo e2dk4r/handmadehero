@@ -50,8 +50,26 @@ struct position_tile_chunk {
 
 u32 TileGetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY,
                  u32 absTileZ);
+
+static inline u32 TileGetValue2(struct tile_map *tileMap,
+                                struct position_tile_map *pos) {
+  return TileGetValue(tileMap, pos->absTileX, pos->absTileY, pos->absTileZ);
+}
+
 void TileSetValue(struct memory_arena *arena, struct tile_map *tileMap,
                   u32 absTileX, u32 absTileY, u32 absTileZ, u32 value);
 struct position_tile_map PositionCorrect(struct tile_map *tileMap,
                                          struct position_tile_map *pos);
+
+static inline u8 PositionTileMapSameTile(struct position_tile_map *left,
+                                         struct position_tile_map *right) {
+  return
+      /* x */
+      left->absTileX == right->absTileX
+      /* y */
+      && left->absTileY == right->absTileY
+      /* z */
+      && left->absTileZ == right->absTileZ;
+}
+
 #endif /* HANDMADEHERO_TILE_H */
