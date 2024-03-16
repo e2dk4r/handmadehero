@@ -72,6 +72,14 @@ static void LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
   struct bitmap_header *header = readResult.data;
   u32 *pixels = readResult.data + header->bitmapOffset;
   *out = pixels;
+
+  u32 *srcDest = pixels;
+  for (i32 y = 0; y < header->height; y++) {
+    for (i32 x = 0; x < header->width; x++) {
+      *srcDest = (*srcDest >> 8) | (*srcDest << 24);
+      srcDest++;
+    }
+  }
 }
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
@@ -215,6 +223,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct tile_map *tileMap = world->tileMap;
   assert(tileMap);
 
+  /****************************************************************
+   * COLLISION DETECTION
+   ****************************************************************/
+
   /* unit: meters */
   f32 playerHeight = 1.4f;
   /* unit: meters */
@@ -297,8 +309,35 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
   }
 
-  draw_rectangle(backbuffer, 0, 0, (f32)backbuffer->width,
-                 (f32)backbuffer->height, 1.0f, 0.0f, 0.0f);
+  /****************************************************************
+   * RENDERING
+   ****************************************************************/
+  u32 bitmapWidth = 1024;
+  u32 bitmapHeight = 576;
+
+  u32 blitWidth = bitmapWidth;
+  if (blitWidth > backbuffer->width)
+    blitWidth = backbuffer->width;
+
+  u32 blitHeight = bitmapHeight;
+  if (blitHeight > backbuffer->height)
+    blitHeight = backbuffer->height;
+
+  u32 *srcRow = state->bitmap + (bitmapHeight - 1) * bitmapWidth;
+  u8 *dstRow = backbuffer->memory;
+  for (u32 y = 0; y < blitHeight; y++) {
+    u32 *src = (u32 *)srcRow;
+    u32 *dst = (u32 *)dstRow;
+
+    for (u32 x = 0; x < blitWidth; x++) {
+      *dst = *src;
+      dst++;
+      src++;
+    }
+
+    dstRow += backbuffer->stride;
+    srcRow -= bitmapWidth;
+  }
 
   f32 screenCenterX = 0.5f * (f32)backbuffer->width;
   f32 screenCenterY = 0.5f * (f32)backbuffer->height;
@@ -390,16 +429,4 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                  playerTop + playerHeight * metersToPixels,
                  /* color */
                  playerR, playerG, playerB);
-
-  u32 *src = state->bitmap;
-  u32 *dst = backbuffer->memory;
-  if (!src)
-    return;
-  for (u32 y = 0; y < backbuffer->height; y++) {
-    for (u32 x = 0; x < backbuffer->width; x++) {
-      *dst = *src;
-      dst++;
-      src++;
-    }
-  }
 }
