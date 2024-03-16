@@ -62,8 +62,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   if (!memory->initialized) {
     state->playerPos.absTileX = 1;
     state->playerPos.absTileY = 3;
-    state->playerPos.tileRelX = 5.0f;
-    state->playerPos.tileRelY = 5.0f;
+    state->playerPos.offsetX = 5.0f;
+    state->playerPos.offsetY = 5.0f;
 
     /* world creation */
     void *data = memory->permanentStorage + sizeof(*state);
@@ -243,16 +243,16 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     dPlayerY *= playerSpeed;
 
     struct position_tile_map newPlayerPos = state->playerPos;
-    newPlayerPos.tileRelX += input->dtPerFrame * dPlayerX;
-    newPlayerPos.tileRelY += input->dtPerFrame * dPlayerY;
+    newPlayerPos.offsetX += input->dtPerFrame * dPlayerX;
+    newPlayerPos.offsetY += input->dtPerFrame * dPlayerY;
     newPlayerPos = PositionCorrect(tileMap, &newPlayerPos);
 
     struct position_tile_map left = newPlayerPos;
-    left.tileRelX -= playerWidth * 0.5f;
+    left.offsetX -= playerWidth * 0.5f;
     left = PositionCorrect(tileMap, &left);
 
     struct position_tile_map right = newPlayerPos;
-    right.tileRelX += playerWidth * 0.5f;
+    right.offsetX += playerWidth * 0.5f;
     right = PositionCorrect(tileMap, &right);
 
     if (WorldIsPointEmpty(tileMap, &left) &&
@@ -324,14 +324,14 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
           /* screen offset */
           screenCenterX
           /* player offset */
-          - state->playerPos.tileRelX * metersToPixels
+          - state->playerPos.offsetX * metersToPixels
           /* tile offset */
           + (f32)relColumn * (f32)tileSideInPixels;
       f32 centerY =
           /* screen offset */
           screenCenterY
           /* player offset */
-          + state->playerPos.tileRelY * metersToPixels
+          + state->playerPos.offsetY * metersToPixels
           /* tile offset */
           - (f32)relRow * (f32)tileSideInPixels;
 

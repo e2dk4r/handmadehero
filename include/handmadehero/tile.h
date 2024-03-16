@@ -35,8 +35,10 @@ struct position_tile_map {
   /* packed. high bits for tile map y, low bits for tile y */
   u32 absTileZ;
 
-  f32 tileRelX;
-  f32 tileRelY;
+  /* x offset from tile center */
+  f32 offsetX;
+  /* y offset from tile center */
+  f32 offsetY;
 };
 
 struct position_tile_chunk {

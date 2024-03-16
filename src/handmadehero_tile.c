@@ -51,8 +51,8 @@ struct position_tile_map PositionCorrect(struct tile_map *tileMap,
                                          struct position_tile_map *pos) {
   struct position_tile_map result = *pos;
 
-  PositionCorrectCoord(tileMap, &result.absTileX, &result.tileRelX);
-  PositionCorrectCoord(tileMap, &result.absTileY, &result.tileRelY);
+  PositionCorrectCoord(tileMap, &result.absTileX, &result.offsetX);
+  PositionCorrectCoord(tileMap, &result.absTileY, &result.offsetY);
 
   return result;
 }
