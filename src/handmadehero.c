@@ -94,6 +94,8 @@ static void DrawBitmap(struct bitmap *bitmap,
   }
 }
 
+#define BITMAP_COMPRESSION_RGB 0
+#define BITMAP_COMPRESSION_BITFIELDS 3
 struct __attribute__((packed)) bitmap_header {
   u16 fileType;
   u32 fileSize;
@@ -105,6 +107,19 @@ struct __attribute__((packed)) bitmap_header {
   i32 height;
   u16 planes;
   u16 bitsPerPixel;
+  u32 compression;
+  u32 imageSize;
+  u32 horzResolution;
+  u32 vertResolution;
+  u32 colorsPalette;
+  u32 colorsImportant;
+};
+
+struct __attribute__((packed)) bitmap_header_compressed {
+  struct bitmap_header header;
+  u32 redMask;
+  u32 greenMask;
+  u32 blueMask;
 };
 
 static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
@@ -119,11 +134,24 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
   struct bitmap_header *header = readResult.data;
   u32 *pixels = readResult.data + header->bitmapOffset;
 
-  u32 *srcDest = pixels;
-  for (i32 y = 0; y < header->height; y++) {
-    for (i32 x = 0; x < header->width; x++) {
-      *srcDest = (*srcDest >> 8) | (*srcDest << 24);
-      srcDest++;
+  if (header->compression == BITMAP_COMPRESSION_BITFIELDS) {
+    struct bitmap_header_compressed *cHeader =
+        (struct bitmap_header_compressed *)header;
+
+    u32 *srcDest = pixels;
+    for (i32 y = 0; y < header->height; y++) {
+      for (i32 x = 0; x < header->width; x++) {
+        i32 redShift = __builtin_ffs((i32)cHeader->redMask) - 1;
+        i32 greenShift = __builtin_ffs((i32)cHeader->greenMask) - 1;
+        i32 blueShift = __builtin_ffs((i32)cHeader->blueMask) - 1;
+
+        u32 red = (*srcDest & cHeader->redMask) >> redShift;
+        u32 green = (*srcDest & cHeader->greenMask) >> greenShift;
+        u32 blue = (*srcDest & cHeader->blueMask) >> blueShift;
+
+        *srcDest = (blue << 0) | (green << 8) | (red << 16);
+        srcDest++;
+      }
     }
   }
 
