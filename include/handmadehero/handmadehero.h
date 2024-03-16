@@ -20,6 +20,10 @@ struct game_state {
 
   struct position_tile_map playerPos;
   struct bitmap bitmapBackground;
+
+  struct bitmap bitmapHeroHead;
+  struct bitmap bitmapHeroTorso;
+  struct bitmap bitmapHeroCape;
 };
 
 #define GAMEUPDATEANDRENDER(name)                                              \

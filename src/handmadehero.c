@@ -49,6 +49,51 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
   }
 }
 
+static void DrawBitmap(struct bitmap *bitmap,
+                       struct game_backbuffer *backbuffer, f32 realX,
+                       f32 realY) {
+  i32 minX = roundf32toi32(realX);
+  i32 minY = roundf32toi32(realY);
+  i32 maxX = roundf32toi32(realX + (f32)bitmap->width);
+  i32 maxY = roundf32toi32(realY + (f32)bitmap->height);
+
+  if (minX < 0)
+    minX = 0;
+
+  if (minY < 0)
+    minY = 0;
+
+  if (maxX > (i32)backbuffer->width)
+    maxX = (i32)backbuffer->width;
+
+  if (maxY > (i32)backbuffer->height)
+    maxY = (i32)backbuffer->height;
+
+  /* bitmap file pixels goes bottom to up */
+  u32 *srcRow = bitmap->pixels
+                /* last row offset */
+                + (bitmap->height - 1) * bitmap->width;
+  u8 *dstRow = backbuffer->memory
+               /* x offset */
+               + ((u32)minX * backbuffer->bytes_per_pixel)
+               /* y offset */
+               + ((u32)minY * backbuffer->stride);
+  for (i32 y = minY; y < maxY; y++) {
+    u32 *src = (u32 *)srcRow;
+    u32 *dst = (u32 *)dstRow;
+
+    for (i32 x = minX; x < maxX; x++) {
+      *dst = *src;
+      dst++;
+      src++;
+    }
+
+    dstRow += backbuffer->stride;
+    /* bitmap file pixels goes bottom to up */
+    srcRow -= bitmap->width;
+  }
+}
+
 struct __attribute__((packed)) bitmap_header {
   u16 fileType;
   u32 fileSize;
@@ -101,6 +146,13 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   if (!memory->initialized) {
     state->bitmapBackground =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
+
+    state->bitmapHeroHead = LoadBmp(memory->PlatformReadEntireFile,
+                                    "test/test_hero_front_head.bmp");
+    state->bitmapHeroTorso = LoadBmp(memory->PlatformReadEntireFile,
+                                     "test/test_hero_front_torso.bmp");
+    state->bitmapHeroCape = LoadBmp(memory->PlatformReadEntireFile,
+                                    "test/test_hero_front_cape.bmp");
 
     state->playerPos.absTileX = 1;
     state->playerPos.absTileY = 3;
@@ -324,32 +376,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /****************************************************************
    * RENDERING
    ****************************************************************/
-  struct bitmap *bitmapBackground = &state->bitmapBackground;
-
-  u32 blitWidth = bitmapBackground->width;
-  if (blitWidth > backbuffer->width)
-    blitWidth = backbuffer->width;
-
-  u32 blitHeight = bitmapBackground->height;
-  if (blitHeight > backbuffer->height)
-    blitHeight = backbuffer->height;
-
-  u32 *srcRow = bitmapBackground->pixels +
-                (bitmapBackground->height - 1) * bitmapBackground->width;
-  u8 *dstRow = backbuffer->memory;
-  for (u32 y = 0; y < blitHeight; y++) {
-    u32 *src = (u32 *)srcRow;
-    u32 *dst = (u32 *)dstRow;
-
-    for (u32 x = 0; x < blitWidth; x++) {
-      *dst = *src;
-      dst++;
-      src++;
-    }
-
-    dstRow += backbuffer->stride;
-    srcRow -= bitmapBackground->width;
-  }
+  DrawBitmap(&state->bitmapBackground, backbuffer, 0, 0);
 
   f32 screenCenterX = 0.5f * (f32)backbuffer->width;
   f32 screenCenterY = 0.5f * (f32)backbuffer->height;
@@ -441,4 +468,5 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                  playerTop + playerHeight * metersToPixels,
                  /* color */
                  playerR, playerG, playerB);
+  DrawBitmap(&state->bitmapHeroHead, backbuffer, playerLeft, playerTop);
 }
