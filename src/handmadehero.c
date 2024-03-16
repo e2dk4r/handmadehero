@@ -49,13 +49,6 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
   }
 }
 
-static inline u8 WorldIsPointEmpty(struct tile_map *tileMap,
-                                   struct position_tile_map *testPos) {
-  u32 value = TileGetValue(tileMap, testPos->absTileX, testPos->absTileY,
-                           testPos->absTileZ);
-  return value & (TILE_WALKABLE | TILE_LADDER_UP | TILE_LADDER_DOWN);
-}
-
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
 
@@ -255,8 +248,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     right.offsetX += playerWidth * 0.5f;
     right = PositionCorrect(tileMap, &right);
 
-    if (WorldIsPointEmpty(tileMap, &left) &&
-        WorldIsPointEmpty(tileMap, &right)) {
+    if (TileMapIsPointEmpty(tileMap, &left) &&
+        TileMapIsPointEmpty(tileMap, &right)) {
 
       if (!PositionTileMapSameTile(&state->playerPos, &newPlayerPos)) {
         u32 newTileValue = TileGetValue2(tileMap, &newPlayerPos);
