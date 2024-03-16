@@ -246,7 +246,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
   /* unit: pixels */
   u32 tileSideInPixels = 60;
-  /* unit: meters/pixels */
+  /* unit: pixels/meters */
   f32 metersToPixels = (f32)tileSideInPixels / tileMap->tileSideInMeters;
 
   for (u8 controllerIndex = 0; controllerIndex < 2; controllerIndex++) {
