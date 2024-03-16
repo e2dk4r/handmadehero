@@ -113,11 +113,14 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       else
         randomValue = RandomNumber() % 3;
 
-      if (randomValue == 2)
+      u8 isDoorZ = 0;
+      if (randomValue == 2) {
+        isDoorZ = 1;
         if (absTileZ == 0)
           isDoorUp = 1;
         else
           isDoorDown = 1;
+      }
       else if (randomValue == 1)
         isDoorRight = 1;
       else
@@ -164,12 +167,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       isDoorRight = 0;
       isDoorTop = 0;
 
-      if (isDoorUp) {
-        isDoorDown = 1;
-        isDoorUp = 0;
-      } else if (isDoorDown) {
-        isDoorUp = 1;
-        isDoorDown = 0;
+      if (isDoorZ) {
+        isDoorUp = !isDoorUp;
+        isDoorDown = !isDoorDown;
       } else {
         isDoorUp = 0;
         isDoorDown = 0;
