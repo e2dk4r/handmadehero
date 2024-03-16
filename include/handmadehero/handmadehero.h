@@ -13,6 +13,7 @@ struct game_state {
   struct world *world;
 
   struct position_tile_map playerPos;
+  u32 *bitmap;
 };
 
 #define GAMEUPDATEANDRENDER(name)                                              \

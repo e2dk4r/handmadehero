@@ -49,10 +49,39 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
   }
 }
 
+struct __attribute__((packed)) bitmap_header {
+  u16 fileType;
+  u32 fileSize;
+  u16 reserved1;
+  u16 reserved2;
+  u32 bitmapOffset;
+  u32 size;
+  i32 width;
+  i32 height;
+  u16 planes;
+  u16 bitsPerPixel;
+};
+
+static void LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
+                    char *filename, u32 **out) {
+  struct read_file_result readResult = PlatformReadEntireFile(filename);
+  if (readResult.size == 0) {
+    return;
+  }
+
+  struct bitmap_header *header = readResult.data;
+  u32 *pixels = readResult.data + header->bitmapOffset;
+  *out = pixels;
+}
+
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
 
   if (!memory->initialized) {
+    state->bitmap = 0;
+    LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp",
+            &state->bitmap);
+
     state->playerPos.absTileX = 1;
     state->playerPos.absTileY = 3;
     state->playerPos.offsetX = 5.0f;
@@ -361,4 +390,16 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                  playerTop + playerHeight * metersToPixels,
                  /* color */
                  playerR, playerG, playerB);
+
+  u32 *src = state->bitmap;
+  u32 *dst = backbuffer->memory;
+  if (!src)
+    return;
+  for (u32 y = 0; y < backbuffer->height; y++) {
+    for (u32 x = 0; x < backbuffer->width; x++) {
+      *dst = *src;
+      dst++;
+      src++;
+    }
+  }
 }

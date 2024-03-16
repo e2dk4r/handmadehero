@@ -10,9 +10,15 @@ struct read_file_result {
   u64 size;
   void *data;
 };
+
 struct read_file_result PlatformReadEntireFile(char *path);
+typedef struct read_file_result (*pfnPlatformReadEntireFile)(char *path);
+
 u8 PlatformWriteEntireFile(char *path, u64 size, void *data);
+typedef u8 (*pfnPlatformWriteEntireFile)(char *path, u64 size, void *data);
+
 void PlatformFreeMemory(void *address);
+typedef void (*pfnPlatformFreeMemory)(void *address);
 
 #endif
 
@@ -80,7 +86,12 @@ struct game_memory {
 
   u64 transientStorageSize;
   void *transientStorage;
-};
 
+#if HANDMADEHERO_INTERNAL
+  pfnPlatformReadEntireFile PlatformReadEntireFile;
+  pfnPlatformWriteEntireFile PlatformWriteEntireFile;
+  pfnPlatformFreeMemory PlatformFreeMemory;
+#endif
+};
 
 #endif /* HANDMADEHERO_PLATFORM_H */

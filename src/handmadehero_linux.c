@@ -875,6 +875,11 @@ int main(int argc, char *argv[]) {
     error_code = HANDMADEHERO_ERROR_ALLOCATION;
     goto wl_exit;
   }
+#if HANDMADEHERO_INTERNAL
+  game_memory.PlatformReadEntireFile = PlatformReadEntireFile;
+  game_memory.PlatformWriteEntireFile = PlatformWriteEntireFile;
+  game_memory.PlatformFreeMemory = PlatformFreeMemory;
+#endif
   state.game_memory = &game_memory;
 
   /* wayland: create buffer */
