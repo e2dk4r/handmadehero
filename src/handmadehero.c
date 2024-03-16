@@ -150,7 +150,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
               value = TILE_LADDER_UP;
 
             if (isDoorDown)
-              value = TILE_LADDER_UP;
+              value = TILE_LADDER_DOWN;
           }
 
           TileSetValue(&state->worldArena, tileMap, absTileX, absTileY,
