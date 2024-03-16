@@ -378,7 +378,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         continue;
 
       else if (tileid & TILE_WALKABLE)
-        gray = 0.5f;
+        continue;
 
       else if (tileid & TILE_BLOCKED)
         gray = 1.0f;
