@@ -72,4 +72,15 @@ GetController(struct game_input *input, u8 index) {
   return &input->controllers[index];
 }
 
+struct game_memory {
+  u8 initialized : 1;
+
+  u64 permanentStorageSize;
+  void *permanentStorage;
+
+  u64 transientStorageSize;
+  void *transientStorage;
+};
+
+
 #endif /* HANDMADEHERO_PLATFORM_H */

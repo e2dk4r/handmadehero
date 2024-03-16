@@ -3,17 +3,6 @@
 #include "memory_arena.h"
 #include "platform.h"
 #include "tile.h"
-#include "types.h"
-
-struct game_memory {
-  u8 initialized : 1;
-
-  u64 permanentStorageSize;
-  void *permanentStorage;
-
-  u64 transientStorageSize;
-  void *transientStorage;
-};
 
 struct world {
   struct tile_map *tileMap;
