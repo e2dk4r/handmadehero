@@ -117,8 +117,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         if (absTileZ == 0)
           isDoorUp = 1;
         else
-          isDoorDown = 0;
-      else if (randomValue == 0)
+          isDoorDown = 1;
+      else if (randomValue == 1)
         isDoorRight = 1;
       else
         isDoorTop = 1;
@@ -180,7 +180,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
           absTileZ = 1;
         else
           absTileZ = 0;
-      else if (randomValue == 0)
+      else if (randomValue == 1)
         screenX += 1;
       else
         screenY += 1;
