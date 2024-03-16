@@ -8,8 +8,9 @@ head_branch
 head_sha
 display_title
 run_number
-status
 html_url
+status
+conclusion
 END
 )
 jq_filter=".workflow_runs[0] | $(echo $props | sed 's/ /,./g' | sed 's/^/./')"
