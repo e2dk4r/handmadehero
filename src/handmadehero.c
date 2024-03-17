@@ -571,6 +571,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                  playerTop + playerHeight * metersToPixels,
                  /* color */
                  playerR, playerG, playerB);
-  DrawBitmap(&state->bitmapHero[BITMAP_HERO_RIGHT].head, backbuffer, playerLeft,
-             playerTop);
+
+  u32 direction = BITMAP_HERO_RIGHT;
+  struct bitmap_hero *bitmap = &state->bitmapHero[direction];
+  DrawBitmap(&bitmap->torso, backbuffer, playerLeft, playerTop);
+  DrawBitmap(&bitmap->cape, backbuffer, playerLeft, playerTop);
+  DrawBitmap(&bitmap->head, backbuffer, playerLeft, playerTop);
 }
