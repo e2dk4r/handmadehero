@@ -85,7 +85,7 @@ static inline u8 PositionTileMapSameTile(struct position_tile_map *left,
 }
 
 static inline u8 TileMapIsPointEmpty(struct tile_map *tileMap,
-                                   struct position_tile_map *testPos) {
+                                     struct position_tile_map *testPos) {
   u32 value = TileGetValue(tileMap, testPos->absTileX, testPos->absTileY,
                            testPos->absTileZ);
   return value & (TILE_WALKABLE | TILE_LADDER_UP | TILE_LADDER_DOWN);
