@@ -17,4 +17,8 @@ static inline i32 floorf32toi32(f32 value) {
   return (i32)__builtin_floor(value);
 }
 
+static inline i32 FindLeastSignificantBitSet(i32 value) {
+  return __builtin_ffs(value) - 1;
+}
+
 #endif /* HANDMADEHERO_MATH_H */

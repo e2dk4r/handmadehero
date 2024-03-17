@@ -138,12 +138,14 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
     struct bitmap_header_compressed *cHeader =
         (struct bitmap_header_compressed *)header;
 
+    i32 redShift = FindLeastSignificantBitSet((i32)cHeader->redMask);
+    i32 greenShift = FindLeastSignificantBitSet((i32)cHeader->greenMask);
+    i32 blueShift = FindLeastSignificantBitSet((i32)cHeader->blueMask);
+    assert(redShift != greenShift != blueShift);
+
     u32 *srcDest = pixels;
     for (i32 y = 0; y < header->height; y++) {
       for (i32 x = 0; x < header->width; x++) {
-        i32 redShift = __builtin_ffs((i32)cHeader->redMask) - 1;
-        i32 greenShift = __builtin_ffs((i32)cHeader->greenMask) - 1;
-        i32 blueShift = __builtin_ffs((i32)cHeader->blueMask) - 1;
 
         u32 red = (*srcDest & cHeader->redMask) >> redShift;
         u32 green = (*srcDest & cHeader->greenMask) >> greenShift;
