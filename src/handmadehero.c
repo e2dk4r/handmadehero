@@ -83,9 +83,45 @@ static void DrawBitmap(struct bitmap *bitmap,
     u32 *dst = (u32 *)dstRow;
 
     for (i32 x = minX; x < maxX; x++) {
-      u32 alpha = *src >> 24;
-      if (alpha > 128)
-        *dst = *src;
+      // source channels
+      f32 a = (f32)((*src >> 24) & 0xff) / 255.0f;
+      f32 sR = (f32)((*src >> 16) & 0xff);
+      f32 sG = (f32)((*src >> 8) & 0xff);
+      f32 sB = (f32)((*src >> 0) & 0xff);
+
+      // destination channels
+      f32 dR = (f32)((*dst >> 16) & 0xff);
+      f32 dG = (f32)((*dst >> 8) & 0xff);
+      f32 dB = (f32)((*dst >> 0) & 0xff);
+
+      /* linear blend
+       *    .       .
+       *    A       B
+       *
+       * from A to B delta is
+       *    t = B - A
+       *
+       * for going from A to B is
+       *    C = A + (B - A)
+       *
+       * this can be formulated where t is [0, 1]
+       *    C(t) = A + t (B - A)
+       *    C(t) = A + t B - t A
+       *    C(t) = A (1 - t) + t B
+       */
+
+      // t is alpha and B is source because we are trying to get to it
+      f32 r = dR * (1.0f - a) + a * sR;
+      f32 g = dG * (1.0f - a) + a * sG;
+      f32 b = dB * (1.0f - a) + a * sB;
+
+      *dst =
+          /* red */
+          (u32)(r) << 16
+          /* green */
+          | (u32)(g) << 8
+          /* blue */
+          | (u32)(b) << 0;
 
       dst++;
       src++;
