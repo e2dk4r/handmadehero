@@ -141,7 +141,7 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
     i32 redShift = FindLeastSignificantBitSet((i32)cHeader->redMask);
     i32 greenShift = FindLeastSignificantBitSet((i32)cHeader->greenMask);
     i32 blueShift = FindLeastSignificantBitSet((i32)cHeader->blueMask);
-    assert(redShift != greenShift != blueShift);
+    assert(redShift != greenShift);
 
     u32 *srcDest = pixels;
     for (i32 y = 0; y < header->height; y++) {
