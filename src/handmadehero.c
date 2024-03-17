@@ -223,16 +223,40 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
 
   if (!memory->initialized) {
+    /* load background */
     state->bitmapBackground =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
 
-    state->bitmapHeroHead = LoadBmp(memory->PlatformReadEntireFile,
-                                    "test/test_hero_front_head.bmp");
-    state->bitmapHeroTorso = LoadBmp(memory->PlatformReadEntireFile,
-                                     "test/test_hero_front_torso.bmp");
-    state->bitmapHeroCape = LoadBmp(memory->PlatformReadEntireFile,
-                                    "test/test_hero_front_cape.bmp");
+    /* load hero bitmaps */
+    state->bitmapHero[BITMAP_HERO_FRONT].head = LoadBmp(
+        memory->PlatformReadEntireFile, "test/test_hero_front_head.bmp");
+    state->bitmapHero[BITMAP_HERO_FRONT].torso = LoadBmp(
+        memory->PlatformReadEntireFile, "test/test_hero_front_torso.bmp");
+    state->bitmapHero[BITMAP_HERO_FRONT].cape = LoadBmp(
+        memory->PlatformReadEntireFile, "test/test_hero_front_cape.bmp");
 
+    state->bitmapHero[BITMAP_HERO_BACK].head =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_head.bmp");
+    state->bitmapHero[BITMAP_HERO_BACK].torso = LoadBmp(
+        memory->PlatformReadEntireFile, "test/test_hero_back_torso.bmp");
+    state->bitmapHero[BITMAP_HERO_BACK].cape =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_cape.bmp");
+
+    state->bitmapHero[BITMAP_HERO_LEFT].head =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_head.bmp");
+    state->bitmapHero[BITMAP_HERO_LEFT].torso = LoadBmp(
+        memory->PlatformReadEntireFile, "test/test_hero_left_torso.bmp");
+    state->bitmapHero[BITMAP_HERO_LEFT].cape =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_cape.bmp");
+
+    state->bitmapHero[BITMAP_HERO_RIGHT].head = LoadBmp(
+        memory->PlatformReadEntireFile, "test/test_hero_right_head.bmp");
+    state->bitmapHero[BITMAP_HERO_RIGHT].torso = LoadBmp(
+        memory->PlatformReadEntireFile, "test/test_hero_right_torso.bmp");
+    state->bitmapHero[BITMAP_HERO_RIGHT].cape = LoadBmp(
+        memory->PlatformReadEntireFile, "test/test_hero_right_cape.bmp");
+
+    /* set initial player position */
     state->playerPos.absTileX = 1;
     state->playerPos.absTileY = 3;
     state->playerPos.offsetX = 5.0f;
@@ -547,5 +571,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                  playerTop + playerHeight * metersToPixels,
                  /* color */
                  playerR, playerG, playerB);
-  DrawBitmap(&state->bitmapHeroHead, backbuffer, playerLeft, playerTop);
+  DrawBitmap(&state->bitmapHero[BITMAP_HERO_RIGHT].head, backbuffer, playerLeft,
+             playerTop);
 }

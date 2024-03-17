@@ -14,6 +14,12 @@ struct bitmap {
   u32 *pixels;
 };
 
+struct bitmap_hero {
+  struct bitmap head;
+  struct bitmap torso;
+  struct bitmap cape;
+};
+
 struct game_state {
   struct memory_arena worldArena;
   struct world *world;
@@ -21,9 +27,11 @@ struct game_state {
   struct position_tile_map playerPos;
   struct bitmap bitmapBackground;
 
-  struct bitmap bitmapHeroHead;
-  struct bitmap bitmapHeroTorso;
-  struct bitmap bitmapHeroCape;
+#define BITMAP_HERO_FRONT 3
+#define BITMAP_HERO_BACK 1
+#define BITMAP_HERO_LEFT 2
+#define BITMAP_HERO_RIGHT 0
+  struct bitmap_hero bitmapHero[4];
 };
 
 #define GAMEUPDATEANDRENDER(name)                                              \
