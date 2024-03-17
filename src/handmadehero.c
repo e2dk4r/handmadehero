@@ -508,6 +508,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       }
 
       state->playerPos = newPlayerPos;
+      state->cameraPos.absTileZ = state->playerPos.absTileZ;
     }
   }
 
