@@ -15,6 +15,9 @@ struct bitmap {
 };
 
 struct bitmap_hero {
+  i32 alignX;
+  i32 alignY;
+
   struct bitmap head;
   struct bitmap torso;
   struct bitmap cape;

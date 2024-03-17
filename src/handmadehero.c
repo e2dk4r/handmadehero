@@ -50,8 +50,11 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
 }
 
 static void DrawBitmap(struct bitmap *bitmap,
-                       struct game_backbuffer *backbuffer, f32 realX,
-                       f32 realY) {
+                       struct game_backbuffer *backbuffer, f32 realX, f32 realY,
+                       i32 alignX, i32 alignY) {
+  realX -= (f32)alignX;
+  realY -= (f32)alignY;
+
   i32 minX = roundf32toi32(realX);
   i32 minY = roundf32toi32(realY);
   i32 maxX = roundf32toi32(realX + (f32)bitmap->width);
@@ -222,39 +225,54 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
 
+  /****************************************************************
+   * INITIALIZATION
+   ****************************************************************/
   if (!memory->initialized) {
     /* load background */
     state->bitmapBackground =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
 
     /* load hero bitmaps */
-    state->bitmapHero[BITMAP_HERO_FRONT].head = LoadBmp(
-        memory->PlatformReadEntireFile, "test/test_hero_front_head.bmp");
-    state->bitmapHero[BITMAP_HERO_FRONT].torso = LoadBmp(
-        memory->PlatformReadEntireFile, "test/test_hero_front_torso.bmp");
-    state->bitmapHero[BITMAP_HERO_FRONT].cape = LoadBmp(
-        memory->PlatformReadEntireFile, "test/test_hero_front_cape.bmp");
+    struct bitmap_hero *bitmapHero = &state->bitmapHero[BITMAP_HERO_FRONT];
+    bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile,
+                               "test/test_hero_front_head.bmp");
+    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
+                                "test/test_hero_front_torso.bmp");
+    bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile,
+                               "test/test_hero_front_cape.bmp");
+    bitmapHero->alignX = 72;
+    bitmapHero->alignY = 182;
 
-    state->bitmapHero[BITMAP_HERO_BACK].head =
+    bitmapHero = &state->bitmapHero[BITMAP_HERO_BACK];
+    bitmapHero->head =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_head.bmp");
-    state->bitmapHero[BITMAP_HERO_BACK].torso = LoadBmp(
-        memory->PlatformReadEntireFile, "test/test_hero_back_torso.bmp");
-    state->bitmapHero[BITMAP_HERO_BACK].cape =
+    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
+                                "test/test_hero_back_torso.bmp");
+    bitmapHero->cape =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_cape.bmp");
+    bitmapHero->alignX = 72;
+    bitmapHero->alignY = 182;
 
-    state->bitmapHero[BITMAP_HERO_LEFT].head =
+    bitmapHero = &state->bitmapHero[BITMAP_HERO_LEFT];
+    bitmapHero->head =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_head.bmp");
-    state->bitmapHero[BITMAP_HERO_LEFT].torso = LoadBmp(
-        memory->PlatformReadEntireFile, "test/test_hero_left_torso.bmp");
-    state->bitmapHero[BITMAP_HERO_LEFT].cape =
+    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
+                                "test/test_hero_left_torso.bmp");
+    bitmapHero->cape =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_cape.bmp");
+    bitmapHero->alignX = 72;
+    bitmapHero->alignY = 182;
 
-    state->bitmapHero[BITMAP_HERO_RIGHT].head = LoadBmp(
-        memory->PlatformReadEntireFile, "test/test_hero_right_head.bmp");
-    state->bitmapHero[BITMAP_HERO_RIGHT].torso = LoadBmp(
-        memory->PlatformReadEntireFile, "test/test_hero_right_torso.bmp");
-    state->bitmapHero[BITMAP_HERO_RIGHT].cape = LoadBmp(
-        memory->PlatformReadEntireFile, "test/test_hero_right_cape.bmp");
+    bitmapHero = &state->bitmapHero[BITMAP_HERO_RIGHT];
+    bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile,
+                               "test/test_hero_right_head.bmp");
+    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
+                                "test/test_hero_right_torso.bmp");
+    bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile,
+                               "test/test_hero_right_cape.bmp");
+    bitmapHero->alignX = 72;
+    bitmapHero->alignY = 182;
 
     /* set initial player position */
     state->playerPos.absTileX = 1;
@@ -492,7 +510,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /****************************************************************
    * RENDERING
    ****************************************************************/
-  DrawBitmap(&state->bitmapBackground, backbuffer, 0, 0);
+  DrawBitmap(&state->bitmapBackground, backbuffer, 0, 0, 0, 0);
 
   f32 screenCenterX = 0.5f * (f32)backbuffer->width;
   f32 screenCenterY = 0.5f * (f32)backbuffer->height;
@@ -563,6 +581,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   f32 playerG = 1.0f;
   f32 playerB = 0.0f;
 
+  f32 playerGroundPointX = screenCenterX;
+  f32 playerGroundPointY = screenCenterY;
+
   f32 playerLeft =
       /* screen offset */
       screenCenterX
@@ -586,7 +607,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                  playerR, playerG, playerB);
 
   struct bitmap_hero *bitmap = &state->bitmapHero[state->heroFacingDirection];
-  DrawBitmap(&bitmap->torso, backbuffer, playerLeft, playerTop);
-  DrawBitmap(&bitmap->cape, backbuffer, playerLeft, playerTop);
-  DrawBitmap(&bitmap->head, backbuffer, playerLeft, playerTop);
+  DrawBitmap(&bitmap->torso, backbuffer, playerGroundPointX, playerGroundPointY,
+             bitmap->alignX, bitmap->alignY);
+  DrawBitmap(&bitmap->cape, backbuffer, playerGroundPointX, playerGroundPointY,
+             bitmap->alignX, bitmap->alignY);
+  DrawBitmap(&bitmap->head, backbuffer, playerGroundPointX, playerGroundPointY,
+             bitmap->alignX, bitmap->alignY);
 }
