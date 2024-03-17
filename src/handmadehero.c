@@ -228,6 +228,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /****************************************************************
    * INITIALIZATION
    ****************************************************************/
+  static const u32 tilesPerWidth = 17;
+  static const u32 tilesPerHeight = 9;
   if (!memory->initialized) {
     /* load background */
     state->bitmapBackground =
@@ -311,8 +313,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                                                 tileMap->tileChunkCountY *
                                                 tileMap->tileChunkCountZ);
     /* generate procedural tile map */
-    u32 tilesPerWidth = 17;
-    u32 tilesPerHeight = 9;
     u32 screenX = 0;
     u32 screenY = 0;
     u32 absTileZ = 0;
@@ -509,6 +509,21 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
       state->playerPos = newPlayerPos;
       state->cameraPos.absTileZ = state->playerPos.absTileZ;
+
+      struct position_difference diff =
+          PositionDifference(tileMap, &state->playerPos, &state->cameraPos);
+
+      f32 maxDiffX = (f32)tilesPerWidth * 0.5f * tileMap->tileSideInMeters;
+      if (diff.dX > maxDiffX)
+        state->cameraPos.absTileX += tilesPerWidth;
+      else if (diff.dX < -maxDiffX)
+        state->cameraPos.absTileX -= tilesPerWidth;
+
+      f32 maxDiffY = (f32)tilesPerHeight / 2.0f * tileMap->tileSideInMeters;
+      if (diff.dY > maxDiffY)
+        state->cameraPos.absTileY += tilesPerHeight;
+      else if (diff.dY < -maxDiffY)
+        state->cameraPos.absTileY -= tilesPerHeight;
     }
   }
 
