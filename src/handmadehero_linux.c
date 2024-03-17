@@ -1062,8 +1062,12 @@ int main(int argc, char *argv[]) {
       wl_display_dispatch_pending(wl_display);
     wl_display_flush(wl_display);
 
-    int error = io_uring_wait_cqe(&ring, &cqe);
+    int error;
+  wait:
+    error = io_uring_wait_cqe(&ring, &cqe);
     if (error) {
+      if (errno == EAGAIN)
+        goto wait;
       error_code = HANDMADEHERO_ERROR_IO_URING_WAIT;
       break;
     }
