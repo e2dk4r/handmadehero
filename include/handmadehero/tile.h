@@ -50,6 +50,16 @@ struct position_tile_chunk {
   u32 relTileY;
 };
 
+struct position_difference {
+  f32 dX;
+  f32 dY;
+  f32 dZ;
+};
+
+struct position_difference PositionDifference(struct tile_map *tileMap,
+                                              struct position_tile_map *a,
+                                              struct position_tile_map *b);
+
 u32 TileGetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY,
                  u32 absTileZ);
 

@@ -581,25 +581,32 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
   }
 
-  /* render player in center of screen */
+  /* render player at player position */
+  struct position_difference diff =
+      PositionDifference(tileMap, playerPos, cameraPos);
+
   f32 playerR = 1.0f;
   f32 playerG = 1.0f;
   f32 playerB = 0.0f;
 
-  f32 playerGroundPointX = screenCenterX;
-  f32 playerGroundPointY = screenCenterY;
-
-  f32 playerLeft =
-      /* screen offset */
+  f32 playerGroundPointX =
+      /* camera offset */
       screenCenterX
-      /* offset */
-      - 0.5f * playerWidth * metersToPixels;
-
-  f32 playerTop =
-      /* screen offset */
+      /* player offset */
+      + diff.dX * metersToPixels;
+  f32 playerGroundPointY =
+      /* camera offset */
       screenCenterY
-      /* offset */
-      - playerHeight * metersToPixels;
+      /* player offset */
+      - diff.dY * metersToPixels;
+
+  f32 playerLeft = playerGroundPointX
+                   /* offset */
+                   - 0.5f * playerWidth * metersToPixels;
+
+  f32 playerTop = playerGroundPointY
+                  /* offset */
+                  - playerHeight * metersToPixels;
 
   draw_rectangle(backbuffer,
                  /* min x, y */

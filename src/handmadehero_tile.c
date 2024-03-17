@@ -119,3 +119,19 @@ void TileSetValue(struct memory_arena *arena, struct tile_map *tileMap,
   TileChunkSetTileValue(tileMap, tileChunk, chunkPos.relTileX,
                         chunkPos.relTileY, value);
 }
+
+struct position_difference PositionDifference(struct tile_map *tileMap,
+                                              struct position_tile_map *a,
+                                              struct position_tile_map *b) {
+  struct position_difference result = {};
+
+  f32 dTileX = (f32)a->absTileX - (f32)b->absTileX;
+  f32 dTileY = (f32)a->absTileY - (f32)b->absTileY;
+  f32 dTileZ = (f32)a->absTileZ - (f32)b->absTileZ;
+
+  result.dX = tileMap->tileSideInMeters * dTileX + a->offsetX - b->offsetX;
+  result.dY = tileMap->tileSideInMeters * dTileY + a->offsetY - b->offsetY;
+  result.dZ = tileMap->tileSideInMeters * dTileZ;
+
+  return result;
+}
