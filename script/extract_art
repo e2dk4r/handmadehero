@@ -1,0 +1,5 @@
+#!/bin/sh
+archive=$1
+tar xf $archive early_data/test
+mv early_data/test ./
+rmdir early_data
