@@ -27,7 +27,9 @@ struct game_state {
   struct memory_arena worldArena;
   struct world *world;
 
+  struct position_tile_map cameraPos;
   struct position_tile_map playerPos;
+
   struct bitmap bitmapBackground;
 
 #define BITMAP_HERO_FRONT 3

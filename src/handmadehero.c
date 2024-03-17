@@ -274,6 +274,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     bitmapHero->alignX = 72;
     bitmapHero->alignY = 182;
 
+    /* set initial camera position */
+    state->cameraPos.absTileX = 17 / 2;
+    state->cameraPos.absTileY = 9 / 2;
+
     /* set initial player position */
     state->playerPos.absTileX = 1;
     state->playerPos.absTileY = 3;
@@ -516,12 +520,13 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   f32 screenCenterY = 0.5f * (f32)backbuffer->height;
 
   struct position_tile_map *playerPos = &state->playerPos;
+  struct position_tile_map *cameraPos = &state->cameraPos;
 
   /* render tiles relative to player position */
   for (i32 relRow = -10; relRow < 10; relRow++) {
     for (i32 relColumn = -20; relColumn < 20; relColumn++) {
-      i32 testColumn = (i32)playerPos->absTileX + relColumn;
-      i32 testRow = (i32)playerPos->absTileY + relRow;
+      i32 testColumn = (i32)cameraPos->absTileX + relColumn;
+      i32 testRow = (i32)cameraPos->absTileY + relRow;
 
       if (testColumn < 0)
         continue;
@@ -530,7 +535,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
       u32 column = (u32)testColumn;
       u32 row = (u32)testRow;
-      u32 plane = playerPos->absTileZ;
+      u32 plane = cameraPos->absTileZ;
 
       u32 tileid = TileGetValue(tileMap, column, row, plane);
       f32 gray = 0.0f;
@@ -548,23 +553,23 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         gray = 0.25f;
 
       /* player tile x, y */
-      if (state->playerPos.absTileX == column &&
-          state->playerPos.absTileY == row) {
+      if (state->cameraPos.absTileX == column &&
+          state->cameraPos.absTileY == row) {
         gray = 0.0f;
       }
 
       f32 centerX =
           /* screen offset */
           screenCenterX
-          /* player offset */
-          - state->playerPos.offsetX * metersToPixels
+          /* follow camera */
+          - state->cameraPos.offsetX * metersToPixels
           /* tile offset */
           + (f32)relColumn * (f32)tileSideInPixels;
       f32 centerY =
           /* screen offset */
           screenCenterY
-          /* player offset */
-          + state->playerPos.offsetY * metersToPixels
+          /* follow camera */
+          + state->cameraPos.offsetY * metersToPixels
           /* tile offset */
           - (f32)relRow * (f32)tileSideInPixels;
 
