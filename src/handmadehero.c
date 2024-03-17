@@ -60,11 +60,17 @@ static void DrawBitmap(struct bitmap *bitmap,
   i32 maxX = roundf32toi32(realX + (f32)bitmap->width);
   i32 maxY = roundf32toi32(realY + (f32)bitmap->height);
 
-  if (minX < 0)
+  u32 srcOffsetX = 0;
+  if (minX < 0) {
+    srcOffsetX = (u32)-minX;
     minX = 0;
+  }
 
-  if (minY < 0)
+  u32 srcOffsetY = 0;
+  if (minY < 0) {
+    srcOffsetY = (u32)-minY;
     minY = 0;
+  }
 
   if (maxX > (i32)backbuffer->width)
     maxX = (i32)backbuffer->width;
@@ -74,6 +80,9 @@ static void DrawBitmap(struct bitmap *bitmap,
 
   /* bitmap file pixels goes bottom to up */
   u32 *srcRow = bitmap->pixels
+                /* clipped offset */
+                - srcOffsetY * bitmap->width +
+                srcOffsetX
                 /* last row offset */
                 + (bitmap->height - 1) * bitmap->width;
   u8 *dstRow = backbuffer->memory
