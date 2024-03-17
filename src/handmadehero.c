@@ -83,7 +83,10 @@ static void DrawBitmap(struct bitmap *bitmap,
     u32 *dst = (u32 *)dstRow;
 
     for (i32 x = minX; x < maxX; x++) {
-      *dst = *src;
+      u32 alpha = *src >> 24;
+      if (alpha > 128)
+        *dst = *src;
+
       dst++;
       src++;
     }
@@ -143,15 +146,25 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
     i32 blueShift = FindLeastSignificantBitSet((i32)cHeader->blueMask);
     assert(redShift != greenShift);
 
+    u32 alphaMask =
+        ~(cHeader->redMask | cHeader->greenMask | cHeader->blueMask);
+    i32 alphaShift = FindLeastSignificantBitSet((i32)alphaMask);
+
     u32 *srcDest = pixels;
     for (i32 y = 0; y < header->height; y++) {
       for (i32 x = 0; x < header->width; x++) {
 
-        u32 red = (*srcDest & cHeader->redMask) >> redShift;
-        u32 green = (*srcDest & cHeader->greenMask) >> greenShift;
-        u32 blue = (*srcDest & cHeader->blueMask) >> blueShift;
+        u32 value = *srcDest;
+        *srcDest =
+            /* blue */
+            ((value >> blueShift) & 0xff) << 0
+            /* green */
+            | ((value >> greenShift) & 0xff) << 8
+            /* red */
+            | ((value >> redShift) & 0xff) << 16
+            /* alpha */
+            | ((value >> alphaShift) & 0xff) << 24;
 
-        *srcDest = (blue << 0) | (green << 8) | (red << 16);
         srcDest++;
       }
     }
