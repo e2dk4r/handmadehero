@@ -893,7 +893,8 @@ int main(int argc, char *argv[]) {
 
     // for wayland allocations
     size = 2 * MEGABYTES;
-    MemoryArenaInit(&state.wayland_arena, game_memory.permanentStorage + used, size);
+    MemoryArenaInit(&state.wayland_arena, game_memory.permanentStorage + used,
+                    size);
     used += size;
 
     // for xkb keyboard allocations
