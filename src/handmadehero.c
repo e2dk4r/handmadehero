@@ -416,22 +416,35 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     if (controller->isAnalog) {
       dPlayerX += controller->stickAverageX;
       dPlayerY += controller->stickAverageY;
+
+      if (controller->stickAverageX > 0)
+        state->heroFacingDirection = BITMAP_HERO_RIGHT;
+      else if (controller->stickAverageX < 0)
+        state->heroFacingDirection = BITMAP_HERO_LEFT;
+      if (controller->stickAverageY > 0)
+        state->heroFacingDirection = BITMAP_HERO_BACK;
+      else if (controller->stickAverageY < 0)
+        state->heroFacingDirection = BITMAP_HERO_FRONT;
     }
 
     if (controller->moveLeft.pressed) {
       dPlayerX = -1.0f;
+      state->heroFacingDirection = BITMAP_HERO_LEFT;
     }
 
     if (controller->moveRight.pressed) {
       dPlayerX = 1.0f;
+      state->heroFacingDirection = BITMAP_HERO_RIGHT;
     }
 
     if (controller->moveDown.pressed) {
       dPlayerY = -1.0f;
+      state->heroFacingDirection = BITMAP_HERO_FRONT;
     }
 
     if (controller->moveUp.pressed) {
       dPlayerY = 1.0f;
+      state->heroFacingDirection = BITMAP_HERO_BACK;
     }
 
     f32 playerSpeed = 2.0f;
@@ -572,8 +585,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                  /* color */
                  playerR, playerG, playerB);
 
-  u32 direction = BITMAP_HERO_RIGHT;
-  struct bitmap_hero *bitmap = &state->bitmapHero[direction];
+  struct bitmap_hero *bitmap = &state->bitmapHero[state->heroFacingDirection];
   DrawBitmap(&bitmap->torso, backbuffer, playerLeft, playerTop);
   DrawBitmap(&bitmap->cape, backbuffer, playerLeft, playerTop);
   DrawBitmap(&bitmap->head, backbuffer, playerLeft, playerTop);

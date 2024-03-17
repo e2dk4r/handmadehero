@@ -31,6 +31,7 @@ struct game_state {
 #define BITMAP_HERO_BACK 1
 #define BITMAP_HERO_LEFT 2
 #define BITMAP_HERO_RIGHT 0
+  u8 heroFacingDirection;
   struct bitmap_hero bitmapHero[4];
 };
 
