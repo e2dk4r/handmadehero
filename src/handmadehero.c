@@ -117,11 +117,11 @@ static void DrawBitmap(struct bitmap *bitmap,
 
       *dst =
           /* red */
-          (u32)(r) << 16
+          (u32)(r + 0.5f) << 16
           /* green */
-          | (u32)(g) << 8
+          | (u32)(g + 0.5f) << 8
           /* blue */
-          | (u32)(b) << 0;
+          | (u32)(b + 0.5f) << 0;
 
       dst++;
       src++;
