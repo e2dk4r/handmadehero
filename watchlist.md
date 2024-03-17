@@ -154,7 +154,7 @@
 - [x] Handmade Hero Day 038 - Basic Linear Bitmap Blending
       https://www.youtube.com/watch?v=ydiHNs1YQoI
 
-- [ ] Handmade Hero Day 039 - Basic Bitmap Rendering Cleanup
+- [x] Handmade Hero Day 039 - Basic Bitmap Rendering Cleanup
       https://www.youtube.com/watch?v=R8BiV_uYT6E
 
 - [ ] Handmade Hero Day 040 - Cursor Hiding and Fullscreen Support
