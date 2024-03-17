@@ -151,7 +151,7 @@
 - [x] Handmade Hero Day 037 - Basic Bitmap Rendering
       https://www.youtube.com/watch?v=ofMJUSchXwo
 
-- [ ] Handmade Hero Day 038 - Basic Linear Bitmap Blending
+- [x] Handmade Hero Day 038 - Basic Linear Bitmap Blending
       https://www.youtube.com/watch?v=ydiHNs1YQoI
 
 - [ ] Handmade Hero Day 039 - Basic Bitmap Rendering Cleanup
