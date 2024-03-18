@@ -483,6 +483,30 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       playerSpeed = 10.0f;
     }
 
+    /* if moving diagonally */
+    if (dPlayerX != 0 && dPlayerY != 0) {
+      /* Pythagorean theorem
+       *
+       *        /|
+       *     d / | a
+       *      /  |
+       *     /___|
+       *       a
+       *
+       *           d² = a² + a²
+       *           d² = 2a²
+       *      d² / 2  = a²
+       *    √(d² / 2) = a
+       *  √(d² . 1/2) = a
+       *     d √(1/2) = a
+       *
+       * player must move 1 unit even when moving diagonally.
+       */
+      const f32 squareRoot = 0.7071067811865476f;
+      dPlayerX *= squareRoot;
+      dPlayerY *= squareRoot;
+    }
+
     dPlayerX *= playerSpeed;
     dPlayerY *= playerSpeed;
 
