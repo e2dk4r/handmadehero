@@ -202,6 +202,7 @@ struct linux_state {
 
   u32 frame;
   u8 running : 1;
+  u8 fullscreen : 1;
 };
 
 /***************************************************************
@@ -404,6 +405,17 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
     }
   } break;
 #endif
+
+  case 'f': {
+    if (!keystate)
+      break;
+
+    if (!state->fullscreen)
+      xdg_toplevel_set_fullscreen(state->xdg_toplevel, 0);
+    else
+      xdg_toplevel_unset_fullscreen(state->xdg_toplevel);
+    state->fullscreen = !state->fullscreen;
+  } break;
 
   case 'A':
   case 'a': {
