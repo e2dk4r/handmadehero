@@ -466,11 +466,10 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
   }
 }
 
-static void wl_keyboard_modifiers_handle(void *data,
-                                         struct wl_keyboard *wl_keyboard,
-                                         u32 serial, u32 mods_depressed,
-                                         u32 mods_latched, u32 mods_locked,
-                                         u32 group) {
+static void wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
+                                  u32 serial, u32 mods_depressed,
+                                  u32 mods_latched, u32 mods_locked,
+                                  u32 group) {
   struct linux_state *state = data;
   debugf("[wl_keyboard::modifiers] serial: %d depressed: %d latched: %d "
          "locked: %d group: %d\n",
@@ -504,7 +503,7 @@ comptime struct wl_keyboard_listener wl_keyboard_listener = {
     .leave = wl_keyboard_leave,
     .keymap = wl_keyboard_keymap,
     .key = wl_keyboard_key,
-    .modifiers = wl_keyboard_modifiers_handle,
+    .modifiers = wl_keyboard_modifiers,
     .repeat_info = wl_keyboard_repeat_info,
 };
 
@@ -564,14 +563,14 @@ static void wl_seat_capabilities(void *data, struct wl_seat *wl_seat,
   }
 }
 
-static void wl_seat_name_handle(void *data, struct wl_seat *wl_seat,
-                                const char *name) {
+static void wl_seat_name(void *data, struct wl_seat *wl_seat,
+                         const char *name) {
   debugf("[wl_seat::name] name: %s\n", name);
 }
 
 comptime struct wl_seat_listener wl_seat_listener = {
     .capabilities = wl_seat_capabilities,
-    .name = wl_seat_name_handle,
+    .name = wl_seat_name,
 };
 
 /*****************************************************************
@@ -663,24 +662,24 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
 /*****************************************************************
  * xdg_wm_base events
  *****************************************************************/
-static void xdg_wm_base_ping_handle(void *data, struct xdg_wm_base *xdg_wm_base,
-                                    u32 serial) {
+static void xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base,
+                             u32 serial) {
   xdg_wm_base_pong(xdg_wm_base, serial);
   debugf("[xdg_wm_base::ping] pong(serial: %d)\n", serial);
 }
 
 static const struct xdg_wm_base_listener xdg_wm_base_listener = {
-    .ping = xdg_wm_base_ping_handle,
+    .ping = xdg_wm_base_ping,
 };
 
 /*****************************************************************
  * xdg_toplevel events
  *****************************************************************/
 
-static void xdg_toplevel_configure_handle(void *data,
-                                          struct xdg_toplevel *xdg_toplevel,
-                                          i32 screen_width, i32 screen_height,
-                                          struct wl_array *states) {
+static void xdg_toplevel_configure(void *data,
+                                   struct xdg_toplevel *xdg_toplevel,
+                                   i32 screen_width, i32 screen_height,
+                                   struct wl_array *states) {
   debugf("[xdg_toplevel::configure] screen width: %d height: %d\n",
          screen_width, screen_height);
   if (screen_width == 0 || screen_height == 0)
@@ -700,23 +699,21 @@ static void xdg_toplevel_configure_handle(void *data,
   wl_surface_commit(state->wl_surface);
 }
 
-static void xdg_toplevel_close_handle(void *data,
-                                      struct xdg_toplevel *xdg_toplevel) {
+static void xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel) {
   struct linux_state *state = data;
   state->running = 0;
 }
 
 comptime struct xdg_toplevel_listener xdg_toplevel_listener = {
-    .configure = xdg_toplevel_configure_handle,
-    .close = xdg_toplevel_close_handle,
+    .configure = xdg_toplevel_configure,
+    .close = xdg_toplevel_close,
 };
 
 /*****************************************************************
  * xdg_surface events
  *****************************************************************/
-static void xdg_surface_configure_handle(void *data,
-                                         struct xdg_surface *xdg_surface,
-                                         u32 serial) {
+static void xdg_surface_configure(void *data, struct xdg_surface *xdg_surface,
+                                  u32 serial) {
   struct linux_state *state = data;
 
   /* ack */
@@ -728,7 +725,7 @@ static void xdg_surface_configure_handle(void *data,
 }
 
 comptime struct xdg_surface_listener xdg_surface_listener = {
-    .configure = xdg_surface_configure_handle,
+    .configure = xdg_surface_configure,
 };
 
 /*****************************************************************
@@ -741,8 +738,8 @@ comptime struct xdg_surface_listener xdg_surface_listener = {
 #define XDG_WM_BASE_MINIMUM_REQUIRED_VERSION 2
 #define WP_VIEWPORTER_MINIMUM_REQUIRED_VERSION 1
 
-static void registry_handle(void *data, struct wl_registry *wl_registry,
-                            u32 name, const char *interface, u32 version) {
+static void wl_registry_global(void *data, struct wl_registry *wl_registry,
+                               u32 name, const char *interface, u32 version) {
   struct linux_state *state = data;
 
   if (strcmp(interface, wl_compositor_interface.name) == 0) {
@@ -780,7 +777,7 @@ static void registry_handle(void *data, struct wl_registry *wl_registry,
 }
 
 comptime struct wl_registry_listener registry_listener = {
-    .global = registry_handle,
+    .global = wl_registry_global,
 };
 
 /*****************************************************************
