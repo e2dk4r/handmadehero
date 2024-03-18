@@ -3,8 +3,8 @@
 #include <handmadehero/math.h>
 #include <handmadehero/random.h>
 
-static void draw_rectangle(struct game_backbuffer *backbuffer, struct v2 min,
-                           struct v2 max, f32 r, f32 g, f32 b) {
+static void DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min,
+                          struct v2 max, f32 r, f32 g, f32 b) {
   assert(min.x < max.x);
   assert(min.y < max.y);
 
@@ -626,7 +626,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       struct v2 min = v2_sub(center, tileSide);
       /* right bottom */
       struct v2 max = v2_add(center, tileSide);
-      draw_rectangle(backbuffer, min, max, gray, gray, gray);
+      DrawRectangle(backbuffer, min, max, gray, gray, gray);
     }
   }
 
@@ -658,9 +658,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   v2_mul_ref(&playerWidthHeight, metersToPixels);
   struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
 
-  draw_rectangle(backbuffer, playerLeftTop, playerRightBottom,
-                 /* color */
-                 playerR, playerG, playerB);
+  DrawRectangle(backbuffer, playerLeftTop, playerRightBottom,
+                /* color */
+                playerR, playerG, playerB);
 
   struct bitmap_hero *bitmap = &state->bitmapHero[state->heroFacingDirection];
   DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
