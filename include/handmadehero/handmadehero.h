@@ -28,7 +28,10 @@ struct game_state {
   struct world *world;
 
   struct position_tile_map cameraPos;
+  /* position */
   struct position_tile_map playerPos;
+  /* velocity */
+  struct v2 dPlayerPos;
 
   struct bitmap bitmapBackground;
 

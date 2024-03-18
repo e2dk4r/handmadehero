@@ -68,6 +68,12 @@ struct game_controller_input {
 
 #define HANDMADEHERO_CONTROLLER_COUNT 2U
 struct game_input {
+  /*
+   *        |-----|-----|-----|-----|-----|--->
+   *  frame 0     1     2     3     4     5
+   *        ⇐ ∆t  ⇒
+   *  in seconds
+   */
   f32 dtPerFrame;
   struct game_controller_input controllers[HANDMADEHERO_CONTROLLER_COUNT];
 };

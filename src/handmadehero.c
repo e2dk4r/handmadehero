@@ -295,6 +295,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     state->playerPos.absTileY = 3;
     state->playerPos.offset = (struct v2){.x = 5.0f, .y = 5.0f};
 
+    /* set initial player velocity */
+    // state->dPlayerPos.x = 0;
+    // state->dPlayerPos.y = 0;
+
     /* world creation */
     void *data = memory->permanentStorage + sizeof(*state);
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
@@ -439,11 +443,12 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct game_controller_input *controller =
         GetController(input, controllerIndex);
 
-    struct v2 dPlayer = {};
+    /* acceleration */
+    struct v2 ddPlayer = {};
 
     if (controller->isAnalog) {
-      dPlayer.x += controller->stickAverageX;
-      dPlayer.y += controller->stickAverageY;
+      ddPlayer.x += controller->stickAverageX;
+      ddPlayer.y += controller->stickAverageY;
 
       if (controller->stickAverageX > 0)
         state->heroFacingDirection = BITMAP_HERO_RIGHT;
@@ -456,27 +461,27 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     if (controller->moveLeft.pressed) {
-      dPlayer.x = -1.0f;
+      ddPlayer.x = -1.0f;
       state->heroFacingDirection = BITMAP_HERO_LEFT;
     }
 
     if (controller->moveRight.pressed) {
-      dPlayer.x = 1.0f;
+      ddPlayer.x = 1.0f;
       state->heroFacingDirection = BITMAP_HERO_RIGHT;
     }
 
     if (controller->moveDown.pressed) {
-      dPlayer.y = -1.0f;
+      ddPlayer.y = -1.0f;
       state->heroFacingDirection = BITMAP_HERO_FRONT;
     }
 
     if (controller->moveUp.pressed) {
-      dPlayer.y = 1.0f;
+      ddPlayer.y = 1.0f;
       state->heroFacingDirection = BITMAP_HERO_BACK;
     }
 
     /* if moving diagonally */
-    if (dPlayer.x != 0 && dPlayer.y != 0) {
+    if (ddPlayer.x != 0 && ddPlayer.y != 0) {
       /* Pythagorean theorem
        *
        *        /|
@@ -495,21 +500,81 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
        * player must move 1 unit even when moving diagonally.
        */
       const f32 squareRoot = 0.7071067811865476f;
-      v2_mul_ref(&dPlayer, squareRoot);
+      v2_mul_ref(&ddPlayer, squareRoot);
     }
 
-    /* set player speed */
+    /* set player speed in m/s² */
     f32 playerSpeed = 2.0f;
     if (controller->actionDown.pressed) {
       playerSpeed = 10.0f;
     }
-    v2_mul_ref(&dPlayer, playerSpeed);
+    v2_mul_ref(&ddPlayer, playerSpeed);
 
-    /* convert from meters/frame to meters/second */
-    v2_mul_ref(&dPlayer, input->dtPerFrame);
-
+    /* calculation of new player position
+     *
+     *  (position)      f(t) = 1/2 a t² + v t + p
+     *     where p is old position
+     *           a is acceleration
+     *           t is time
+     *  (velocity)     f'(t) = a t + v
+     *  (acceleration) f"(t) = a
+     *     acceleration coming from user
+     *
+     *  calculated using integral of acceleration
+     *  (velocity) ∫(f"(t)) = f'(t) = a t + v
+     *             where v is old velocity
+     *             using integral of velocity
+     *  (position) ∫(f'(t)) = 1/2 a t² + v t + p
+     *             where p is old position
+     *
+     *        |-----|-----|-----|-----|-----|--->
+     *  frame 0     1     2     3     4     5
+     *        ⇐ ∆t  ⇒
+     *     ∆t comes from platform layer
+     */
     struct position_tile_map newPlayerPos = state->playerPos;
-    v2_add_ref(&newPlayerPos.offset, dPlayer);
+
+    // clang-format off
+    /* new position */
+    newPlayerPos.offset =
+      /* 1/2 a t² + v t + p */
+      v2_add(
+        /* 1/2 a t² + v t */
+        v2_add(
+          /* 1/2 a t² */
+          v2_mul(
+            /* 1/2 a */
+            v2_mul(ddPlayer, 0.5f),
+            /* t² */
+            square(input->dtPerFrame)
+          ), /* end: 1/2 a t² */
+          /* v t */
+          v2_mul(
+            /* v */
+            state->dPlayerPos,
+            /* t */
+            input->dtPerFrame
+          ) /* end: v t */
+        ), /* end: 1/2 a t² + v t */
+        /* p */
+        state->playerPos.offset
+      );
+
+    /* new velocity */
+    state->dPlayerPos =
+      /* a t + v */
+      v2_add(
+        /* a t */
+        v2_mul(
+            /* a */
+            ddPlayer,
+            /* t */
+            input->dtPerFrame
+        ),
+        /* v */
+        state->dPlayerPos
+      );
+    // clang-format on
     newPlayerPos = PositionCorrect(tileMap, &newPlayerPos);
 
     struct position_tile_map left = newPlayerPos;
