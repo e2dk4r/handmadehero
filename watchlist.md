@@ -163,7 +163,7 @@
 - [x] Handmade Hero Day 041 - Overview of the Types of Math Used in Games
       https://www.youtube.com/watch?v=WN3_d_QcJZE
 
-- [ ] Handmade Hero Day 042 - Basic 2D Vectors
+- [x] Handmade Hero Day 042 - Basic 2D Vectors
       https://www.youtube.com/watch?v=eE-D_wSUd0g
 
 - [ ] Handmade Hero Day 043 - The Equations of Motion
