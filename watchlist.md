@@ -160,7 +160,7 @@
 - [x] Handmade Hero Day 040 - Cursor Hiding and Fullscreen Support
       https://www.youtube.com/watch?v=YBCOijN2fNA
 
-- [ ] Handmade Hero Day 041 - Overview of the Types of Math Used in Games
+- [x] Handmade Hero Day 041 - Overview of the Types of Math Used in Games
       https://www.youtube.com/watch?v=WN3_d_QcJZE
 
 - [ ] Handmade Hero Day 042 - Basic 2D Vectors
