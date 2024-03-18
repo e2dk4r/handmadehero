@@ -103,6 +103,23 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  const off_t MEGABYTES = 1 << 20;
+  const off_t GIGABYTES = 1 << 30;
+  off_t game_state_size =
+      /* total memory */
+      1 * GIGABYTES
+      // for wayland allocations
+      - 2 * MEGABYTES
+      // for xkb keyboard allocations
+      - 1 * MEGABYTES;
+  off_t seekBytes = lseek(state.fd, game_state_size, SEEK_SET);
+  if (seekBytes < 0) {
+    static const char msg[] = "cannot seek to input" NEWLINE;
+    static const u64 msg_len = sizeof(msg) - 1;
+    write(STDERR, msg, msg_len);
+    return 1;
+  }
+
   u8 status;
 playback:
   status = PlaybackInput(&state, &next);
