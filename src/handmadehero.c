@@ -3,16 +3,15 @@
 #include <handmadehero/math.h>
 #include <handmadehero/random.h>
 
-static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
-                           f32 realMinY, f32 realMaxX, f32 realMaxY, f32 r,
-                           f32 g, f32 b) {
-  assert(realMinX < realMaxX);
-  assert(realMinY < realMaxY);
+static void draw_rectangle(struct game_backbuffer *backbuffer, struct v2 min,
+                           struct v2 max, f32 r, f32 g, f32 b) {
+  assert(min.x < max.x);
+  assert(min.y < max.y);
 
-  i32 minX = roundf32toi32(realMinX);
-  i32 minY = roundf32toi32(realMinY);
-  i32 maxX = roundf32toi32(realMaxX);
-  i32 maxY = roundf32toi32(realMaxY);
+  i32 minX = roundf32toi32(min.x);
+  i32 minY = roundf32toi32(min.y);
+  i32 maxX = roundf32toi32(max.x);
+  i32 maxY = roundf32toi32(max.y);
 
   if (minX < 0)
     minX = 0;
@@ -50,15 +49,17 @@ static void draw_rectangle(struct game_backbuffer *backbuffer, f32 realMinX,
 }
 
 static void DrawBitmap(struct bitmap *bitmap,
-                       struct game_backbuffer *backbuffer, f32 realX, f32 realY,
+                       struct game_backbuffer *backbuffer, struct v2 pos,
                        i32 alignX, i32 alignY) {
-  realX -= (f32)alignX;
-  realY -= (f32)alignY;
+  v2_sub_ref(&pos, (struct v2){
+                       .x = (f32)alignX,
+                       .y = (f32)alignY,
+                   });
 
-  i32 minX = roundf32toi32(realX);
-  i32 minY = roundf32toi32(realY);
-  i32 maxX = roundf32toi32(realX + (f32)bitmap->width);
-  i32 maxY = roundf32toi32(realY + (f32)bitmap->height);
+  i32 minX = roundf32toi32(pos.x);
+  i32 minY = roundf32toi32(pos.y);
+  i32 maxX = roundf32toi32(pos.x + (f32)bitmap->width);
+  i32 maxY = roundf32toi32(pos.y + (f32)bitmap->height);
 
   u32 srcOffsetX = 0;
   if (minX < 0) {
@@ -559,10 +560,12 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /****************************************************************
    * RENDERING
    ****************************************************************/
-  DrawBitmap(&state->bitmapBackground, backbuffer, 0, 0, 0, 0);
+  DrawBitmap(&state->bitmapBackground, backbuffer, (struct v2){}, 0, 0);
 
-  f32 screenCenterX = 0.5f * (f32)backbuffer->width;
-  f32 screenCenterY = 0.5f * (f32)backbuffer->height;
+  struct v2 screenCenter = {
+      .x = 0.5f * (f32)backbuffer->width,
+      .y = 0.5f * (f32)backbuffer->height,
+  };
 
   struct position_tile_map *playerPos = &state->playerPos;
   struct position_tile_map *cameraPos = &state->cameraPos;
@@ -603,26 +606,27 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         gray = 0.0f;
       }
 
-      f32 centerX =
-          /* screen offset */
-          screenCenterX
-          /* follow camera */
-          - state->cameraPos.offset.x * metersToPixels
-          /* tile offset */
-          + (f32)relColumn * (f32)tileSideInPixels;
-      f32 centerY =
-          /* screen offset */
-          screenCenterY
-          /* follow camera */
-          + state->cameraPos.offset.y * metersToPixels
-          /* tile offset */
-          - (f32)relRow * (f32)tileSideInPixels;
+      struct v2 center = {.x = screenCenter.x /* screen offset */
+                               /* follow camera */
+                               - state->cameraPos.offset.x * metersToPixels
+                               /* tile offset */
+                               + (f32)relColumn * (f32)tileSideInPixels,
 
-      f32 left = centerX - 0.5f * (f32)tileSideInPixels;
-      f32 bottom = centerY + 0.5f * (f32)tileSideInPixels;
-      f32 right = left + (f32)tileSideInPixels;
-      f32 top = bottom - (f32)tileSideInPixels;
-      draw_rectangle(backbuffer, left, top, right, bottom, gray, gray, gray);
+                          .y = screenCenter.y /* screen offset */
+                               /* follow camera */
+                               + state->cameraPos.offset.y * metersToPixels
+                               /* tile offset */
+                               - (f32)relRow * (f32)tileSideInPixels};
+
+      struct v2 tileSide = {
+          .x = 0.5f * (f32)tileSideInPixels,
+          .y = 0.5f * (f32)tileSideInPixels,
+      };
+      /* left top */
+      struct v2 min = v2_sub(center, tileSide);
+      /* right bottom */
+      struct v2 max = v2_add(center, tileSide);
+      draw_rectangle(backbuffer, min, max, gray, gray, gray);
     }
   }
 
@@ -630,44 +634,39 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct position_difference diff =
       PositionDifference(tileMap, playerPos, cameraPos);
 
+  /* convert from meters to pixel */
+  v2_mul_ref(&diff.dXY, metersToPixels);
+
   f32 playerR = 1.0f;
   f32 playerG = 1.0f;
   f32 playerB = 0.0f;
 
-  f32 playerGroundPointX =
-      /* camera offset */
-      screenCenterX
-      /* player offset */
-      + diff.dXY.x * metersToPixels;
-  f32 playerGroundPointY =
-      /* camera offset */
-      screenCenterY
-      /* player offset */
-      - diff.dXY.y * metersToPixels;
+  struct v2 playerGroundPoint = {
+      .x = screenCenter.x + diff.dXY.x,
+      .y = screenCenter.y - diff.dXY.y,
+  };
 
-  f32 playerLeft = playerGroundPointX
-                   /* offset */
-                   - 0.5f * playerWidth * metersToPixels;
+  struct v2 playerLeftTop = (struct v2){
+      .x = playerGroundPoint.x - 0.5f * playerWidth * metersToPixels,
+      .y = playerGroundPoint.y - playerHeight * metersToPixels,
+  };
 
-  f32 playerTop = playerGroundPointY
-                  /* offset */
-                  - playerHeight * metersToPixels;
+  struct v2 playerWidthHeight = (struct v2){
+      .x = playerWidth,
+      .y = playerHeight,
+  };
+  v2_mul_ref(&playerWidthHeight, metersToPixels);
+  struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
 
-  draw_rectangle(backbuffer,
-                 /* min x, y */
-                 playerLeft, playerTop,
-                 /* max x */
-                 playerLeft + playerWidth * metersToPixels,
-                 /* max y */
-                 playerTop + playerHeight * metersToPixels,
+  draw_rectangle(backbuffer, playerLeftTop, playerRightBottom,
                  /* color */
                  playerR, playerG, playerB);
 
   struct bitmap_hero *bitmap = &state->bitmapHero[state->heroFacingDirection];
-  DrawBitmap(&bitmap->torso, backbuffer, playerGroundPointX, playerGroundPointY,
-             bitmap->alignX, bitmap->alignY);
-  DrawBitmap(&bitmap->cape, backbuffer, playerGroundPointX, playerGroundPointY,
-             bitmap->alignX, bitmap->alignY);
-  DrawBitmap(&bitmap->head, backbuffer, playerGroundPointX, playerGroundPointY,
-             bitmap->alignX, bitmap->alignY);
+  DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
+             bitmap->alignY);
+  DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->alignX,
+             bitmap->alignY);
+  DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
+             bitmap->alignY);
 }
