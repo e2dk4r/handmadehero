@@ -35,7 +35,7 @@ jobs:
         file=$output.tar.zst
 
         mkdir $output
-        cp build/handmadehero build/libhandmadehero.so $output
+        cp script/extract_art build/handmadehero build/libhandmadehero.so $output
         tar cf - $output | zstd --ultra -22 -T0 -o $file
 
         echo **Workflow run**: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID >> notes
