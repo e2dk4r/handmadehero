@@ -166,7 +166,7 @@
 - [x] Handmade Hero Day 042 - Basic 2D Vectors
       https://www.youtube.com/watch?v=eE-D_wSUd0g
 
-- [ ] Handmade Hero Day 043 - The Equations of Motion
+- [x] Handmade Hero Day 043 - The Equations of Motion
       https://www.youtube.com/watch?v=LoTRzRFEk5I
 
 - [ ] Handmade Hero Day 044 - Reflecting Vectors
