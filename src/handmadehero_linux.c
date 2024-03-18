@@ -183,6 +183,7 @@ struct linux_state {
   struct wl_buffer *wl_buffer;
 
   struct wl_keyboard *wl_keyboard;
+  struct wl_pointer *wl_pointer;
   struct xkb_context *xkb_context;
   struct xkb_keymap *xkb_keymap;
   struct xkb_state *xkb_state;
@@ -495,6 +496,38 @@ comptime struct wl_keyboard_listener wl_keyboard_listener = {
     .repeat_info = wl_keyboard_repeat_info,
 };
 
+static void wl_pointer_enter(void *data, struct wl_pointer *wl_pointer,
+                             uint32_t serial, struct wl_surface *surface,
+                             wl_fixed_t surface_x, wl_fixed_t surface_y) {
+  /* hide cursor */
+  wl_pointer_set_cursor(wl_pointer, serial, 0, 0, 0);
+}
+
+static void wl_pointer_leave(void *data, struct wl_pointer *wl_pointer,
+                             uint32_t serial, struct wl_surface *surface) {}
+
+static void wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
+                              uint32_t time, wl_fixed_t surface_x,
+                              wl_fixed_t surface_y) {}
+
+static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
+                              uint32_t serial, uint32_t time, uint32_t button,
+                              uint32_t state) {}
+
+static void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer,
+                            uint32_t time, uint32_t axis, wl_fixed_t value) {}
+
+static void wl_pointer_frame(void *data, struct wl_pointer *wl_pointer) {}
+
+comptime struct wl_pointer_listener wl_pointer_listener = {
+    .enter = wl_pointer_enter,
+    .leave = wl_pointer_leave,
+    .motion = wl_pointer_motion,
+    .button = wl_pointer_button,
+    .axis = wl_pointer_axis,
+    .frame = wl_pointer_frame,
+};
+
 static void wl_seat_capabilities(void *data, struct wl_seat *wl_seat,
                                  u32 capabilities) {
   struct linux_state *state = data;
@@ -507,6 +540,15 @@ static void wl_seat_capabilities(void *data, struct wl_seat *wl_seat,
   } else if (!have_keyboard && state->wl_keyboard) {
     wl_keyboard_release(state->wl_keyboard);
     state->wl_keyboard = 0;
+  }
+
+  u8 have_pointer = WL_SEAT_CAPABILITY_POINTER;
+  if (have_pointer && !state->wl_pointer) {
+    state->wl_pointer = wl_seat_get_pointer(wl_seat);
+    wl_pointer_add_listener(state->wl_pointer, &wl_pointer_listener, state);
+  } else if (!have_pointer && state->wl_pointer) {
+    wl_pointer_release(state->wl_pointer);
+    state->wl_pointer = 0;
   }
 }
 
