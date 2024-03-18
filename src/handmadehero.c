@@ -292,8 +292,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     /* set initial player position */
     state->playerPos.absTileX = 1;
     state->playerPos.absTileY = 3;
-    state->playerPos.offsetX = 5.0f;
-    state->playerPos.offsetY = 5.0f;
+    state->playerPos.offset = (struct v2){.x = 5.0f, .y = 5.0f};
 
     /* world creation */
     void *data = memory->permanentStorage + sizeof(*state);
@@ -439,14 +438,11 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct game_controller_input *controller =
         GetController(input, controllerIndex);
 
-    /* pixels/second */
-    f32 dPlayerX = 0.0f;
-    /* pixels/second */
-    f32 dPlayerY = 0.0f;
+    struct v2 dPlayer = {};
 
     if (controller->isAnalog) {
-      dPlayerX += controller->stickAverageX;
-      dPlayerY += controller->stickAverageY;
+      dPlayer.x += controller->stickAverageX;
+      dPlayer.y += controller->stickAverageY;
 
       if (controller->stickAverageX > 0)
         state->heroFacingDirection = BITMAP_HERO_RIGHT;
@@ -459,32 +455,27 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     if (controller->moveLeft.pressed) {
-      dPlayerX = -1.0f;
+      dPlayer.x = -1.0f;
       state->heroFacingDirection = BITMAP_HERO_LEFT;
     }
 
     if (controller->moveRight.pressed) {
-      dPlayerX = 1.0f;
+      dPlayer.x = 1.0f;
       state->heroFacingDirection = BITMAP_HERO_RIGHT;
     }
 
     if (controller->moveDown.pressed) {
-      dPlayerY = -1.0f;
+      dPlayer.y = -1.0f;
       state->heroFacingDirection = BITMAP_HERO_FRONT;
     }
 
     if (controller->moveUp.pressed) {
-      dPlayerY = 1.0f;
+      dPlayer.y = 1.0f;
       state->heroFacingDirection = BITMAP_HERO_BACK;
     }
 
-    f32 playerSpeed = 2.0f;
-    if (controller->actionDown.pressed) {
-      playerSpeed = 10.0f;
-    }
-
     /* if moving diagonally */
-    if (dPlayerX != 0 && dPlayerY != 0) {
+    if (dPlayer.x != 0 && dPlayer.y != 0) {
       /* Pythagorean theorem
        *
        *        /|
@@ -503,24 +494,29 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
        * player must move 1 unit even when moving diagonally.
        */
       const f32 squareRoot = 0.7071067811865476f;
-      dPlayerX *= squareRoot;
-      dPlayerY *= squareRoot;
+      v2_mul_ref(&dPlayer, squareRoot);
     }
 
-    dPlayerX *= playerSpeed;
-    dPlayerY *= playerSpeed;
+    /* set player speed */
+    f32 playerSpeed = 2.0f;
+    if (controller->actionDown.pressed) {
+      playerSpeed = 10.0f;
+    }
+    v2_mul_ref(&dPlayer, playerSpeed);
+
+    /* convert from meters/frame to meters/second */
+    v2_mul_ref(&dPlayer, input->dtPerFrame);
 
     struct position_tile_map newPlayerPos = state->playerPos;
-    newPlayerPos.offsetX += input->dtPerFrame * dPlayerX;
-    newPlayerPos.offsetY += input->dtPerFrame * dPlayerY;
+    v2_add_ref(&newPlayerPos.offset, dPlayer);
     newPlayerPos = PositionCorrect(tileMap, &newPlayerPos);
 
     struct position_tile_map left = newPlayerPos;
-    left.offsetX -= playerWidth * 0.5f;
+    v2_sub_ref(&left.offset, (struct v2){.x = playerWidth * 0.5f});
     left = PositionCorrect(tileMap, &left);
 
     struct position_tile_map right = newPlayerPos;
-    right.offsetX += playerWidth * 0.5f;
+    v2_add_ref(&right.offset, (struct v2){.x = playerWidth * 0.5f});
     right = PositionCorrect(tileMap, &right);
 
     if (TileMapIsPointEmpty(tileMap, &left) &&
@@ -547,15 +543,15 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
           PositionDifference(tileMap, &state->playerPos, &state->cameraPos);
 
       f32 maxDiffX = (f32)tilesPerWidth * 0.5f * tileMap->tileSideInMeters;
-      if (diff.dX > maxDiffX)
+      if (diff.dXY.x > maxDiffX)
         state->cameraPos.absTileX += tilesPerWidth;
-      else if (diff.dX < -maxDiffX)
+      else if (diff.dXY.x < -maxDiffX)
         state->cameraPos.absTileX -= tilesPerWidth;
 
       f32 maxDiffY = (f32)tilesPerHeight * 0.5f * tileMap->tileSideInMeters;
-      if (diff.dY > maxDiffY)
+      if (diff.dXY.y > maxDiffY)
         state->cameraPos.absTileY += tilesPerHeight;
-      else if (diff.dY < -maxDiffY)
+      else if (diff.dXY.y < -maxDiffY)
         state->cameraPos.absTileY -= tilesPerHeight;
     }
   }
@@ -611,14 +607,14 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
           /* screen offset */
           screenCenterX
           /* follow camera */
-          - state->cameraPos.offsetX * metersToPixels
+          - state->cameraPos.offset.x * metersToPixels
           /* tile offset */
           + (f32)relColumn * (f32)tileSideInPixels;
       f32 centerY =
           /* screen offset */
           screenCenterY
           /* follow camera */
-          + state->cameraPos.offsetY * metersToPixels
+          + state->cameraPos.offset.y * metersToPixels
           /* tile offset */
           - (f32)relRow * (f32)tileSideInPixels;
 
@@ -642,12 +638,12 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       /* camera offset */
       screenCenterX
       /* player offset */
-      + diff.dX * metersToPixels;
+      + diff.dXY.x * metersToPixels;
   f32 playerGroundPointY =
       /* camera offset */
       screenCenterY
       /* player offset */
-      - diff.dY * metersToPixels;
+      - diff.dXY.y * metersToPixels;
 
   f32 playerLeft = playerGroundPointX
                    /* offset */

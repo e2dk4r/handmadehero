@@ -3,6 +3,7 @@
 
 #include "memory_arena.h"
 #include "types.h"
+#include "math.h"
 
 #define TILE_INVALID 0
 #define TILE_WALKABLE (1 << 0)
@@ -35,10 +36,8 @@ struct position_tile_map {
   /* packed. high bits for tile map y, low bits for tile y */
   u32 absTileZ;
 
-  /* x offset from tile center */
-  f32 offsetX;
-  /* y offset from tile center */
-  f32 offsetY;
+  /* offset from tile center */
+  struct v2 offset;
 };
 
 struct position_tile_chunk {
@@ -51,8 +50,7 @@ struct position_tile_chunk {
 };
 
 struct position_difference {
-  f32 dX;
-  f32 dY;
+  struct v2 dXY;
   f32 dZ;
 };
 

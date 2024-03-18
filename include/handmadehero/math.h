@@ -21,4 +21,53 @@ static inline i32 FindLeastSignificantBitSet(i32 value) {
   return __builtin_ffs(value) - 1;
 }
 
+struct v2 {
+  f32 x;
+  f32 y;
+};
+
+static inline void v2_add_ref(struct v2 *a, struct v2 b) {
+  a->x += b.x;
+  a->y += b.y;
+}
+
+static inline struct v2 v2_add(struct v2 a, struct v2 b) {
+  struct v2 result = a;
+  v2_add_ref(&result, b);
+  return result;
+}
+
+static inline void v2_sub_ref(struct v2 *a, struct v2 b) {
+  a->x -= b.x;
+  a->y -= b.y;
+}
+
+static inline struct v2 v2_sub(struct v2 a, struct v2 b) {
+  struct v2 result = a;
+  v2_sub_ref(&result, b);
+  return result;
+}
+
+static inline void v2_neg_ref(struct v2 *a) {
+  a->x = -a->x;
+  a->y = -a->y;
+}
+
+static inline struct v2 v2_neg(struct v2 a) {
+  struct v2 result = a;
+  v2_neg_ref(&result);
+  return result;
+}
+
+static inline void v2_mul_ref(struct v2 *a, f32 value) {
+  a->x *= value;
+  a->y *= value;
+}
+/* scaler multiplication */
+static inline struct v2 v2_mul(struct v2 a, f32 value) {
+  struct v2 result = a;
+  v2_mul_ref(&result, value);
+  return result;
+}
+
 #endif /* HANDMADEHERO_MATH_H */

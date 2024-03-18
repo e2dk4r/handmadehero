@@ -51,8 +51,8 @@ struct position_tile_map PositionCorrect(struct tile_map *tileMap,
                                          struct position_tile_map *pos) {
   struct position_tile_map result = *pos;
 
-  PositionCorrectCoord(tileMap, &result.absTileX, &result.offsetX);
-  PositionCorrectCoord(tileMap, &result.absTileY, &result.offsetY);
+  PositionCorrectCoord(tileMap, &result.absTileX, &result.offset.x);
+  PositionCorrectCoord(tileMap, &result.absTileY, &result.offset.y);
 
   return result;
 }
@@ -125,12 +125,14 @@ struct position_difference PositionDifference(struct tile_map *tileMap,
                                               struct position_tile_map *b) {
   struct position_difference result = {};
 
-  f32 dTileX = (f32)a->absTileX - (f32)b->absTileX;
-  f32 dTileY = (f32)a->absTileY - (f32)b->absTileY;
+  struct v2 dTileXY = {
+      .x = (f32)a->absTileX - (f32)b->absTileX,
+      .y = (f32)a->absTileY - (f32)b->absTileY,
+  };
   f32 dTileZ = (f32)a->absTileZ - (f32)b->absTileZ;
 
-  result.dX = tileMap->tileSideInMeters * dTileX + a->offsetX - b->offsetX;
-  result.dY = tileMap->tileSideInMeters * dTileY + a->offsetY - b->offsetY;
+  result.dXY = v2_add(v2_mul(dTileXY, tileMap->tileSideInMeters),
+                      v2_sub(a->offset, b->offset));
   result.dZ = tileMap->tileSideInMeters * dTileZ;
 
   return result;
