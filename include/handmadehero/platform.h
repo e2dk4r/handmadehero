@@ -40,7 +40,9 @@ struct game_button_state {
 struct game_controller_input {
   u8 isAnalog : 1;
 
+  /* normalized where values are [0, 1] */
   f32 stickAverageX;
+  /* normalized where values are [0, 1] */
   f32 stickAverageY;
 
   union {
