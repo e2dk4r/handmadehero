@@ -504,11 +504,16 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     /* set player speed in m/s² */
-    f32 playerSpeed = 2.0f;
+    f32 playerSpeed = 10.0f;
     if (controller->actionDown.pressed) {
-      playerSpeed = 10.0f;
+      playerSpeed = 50.0f;
     }
     v2_mul_ref(&ddPlayer, playerSpeed);
+
+    /*
+     * apply friction opposite force to acceleration
+     */
+    v2_add_ref(&ddPlayer, v2_neg(v2_mul(state->dPlayerPos, 1.5f)));
 
     /* calculation of new player position
      *
