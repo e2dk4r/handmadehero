@@ -22,8 +22,13 @@ static inline i32 FindLeastSignificantBitSet(i32 value) {
 }
 
 struct v2 {
-  f32 x;
-  f32 y;
+  union {
+    struct {
+      f32 x;
+      f32 y;
+    };
+    f32 e[2];
+  };
 };
 
 static inline void v2_add_ref(struct v2 *a, struct v2 b) {
