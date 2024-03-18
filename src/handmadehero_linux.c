@@ -221,6 +221,11 @@ static void RecordInputBegin(struct linux_state *state, u8 index) {
   state->recordInputIndex = index;
   state->recordInputFd = open(recordPath, O_CREAT | O_WRONLY | O_TRUNC, 0644);
   assert(state->recordInputFd >= 0);
+
+  ssize_t bytesWritten =
+      write(state->recordInputFd, state->game_memory->permanentStorage,
+            state->game_memory->permanentStorageSize);
+  assert(bytesWritten > 0);
 }
 
 static void RecordInputEnd(struct linux_state *state) {
@@ -244,6 +249,11 @@ static void PlaybackInputBegin(struct linux_state *state, u8 index) {
   state->playbackInputIndex = index;
   state->playbackInputFd = open(recordPath, O_RDONLY);
   assert(state->playbackInputFd >= 0);
+
+  ssize_t bytesRead =
+      read(state->playbackInputFd, state->game_memory->permanentStorage,
+           state->game_memory->permanentStorageSize);
+  assert(bytesRead > 0);
 }
 
 static void PlaybackInputEnd(struct linux_state *state) {
@@ -266,6 +276,10 @@ begin:
   if (bytesRead == 0) {
     off_t result = lseek(state->playbackInputFd, 0, SEEK_SET);
     assert(result >= 0);
+    ssize_t bytesRead =
+        read(state->playbackInputFd, state->game_memory->permanentStorage,
+             state->game_memory->permanentStorageSize);
+    assert(bytesRead > 0);
     goto begin;
   }
 }
