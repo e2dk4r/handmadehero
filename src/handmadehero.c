@@ -528,7 +528,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       else if (diff.dX < -maxDiffX)
         state->cameraPos.absTileX -= tilesPerWidth;
 
-      f32 maxDiffY = (f32)tilesPerHeight / 2.0f * tileMap->tileSideInMeters;
+      f32 maxDiffY = (f32)tilesPerHeight * 0.5f * tileMap->tileSideInMeters;
       if (diff.dY > maxDiffY)
         state->cameraPos.absTileY += tilesPerHeight;
       else if (diff.dY < -maxDiffY)
