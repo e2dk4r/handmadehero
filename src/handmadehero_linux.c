@@ -687,6 +687,18 @@ static void xdg_toplevel_configure(void *data,
 
   struct linux_state *state = data;
 
+  state->fullscreen = 0;
+  enum xdg_toplevel_state *toplevel_state;
+  wl_array_for_each(toplevel_state, states) {
+    switch (*toplevel_state) {
+    case XDG_TOPLEVEL_STATE_FULLSCREEN:
+      state->fullscreen = 1;
+      break;
+    default:
+      break;
+    }
+  }
+
   if (state->wp_viewport) {
     wp_viewport_destroy(state->wp_viewport);
     state->wp_viewport = 0;
