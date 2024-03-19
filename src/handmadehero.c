@@ -663,7 +663,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                 /* vTr */
                 v2_dot(state->dPlayerPos, r)
               ),
-              2
+              1
             )
         );
       // clang-format on
