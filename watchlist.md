@@ -169,7 +169,7 @@
 - [x] Handmade Hero Day 043 - The Equations of Motion
       https://www.youtube.com/watch?v=LoTRzRFEk5I
 
-- [ ] Handmade Hero Day 044 - Reflecting Vectors
+- [x] Handmade Hero Day 044 - Reflecting Vectors
       https://www.youtube.com/watch?v=2nyNOJoVC8M
 
 - [ ] Handmade Hero Day 045 - Geometric vs. Temporal Movement Search
