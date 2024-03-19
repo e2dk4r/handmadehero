@@ -58,6 +58,11 @@ struct position_difference PositionDifference(struct tile_map *tileMap,
                                               struct position_tile_map *a,
                                               struct position_tile_map *b);
 
+static inline struct position_tile_map
+PositionTileMapCentered(u32 absTileX, u32 absTileY, u32 absTileZ) {
+  return (struct position_tile_map){absTileX, absTileY, absTileZ, 0, 0};
+}
+
 u32 TileGetValue(struct tile_map *tileMap, u32 absTileX, u32 absTileY,
                  u32 absTileZ);
 
@@ -82,11 +87,15 @@ static inline u8 PositionTileMapSameTile(struct position_tile_map *left,
       && left->absTileZ == right->absTileZ;
 }
 
+static inline u8 TileIsEmpty(u32 value) {
+  return value & (TILE_WALKABLE | TILE_LADDER_UP | TILE_LADDER_DOWN);
+}
+
 static inline u8 TileMapIsPointEmpty(struct tile_map *tileMap,
                                      struct position_tile_map *testPos) {
   u32 value = TileGetValue(tileMap, testPos->absTileX, testPos->absTileY,
                            testPos->absTileZ);
-  return value & (TILE_WALKABLE | TILE_LADDER_UP | TILE_LADDER_DOWN);
+  return TileIsEmpty(value);
 }
 
 #endif /* HANDMADEHERO_TILE_H */

@@ -543,9 +543,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
     // clang-format off
     /* new position */
-    newPlayerPos.offset =
-      /* 1/2 a t² + v t + p */
-      v2_add(
+    struct v2 playerDelta =
         /* 1/2 a t² + v t */
         v2_add(
           /* 1/2 a t² */
@@ -562,10 +560,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
             /* t */
             input->dtPerFrame
           ) /* end: v t */
-        ), /* end: 1/2 a t² + v t */
-        /* p */
-        state->playerPos.offset
-      );
+        );
+
+    /* 1/2 a t² + v t + p */
+    v2_add_ref(&newPlayerPos.offset, playerDelta);
 
     /* new velocity */
     state->dPlayerPos =
@@ -603,9 +601,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       collisionPos = &right;
     }
 
-    if (!collided) {
+    if (!collided)
       state->playerPos = newPlayerPos;
-    } /* if new point is not empty */ else {
+    else {
       /* |r| = 1 */
       struct v2 r = {0, 0};
       /* collision accoured in west of player */
@@ -635,6 +633,34 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
             )
         );
       // clang-format on
+
+#if 0
+    u32 minTileX = 0;
+    u32 minTileY = 0;
+    u32 maxTileX = 0;
+    u32 maxTileY = 0;
+    u32 absTileZ = state->playerPos.absTileZ;
+    struct position_tile_map bestPlayerPos = state->playerPos;
+    f32 bestDistanceSq = v2_length_square(playerDelta);
+    for (u32 absTileX = minTileX; absTileX != maxTileX; absTileX++) {
+      for (u32 absTileY = minTileY; absTileY != maxTileY; absTileY++) {
+        u32 tileValue = TileGetValue(tileMap, absTileX, absTileY, absTileZ);
+        if (TileIsEmpty(tileValue)) {
+          struct position_tile_map testTilePos =
+              PositionTileMapCentered(absTileX, absTileY, absTileZ);
+
+          struct v2 minCorner = v2_mul(
+              (struct v2){tileMap->tileSideInMeters, tileMap->tileSideInMeters},
+              -0.5f);
+          struct v2 maxCorner = v2_mul(
+              (struct v2){tileMap->tileSideInMeters, tileMap->tileSideInMeters},
+              0.5f);
+
+          struct position_difference relNewPlayerPos =
+              PositionDifference(tileMap, &testTilePos, &newPlayerPos);
+          // struct v2 testP = ClosestPointInRectangle(minCorner, maxCorner);
+        }
+#endif
     }
   }
 

@@ -21,9 +21,7 @@ static inline i32 FindLeastSignificantBitSet(i32 value) {
   return __builtin_ffs(value) - 1;
 }
 
-static inline f32 square(f32 value) {
-  return value * value;
-}
+static inline f32 square(f32 value) { return value * value; }
 
 struct v2 {
   union {
@@ -81,6 +79,14 @@ static inline struct v2 v2_mul(struct v2 a, f32 value) {
 
 static inline f32 v2_dot(struct v2 a, struct v2 b) {
   f32 value = a.x * b.x + a.y * b.y;
+  return value;
+}
+
+static inline f32 v2_length_square(struct v2 a) {
+  f32 value;
+
+  value = v2_dot(a, a);
+
   return value;
 }
 
