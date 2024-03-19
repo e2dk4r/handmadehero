@@ -631,14 +631,34 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
   wl_callback = wl_surface_frame(state->wl_surface);
   wl_callback_add_listener(wl_callback, &wl_surface_frame_listener, data);
 
-  u32 elapsed = time - state->frame;
-  f32 second_in_milliseconds = 1000;
-  f32 frames_per_second = 24;
-  newInput->dtPerFrame = frames_per_second / second_in_milliseconds;
+  /*
+   *        |-----|-----|-----|-----|-----|---...---|>
+   *  frame 0     1     2     3     4     5         30
+   *  time  0   ~33ms ~66ms ~99ms                   1sec
+   *  frame 0     1     2     3     4     5         60
+   *  time  0   ~16ms ~33ms                       1sec
+   *  frame 0     1     2     3     4     5
+   *  time  0    1sec  2sec
+   *        ⇐ ∆t  ⇒
+   *
+   *    ∆t > one frame time, display next frame
+   */
+  const f32 millisecondsPerSecond = 1000;
+  const f32 framesPerSecond = 60;
+  const f32 millisecondsPerFrame = millisecondsPerSecond / framesPerSecond;
 
-  f32 frame_unit = (f32)elapsed * second_in_milliseconds / frames_per_second;
-  if (frame_unit > 1.0f) {
+  u32 elapsed = time - state->frame;
+  if ((f32)elapsed > millisecondsPerFrame) {
     state->input = newInput;
+
+    /*
+     *        |-----|-----|-----|-----|-----|---...---|>
+     *  frame 0     1     2     3     4     5         30
+     *  time  0   ~33ms ~66ms ~99ms                   1
+     *        ⇐ ∆t  ⇒
+     *  dtPerFrame in seconds
+     */
+    newInput->dtPerFrame = (f32)elapsed / millisecondsPerSecond;
 
 #ifdef HANDMADEHERO_DEBUG
     if (RecordInputStarted(state)) {
