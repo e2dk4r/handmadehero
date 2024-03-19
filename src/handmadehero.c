@@ -590,9 +590,18 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     v2_add_ref(&right.offset, (struct v2){.x = playerWidth * 0.5f});
     right = PositionCorrect(tileMap, &right);
 
-    if (TileMapIsPointEmpty(tileMap, &left) &&
-        TileMapIsPointEmpty(tileMap, &right)) {
+    u8 collided = 0;
+    struct position_tile_map *collisionPos;
+    if (!TileMapIsPointEmpty(tileMap, &left)) {
+      collided = 1;
+      collisionPos = &left;
+    }
+    if (!TileMapIsPointEmpty(tileMap, &right)) {
+      collided = 1;
+      collisionPos = &right;
+    }
 
+    if (!collided) {
       if (!PositionTileMapSameTile(&state->playerPos, &newPlayerPos)) {
         u32 newTileValue = TileGetValue2(tileMap, &newPlayerPos);
 
@@ -624,6 +633,40 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         state->cameraPos.absTileY += tilesPerHeight;
       else if (diff.dXY.y < -maxDiffY)
         state->cameraPos.absTileY -= tilesPerHeight;
+    } /* if new point is not empty */ else {
+      /* |r| = 1 */
+      struct v2 r = {0, 0};
+      /* collision accoured in west of player */
+      if (collisionPos->absTileX < state->playerPos.absTileX)
+        r = (struct v2){1, 0};
+      /* collision accoured in east of player */
+      if (collisionPos->absTileX > state->playerPos.absTileX)
+        r = (struct v2){-1, 0};
+      /* collision accoured in north of player */
+      if (collisionPos->absTileY > state->playerPos.absTileY)
+        r = (struct v2){0, 1};
+      /* collision accoured in south of player */
+      if (collisionPos->absTileY < state->playerPos.absTileY)
+        r = (struct v2){0, -1};
+
+      // clang-format off
+      state->dPlayerPos =
+        /* v - 2 vTr r */
+        v2_sub(
+            /* v */
+            state->dPlayerPos,
+            /* - 2 vTr r */
+            v2_mul(
+              /* vTr r */
+              v2_mul(
+                r,
+                /* vTr */
+                v2_dot(state->dPlayerPos, r)
+              ),
+              2
+            )
+        );
+      // clang-format on
     }
   }
 

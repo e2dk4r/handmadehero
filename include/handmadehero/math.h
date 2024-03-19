@@ -79,4 +79,9 @@ static inline struct v2 v2_mul(struct v2 a, f32 value) {
   return result;
 }
 
+static inline f32 v2_dot(struct v2 a, struct v2 b) {
+  f32 value = a.x * b.x + a.y * b.y;
+  return value;
+}
+
 #endif /* HANDMADEHERO_MATH_H */
