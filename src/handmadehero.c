@@ -651,19 +651,15 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
       // clang-format off
       state->dPlayerPos =
-        /* v - 2 vTr r */
+        /* v - vTr r */
         v2_sub(
             /* v */
             state->dPlayerPos,
-            /* - 2 vTr r */
+            /* - vTr r */
             v2_mul(
-              /* vTr r */
-              v2_mul(
-                r,
-                /* vTr */
-                v2_dot(state->dPlayerPos, r)
-              ),
-              1
+              r,
+              /* vTr */
+              v2_dot(state->dPlayerPos, r)
             )
         );
       // clang-format on
