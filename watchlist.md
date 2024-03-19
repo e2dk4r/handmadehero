@@ -172,7 +172,7 @@
 - [x] Handmade Hero Day 044 - Reflecting Vectors
       https://www.youtube.com/watch?v=2nyNOJoVC8M
 
-- [ ] Handmade Hero Day 045 - Geometric vs. Temporal Movement Search
+- [x] Handmade Hero Day 045 - Geometric vs. Temporal Movement Search
       https://www.youtube.com/watch?v=bERy-zhosqY
 
 - [ ] Handmade Hero Day 046 - Basic Multiplayer Support
