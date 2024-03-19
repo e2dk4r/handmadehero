@@ -439,6 +439,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /* unit: pixels/meters */
   f32 metersToPixels = (f32)tileSideInPixels / tileMap->tileSideInMeters;
 
+  struct position_tile_map oldPlayerPos = state->playerPos;
+
   for (u8 controllerIndex = 0; controllerIndex < 2; controllerIndex++) {
     struct game_controller_input *controller =
         GetController(input, controllerIndex);
@@ -602,37 +604,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     if (!collided) {
-      if (!PositionTileMapSameTile(&state->playerPos, &newPlayerPos)) {
-        u32 newTileValue = TileGetValue2(tileMap, &newPlayerPos);
-
-        if (newTileValue & TILE_LADDER_UP) {
-          newPlayerPos.absTileZ++;
-        }
-
-        if (newTileValue & TILE_LADDER_DOWN) {
-          newPlayerPos.absTileZ--;
-        }
-
-        assert(newPlayerPos.absTileZ < tileMap->tileChunkCountZ);
-      }
-
       state->playerPos = newPlayerPos;
-      state->cameraPos.absTileZ = state->playerPos.absTileZ;
-
-      struct position_difference diff =
-          PositionDifference(tileMap, &state->playerPos, &state->cameraPos);
-
-      f32 maxDiffX = (f32)tilesPerWidth * 0.5f * tileMap->tileSideInMeters;
-      if (diff.dXY.x > maxDiffX)
-        state->cameraPos.absTileX += tilesPerWidth;
-      else if (diff.dXY.x < -maxDiffX)
-        state->cameraPos.absTileX -= tilesPerWidth;
-
-      f32 maxDiffY = (f32)tilesPerHeight * 0.5f * tileMap->tileSideInMeters;
-      if (diff.dXY.y > maxDiffY)
-        state->cameraPos.absTileY += tilesPerHeight;
-      else if (diff.dXY.y < -maxDiffY)
-        state->cameraPos.absTileY -= tilesPerHeight;
     } /* if new point is not empty */ else {
       /* |r| = 1 */
       struct v2 r = {0, 0};
@@ -665,6 +637,39 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       // clang-format on
     }
   }
+
+  if (!PositionTileMapSameTile(&oldPlayerPos, &state->playerPos)) {
+    u32 newTileValue = TileGetValue2(tileMap, &state->playerPos);
+
+    if (newTileValue & TILE_LADDER_UP) {
+      state->playerPos.absTileZ++;
+    }
+
+    if (newTileValue & TILE_LADDER_DOWN) {
+      state->playerPos.absTileZ--;
+    }
+
+    assert(state->playerPos.absTileZ < tileMap->tileChunkCountZ);
+  }
+
+  state->cameraPos.absTileZ = state->playerPos.absTileZ;
+
+  struct position_difference diff =
+      PositionDifference(tileMap, &state->playerPos, &state->cameraPos);
+
+  f32 maxDiffX = (f32)tilesPerWidth * 0.5f * tileMap->tileSideInMeters;
+  if (diff.dXY.x > maxDiffX)
+    state->cameraPos.absTileX += tilesPerWidth;
+  else if (diff.dXY.x < -maxDiffX)
+    state->cameraPos.absTileX -= tilesPerWidth;
+
+  f32 maxDiffY = (f32)tilesPerHeight * 0.5f * tileMap->tileSideInMeters;
+  if (diff.dXY.y > maxDiffY)
+    state->cameraPos.absTileY += tilesPerHeight;
+  else if (diff.dXY.y < -maxDiffY)
+    state->cameraPos.absTileY -= tilesPerHeight;
+
+  diff = PositionDifference(tileMap, &state->playerPos, &state->cameraPos);
 
   /****************************************************************
    * RENDERING
@@ -740,9 +745,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   }
 
   /* render player at player position */
-  struct position_difference diff =
-      PositionDifference(tileMap, playerPos, cameraPos);
-
   /* convert from meters to pixel */
   v2_mul_ref(&diff.dXY, metersToPixels);
 
