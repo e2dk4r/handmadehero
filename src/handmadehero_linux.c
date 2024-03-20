@@ -328,11 +328,11 @@ static void joystick_key(struct linux_state *state, u16 type, u16 code,
   } break;
 
   case BTN_START: {
-    controller->start.pressed = value < 0;
+    controller->start.pressed = value & 1;
   } break;
 
   case BTN_SELECT: {
-    controller->back.pressed = value < 0;
+    controller->back.pressed = value & 1;
   } break;
 
     /* normalize stick x movement */
