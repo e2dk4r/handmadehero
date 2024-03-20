@@ -233,6 +233,10 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
 }
 
 static inline struct entity *EntityGet(struct game_state *state, u32 index) {
+  /* index 0 is reserved for null */
+  if (index == 0)
+    return 0;
+
   if (index >= HANDMADEHERO_ENTITY_TOTAL)
     return 0;
 
@@ -243,7 +247,9 @@ static inline u32 EntityAdd(struct game_state *state) {
   struct entity *entity;
 
   u32 entityIndex = state->entityCount;
-  entity = EntityGet(state, entityIndex);
+  assert(entityIndex < HANDMADEHERO_ENTITY_TOTAL);
+
+  entity = &state->entities[entityIndex];
   assert(entity);
 
   /* clear entity */
@@ -559,12 +565,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     state->cameraPos.absTileX = tilesPerWidth / 2;
     state->cameraPos.absTileY = tilesPerHeight / 2;
 
-    /* initialize controller entity hash table with invalid entities */
-    for (u32 controllerIndex = 0;
-         controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
-      state->playerIndexForController[controllerIndex] =
-          HANDMADEHERO_ENTITY_TOTAL;
-    }
+    /* use entity with 0 index as null */
+    EntityAdd(state);
 
     /* world creation */
     void *data = memory->permanentStorage + sizeof(*state);
@@ -847,7 +849,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   }
 
   /* render entities */
-  for (u32 entityIndex = 0; entityIndex < state->entityCount; entityIndex++) {
+  for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
     struct entity *entity = EntityGet(state, entityIndex);
     if (!entity->exists)
       continue;
