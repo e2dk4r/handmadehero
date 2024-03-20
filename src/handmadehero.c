@@ -715,6 +715,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         assert(entityIndex < HANDMADEHERO_ENTITY_TOTAL);
         state->playerIndexForController[controllerIndex] = entityIndex;
         EntityReset(controlledEntity);
+
+        if (state->followedEntityIndex == 0) {
+          state->followedEntityIndex = entityIndex;
+        }
       }
       continue;
     }
