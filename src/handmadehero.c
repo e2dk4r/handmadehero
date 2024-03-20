@@ -536,8 +536,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     bitmapHero->alignY = 182;
 
     /* set initial camera position */
-    state->cameraPos.absTileX = 17 / 2;
-    state->cameraPos.absTileY = 9 / 2;
+    state->cameraPos.absTileX = tilesPerWidth / 2;
+    state->cameraPos.absTileY = tilesPerHeight / 2;
 
     /* initialize controller entity hash table with invalid entities */
     for (u32 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
