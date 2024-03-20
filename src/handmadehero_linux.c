@@ -1320,8 +1320,8 @@ int main(int argc, char *argv[]) {
         goto cqe_seen;
       }
 
-      printf("Input device name: \"%s\"\n", libevdev_get_name(evdev));
-      printf("Input device ID: bus %#x vendor %#x product %#x\n",
+      debugf("Input device name: \"%s\"\n", libevdev_get_name(evdev));
+      debugf("Input device ID: bus %#x vendor %#x product %#x\n",
              libevdev_get_id_bustype(evdev), libevdev_get_id_vendor(evdev),
              libevdev_get_id_product(evdev));
 
