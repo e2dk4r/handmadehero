@@ -26,6 +26,8 @@ struct bitmap_hero {
 struct entity {
   u8 exists : 1;
   u8 facingDirection;
+  f32 width;
+  f32 height;
   struct position_tile_map position;
   struct v2 dPosition;
 };

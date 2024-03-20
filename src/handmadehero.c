@@ -239,14 +239,19 @@ static inline struct entity *EntityGet(struct game_state *state, u32 index) {
   return &state->entities[index];
 }
 
-static inline struct entity *EntityAdd(struct game_state *state) {
+static inline u32 EntityAdd(struct game_state *state) {
   struct entity *entity;
 
-  entity = EntityGet(state, state->entityCount);
-  state->entityCount++;
+  u32 entityIndex = state->entityCount;
+  entity = EntityGet(state, entityIndex);
+  assert(entity);
+
+  /* clear entity */
   *entity = (struct entity){};
 
-  return entity;
+  state->entityCount++;
+
+  return entityIndex;
 }
 
 static inline void EntityReset(struct entity *entity) {
@@ -261,225 +266,240 @@ static inline void EntityReset(struct entity *entity) {
   /* set initial player velocity */
   entity->dPosition.x = 0;
   entity->dPosition.y = 0;
+
+  /* set player size */
+  entity->height = 1.4f;
+  entity->width = 0.75f * entity->height;
 }
 
-#if 0
-static void foo() {
-  struct position_tile_map oldPlayerPos = state->playerPos;
+static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
+                       struct v2 ddPosition) {
+  struct tile_map *tileMap = state->world->tileMap;
 
-    /* if moving diagonally */
-    if (ddPlayer.x != 0 && ddPlayer.y != 0) {
-      /* Pythagorean theorem
-       *
-       *        /|
-       *     d / | a
-       *      /  |
-       *     /___|
-       *       a
-       *
-       *           d² = a² + a²
-       *           d² = 2a²
-       *      d² / 2  = a²
-       *    √(d² / 2) = a
-       *  √(d² . 1/2) = a
-       *     d √(1/2) = a
-       *
-       * player must move 1 unit even when moving diagonally.
-       */
-      const f32 squareRoot = 0.7071067811865476f;
-      v2_mul_ref(&ddPlayer, squareRoot);
-    }
-
-    /* set player speed in m/s² */
-    f32 playerSpeed = 10.0f;
-    if (controller->actionDown.pressed) {
-      playerSpeed = 50.0f;
-    }
-    v2_mul_ref(&ddPlayer, playerSpeed);
-
-    /*
-     * apply friction opposite force to acceleration
+  /*****************************************************************
+   * CORRECTING ACCELERATION
+   *****************************************************************/
+  /* if moving diagonally */
+  if (ddPosition.x != 0 && ddPosition.y != 0) {
+    /* Pythagorean theorem
+     *
+     *        /|
+     *     d / | a
+     *      /  |
+     *     /___|
+     *       a
+     *
+     *           d² = a² + a²
+     *           d² = 2a²
+     *      d² / 2  = a²
+     *    √(d² / 2) = a
+     *  √(d² . 1/2) = a
+     *     d √(1/2) = a
+     *
+     * player must move 1 unit even when moving diagonally.
      */
-    v2_add_ref(&ddPlayer, v2_neg(v2_mul(state->dPlayerPos, 1.5f)));
+    const f32 squareRoot = 0.7071067811865476f;
+    v2_mul_ref(&ddPosition, squareRoot);
+  }
 
-    /* calculation of new player position
-     *
-     *  (position)      f(t) = 1/2 a t² + v t + p
-     *     where p is old position
-     *           a is acceleration
-     *           t is time
-     *  (velocity)     f'(t) = a t + v
-     *  (acceleration) f"(t) = a
-     *     acceleration coming from user
-     *
-     *  calculated using integral of acceleration
-     *  (velocity) ∫(f"(t)) = f'(t) = a t + v
-     *             where v is old velocity
-     *             using integral of velocity
-     *  (position) ∫(f'(t)) = 1/2 a t² + v t + p
-     *             where p is old position
-     *
-     *        |-----|-----|-----|-----|-----|--->
-     *  frame 0     1     2     3     4     5
-     *        ⇐ ∆t  ⇒
-     *     ∆t comes from platform layer
-     */
-    struct position_tile_map newPlayerPos = state->playerPos;
+  /* set player speed in m/s² */
+  f32 playerSpeed = 10.0f;
+  v2_mul_ref(&ddPosition, playerSpeed);
+
+  /*
+   * apply friction opposite force to acceleration
+   */
+  v2_add_ref(&ddPosition, v2_neg(v2_mul(entity->dPosition, 1.5f)));
+
+  /*****************************************************************
+   * CALCULATION OF NEW PLAYER POSITION
+   *****************************************************************/
+
+  /*
+   *
+   *  (position)      f(t) = 1/2 a t² + v t + p
+   *     where p is old position
+   *           a is acceleration
+   *           t is time
+   *  (velocity)     f'(t) = a t + v
+   *  (acceleration) f"(t) = a
+   *     acceleration coming from user
+   *
+   *  calculated using integral of acceleration
+   *  (velocity) ∫(f"(t)) = f'(t) = a t + v
+   *             where v is old velocity
+   *             using integral of velocity
+   *  (position) ∫(f'(t)) = 1/2 a t² + v t + p
+   *             where p is old position
+   *
+   *        |-----|-----|-----|-----|-----|--->
+   *  frame 0     1     2     3     4     5
+   *        ⇐ ∆t  ⇒
+   *     ∆t comes from platform layer
+   */
+  struct position_tile_map oldPosition = entity->position;
+  struct position_tile_map newPosition = entity->position;
+
+  // clang-format off
+  /* new position */
+  struct v2 playerDelta =
+      /* 1/2 a t² + v t */
+      v2_add(
+        /* 1/2 a t² */
+        v2_mul(
+          /* 1/2 a */
+          v2_mul(ddPosition, 0.5f),
+          /* t² */
+          square(dt)
+        ), /* end: 1/2 a t² */
+        /* v t */
+        v2_mul(
+          /* v */
+          entity->dPosition,
+          /* t */
+          dt
+        ) /* end: v t */
+      );
+
+  /* 1/2 a t² + v t + p */
+  v2_add_ref(&newPosition.offset, playerDelta);
+
+  /* new velocity */
+  entity->dPosition =
+    /* a t + v */
+    v2_add(
+      /* a t */
+      v2_mul(
+          /* a */
+          ddPosition,
+          /* t */
+          dt
+      ),
+      /* v */
+      entity->dPosition
+    );
+  // clang-format on
+
+  /*****************************************************************
+   * COLLUSION DETECTION
+   *****************************************************************/
+  newPosition = PositionCorrect(tileMap, &newPosition);
+
+  struct position_tile_map left = newPosition;
+  v2_sub_ref(&left.offset, (struct v2){.x = entity->width * 0.5f});
+  left = PositionCorrect(tileMap, &left);
+
+  struct position_tile_map right = newPosition;
+  v2_add_ref(&right.offset, (struct v2){.x = entity->width * 0.5f});
+  right = PositionCorrect(tileMap, &right);
+
+  u8 collided = 0;
+  struct position_tile_map *collisionPos;
+  if (!TileMapIsPointEmpty(tileMap, &left)) {
+    collided = 1;
+    collisionPos = &left;
+  }
+  if (!TileMapIsPointEmpty(tileMap, &right)) {
+    collided = 1;
+    collisionPos = &right;
+  }
+
+  /*****************************************************************
+   * COLLUSION HANDLING
+   *****************************************************************/
+  if (!collided)
+    entity->position = newPosition;
+  else {
+    /* |r| = 1 */
+    struct v2 r = {0, 0};
+    /* collision accoured in west of player */
+    if (collisionPos->absTileX < entity->position.absTileX)
+      r = (struct v2){1, 0};
+    /* collision accoured in east of player */
+    if (collisionPos->absTileX > entity->position.absTileX)
+      r = (struct v2){-1, 0};
+    /* collision accoured in north of player */
+    if (collisionPos->absTileY > entity->position.absTileY)
+      r = (struct v2){0, 1};
+    /* collision accoured in south of player */
+    if (collisionPos->absTileY < entity->position.absTileY)
+      r = (struct v2){0, -1};
 
     // clang-format off
-    /* new position */
-    struct v2 playerDelta =
-        /* 1/2 a t² + v t */
-        v2_add(
-          /* 1/2 a t² */
+    entity->dPosition =
+      /* v - vTr r */
+      v2_sub(
+          /* v */
+          entity->dPosition,
+          /* - vTr r */
           v2_mul(
-            /* 1/2 a */
-            v2_mul(ddPlayer, 0.5f),
-            /* t² */
-            square(input->dtPerFrame)
-          ), /* end: 1/2 a t² */
-          /* v t */
-          v2_mul(
-            /* v */
-            state->dPlayerPos,
-            /* t */
-            input->dtPerFrame
-          ) /* end: v t */
-        );
-
-    /* 1/2 a t² + v t + p */
-    v2_add_ref(&newPlayerPos.offset, playerDelta);
-
-    /* new velocity */
-    state->dPlayerPos =
-      /* a t + v */
-      v2_add(
-        /* a t */
-        v2_mul(
-            /* a */
-            ddPlayer,
-            /* t */
-            input->dtPerFrame
-        ),
-        /* v */
-        state->dPlayerPos
+            r,
+            /* vTr */
+            v2_dot(entity->dPosition, r)
+          )
       );
     // clang-format on
-    newPlayerPos = PositionCorrect(tileMap, &newPlayerPos);
 
-    struct position_tile_map left = newPlayerPos;
-    v2_sub_ref(&left.offset, (struct v2){.x = playerWidth * 0.5f});
-    left = PositionCorrect(tileMap, &left);
-
-    struct position_tile_map right = newPlayerPos;
-    v2_add_ref(&right.offset, (struct v2){.x = playerWidth * 0.5f});
-    right = PositionCorrect(tileMap, &right);
-
-    u8 collided = 0;
-    struct position_tile_map *collisionPos;
-    if (!TileMapIsPointEmpty(tileMap, &left)) {
-      collided = 1;
-      collisionPos = &left;
-    }
-    if (!TileMapIsPointEmpty(tileMap, &right)) {
-      collided = 1;
-      collisionPos = &right;
-    }
-
-    if (!collided)
-      state->playerPos = newPlayerPos;
-    else {
-      /* |r| = 1 */
-      struct v2 r = {0, 0};
-      /* collision accoured in west of player */
-      if (collisionPos->absTileX < state->playerPos.absTileX)
-        r = (struct v2){1, 0};
-      /* collision accoured in east of player */
-      if (collisionPos->absTileX > state->playerPos.absTileX)
-        r = (struct v2){-1, 0};
-      /* collision accoured in north of player */
-      if (collisionPos->absTileY > state->playerPos.absTileY)
-        r = (struct v2){0, 1};
-      /* collision accoured in south of player */
-      if (collisionPos->absTileY < state->playerPos.absTileY)
-        r = (struct v2){0, -1};
-
-      // clang-format off
-      state->dPlayerPos =
-        /* v - vTr r */
-        v2_sub(
-            /* v */
-            state->dPlayerPos,
-            /* - vTr r */
-            v2_mul(
-              r,
-              /* vTr */
-              v2_dot(state->dPlayerPos, r)
-            )
-        );
-      // clang-format on
-
-#if 0
-    u32 minTileX = 0;
-    u32 minTileY = 0;
-    u32 maxTileX = 0;
-    u32 maxTileY = 0;
-    u32 absTileZ = state->playerPos.absTileZ;
-    struct position_tile_map bestPlayerPos = state->playerPos;
-    f32 bestDistanceSq = v2_length_square(playerDelta);
-    for (u32 absTileX = minTileX; absTileX != maxTileX; absTileX++) {
-      for (u32 absTileY = minTileY; absTileY != maxTileY; absTileY++) {
-        u32 tileValue = TileGetValue(tileMap, absTileX, absTileY, absTileZ);
-        if (TileIsEmpty(tileValue)) {
-          struct position_tile_map testTilePos =
-              PositionTileMapCentered(absTileX, absTileY, absTileZ);
-
-          struct v2 minCorner = v2_mul(
-              (struct v2){tileMap->tileSideInMeters, tileMap->tileSideInMeters},
-              -0.5f);
-          struct v2 maxCorner = v2_mul(
-              (struct v2){tileMap->tileSideInMeters, tileMap->tileSideInMeters},
-              0.5f);
-
-          struct position_difference relNewPlayerPos =
-              PositionDifference(tileMap, &testTilePos, &newPlayerPos);
-          // struct v2 testP = ClosestPointInRectangle(minCorner, maxCorner);
-        }
-#endif
-    }
+    //   u32 minTileX = 0;
+    //   u32 minTileY = 0;
+    //   u32 maxTileX = 0;
+    //   u32 maxTileY = 0;
+    //   u32 absTileZ = state->playerPos.absTileZ;
+    //   struct position_tile_map bestPlayerPos = state->playerPos;
+    //   f32 bestDistanceSq = v2_length_square(playerDelta);
+    //   for (u32 absTileX = minTileX; absTileX != maxTileX; absTileX++) {
+    //     for (u32 absTileY = minTileY; absTileY != maxTileY; absTileY++) {
+    //       u32 tileValue = TileGetValue(tileMap, absTileX, absTileY,
+    //       absTileZ); if (TileIsEmpty(tileValue)) {
+    //         struct position_tile_map testTilePos =
+    //             PositionTileMapCentered(absTileX, absTileY, absTileZ);
+    //
+    //         struct v2 minCorner = v2_mul(
+    //             (struct v2){tileMap->tileSideInMeters,
+    //             tileMap->tileSideInMeters}, -0.5f);
+    //         struct v2 maxCorner = v2_mul(
+    //             (struct v2){tileMap->tileSideInMeters,
+    //             tileMap->tileSideInMeters}, 0.5f);
+    //
+    //         struct position_difference relNewPlayerPos =
+    //             PositionDifference(tileMap, &testTilePos, &newPlayerPos);
+    //         // struct v2 testP = ClosestPointInRectangle(minCorner,
+    //         maxCorner);
+    //       }
+    //     }
+    //   }
   }
 
   /* update player position */
-  if (!PositionTileMapSameTile(&oldPlayerPos, &state->playerPos)) {
-    u32 newTileValue = TileGetValue2(tileMap, &state->playerPos);
+  if (!PositionTileMapSameTile(&oldPosition, &entity->position)) {
+    u32 newTileValue = TileGetValue2(tileMap, &entity->position);
 
     if (newTileValue & TILE_LADDER_UP) {
-      state->playerPos.absTileZ++;
+      entity->position.absTileZ++;
     }
 
     if (newTileValue & TILE_LADDER_DOWN) {
-      state->playerPos.absTileZ--;
+      entity->position.absTileZ--;
     }
 
-    assert(state->playerPos.absTileZ < tileMap->tileChunkCountZ);
+    assert(entity->position.absTileZ < tileMap->tileChunkCountZ);
   }
 
-  if (absolute(ddPlayer.x) > absolute(ddPlayer.y)) {
-    if (ddPlayer.x < 0)
-      state->heroFacingDirection = BITMAP_HERO_LEFT;
+  /*****************************************************************
+   * VISUAL CORRECTIONS
+   *****************************************************************/
+  if (absolute(ddPosition.x) > absolute(ddPosition.y)) {
+    if (ddPosition.x < 0)
+      entity->facingDirection = BITMAP_HERO_LEFT;
     else
-      state->heroFacingDirection = BITMAP_HERO_RIGHT;
-  }
-  else if (abs(ddPlayer.x) < abs(ddPlayer.y)) {
-    if (ddPlayer.y > 0)
-      state->heroFacingDirection = BITMAP_HERO_BACK;
+      entity->facingDirection = BITMAP_HERO_RIGHT;
+  } else if (absolute(ddPosition.x) < absolute(ddPosition.y)) {
+    if (ddPosition.y > 0)
+      entity->facingDirection = BITMAP_HERO_BACK;
     else
-      state->heroFacingDirection = BITMAP_HERO_FRONT;
+      entity->facingDirection = BITMAP_HERO_FRONT;
   }
-
 }
-}
-#endif
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
@@ -540,8 +560,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     state->cameraPos.absTileY = tilesPerHeight / 2;
 
     /* initialize controller entity hash table with invalid entities */
-    for (u32 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
-      state->playerIndexForController[controllerIndex] = HANDMADEHERO_ENTITY_TOTAL;
+    for (u32 controllerIndex = 0;
+         controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
+      state->playerIndexForController[controllerIndex] =
+          HANDMADEHERO_ENTITY_TOTAL;
     }
 
     /* world creation */
@@ -671,18 +693,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   assert(tileMap);
 
   /****************************************************************
-   * COLLISION DETECTION
+   * CONTROLLER INPUT HANDLING
    ****************************************************************/
-
-  /* unit: meters */
-  f32 playerHeight = 1.4f;
-  /* unit: meters */
-  f32 playerWidth = playerHeight * 0.75f;
-
-  /* unit: pixels */
-  u32 tileSideInPixels = 60;
-  /* unit: pixels/meters */
-  f32 metersToPixels = (f32)tileSideInPixels / tileMap->tileSideInMeters;
 
   for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT;
        controllerIndex++) {
@@ -691,21 +703,25 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct entity *controlledEntity =
         EntityGet(state, state->playerIndexForController[controllerIndex]);
 
+    /* if there is no entity associated with this controller */
     if (!controlledEntity) {
       /* wait for start button pressed to enable */
       if (controller->start.pressed) {
-        controlledEntity = EntityAdd(state);
+        u32 entityIndex = EntityAdd(state);
+        controlledEntity = EntityGet(state, entityIndex);
+        assert(entityIndex < HANDMADEHERO_ENTITY_TOTAL);
+        state->playerIndexForController[controllerIndex] = entityIndex;
         EntityReset(controlledEntity);
       }
       continue;
     }
 
     /* acceleration */
-    struct v2 ddPlayer = {};
+    struct v2 ddPosition = {};
 
     /* analog controller */
     if (controller->isAnalog) {
-      ddPlayer = (struct v2){
+      ddPosition = (struct v2){
           .x = controller->stickAverageX,
           .y = controller->stickAverageY,
       };
@@ -715,25 +731,27 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     else {
 
       if (controller->moveLeft.pressed) {
-        ddPlayer.x = -1.0f;
+        ddPosition.x = -1.0f;
       }
 
       if (controller->moveRight.pressed) {
-        ddPlayer.x = 1.0f;
+        ddPosition.x = 1.0f;
       }
 
       if (controller->moveDown.pressed) {
-        ddPlayer.y = -1.0f;
+        ddPosition.y = -1.0f;
       }
 
       if (controller->moveUp.pressed) {
-        ddPlayer.y = 1.0f;
+        ddPosition.y = 1.0f;
       }
     }
+
+    PlayerMove(state, controlledEntity, input->dtPerFrame, ddPosition);
   }
 
+  /* sync camera with floowed player */
   struct entity *followedEntity = EntityGet(state, state->followedEntityIndex);
-
   if (followedEntity) {
     state->cameraPos.absTileZ = followedEntity->position.absTileZ;
 
@@ -756,6 +774,11 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /****************************************************************
    * RENDERING
    ****************************************************************/
+  /* unit: pixels */
+  const u32 tileSideInPixels = 60;
+  /* unit: pixels/meters */
+  const f32 metersToPixels = (f32)tileSideInPixels / tileMap->tileSideInMeters;
+
   DrawBitmap(&state->bitmapBackground, backbuffer, (struct v2){}, 0, 0);
 
   struct v2 screenCenter = {
@@ -844,13 +867,13 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     };
 
     struct v2 playerLeftTop = (struct v2){
-        .x = playerGroundPoint.x - 0.5f * playerWidth * metersToPixels,
-        .y = playerGroundPoint.y - playerHeight * metersToPixels,
+        .x = playerGroundPoint.x - 0.5f * entity->width * metersToPixels,
+        .y = playerGroundPoint.y - entity->height * metersToPixels,
     };
 
     struct v2 playerWidthHeight = (struct v2){
-        .x = playerWidth,
-        .y = playerHeight,
+        .x = entity->width,
+        .y = entity->height,
     };
     v2_mul_ref(&playerWidthHeight, metersToPixels);
     struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
