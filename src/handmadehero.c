@@ -232,255 +232,31 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
   return result;
 }
 
-GAMEUPDATEANDRENDER(GameUpdateAndRender) {
-  struct game_state *state = memory->permanentStorage;
+static inline struct entity *EntityGet(struct game_state *state, u32 index) {
+  if (index > state->entityCount)
+    return 0;
 
-  /****************************************************************
-   * INITIALIZATION
-   ****************************************************************/
-  static const u32 tilesPerWidth = 17;
-  static const u32 tilesPerHeight = 9;
-  if (!memory->initialized) {
-    /* load background */
-    state->bitmapBackground =
-        LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
+  return &state->entities[index];
+}
 
-    /* load hero bitmaps */
-    struct bitmap_hero *bitmapHero = &state->bitmapHero[BITMAP_HERO_FRONT];
-    bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile,
-                               "test/test_hero_front_head.bmp");
-    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
-                                "test/test_hero_front_torso.bmp");
-    bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile,
-                               "test/test_hero_front_cape.bmp");
-    bitmapHero->alignX = 72;
-    bitmapHero->alignY = 182;
+static inline void EntityReset(struct entity *entity) {
+  *entity = (struct entity){};
 
-    bitmapHero = &state->bitmapHero[BITMAP_HERO_BACK];
-    bitmapHero->head =
-        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_head.bmp");
-    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
-                                "test/test_hero_back_torso.bmp");
-    bitmapHero->cape =
-        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_cape.bmp");
-    bitmapHero->alignX = 72;
-    bitmapHero->alignY = 182;
+  entity->exists = 1;
 
-    bitmapHero = &state->bitmapHero[BITMAP_HERO_LEFT];
-    bitmapHero->head =
-        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_head.bmp");
-    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
-                                "test/test_hero_left_torso.bmp");
-    bitmapHero->cape =
-        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_cape.bmp");
-    bitmapHero->alignX = 72;
-    bitmapHero->alignY = 182;
+  /* set initial player position */
+  entity->position.absTileX = 1;
+  entity->position.absTileY = 3;
+  entity->position.offset = (struct v2){.x = 5.0f, .y = 5.0f};
 
-    bitmapHero = &state->bitmapHero[BITMAP_HERO_RIGHT];
-    bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile,
-                               "test/test_hero_right_head.bmp");
-    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
-                                "test/test_hero_right_torso.bmp");
-    bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile,
-                               "test/test_hero_right_cape.bmp");
-    bitmapHero->alignX = 72;
-    bitmapHero->alignY = 182;
+  /* set initial player velocity */
+  entity->dPosition.x = 0;
+  entity->dPosition.y = 0;
+}
 
-    /* set initial camera position */
-    state->cameraPos.absTileX = 17 / 2;
-    state->cameraPos.absTileY = 9 / 2;
-
-    /* set initial player position */
-    state->playerPos.absTileX = 1;
-    state->playerPos.absTileY = 3;
-    state->playerPos.offset = (struct v2){.x = 5.0f, .y = 5.0f};
-
-    /* set initial player velocity */
-    // state->dPlayerPos.x = 0;
-    // state->dPlayerPos.y = 0;
-
-    /* world creation */
-    void *data = memory->permanentStorage + sizeof(*state);
-    memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
-    MemoryArenaInit(&state->worldArena, data, size);
-
-    struct world *world = MemoryArenaPush(&state->worldArena, sizeof(*world));
-    state->world = world;
-    struct tile_map *tileMap =
-        MemoryArenaPush(&state->worldArena, sizeof(*tileMap));
-    world->tileMap = tileMap;
-
-    tileMap->chunkShift = 4;
-    tileMap->chunkDim = (u32)(1 << tileMap->chunkShift);
-    tileMap->chunkMask = (u32)(1 << tileMap->chunkShift) - 1;
-
-    tileMap->tileSideInMeters = 1.4f;
-
-    tileMap->tileChunkCountX = 128;
-    tileMap->tileChunkCountY = 128;
-    tileMap->tileChunkCountZ = 2;
-    tileMap->tileChunks =
-        MemoryArenaPush(&state->worldArena, sizeof(struct tile_chunk) *
-                                                /* x . y . z */
-                                                tileMap->tileChunkCountX *
-                                                tileMap->tileChunkCountY *
-                                                tileMap->tileChunkCountZ);
-    /* generate procedural tile map */
-    u32 screenX = 0;
-    u32 screenY = 0;
-    u32 absTileZ = 0;
-
-    u8 isDoorLeft = 0;
-    u8 isDoorRight = 0;
-    u8 isDoorTop = 0;
-    u8 isDoorBottom = 0;
-    u8 isDoorUp = 0;
-    u8 isDoorDown = 0;
-
-    for (u32 screenIndex = 0; screenIndex < 100; screenIndex++) {
-      u32 randomValue;
-
-      if (isDoorUp || isDoorDown)
-        randomValue = RandomNumber() % 2;
-      else
-        randomValue = RandomNumber() % 3;
-
-      u8 isDoorZ = 0;
-      if (randomValue == 2) {
-        isDoorZ = 1;
-        if (absTileZ == 0)
-          isDoorUp = 1;
-        else
-          isDoorDown = 1;
-      } else if (randomValue == 1)
-        isDoorRight = 1;
-      else
-        isDoorTop = 1;
-
-      for (u32 tileY = 0; tileY < tilesPerHeight; tileY++) {
-        for (u32 tileX = 0; tileX < tilesPerWidth; tileX++) {
-
-          u32 absTileX = screenX * tilesPerWidth + tileX;
-          u32 absTileY = screenY * tilesPerHeight + tileY;
-
-          u32 value = TILE_WALKABLE;
-
-          if (tileX == 0 && (!isDoorLeft || tileY != tilesPerHeight / 2))
-            value = TILE_BLOCKED;
-
-          if (tileX == tilesPerWidth - 1 &&
-              (!isDoorRight || tileY != tilesPerHeight / 2))
-            value = TILE_BLOCKED;
-
-          if (tileY == 0 && (!isDoorBottom || tileX != tilesPerWidth / 2))
-            value = TILE_BLOCKED;
-
-          if (tileY == tilesPerHeight - 1 &&
-              (!isDoorTop || tileX != tilesPerWidth / 2))
-            value = TILE_BLOCKED;
-
-          if (tileX == 10 && tileY == 6) {
-            if (isDoorUp)
-              value = TILE_LADDER_UP;
-
-            if (isDoorDown)
-              value = TILE_LADDER_DOWN;
-          }
-
-          TileSetValue(&state->worldArena, tileMap, absTileX, absTileY,
-                       absTileZ, value);
-        }
-      }
-
-      isDoorLeft = isDoorRight;
-      isDoorBottom = isDoorTop;
-
-      isDoorRight = 0;
-      isDoorTop = 0;
-
-      if (isDoorZ) {
-        isDoorUp = !isDoorUp;
-        isDoorDown = !isDoorDown;
-      } else {
-        isDoorUp = 0;
-        isDoorDown = 0;
-      }
-
-      if (randomValue == 2)
-        if (absTileZ == 0)
-          absTileZ = 1;
-        else
-          absTileZ = 0;
-      else if (randomValue == 1)
-        screenX += 1;
-      else
-        screenY += 1;
-    }
-
-    memory->initialized = 1;
-  }
-
-  struct world *world = state->world;
-  assert(world);
-  struct tile_map *tileMap = world->tileMap;
-  assert(tileMap);
-
-  /****************************************************************
-   * COLLISION DETECTION
-   ****************************************************************/
-
-  /* unit: meters */
-  f32 playerHeight = 1.4f;
-  /* unit: meters */
-  f32 playerWidth = playerHeight * 0.75f;
-
-  /* unit: pixels */
-  u32 tileSideInPixels = 60;
-  /* unit: pixels/meters */
-  f32 metersToPixels = (f32)tileSideInPixels / tileMap->tileSideInMeters;
-
+#if 0
+static void foo() {
   struct position_tile_map oldPlayerPos = state->playerPos;
-
-  for (u8 controllerIndex = 0; controllerIndex < 2; controllerIndex++) {
-    struct game_controller_input *controller =
-        GetController(input, controllerIndex);
-
-    /* acceleration */
-    struct v2 ddPlayer = {};
-
-    if (controller->isAnalog) {
-      ddPlayer.x += controller->stickAverageX;
-      ddPlayer.y += controller->stickAverageY;
-
-      if (controller->stickAverageX > 0)
-        state->heroFacingDirection = BITMAP_HERO_RIGHT;
-      else if (controller->stickAverageX < 0)
-        state->heroFacingDirection = BITMAP_HERO_LEFT;
-      if (controller->stickAverageY > 0)
-        state->heroFacingDirection = BITMAP_HERO_BACK;
-      else if (controller->stickAverageY < 0)
-        state->heroFacingDirection = BITMAP_HERO_FRONT;
-    }
-
-    if (controller->moveLeft.pressed) {
-      ddPlayer.x = -1.0f;
-      state->heroFacingDirection = BITMAP_HERO_LEFT;
-    }
-
-    if (controller->moveRight.pressed) {
-      ddPlayer.x = 1.0f;
-      state->heroFacingDirection = BITMAP_HERO_RIGHT;
-    }
-
-    if (controller->moveDown.pressed) {
-      ddPlayer.y = -1.0f;
-      state->heroFacingDirection = BITMAP_HERO_FRONT;
-    }
-
-    if (controller->moveUp.pressed) {
-      ddPlayer.y = 1.0f;
-      state->heroFacingDirection = BITMAP_HERO_BACK;
-    }
 
     /* if moving diagonally */
     if (ddPlayer.x != 0 && ddPlayer.y != 0) {
@@ -664,6 +440,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
   }
 
+  /* update player position */
   if (!PositionTileMapSameTile(&oldPlayerPos, &state->playerPos)) {
     u32 newTileValue = TileGetValue2(tileMap, &state->playerPos);
 
@@ -678,24 +455,275 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     assert(state->playerPos.absTileZ < tileMap->tileChunkCountZ);
   }
 
-  state->cameraPos.absTileZ = state->playerPos.absTileZ;
+  if (absolute(ddPlayer.x) > absolute(ddPlayer.y)) {
+    if (ddPlayer.x < 0)
+      state->heroFacingDirection = BITMAP_HERO_LEFT;
+    else
+      state->heroFacingDirection = BITMAP_HERO_RIGHT;
+  }
+  else if (abs(ddPlayer.x) < abs(ddPlayer.y)) {
+    if (ddPlayer.y > 0)
+      state->heroFacingDirection = BITMAP_HERO_BACK;
+    else
+      state->heroFacingDirection = BITMAP_HERO_FRONT;
+  }
 
-  struct position_difference diff =
-      PositionDifference(tileMap, &state->playerPos, &state->cameraPos);
+}
+}
+#endif
 
-  f32 maxDiffX = (f32)tilesPerWidth * 0.5f * tileMap->tileSideInMeters;
-  if (diff.dXY.x > maxDiffX)
-    state->cameraPos.absTileX += tilesPerWidth;
-  else if (diff.dXY.x < -maxDiffX)
-    state->cameraPos.absTileX -= tilesPerWidth;
+GAMEUPDATEANDRENDER(GameUpdateAndRender) {
+  struct game_state *state = memory->permanentStorage;
 
-  f32 maxDiffY = (f32)tilesPerHeight * 0.5f * tileMap->tileSideInMeters;
-  if (diff.dXY.y > maxDiffY)
-    state->cameraPos.absTileY += tilesPerHeight;
-  else if (diff.dXY.y < -maxDiffY)
-    state->cameraPos.absTileY -= tilesPerHeight;
+  /****************************************************************
+   * INITIALIZATION
+   ****************************************************************/
+  static const u32 tilesPerWidth = 17;
+  static const u32 tilesPerHeight = 9;
+  if (!memory->initialized) {
+    /* load background */
+    state->bitmapBackground =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
 
-  diff = PositionDifference(tileMap, &state->playerPos, &state->cameraPos);
+    /* load hero bitmaps */
+    struct bitmap_hero *bitmapHero = &state->bitmapHero[BITMAP_HERO_FRONT];
+    bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile,
+                               "test/test_hero_front_head.bmp");
+    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
+                                "test/test_hero_front_torso.bmp");
+    bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile,
+                               "test/test_hero_front_cape.bmp");
+    bitmapHero->alignX = 72;
+    bitmapHero->alignY = 182;
+
+    bitmapHero = &state->bitmapHero[BITMAP_HERO_BACK];
+    bitmapHero->head =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_head.bmp");
+    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
+                                "test/test_hero_back_torso.bmp");
+    bitmapHero->cape =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_cape.bmp");
+    bitmapHero->alignX = 72;
+    bitmapHero->alignY = 182;
+
+    bitmapHero = &state->bitmapHero[BITMAP_HERO_LEFT];
+    bitmapHero->head =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_head.bmp");
+    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
+                                "test/test_hero_left_torso.bmp");
+    bitmapHero->cape =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_cape.bmp");
+    bitmapHero->alignX = 72;
+    bitmapHero->alignY = 182;
+
+    bitmapHero = &state->bitmapHero[BITMAP_HERO_RIGHT];
+    bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile,
+                               "test/test_hero_right_head.bmp");
+    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile,
+                                "test/test_hero_right_torso.bmp");
+    bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile,
+                               "test/test_hero_right_cape.bmp");
+    bitmapHero->alignX = 72;
+    bitmapHero->alignY = 182;
+
+    /* set initial camera position */
+    state->cameraPos.absTileX = 17 / 2;
+    state->cameraPos.absTileY = 9 / 2;
+
+    /* world creation */
+    void *data = memory->permanentStorage + sizeof(*state);
+    memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
+    MemoryArenaInit(&state->worldArena, data, size);
+
+    struct world *world = MemoryArenaPush(&state->worldArena, sizeof(*world));
+    state->world = world;
+    struct tile_map *tileMap =
+        MemoryArenaPush(&state->worldArena, sizeof(*tileMap));
+    world->tileMap = tileMap;
+
+    tileMap->chunkShift = 4;
+    tileMap->chunkDim = (u32)(1 << tileMap->chunkShift);
+    tileMap->chunkMask = (u32)(1 << tileMap->chunkShift) - 1;
+
+    tileMap->tileSideInMeters = 1.4f;
+
+    tileMap->tileChunkCountX = 128;
+    tileMap->tileChunkCountY = 128;
+    tileMap->tileChunkCountZ = 2;
+    tileMap->tileChunks =
+        MemoryArenaPush(&state->worldArena, sizeof(struct tile_chunk) *
+                                                /* x . y . z */
+                                                tileMap->tileChunkCountX *
+                                                tileMap->tileChunkCountY *
+                                                tileMap->tileChunkCountZ);
+    /* generate procedural tile map */
+    u32 screenX = 0;
+    u32 screenY = 0;
+    u32 absTileZ = 0;
+
+    u8 isDoorLeft = 0;
+    u8 isDoorRight = 0;
+    u8 isDoorTop = 0;
+    u8 isDoorBottom = 0;
+    u8 isDoorUp = 0;
+    u8 isDoorDown = 0;
+
+    for (u32 screenIndex = 0; screenIndex < 100; screenIndex++) {
+      u32 randomValue;
+
+      if (isDoorUp || isDoorDown)
+        randomValue = RandomNumber() % 2;
+      else
+        randomValue = RandomNumber() % 3;
+
+      u8 isDoorZ = 0;
+      if (randomValue == 2) {
+        isDoorZ = 1;
+        if (absTileZ == 0)
+          isDoorUp = 1;
+        else
+          isDoorDown = 1;
+      } else if (randomValue == 1)
+        isDoorRight = 1;
+      else
+        isDoorTop = 1;
+
+      for (u32 tileY = 0; tileY < tilesPerHeight; tileY++) {
+        for (u32 tileX = 0; tileX < tilesPerWidth; tileX++) {
+
+          u32 absTileX = screenX * tilesPerWidth + tileX;
+          u32 absTileY = screenY * tilesPerHeight + tileY;
+
+          u32 value = TILE_WALKABLE;
+
+          if (tileX == 0 && (!isDoorLeft || tileY != tilesPerHeight / 2))
+            value = TILE_BLOCKED;
+
+          if (tileX == tilesPerWidth - 1 &&
+              (!isDoorRight || tileY != tilesPerHeight / 2))
+            value = TILE_BLOCKED;
+
+          if (tileY == 0 && (!isDoorBottom || tileX != tilesPerWidth / 2))
+            value = TILE_BLOCKED;
+
+          if (tileY == tilesPerHeight - 1 &&
+              (!isDoorTop || tileX != tilesPerWidth / 2))
+            value = TILE_BLOCKED;
+
+          if (tileX == 10 && tileY == 6) {
+            if (isDoorUp)
+              value = TILE_LADDER_UP;
+
+            if (isDoorDown)
+              value = TILE_LADDER_DOWN;
+          }
+
+          TileSetValue(&state->worldArena, tileMap, absTileX, absTileY,
+                       absTileZ, value);
+        }
+      }
+
+      isDoorLeft = isDoorRight;
+      isDoorBottom = isDoorTop;
+
+      isDoorRight = 0;
+      isDoorTop = 0;
+
+      if (isDoorZ) {
+        isDoorUp = !isDoorUp;
+        isDoorDown = !isDoorDown;
+      } else {
+        isDoorUp = 0;
+        isDoorDown = 0;
+      }
+
+      if (randomValue == 2)
+        if (absTileZ == 0)
+          absTileZ = 1;
+        else
+          absTileZ = 0;
+      else if (randomValue == 1)
+        screenX += 1;
+      else
+        screenY += 1;
+    }
+
+    memory->initialized = 1;
+  }
+
+  struct world *world = state->world;
+  assert(world);
+  struct tile_map *tileMap = world->tileMap;
+  assert(tileMap);
+
+  /****************************************************************
+   * COLLISION DETECTION
+   ****************************************************************/
+
+  /* unit: meters */
+  f32 playerHeight = 1.4f;
+  /* unit: meters */
+  f32 playerWidth = playerHeight * 0.75f;
+
+  /* unit: pixels */
+  u32 tileSideInPixels = 60;
+  /* unit: pixels/meters */
+  f32 metersToPixels = (f32)tileSideInPixels / tileMap->tileSideInMeters;
+
+  for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
+    struct game_controller_input *controller =
+        GetController(input, controllerIndex);
+
+    /* acceleration */
+    struct v2 ddPlayer = {};
+
+    /* analog controller */
+    if (controller->isAnalog) {
+      ddPlayer.x += controller->stickAverageX;
+      ddPlayer.y += controller->stickAverageY;
+    }
+
+    /* digital controller */
+    else {
+
+      if (controller->moveLeft.pressed) {
+        ddPlayer.x = -1.0f;
+      }
+
+      if (controller->moveRight.pressed) {
+        ddPlayer.x = 1.0f;
+      }
+
+      if (controller->moveDown.pressed) {
+        ddPlayer.y = -1.0f;
+      }
+
+      if (controller->moveUp.pressed) {
+        ddPlayer.y = 1.0f;
+      }
+    }
+  }
+
+  struct entity *followedEntity = EntityGet(state, state->followedEntityIndex);
+
+  if (followedEntity) {
+    state->cameraPos.absTileZ = followedEntity->position.absTileZ;
+
+    struct position_difference diff = PositionDifference(
+        tileMap, &followedEntity->position, &state->cameraPos);
+
+    f32 maxDiffX = (f32)tilesPerWidth * 0.5f * tileMap->tileSideInMeters;
+    if (diff.dXY.x > maxDiffX)
+      state->cameraPos.absTileX += tilesPerWidth;
+    else if (diff.dXY.x < -maxDiffX)
+      state->cameraPos.absTileX -= tilesPerWidth;
+
+    f32 maxDiffY = (f32)tilesPerHeight * 0.5f * tileMap->tileSideInMeters;
+    if (diff.dXY.y > maxDiffY)
+      state->cameraPos.absTileY += tilesPerHeight;
+    else if (diff.dXY.y < -maxDiffY)
+      state->cameraPos.absTileY -= tilesPerHeight;
+  }
 
   /****************************************************************
    * RENDERING
@@ -707,14 +735,11 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       .y = 0.5f * (f32)backbuffer->height,
   };
 
-  struct position_tile_map *playerPos = &state->playerPos;
-  struct position_tile_map *cameraPos = &state->cameraPos;
-
   /* render tiles relative to player position */
   for (i32 relRow = -10; relRow < 10; relRow++) {
     for (i32 relColumn = -20; relColumn < 20; relColumn++) {
-      i32 testColumn = (i32)cameraPos->absTileX + relColumn;
-      i32 testRow = (i32)cameraPos->absTileY + relRow;
+      i32 testColumn = (i32)state->cameraPos.absTileX + relColumn;
+      i32 testRow = (i32)state->cameraPos.absTileY + relRow;
 
       if (testColumn < 0)
         continue;
@@ -723,7 +748,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
       u32 column = (u32)testColumn;
       u32 row = (u32)testRow;
-      u32 plane = cameraPos->absTileZ;
+      u32 plane = state->cameraPos.absTileZ;
 
       u32 tileid = TileGetValue(tileMap, column, row, plane);
       f32 gray = 0.0f;
@@ -770,40 +795,48 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
   }
 
-  /* render player at player position */
-  /* convert from meters to pixel */
-  v2_mul_ref(&diff.dXY, metersToPixels);
+  /* render entities */
+  for (u32 entityIndex = 0; entityIndex < state->entityCount; entityIndex++) {
+    struct entity *entity = EntityGet(state, entityIndex);
+    if (!entity->exists)
+      continue;
 
-  f32 playerR = 1.0f;
-  f32 playerG = 1.0f;
-  f32 playerB = 0.0f;
+    struct position_difference diff =
+        PositionDifference(tileMap, &entity->position, &state->cameraPos);
+    /* convert from meters to pixel */
+    v2_mul_ref(&diff.dXY, metersToPixels);
 
-  struct v2 playerGroundPoint = {
-      .x = screenCenter.x + diff.dXY.x,
-      .y = screenCenter.y - diff.dXY.y,
-  };
+    f32 playerR = 1.0f;
+    f32 playerG = 1.0f;
+    f32 playerB = 0.0f;
 
-  struct v2 playerLeftTop = (struct v2){
-      .x = playerGroundPoint.x - 0.5f * playerWidth * metersToPixels,
-      .y = playerGroundPoint.y - playerHeight * metersToPixels,
-  };
+    struct v2 playerGroundPoint = {
+        .x = screenCenter.x + diff.dXY.x,
+        .y = screenCenter.y - diff.dXY.y,
+    };
 
-  struct v2 playerWidthHeight = (struct v2){
-      .x = playerWidth,
-      .y = playerHeight,
-  };
-  v2_mul_ref(&playerWidthHeight, metersToPixels);
-  struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
+    struct v2 playerLeftTop = (struct v2){
+        .x = playerGroundPoint.x - 0.5f * playerWidth * metersToPixels,
+        .y = playerGroundPoint.y - playerHeight * metersToPixels,
+    };
 
-  DrawRectangle(backbuffer, playerLeftTop, playerRightBottom,
-                /* color */
-                playerR, playerG, playerB);
+    struct v2 playerWidthHeight = (struct v2){
+        .x = playerWidth,
+        .y = playerHeight,
+    };
+    v2_mul_ref(&playerWidthHeight, metersToPixels);
+    struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
 
-  struct bitmap_hero *bitmap = &state->bitmapHero[state->heroFacingDirection];
-  DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
-             bitmap->alignY);
-  DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->alignX,
-             bitmap->alignY);
-  DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
-             bitmap->alignY);
+    DrawRectangle(backbuffer, playerLeftTop, playerRightBottom,
+                  /* color */
+                  playerR, playerG, playerB);
+
+    struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
+    DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
+               bitmap->alignY);
+    DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->alignX,
+               bitmap->alignY);
+    DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
+               bitmap->alignY);
+  }
 }

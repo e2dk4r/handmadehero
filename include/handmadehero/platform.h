@@ -68,7 +68,7 @@ struct game_controller_input {
   };
 };
 
-#define HANDMADEHERO_CONTROLLER_COUNT 2U
+#define HANDMADEHERO_CONTROLLER_COUNT 5
 struct game_input {
   /*
    *        |-----|-----|-----|-----|-----|--->

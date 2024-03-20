@@ -23,15 +23,23 @@ struct bitmap_hero {
   struct bitmap cape;
 };
 
+struct entity {
+  u8 exists : 1;
+  u8 facingDirection;
+  struct position_tile_map position;
+  struct v2 dPosition;
+};
+
 struct game_state {
   struct memory_arena worldArena;
   struct world *world;
 
+  u32 followedEntityIndex;
   struct position_tile_map cameraPos;
-  /* position */
-  struct position_tile_map playerPos;
-  /* velocity */
-  struct v2 dPlayerPos;
+
+  u32 playerIndexForController[HANDMADEHERO_CONTROLLER_COUNT];
+  u32 entityCount;
+  struct entity entities[256];
 
   struct bitmap bitmapBackground;
 
@@ -39,7 +47,6 @@ struct game_state {
 #define BITMAP_HERO_BACK 1
 #define BITMAP_HERO_LEFT 2
 #define BITMAP_HERO_RIGHT 0
-  u8 heroFacingDirection;
   struct bitmap_hero bitmapHero[4];
 };
 
