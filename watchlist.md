@@ -175,7 +175,7 @@
 - [x] Handmade Hero Day 045 - Geometric vs. Temporal Movement Search
       https://www.youtube.com/watch?v=bERy-zhosqY
 
-- [ ] Handmade Hero Day 046 - Basic Multiplayer Support
+- [x] Handmade Hero Day 046 - Basic Multiplayer Support
       https://www.youtube.com/watch?v=BU5xBpUMdPA
 
 - [ ] Handmade Hero Day 047 - Vector Lengths
