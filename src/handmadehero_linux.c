@@ -310,62 +310,68 @@ static void joystick_key(struct linux_state *state, u16 type, u16 code,
     return;
   }
 
-  else if (code == ABS_HAT0Y || code == ABS_HAT1Y || code == ABS_HAT2Y ||
-           code == ABS_HAT3Y) {
-    controller->moveUp.pressed = value < 0;
-    controller->moveDown.pressed = value > 0;
-  }
-
-  else if (code == ABS_HAT0X || code == ABS_HAT1X || code == ABS_HAT2X ||
-           code == ABS_HAT3X) {
+  switch (code) {
+  case ABS_HAT0X:
+  case ABS_HAT1X:
+  case ABS_HAT2X:
+  case ABS_HAT3X: {
     controller->moveLeft.pressed = value < 0;
     controller->moveRight.pressed = value > 0;
-  }
+  } break;
 
-  else if (code == BTN_START) {
+  case ABS_HAT0Y:
+  case ABS_HAT1Y:
+  case ABS_HAT2Y:
+  case ABS_HAT3Y: {
+    controller->moveUp.pressed = value < 0;
+    controller->moveDown.pressed = value > 0;
+  } break;
+
+  case BTN_START: {
     controller->start.pressed = value < 0;
-  }
+  } break;
 
-  else if (code == BTN_SELECT) {
+  case BTN_SELECT: {
     controller->back.pressed = value < 0;
-  }
+  } break;
 
-  // normal of X values
-  else if (code == ABS_X) {
-    static const f32 MAX_LEFT = 32768.0f;
-    static const f32 MAX_RIGHT = 32767.0f;
+    /* normalize stick x movement */
+    comptime f32 MAX_LEFT = 32768.0f;
+    comptime f32 MAX_RIGHT = 32767.0f;
+    comptime i32 MIN_LEFT = -129;
+    comptime i32 MIN_RIGHT = 128;
+  case ABS_X: {
     f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
-    if (value >= -129 && value <= 128)
+    if (value >= MIN_LEFT && value <= MIN_RIGHT)
       value = 0;
     f32 x = (f32)value / max;
     controller->stickAverageX = x;
-  }
+  } break;
 
-  // normal of Y values
-  else if (code == ABS_Y) {
-    static const f32 MAX_LEFT = 32768.0f;
-    static const f32 MAX_RIGHT = 32767.0f;
+  /* normalize stick y movement */
+  case ABS_Y: {
     f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
-    if (value >= -129 && value <= 128)
+    if (value >= MIN_LEFT && value <= MIN_RIGHT)
       value = 0;
     f32 y = (f32)value / max;
     controller->stickAverageY = -y;
-  }
+  } break;
 
-  else if (code == BTN_NORTH) {
+  case BTN_NORTH: {
     controller->actionUp.pressed = (u8)(value & 0x1);
-  }
+  } break;
 
-  else if (code == BTN_SOUTH) {
+  case BTN_SOUTH: {
     controller->actionDown.pressed = (u8)(value & 0x1);
-  }
+  } break;
 
-  else if (code == BTN_WEST) {
+  case BTN_WEST: {
     controller->actionLeft.pressed = (u8)(value & 0x1);
-  }
+  } break;
 
-  else if (code == BTN_EAST) {
+  case BTN_EAST: {
     controller->actionRight.pressed = (u8)(value & 0x1);
+  } break;
   }
 }
 
