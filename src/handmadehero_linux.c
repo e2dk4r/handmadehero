@@ -315,16 +315,14 @@ static void joystick_key(struct linux_state *state, u16 type, u16 code,
   case ABS_HAT1X:
   case ABS_HAT2X:
   case ABS_HAT3X: {
-    controller->moveLeft.pressed = value < 0;
-    controller->moveRight.pressed = value > 0;
+    controller->stickAverageX = (f32)value;
   } break;
 
   case ABS_HAT0Y:
   case ABS_HAT1Y:
   case ABS_HAT2Y:
   case ABS_HAT3Y: {
-    controller->moveUp.pressed = value < 0;
-    controller->moveDown.pressed = value > 0;
+    controller->stickAverageY = -(f32)value;
   } break;
 
   case BTN_START: {
