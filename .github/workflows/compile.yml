@@ -39,6 +39,30 @@ jobs:
         tar cf - $output | zstd --ultra -22 -T0 -o $file
 
         echo **Workflow run**: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID >> notes
-        echo DO NOT FORGET to extract art archive >> notes
+
+        echo '' >> notes
+        echo '> [!IMPORTANT]'
+        echo '> **DO NOT FORGET** to extract art archive' >> notes
+
+        echo '' >> notes
+        echo '# Keyboard Input' >> notes
+        echo '| key   | meaning           |' >> notes
+        echo '|-------|-------------------|' >> notes
+        echo '| q     | Exit the game     |' >> notes
+        echo '| l     | Loop mode toggle  |' >> notes
+        echo '| f     | Go to fullscreen  |' >> notes
+        echo '| space | Create player     |' >> notes
+        echo '| w     | Go to up          |' >> notes
+        echo '| a     | Go to left        |' >> notes
+        echo '| s     | Go to down        |' >> notes
+        echo '| d     | Go to right       |' >> notes
+
+        echo '' >> notes
+        echo '# Gamepad Input' >> notes
+        echo '| key        | meaning                     |' >> notes
+        echo '|------------|-----------------------------|' >> notes
+        echo '| start      | Create player               |' >> notes
+        echo '| dpad       | Go to up, left, down, right |' >> notes
+        echo '| left stick | Go to up, left, down, right |' >> notes
 
         gh release create day-$day --notes-file notes $file
