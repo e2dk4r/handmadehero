@@ -9,7 +9,7 @@ wayland_scanner = find_program(
 protocols = [
   wl_protocol_dir / 'stable/xdg-shell/xdg-shell.xml',
   wl_protocol_dir / 'stable/viewporter/viewporter.xml',
-  # wl_protocol_dir / 'stable/presentation-time/presentation-time.xml',
+  wl_protocol_dir / 'stable/presentation-time/presentation-time.xml',
   # wl_protocol_dir / 'unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml',
 ]
 

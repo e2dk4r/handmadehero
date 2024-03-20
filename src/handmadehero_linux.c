@@ -24,6 +24,7 @@
 #endif
 
 /* generated */
+#include "presentation-time-client-protocol.h"
 #include "viewporter-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
 
@@ -181,6 +182,7 @@ struct linux_state {
   struct xdg_surface *xdg_surface;
   struct xdg_toplevel *xdg_toplevel;
   struct wl_buffer *wl_buffer;
+  struct wp_presentation *wp_presentation;
 
   struct wl_keyboard *wl_keyboard;
   struct wl_pointer *wl_pointer;
@@ -200,7 +202,13 @@ struct linux_state {
   u8 playbackInputIndex;
   int playbackInputFd;
 
-  u32 frame;
+  /* The Unadjusted System Time (or UST)
+   * is a 64-bit monotonically increasing counter that is available
+   * throughout the system.
+   */
+  u64 last_ust;
+  u64 frame;
+
   u8 running : 1;
   u8 fullscreen : 1;
 };
@@ -612,25 +620,21 @@ static i32 create_shared_memory(off_t size) {
 /*****************************************************************
  * frame_callback events
  *****************************************************************/
-static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
-                                  u32 time);
 
-static const struct wl_callback_listener wl_surface_frame_listener = {
-    .done = wl_surface_frame_done,
-};
+static void wp_presentation_feedback_sync_output(
+    void *data, struct wp_presentation_feedback *wp_presentation_feedback,
+    struct wl_output *output) {}
 
-static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
-                                  u32 time) {
-  wl_callback_destroy(wl_callback);
+static void wp_presentation_feedback_presented(
+    void *data, struct wp_presentation_feedback *wp_presentation_feedback,
+    uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec, uint32_t refresh,
+    uint32_t seq_hi, uint32_t seq_lo, uint32_t flags) {
+  wp_presentation_feedback_destroy(wp_presentation_feedback);
   struct linux_state *state = data;
 
   static struct game_input inputs[2] = {};
   struct game_input *newInput = &inputs[0];
   struct game_input *oldInput = &inputs[1];
-
-  wl_callback = wl_surface_frame(state->wl_surface);
-  wl_callback_add_listener(wl_callback, &wl_surface_frame_listener, data);
-
   /*
    *        |-----|-----|-----|-----|-----|---...---|>
    *  frame 0     1     2     3     4     5         30
@@ -643,12 +647,13 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
    *
    *    ∆t > one frame time, display next frame
    */
-  const f32 millisecondsPerSecond = 1000;
-  const f32 framesPerSecond = 60;
-  const f32 millisecondsPerFrame = millisecondsPerSecond / framesPerSecond;
+  const f32 nanosecondsPerSecond = 1000000000;
+  const f32 framesPerSecond = 30;
+  const f32 nanosecondsPerFrame = nanosecondsPerSecond / (framesPerSecond + 1);
 
-  u32 elapsed = time - state->frame;
-  if ((f32)elapsed > millisecondsPerFrame) {
+  u64 ust = (((u64)tv_sec_hi << 32) + tv_sec_lo) * 1000000000 + tv_nsec;
+  u64 elapsed = ust - state->last_ust;
+  if ((f32)elapsed > nanosecondsPerFrame) {
     state->input = newInput;
 
     /*
@@ -658,7 +663,8 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
      *        ⇐ ∆t  ⇒
      *  dtPerFrame in seconds
      */
-    newInput->dtPerFrame = (f32)elapsed / millisecondsPerSecond;
+    newInput->dtPerFrame = (f32)elapsed / nanosecondsPerSecond;
+    // debugf("∆t = %.3f\n", newInput->dtPerFrame);
 
 #ifdef HANDMADEHERO_DEBUG
     if (RecordInputStarted(state)) {
@@ -677,7 +683,8 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
                              (i32)state->backbuffer->width,
                              (i32)state->backbuffer->height);
 
-    state->frame = time;
+    state->frame++;
+    state->last_ust = ust;
 
     // swap inputs
     struct game_input *tempInput = newInput;
@@ -689,9 +696,40 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
     ReloadGameCode(state->lib);
 #endif
   }
+}
+
+static void wp_presentation_feedback_discarded(
+    void *data, struct wp_presentation_feedback *wp_presentation_feedback) {
+  wp_presentation_feedback_destroy(wp_presentation_feedback);
+}
+
+comptime struct wp_presentation_feedback_listener
+    wp_presentation_feedback_listener = {
+        .sync_output = wp_presentation_feedback_sync_output,
+        .presented = wp_presentation_feedback_presented,
+        .discarded = wp_presentation_feedback_discarded};
+
+comptime struct wl_callback_listener wl_surface_frame_listener;
+
+static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
+                                  u32 time) {
+  wl_callback_destroy(wl_callback);
+  struct linux_state *state = data;
+
+  struct wp_presentation_feedback *feedback =
+      wp_presentation_feedback(state->wp_presentation, state->wl_surface);
+  wp_presentation_feedback_add_listener(
+      feedback, &wp_presentation_feedback_listener, data);
+
+  wl_callback = wl_surface_frame(state->wl_surface);
+  wl_callback_add_listener(wl_callback, &wl_surface_frame_listener, data);
 
   wl_surface_commit(state->wl_surface);
 }
+
+comptime struct wl_callback_listener wl_surface_frame_listener = {
+    .done = wl_surface_frame_done,
+};
 
 /*****************************************************************
  * xdg_wm_base events
@@ -783,6 +821,7 @@ comptime struct xdg_surface_listener xdg_surface_listener = {
 #define WL_SEAT_MINIMUM_REQUIRED_VERSION 6
 #define XDG_WM_BASE_MINIMUM_REQUIRED_VERSION 2
 #define WP_VIEWPORTER_MINIMUM_REQUIRED_VERSION 1
+#define WP_PRESENTATION_MINIMUM_REQUIRED_VERSION 1
 
 static void wl_registry_global(void *data, struct wl_registry *wl_registry,
                                u32 name, const char *interface, u32 version) {
@@ -819,6 +858,13 @@ static void wl_registry_global(void *data, struct wl_registry *wl_registry,
         wl_registry_bind(wl_registry, name, &wp_viewporter_interface,
                          WP_VIEWPORTER_MINIMUM_REQUIRED_VERSION);
     debug("[wl_registry::global] binded to wp_viewporter_interface\n");
+  }
+
+  else if (strcmp(interface, wp_presentation_interface.name) == 0) {
+    state->wp_presentation =
+        wl_registry_bind(wl_registry, name, &wp_presentation_interface,
+                         WP_PRESENTATION_MINIMUM_REQUIRED_VERSION);
+    debug("[wl_registry::global] binded to wp_presentation_interface\n");
   }
 }
 
@@ -935,9 +981,10 @@ int main(int argc, char *argv[]) {
   debugf("wl_shm: @%p\n", state.wl_shm);
   debugf("wl_seat: @%p\n", state.wl_seat);
   debugf("xdg_wm_base: @%p\n", state.xdg_wm_base);
+  debugf("wp_presentation: @%p\n", state.wp_presentation);
 
   if (!state.wl_compositor || !state.wl_shm || !state.wl_seat ||
-      !state.xdg_wm_base || !state.wp_viewporter) {
+      !state.xdg_wm_base || !state.wp_viewporter || !state.wp_presentation) {
     fprintf(stderr, "error: cannot get wayland globals!\n");
     error_code = HANDMADEHERO_ERROR_WAYLAND_EXTENSIONS;
     goto wl_exit;
