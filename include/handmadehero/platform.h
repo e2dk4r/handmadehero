@@ -82,7 +82,7 @@ struct game_input {
 
 static inline struct game_controller_input *
 GetController(struct game_input *input, u8 index) {
-  assert(index < sizeof(input->controllers) / sizeof(*input->controllers));
+  assert(index < HANDMADEHERO_CONTROLLER_COUNT);
   return &input->controllers[index];
 }
 
