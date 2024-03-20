@@ -37,9 +37,10 @@ struct game_state {
   u32 followedEntityIndex;
   struct position_tile_map cameraPos;
 
-  u32 playerIndexForController[HANDMADEHERO_CONTROLLER_COUNT];
+#define HANDMADEHERO_ENTITY_TOTAL 256
+  struct entity entities[HANDMADEHERO_ENTITY_TOTAL];
   u32 entityCount;
-  struct entity entities[256];
+  u32 playerIndexForController[HANDMADEHERO_CONTROLLER_COUNT];
 
   struct bitmap bitmapBackground;
 

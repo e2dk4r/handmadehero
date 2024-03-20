@@ -233,15 +233,24 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
 }
 
 static inline struct entity *EntityGet(struct game_state *state, u32 index) {
-  if (index > state->entityCount)
+  if (index >= HANDMADEHERO_ENTITY_TOTAL)
     return 0;
 
   return &state->entities[index];
 }
 
-static inline void EntityReset(struct entity *entity) {
+static inline struct entity *EntityAdd(struct game_state *state) {
+  struct entity *entity;
+
+  entity = EntityGet(state, state->entityCount);
+  state->entityCount++;
   *entity = (struct entity){};
 
+  return entity;
+}
+
+static inline void EntityReset(struct entity *entity) {
+  assert(entity);
   entity->exists = 1;
 
   /* set initial player position */
@@ -530,6 +539,11 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     state->cameraPos.absTileX = 17 / 2;
     state->cameraPos.absTileY = 9 / 2;
 
+    /* initialize controller entity hash table with invalid entities */
+    for (u32 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
+      state->playerIndexForController[controllerIndex] = HANDMADEHERO_ENTITY_TOTAL;
+    }
+
     /* world creation */
     void *data = memory->permanentStorage + sizeof(*state);
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
@@ -670,9 +684,21 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /* unit: pixels/meters */
   f32 metersToPixels = (f32)tileSideInPixels / tileMap->tileSideInMeters;
 
-  for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
+  for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT;
+       controllerIndex++) {
     struct game_controller_input *controller =
         GetController(input, controllerIndex);
+    struct entity *controlledEntity =
+        EntityGet(state, state->playerIndexForController[controllerIndex]);
+
+    if (!controlledEntity) {
+      /* wait for start button pressed to enable */
+      if (controller->start.pressed) {
+        controlledEntity = EntityAdd(state);
+        EntityReset(controlledEntity);
+      }
+      continue;
+    }
 
     /* acceleration */
     struct v2 ddPlayer = {};

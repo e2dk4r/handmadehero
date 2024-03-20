@@ -491,6 +491,16 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
     // assert(controller-actionUp.pressed != keystate);
     controller->actionUp.pressed = (u8)(keystate & 0x1);
   } break;
+
+  case XKB_KEY_Escape: {
+    // assert(controller-back.pressed != keystate);
+    controller->back.pressed = (u8)(keystate & 0x1);
+  } break;
+
+  case XKB_KEY_space: {
+    // assert(controller-start.pressed != keystate);
+    controller->start.pressed = (u8)(keystate & 0x1);
+  } break;
   }
 }
 
