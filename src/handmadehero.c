@@ -309,13 +309,13 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
   }
 
   /* set player speed in m/s² */
-  f32 playerSpeed = 10.0f;
+  f32 playerSpeed = 50.0f;
   v2_mul_ref(&ddPosition, playerSpeed);
 
   /*
    * apply friction opposite force to acceleration
    */
-  v2_add_ref(&ddPosition, v2_neg(v2_mul(entity->dPosition, 1.5f)));
+  v2_add_ref(&ddPosition, v2_neg(v2_mul(entity->dPosition, 8.0f)));
 
   /*****************************************************************
    * CALCULATION OF NEW PLAYER POSITION
