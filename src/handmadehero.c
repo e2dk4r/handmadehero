@@ -705,8 +705,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
     /* analog controller */
     if (controller->isAnalog) {
-      ddPlayer.x += controller->stickAverageX;
-      ddPlayer.y += controller->stickAverageY;
+      ddPlayer = (struct v2){
+          .x = controller->stickAverageX,
+          .y = controller->stickAverageY,
+      };
     }
 
     /* digital controller */
