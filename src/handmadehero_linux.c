@@ -218,7 +218,7 @@ struct linux_state {
  ***************************************************************/
 #ifdef HANDMADEHERO_DEBUG
 
-static const char recordPath[] = "input.rec";
+comptime char recordPath[] = "input.rec";
 
 static inline u8 RecordInputStarted(struct linux_state *state) {
   return state->recordInputIndex;
@@ -740,7 +740,7 @@ static void xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base,
   debugf("[xdg_wm_base::ping] pong(serial: %d)\n", serial);
 }
 
-static const struct xdg_wm_base_listener xdg_wm_base_listener = {
+comptime struct xdg_wm_base_listener xdg_wm_base_listener = {
     .ping = xdg_wm_base_ping,
 };
 
