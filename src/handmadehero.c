@@ -494,13 +494,14 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
   /*****************************************************************
    * VISUAL CORRECTIONS
    *****************************************************************/
-  if (absolute(ddPosition.x) > absolute(ddPosition.y)) {
-    if (ddPosition.x < 0)
+  /* use player velocity to face the direction */
+  if (absolute(entity->dPosition.x) > absolute(entity->dPosition.y)) {
+    if (entity->dPosition.x < 0)
       entity->facingDirection = BITMAP_HERO_LEFT;
     else
       entity->facingDirection = BITMAP_HERO_RIGHT;
-  } else if (absolute(ddPosition.x) < absolute(ddPosition.y)) {
-    if (ddPosition.y > 0)
+  } else if (absolute(entity->dPosition.x) < absolute(entity->dPosition.y)) {
+    if (entity->dPosition.y > 0)
       entity->facingDirection = BITMAP_HERO_BACK;
     else
       entity->facingDirection = BITMAP_HERO_FRONT;
