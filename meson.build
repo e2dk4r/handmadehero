@@ -50,6 +50,7 @@ if is_build_debug
       '-DHANDMADEHERO_DEBUG=1',
       '-DHANDMADEHERO_INTERNAL=1',
 
+      '-Wno-unused-but-set-variable',
       '-Wno-unused-function',
       '-Wno-unused-variable',
     ],
