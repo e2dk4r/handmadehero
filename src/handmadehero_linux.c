@@ -24,6 +24,7 @@
 #endif
 
 /* generated */
+#include "ext-idle-notify-v1-client-protocol.h"
 #include "presentation-time-client-protocol.h"
 #include "viewporter-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
@@ -183,6 +184,7 @@ struct linux_state {
   struct xdg_toplevel *xdg_toplevel;
   struct wl_buffer *wl_buffer;
   struct wp_presentation *wp_presentation;
+  struct ext_idle_notifier_v1 *ext_idle_notifier_v1;
 
   struct wl_keyboard *wl_keyboard;
   struct wl_pointer *wl_pointer;
@@ -667,7 +669,7 @@ static void wp_presentation_feedback_presented(
 
   u64 ust = (((u64)tv_sec_hi << 32) + tv_sec_lo) * 1000000000 + tv_nsec;
   u64 elapsed = ust - state->last_ust;
-  if ((f32)elapsed > nanosecondsPerFrame) {
+  if (state->last_ust == 0 || (f32)elapsed >= nanosecondsPerFrame) {
     state->input = newInput;
 
     /*
@@ -743,6 +745,30 @@ static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
 
 comptime struct wl_callback_listener wl_surface_frame_listener = {
     .done = wl_surface_frame_done,
+};
+
+/*****************************************************************
+ * ext_idle_notification_v1 events
+ *****************************************************************/
+
+static void ext_idle_notification_v1_idled(
+    void *data, struct ext_idle_notification_v1 *ext_idle_notification_v1) {
+  struct linux_state *state = data;
+  debugf("[ext_idle_notification_v1::idled] ust: %llu frame: %llu\n", state->last_ust, state->frame);
+  ext_idle_notification_v1_destroy(ext_idle_notification_v1);
+}
+static void ext_idle_notification_v1_resumed(
+    void *data, struct ext_idle_notification_v1 *ext_idle_notification_v1) {
+  ext_idle_notification_v1_destroy(ext_idle_notification_v1);
+  struct linux_state *state = data;
+  debugf("[ext_idle_notification_v1::resumed] ust: %llu frame: %llu\n", state->last_ust, state->frame);
+  state->last_ust = 0;
+}
+
+comptime struct ext_idle_notification_v1_listener
+    ext_idle_notification_v1_listener = {
+        .idled = ext_idle_notification_v1_idled,
+        .resumed = ext_idle_notification_v1_resumed,
 };
 
 /*****************************************************************
@@ -836,6 +862,7 @@ comptime struct xdg_surface_listener xdg_surface_listener = {
 #define XDG_WM_BASE_MINIMUM_REQUIRED_VERSION 2
 #define WP_VIEWPORTER_MINIMUM_REQUIRED_VERSION 1
 #define WP_PRESENTATION_MINIMUM_REQUIRED_VERSION 1
+#define EXT_IDLE_NOTIFIER_V1_MINIMUM_REQUIRED_VERSION 1
 
 static void wl_registry_global(void *data, struct wl_registry *wl_registry,
                                u32 name, const char *interface, u32 version) {
@@ -879,6 +906,13 @@ static void wl_registry_global(void *data, struct wl_registry *wl_registry,
         wl_registry_bind(wl_registry, name, &wp_presentation_interface,
                          WP_PRESENTATION_MINIMUM_REQUIRED_VERSION);
     debug("[wl_registry::global] binded to wp_presentation_interface\n");
+  }
+
+  else if (strcmp(interface, ext_idle_notifier_v1_interface.name) == 0) {
+    state->ext_idle_notifier_v1 =
+        wl_registry_bind(wl_registry, name, &ext_idle_notifier_v1_interface,
+                         EXT_IDLE_NOTIFIER_V1_MINIMUM_REQUIRED_VERSION);
+    debug("[wl_registry::global] binded to ext_idle_notifier_v1_interface\n");
   }
 }
 
@@ -998,7 +1032,8 @@ int main(int argc, char *argv[]) {
   debugf("wp_presentation: @%p\n", state.wp_presentation);
 
   if (!state.wl_compositor || !state.wl_shm || !state.wl_seat ||
-      !state.xdg_wm_base || !state.wp_viewporter || !state.wp_presentation) {
+      !state.xdg_wm_base || !state.wp_viewporter || !state.wp_presentation ||
+      !state.ext_idle_notifier_v1) {
     fprintf(stderr, "error: cannot get wayland globals!\n");
     error_code = HANDMADEHERO_ERROR_WAYLAND_EXTENSIONS;
     goto wl_exit;
@@ -1024,7 +1059,15 @@ int main(int argc, char *argv[]) {
   struct wl_callback *frame_callback = wl_surface_frame(state.wl_surface);
   wl_callback_add_listener(frame_callback, &wl_surface_frame_listener, &state);
 
+  /* wayland: listen for inputs */
   wl_seat_add_listener(state.wl_seat, &wl_seat_listener, &state);
+
+  /* wayland: get idle notification */
+  struct ext_idle_notification_v1 *ext_idle_notification_v1 =
+      ext_idle_notifier_v1_get_idle_notification(state.ext_idle_notifier_v1, 0,
+                                                 state.wl_seat);
+  ext_idle_notification_v1_add_listener(
+      ext_idle_notification_v1, &ext_idle_notification_v1_listener, &state);
 
   /* game: mem allocation */
   static struct game_memory game_memory;
