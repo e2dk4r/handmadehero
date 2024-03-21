@@ -178,7 +178,7 @@
 - [x] Handmade Hero Day 046 - Basic Multiplayer Support
       https://www.youtube.com/watch?v=BU5xBpUMdPA
 
-- [ ] Handmade Hero Day 047 - Vector Lengths
+- [x] Handmade Hero Day 047 - Vector Lengths
       https://www.youtube.com/watch?v=5KzJ0TDeLxQ
 
 - [ ] Handmade Hero Day 048 - Line Segment Intersection Collisions
