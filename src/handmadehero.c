@@ -285,27 +285,13 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
   /*****************************************************************
    * CORRECTING ACCELERATION
    *****************************************************************/
-  /* if moving diagonally */
-  if (ddPosition.x != 0 && ddPosition.y != 0) {
-    /* Pythagorean theorem
-     *
-     *        /|
-     *     d / | a
-     *      /  |
-     *     /___|
-     *       a
-     *
-     *           d² = a² + a²
-     *           d² = 2a²
-     *      d² / 2  = a²
-     *    √(d² / 2) = a
-     *  √(d² . 1/2) = a
-     *     d √(1/2) = a
-     *
-     * player must move 1 unit even when moving diagonally.
-     */
-    const f32 squareRoot = 0.7071067811865476f;
-    v2_mul_ref(&ddPosition, squareRoot);
+  f32 ddPositionLength = v2_length_square(ddPosition);
+  /*
+   * scale down acceleration to unit vector
+   * fixes moving diagonally √2 times faster
+   */
+  if (ddPositionLength > 1.0f) {
+    v2_mul_ref(&ddPosition, 1 / square_root(ddPositionLength));
   }
 
   /* set player speed in m/s² */

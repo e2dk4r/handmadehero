@@ -23,6 +23,7 @@ static inline i32 FindLeastSignificantBitSet(i32 value) {
 
 static inline f32 square(f32 value) { return value * value; }
 static inline f32 absolute(f32 value) { return __builtin_fabsf(value); }
+static inline f32 square_root(f32 value) { return __builtin_sqrtf(value); }
 
 struct v2 {
   union {
