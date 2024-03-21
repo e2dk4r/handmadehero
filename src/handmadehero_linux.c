@@ -212,6 +212,8 @@ struct linux_state {
   u64 frame;
 
   u8 running : 1;
+  u8 paused : 1;
+  u8 resumed : 1;
   u8 fullscreen : 1;
 };
 
@@ -526,14 +528,17 @@ static void wl_keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
 static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard,
                               u32 serial, struct wl_surface *surface,
                               struct wl_array *keys) {
-  // struct my_state *state = data;
   debugf("[wl_keyboard::enter] serial: %d\n", serial);
+  struct linux_state *state = data;
+  state->resumed = 1;
 }
 
 static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard,
                               u32 serial, struct wl_surface *surface) {
-  // struct my_state *state = data;
   debugf("[wl_keyboard::leave] serial: %d\n", serial);
+  struct linux_state *state = data;
+  state->paused = 1;
+  state->resumed = 0;
 }
 
 comptime struct wl_keyboard_listener wl_keyboard_listener = {
@@ -668,8 +673,17 @@ static void wp_presentation_feedback_presented(
   const f32 nanosecondsPerFrame = nanosecondsPerSecond / (framesPerSecond + 1);
 
   u64 ust = (((u64)tv_sec_hi << 32) + tv_sec_lo) * 1000000000 + tv_nsec;
+
+  if (state->paused && state->resumed) {
+    state->last_ust = ust - (u64)nanosecondsPerFrame;
+    state->paused = 0;
+    state->resumed = 0;
+  } else if (state->paused) {
+    return;
+  }
+
   u64 elapsed = ust - state->last_ust;
-  if (state->last_ust == 0 || (f32)elapsed >= nanosecondsPerFrame) {
+  if ((f32)elapsed >= nanosecondsPerFrame) {
     state->input = newInput;
 
     /*
