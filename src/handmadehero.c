@@ -334,7 +334,7 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
 
   // clang-format off
   /* new position */
-  struct v2 playerDelta =
+  struct v2 deltaPosition =
       /* 1/2 a t² + v t */
       v2_add(
         /* 1/2 a t² */
@@ -354,7 +354,7 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
       );
 
   /* 1/2 a t² + v t + p */
-  v2_add_ref(&newPosition.offset, playerDelta);
+  v2_add_ref(&newPosition.offset, deltaPosition);
 
   /* new velocity */
   entity->dPosition =
@@ -432,34 +432,44 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
       );
     // clang-format on
 
-    //   u32 minTileX = 0;
-    //   u32 minTileY = 0;
-    //   u32 maxTileX = 0;
-    //   u32 maxTileY = 0;
-    //   u32 absTileZ = state->playerPos.absTileZ;
-    //   struct position_tile_map bestPlayerPos = state->playerPos;
-    //   f32 bestDistanceSq = v2_length_square(playerDelta);
-    //   for (u32 absTileX = minTileX; absTileX != maxTileX; absTileX++) {
-    //     for (u32 absTileY = minTileY; absTileY != maxTileY; absTileY++) {
-    //       u32 tileValue = TileGetValue(tileMap, absTileX, absTileY,
-    //       absTileZ); if (TileIsEmpty(tileValue)) {
-    //         struct position_tile_map testTilePos =
-    //             PositionTileMapCentered(absTileX, absTileY, absTileZ);
-    //
-    //         struct v2 minCorner = v2_mul(
-    //             (struct v2){tileMap->tileSideInMeters,
-    //             tileMap->tileSideInMeters}, -0.5f);
-    //         struct v2 maxCorner = v2_mul(
-    //             (struct v2){tileMap->tileSideInMeters,
-    //             tileMap->tileSideInMeters}, 0.5f);
-    //
-    //         struct position_difference relNewPlayerPos =
-    //             PositionDifference(tileMap, &testTilePos, &newPlayerPos);
-    //         // struct v2 testP = ClosestPointInRectangle(minCorner,
-    //         maxCorner);
-    //       }
-    //     }
+    // u32 minTileX = minimum(oldPosition.absTileX, newPosition.absTileX);
+    // u32 minTileY = minimum(oldPosition.absTileY, newPosition.absTileY);
+    // u32 maxTileX = maximum(oldPosition.absTileX, newPosition.absTileX)
+    //                /* +1 is for wrapping */
+    //                + 1;
+    // u32 maxTileY = maximum(oldPosition.absTileY, newPosition.absTileY)
+    //                /* +1 is for wrapping */
+    //                + 1;
+
+    // u32 absTileZ = entity->position.absTileZ;
+    // f32 tMin = 1;
+    // for (u32 absTileX = minTileX; absTileX != maxTileX; absTileX++) {
+    //   for (u32 absTileY = minTileY; absTileY != maxTileY; absTileY++) {
+    //     u32 tileValue = TileGetValue(tileMap, absTileX, absTileY, absTileZ);
+    //     if (TileIsEmpty(tileValue))
+    //       continue;
+
+    //     struct position_tile_map testTilePos =
+    //         PositionTileMapCentered(absTileX, absTileY, absTileZ);
+
+    //     struct v2 minCorner = {
+    //         .x = tileMap->tileSideInMeters * -0.5f,
+    //         .y = tileMap->tileSideInMeters * -0.5f,
+    //     };
+
+    //     struct v2 maxCorner = {
+    //         .x = tileMap->tileSideInMeters * 0.5f,
+    //         .y = tileMap->tileSideInMeters * 0.5f,
+    //     };
+
+    //     struct position_difference relNewPosition =
+    //         PositionDifference(tileMap, &testTilePos, &newPosition);
+    //     struct v2 rel = relNewPosition.dXY;
+
+    //     tResult = (wallX - relNewPosition.x) / deltaPosition.x;
+    //     TestWall(minCorner.x, minCorner.y, maxCorner.x, relNewPosition.x);
     //   }
+    // }
   }
 
   /* update player position */

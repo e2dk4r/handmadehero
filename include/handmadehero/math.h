@@ -3,6 +3,9 @@
 
 #include "types.h"
 
+#define minimum(a, b) (a < b) ? a : b
+#define maximum(a, b) (a > b) ? a : b
+
 static inline i32 roundf32toi32(f32 value) {
   return (i32)__builtin_round(value);
 }
