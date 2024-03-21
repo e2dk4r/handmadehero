@@ -24,7 +24,6 @@
 #endif
 
 /* generated */
-#include "ext-idle-notify-v1-client-protocol.h"
 #include "presentation-time-client-protocol.h"
 #include "viewporter-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
@@ -184,7 +183,6 @@ struct linux_state {
   struct xdg_toplevel *xdg_toplevel;
   struct wl_buffer *wl_buffer;
   struct wp_presentation *wp_presentation;
-  struct ext_idle_notifier_v1 *ext_idle_notifier_v1;
 
   struct wl_keyboard *wl_keyboard;
   struct wl_pointer *wl_pointer;
@@ -762,32 +760,6 @@ comptime struct wl_callback_listener wl_surface_frame_listener = {
 };
 
 /*****************************************************************
- * ext_idle_notification_v1 events
- *****************************************************************/
-
-static void ext_idle_notification_v1_idled(
-    void *data, struct ext_idle_notification_v1 *ext_idle_notification_v1) {
-  struct linux_state *state = data;
-  debugf("[ext_idle_notification_v1::idled] ust: %llu frame: %llu\n",
-         state->last_ust, state->frame);
-  ext_idle_notification_v1_destroy(ext_idle_notification_v1);
-}
-static void ext_idle_notification_v1_resumed(
-    void *data, struct ext_idle_notification_v1 *ext_idle_notification_v1) {
-  ext_idle_notification_v1_destroy(ext_idle_notification_v1);
-  struct linux_state *state = data;
-  debugf("[ext_idle_notification_v1::resumed] ust: %llu frame: %llu\n",
-         state->last_ust, state->frame);
-  state->last_ust = 0;
-}
-
-comptime struct ext_idle_notification_v1_listener
-    ext_idle_notification_v1_listener = {
-        .idled = ext_idle_notification_v1_idled,
-        .resumed = ext_idle_notification_v1_resumed,
-};
-
-/*****************************************************************
  * xdg_wm_base events
  *****************************************************************/
 static void xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base,
@@ -922,13 +894,6 @@ static void wl_registry_global(void *data, struct wl_registry *wl_registry,
                          WP_PRESENTATION_MINIMUM_REQUIRED_VERSION);
     debug("[wl_registry::global] binded to wp_presentation_interface\n");
   }
-
-  else if (strcmp(interface, ext_idle_notifier_v1_interface.name) == 0) {
-    state->ext_idle_notifier_v1 =
-        wl_registry_bind(wl_registry, name, &ext_idle_notifier_v1_interface,
-                         EXT_IDLE_NOTIFIER_V1_MINIMUM_REQUIRED_VERSION);
-    debug("[wl_registry::global] binded to ext_idle_notifier_v1_interface\n");
-  }
 }
 
 comptime struct wl_registry_listener registry_listener = {
@@ -1047,8 +1012,7 @@ int main(int argc, char *argv[]) {
   debugf("wp_presentation: @%p\n", state.wp_presentation);
 
   if (!state.wl_compositor || !state.wl_shm || !state.wl_seat ||
-      !state.xdg_wm_base || !state.wp_viewporter || !state.wp_presentation ||
-      !state.ext_idle_notifier_v1) {
+      !state.xdg_wm_base || !state.wp_viewporter || !state.wp_presentation) {
     fprintf(stderr, "error: cannot get wayland globals!\n");
     error_code = HANDMADEHERO_ERROR_WAYLAND_EXTENSIONS;
     goto wl_exit;
@@ -1076,13 +1040,6 @@ int main(int argc, char *argv[]) {
 
   /* wayland: listen for inputs */
   wl_seat_add_listener(state.wl_seat, &wl_seat_listener, &state);
-
-  /* wayland: get idle notification */
-  struct ext_idle_notification_v1 *ext_idle_notification_v1 =
-      ext_idle_notifier_v1_get_idle_notification(state.ext_idle_notifier_v1, 0,
-                                                 state.wl_seat);
-  ext_idle_notification_v1_add_listener(
-      ext_idle_notification_v1, &ext_idle_notification_v1_listener, &state);
 
   /* game: mem allocation */
   static struct game_memory game_memory;
