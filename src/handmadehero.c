@@ -278,6 +278,26 @@ static inline void EntityReset(struct entity *entity) {
   entity->width = 0.75f * entity->height;
 }
 
+static void WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
+                     f32 deltaY, f32 minY, f32 maxY) {
+  /* no movement, no sweet */
+  if (deltaX == 0)
+    return;
+
+  f32 tResult = (wallX - relX) / deltaX;
+  if (tResult < 0)
+    return;
+
+  f32 y = relY + tResult * deltaY;
+
+  /* do not care, if entity needs to go back to hit */
+  if (*tMin > tResult) {
+    if (y >= minY && y < maxY) {
+      *tMin = tResult;
+    }
+  }
+}
+
 static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
                        struct v2 ddPosition) {
   struct tile_map *tileMap = state->world->tileMap;
@@ -307,8 +327,9 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
    * CALCULATION OF NEW PLAYER POSITION
    *****************************************************************/
 
+  struct position_tile_map oldPosition = entity->position;
+
   /*
-   *
    *  (position)      f(t) = 1/2 a t² + v t + p
    *     where p is old position
    *           a is acceleration
@@ -329,11 +350,8 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
    *        ⇐ ∆t  ⇒
    *     ∆t comes from platform layer
    */
-  struct position_tile_map oldPosition = entity->position;
   struct position_tile_map newPosition = entity->position;
-
   // clang-format off
-  /* new position */
   struct v2 deltaPosition =
       /* 1/2 a t² + v t */
       v2_add(
@@ -352,11 +370,13 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
           dt
         ) /* end: v t */
       );
-
+  // clang-format on
   /* 1/2 a t² + v t + p */
   v2_add_ref(&newPosition.offset, deltaPosition);
+  newPosition = PositionCorrect(tileMap, &newPosition);
 
   /* new velocity */
+  // clang-format off
   entity->dPosition =
     /* a t + v */
     v2_add(
@@ -372,105 +392,123 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
     );
   // clang-format on
 
-  /*****************************************************************
-   * COLLUSION DETECTION
-   *****************************************************************/
-  newPosition = PositionCorrect(tileMap, &newPosition);
+  // struct position_tile_map oldPosition = entity->position;
+  // struct position_tile_map newPosition = entity->position;
 
-  struct position_tile_map left = newPosition;
-  v2_sub_ref(&left.offset, (struct v2){.x = entity->width * 0.5f});
-  left = PositionCorrect(tileMap, &left);
+  ///*****************************************************************
+  // * COLLUSION DETECTION
+  // *****************************************************************/
 
-  struct position_tile_map right = newPosition;
-  v2_add_ref(&right.offset, (struct v2){.x = entity->width * 0.5f});
-  right = PositionCorrect(tileMap, &right);
+  // struct position_tile_map left = newPosition;
+  // v2_sub_ref(&left.offset, (struct v2){.x = entity->width * 0.5f});
+  // left = PositionCorrect(tileMap, &left);
 
-  u8 collided = 0;
-  struct position_tile_map *collisionPos;
-  if (!TileMapIsPointEmpty(tileMap, &left)) {
-    collided = 1;
-    collisionPos = &left;
-  }
-  if (!TileMapIsPointEmpty(tileMap, &right)) {
-    collided = 1;
-    collisionPos = &right;
+  // struct position_tile_map right = newPosition;
+  // v2_add_ref(&right.offset, (struct v2){.x = entity->width * 0.5f});
+  // right = PositionCorrect(tileMap, &right);
+
+  // u8 collided = 0;
+  // struct position_tile_map *collisionPos;
+  // if (!TileMapIsPointEmpty(tileMap, &left)) {
+  //   collided = 1;
+  //   collisionPos = &left;
+  // }
+  // if (!TileMapIsPointEmpty(tileMap, &right)) {
+  //   collided = 1;
+  //   collisionPos = &right;
+  // }
+
+  // /*****************************************************************
+  //  * COLLUSION HANDLING
+  //  *****************************************************************/
+  // if (!collided)
+  //   entity->position = newPosition;
+  // else {
+  //   /* |r| = 1 */
+  //   struct v2 r = {0, 0};
+  //   /* collision accoured in west of player */
+  //   if (collisionPos->absTileX < entity->position.absTileX)
+  //     r = (struct v2){1, 0};
+  //   /* collision accoured in east of player */
+  //   if (collisionPos->absTileX > entity->position.absTileX)
+  //     r = (struct v2){-1, 0};
+  //   /* collision accoured in north of player */
+  //   if (collisionPos->absTileY > entity->position.absTileY)
+  //     r = (struct v2){0, 1};
+  //   /* collision accoured in south of player */
+  //   if (collisionPos->absTileY < entity->position.absTileY)
+  //     r = (struct v2){0, -1};
+
+  //   // clang-format off
+  //   entity->dPosition =
+  //     /* v - vTr r */
+  //     v2_sub(
+  //         /* v */
+  //         entity->dPosition,
+  //         /* - vTr r */
+  //         v2_mul(
+  //           r,
+  //           /* vTr */
+  //           v2_dot(entity->dPosition, r)
+  //         )
+  //     );
+  //   // clang-format on
+  //   }
+
+  u32 minTileX = minimum(oldPosition.absTileX, newPosition.absTileX);
+  u32 minTileY = minimum(oldPosition.absTileY, newPosition.absTileY);
+  u32 maxTileX = maximum(oldPosition.absTileX, newPosition.absTileX)
+                 /* +1 is for wrapping */
+                 + 1;
+  u32 maxTileY = maximum(oldPosition.absTileY, newPosition.absTileY)
+                 /* +1 is for wrapping */
+                 + 1;
+
+  u32 absTileZ = entity->position.absTileZ;
+  f32 tMin = 1.0f;
+  for (u32 absTileX = minTileX; absTileX != maxTileX; absTileX++) {
+    for (u32 absTileY = minTileY; absTileY != maxTileY; absTileY++) {
+      u32 tileValue = TileGetValue(tileMap, absTileX, absTileY, absTileZ);
+
+      /* if tile is entity, can move to it */
+      if (TileIsEmpty(tileValue))
+        continue;
+
+      struct position_tile_map testPosition =
+          PositionTileMapCentered(absTileX, absTileY, absTileZ);
+
+      struct v2 minCorner = {
+          .x = tileMap->tileSideInMeters * -0.5f,
+          .y = tileMap->tileSideInMeters * -0.5f,
+      };
+
+      struct v2 maxCorner = {
+          .x = tileMap->tileSideInMeters * 0.5f,
+          .y = tileMap->tileSideInMeters * 0.5f,
+      };
+
+      struct position_difference relOldPosition =
+          PositionDifference(tileMap, &oldPosition, &testPosition);
+      struct v2 rel = relOldPosition.dXY;
+
+      /* test all 4 walls and take minimum t. */
+      WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x,
+               deltaPosition.y, minCorner.y, maxCorner.y);
+      WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x,
+               deltaPosition.y, minCorner.y, maxCorner.y);
+      WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
+               deltaPosition.x, minCorner.x, maxCorner.x);
+      WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
+               deltaPosition.x, minCorner.x, maxCorner.x);
+    }
   }
 
   /*****************************************************************
    * COLLUSION HANDLING
    *****************************************************************/
-  if (!collided)
-    entity->position = newPosition;
-  else {
-    /* |r| = 1 */
-    struct v2 r = {0, 0};
-    /* collision accoured in west of player */
-    if (collisionPos->absTileX < entity->position.absTileX)
-      r = (struct v2){1, 0};
-    /* collision accoured in east of player */
-    if (collisionPos->absTileX > entity->position.absTileX)
-      r = (struct v2){-1, 0};
-    /* collision accoured in north of player */
-    if (collisionPos->absTileY > entity->position.absTileY)
-      r = (struct v2){0, 1};
-    /* collision accoured in south of player */
-    if (collisionPos->absTileY < entity->position.absTileY)
-      r = (struct v2){0, -1};
-
-    // clang-format off
-    entity->dPosition =
-      /* v - vTr r */
-      v2_sub(
-          /* v */
-          entity->dPosition,
-          /* - vTr r */
-          v2_mul(
-            r,
-            /* vTr */
-            v2_dot(entity->dPosition, r)
-          )
-      );
-    // clang-format on
-
-    // u32 minTileX = minimum(oldPosition.absTileX, newPosition.absTileX);
-    // u32 minTileY = minimum(oldPosition.absTileY, newPosition.absTileY);
-    // u32 maxTileX = maximum(oldPosition.absTileX, newPosition.absTileX)
-    //                /* +1 is for wrapping */
-    //                + 1;
-    // u32 maxTileY = maximum(oldPosition.absTileY, newPosition.absTileY)
-    //                /* +1 is for wrapping */
-    //                + 1;
-
-    // u32 absTileZ = entity->position.absTileZ;
-    // f32 tMin = 1;
-    // for (u32 absTileX = minTileX; absTileX != maxTileX; absTileX++) {
-    //   for (u32 absTileY = minTileY; absTileY != maxTileY; absTileY++) {
-    //     u32 tileValue = TileGetValue(tileMap, absTileX, absTileY, absTileZ);
-    //     if (TileIsEmpty(tileValue))
-    //       continue;
-
-    //     struct position_tile_map testTilePos =
-    //         PositionTileMapCentered(absTileX, absTileY, absTileZ);
-
-    //     struct v2 minCorner = {
-    //         .x = tileMap->tileSideInMeters * -0.5f,
-    //         .y = tileMap->tileSideInMeters * -0.5f,
-    //     };
-
-    //     struct v2 maxCorner = {
-    //         .x = tileMap->tileSideInMeters * 0.5f,
-    //         .y = tileMap->tileSideInMeters * 0.5f,
-    //     };
-
-    //     struct position_difference relNewPosition =
-    //         PositionDifference(tileMap, &testTilePos, &newPosition);
-    //     struct v2 rel = relNewPosition.dXY;
-
-    //     tResult = (wallX - relNewPosition.x) / deltaPosition.x;
-    //     TestWall(minCorner.x, minCorner.y, maxCorner.x, relNewPosition.x);
-    //   }
-    // }
-  }
+  newPosition = oldPosition;
+  v2_add_ref(&newPosition.offset, v2_mul(deltaPosition, tMin));
+  entity->position = newPosition;
 
   /* update player position */
   if (!PositionTileMapSameTile(&oldPosition, &entity->position)) {
