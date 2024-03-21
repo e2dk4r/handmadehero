@@ -181,7 +181,7 @@
 - [x] Handmade Hero Day 047 - Vector Lengths
       https://www.youtube.com/watch?v=5KzJ0TDeLxQ
 
-- [ ] Handmade Hero Day 048 - Line Segment Intersection Collisions
+- [x] Handmade Hero Day 048 - Line Segment Intersection Collisions
       https://www.youtube.com/watch?v=rWpZLvbT02o
 
 - [ ] Handmade Hero Day 049 - Debugging Canonical Coordinates
