@@ -44,7 +44,7 @@ static inline void PositionCorrectCoord(struct tile_map *tileMap, u32 *tile,
   *tileRel -= (f32)offset * tileMap->tileSideInMeters;
 
   assert(*tileRel >= -0.5f * tileMap->tileSideInMeters);
-  assert(*tileRel < 0.5f * tileMap->tileSideInMeters);
+  assert(*tileRel <= 0.5f * tileMap->tileSideInMeters);
 }
 
 struct position_tile_map PositionCorrect(struct tile_map *tileMap,
