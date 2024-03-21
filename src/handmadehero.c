@@ -280,6 +280,8 @@ static inline void EntityReset(struct entity *entity) {
 
 static void WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
                      f32 deltaY, f32 minY, f32 maxY) {
+  f32 tEpsilon = 0.0001f;
+
   /* no movement, no sweet */
   if (deltaX == 0)
     return;
@@ -293,7 +295,7 @@ static void WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
   /* do not care, if entity needs to go back to hit */
   if (*tMin > tResult) {
     if (y >= minY && y < maxY) {
-      *tMin = tResult;
+      *tMin = maximum(0.0f, tResult - tEpsilon);
     }
   }
 }
@@ -508,6 +510,7 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
    *****************************************************************/
   newPosition = oldPosition;
   v2_add_ref(&newPosition.offset, v2_mul(deltaPosition, tMin));
+  newPosition = PositionCorrect(tileMap, &newPosition);
   entity->position = newPosition;
 
   /* update player position */
