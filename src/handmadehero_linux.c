@@ -844,7 +844,6 @@ static void xdg_surface_configure(void *data, struct xdg_surface *xdg_surface,
   xdg_surface_ack_configure(xdg_surface, serial);
   debugf("[xdg_surface::configure] ack_configure(serial: %d)\n", serial);
 
-  wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
   wl_surface_commit(state->wl_surface);
 }
 
