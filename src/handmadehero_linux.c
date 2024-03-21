@@ -754,14 +754,16 @@ comptime struct wl_callback_listener wl_surface_frame_listener = {
 static void ext_idle_notification_v1_idled(
     void *data, struct ext_idle_notification_v1 *ext_idle_notification_v1) {
   struct linux_state *state = data;
-  debugf("[ext_idle_notification_v1::idled] ust: %llu frame: %llu\n", state->last_ust, state->frame);
+  debugf("[ext_idle_notification_v1::idled] ust: %llu frame: %llu\n",
+         state->last_ust, state->frame);
   ext_idle_notification_v1_destroy(ext_idle_notification_v1);
 }
 static void ext_idle_notification_v1_resumed(
     void *data, struct ext_idle_notification_v1 *ext_idle_notification_v1) {
   ext_idle_notification_v1_destroy(ext_idle_notification_v1);
   struct linux_state *state = data;
-  debugf("[ext_idle_notification_v1::resumed] ust: %llu frame: %llu\n", state->last_ust, state->frame);
+  debugf("[ext_idle_notification_v1::resumed] ust: %llu frame: %llu\n",
+         state->last_ust, state->frame);
   state->last_ust = 0;
 }
 
