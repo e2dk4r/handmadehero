@@ -10,8 +10,8 @@ protocols = [
   wl_protocol_dir / 'stable/xdg-shell/xdg-shell.xml',
   wl_protocol_dir / 'stable/viewporter/viewporter.xml',
   wl_protocol_dir / 'stable/presentation-time/presentation-time.xml',
-  wl_protocol_dir / 'staging/ext-idle-notify/ext-idle-notify-v1.xml',
   # wl_protocol_dir / 'unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml',
+  'ext-idle-notify-v1.xml',
 ]
 
 wl_protocols_src = []
