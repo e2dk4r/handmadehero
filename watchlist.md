@@ -184,7 +184,7 @@
 - [x] Handmade Hero Day 048 - Line Segment Intersection Collisions
       https://www.youtube.com/watch?v=rWpZLvbT02o
 
-- [ ] Handmade Hero Day 049 - Debugging Canonical Coordinates
+- [x] Handmade Hero Day 049 - Debugging Canonical Coordinates
       https://www.youtube.com/watch?v=CIe8J9ScmRo
 
 - [ ] Handmade Hero Day 050 - Basic Minkowski-based Collision Detection
