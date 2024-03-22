@@ -797,7 +797,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     PlayerMove(state, controlledEntity, input->dtPerFrame, ddPosition);
   }
 
-  /* sync camera with floowed player */
+  /* sync camera with followed entity */
   struct entity *followedEntity = EntityGet(state, state->followedEntityIndex);
   if (followedEntity) {
     state->cameraPos.absTileZ = followedEntity->position.absTileZ;
@@ -833,7 +833,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       .y = 0.5f * (f32)backbuffer->height,
   };
 
-  /* render tiles relative to player position */
+  /* render tiles relative to camera position */
   for (i32 relRow = -10; relRow < 10; relRow++) {
     for (i32 relColumn = -20; relColumn < 20; relColumn++) {
       i32 testColumn = (i32)state->cameraPos.absTileX + relColumn;
