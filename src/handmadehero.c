@@ -267,7 +267,7 @@ static inline void EntityReset(struct entity *entity) {
   /* set initial player position */
   entity->position.absTileX = 1;
   entity->position.absTileY = 3;
-  entity->position.offset = (struct v2){.x = 5.0f, .y = 5.0f};
+  entity->position.offset = (struct v2){.x = 0.0f, .y = 0.0f};
 
   /* set initial player velocity */
   entity->dPosition.x = 0;
