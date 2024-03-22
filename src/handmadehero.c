@@ -267,7 +267,7 @@ static inline void EntityReset(struct entity *entity) {
   /* set initial player position */
   entity->position.absTileX = 1;
   entity->position.absTileY = 3;
-  entity->position.offset = (struct v2){.x = 0.0f, .y = 0.0f};
+  entity->position.offset_ = (struct v2){.x = 0.0f, .y = 0.0f};
 
   /* set initial player velocity */
   entity->dPosition.x = 0;
@@ -352,7 +352,6 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
    *        ⇐ ∆t  ⇒
    *     ∆t comes from platform layer
    */
-  struct position_tile_map newPosition = entity->position;
   // clang-format off
   struct v2 deltaPosition =
       /* 1/2 a t² + v t */
@@ -374,8 +373,7 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
       );
   // clang-format on
   /* 1/2 a t² + v t + p */
-  v2_add_ref(&newPosition.offset, deltaPosition);
-  newPosition = PositionCorrect(tileMap, &newPosition);
+  struct position_tile_map newPosition = PositionOffset(tileMap, oldPosition, deltaPosition);
 
   /* new velocity */
   // clang-format off
@@ -516,10 +514,7 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
   /*****************************************************************
    * COLLUSION HANDLING
    *****************************************************************/
-  newPosition = oldPosition;
-  v2_add_ref(&newPosition.offset, v2_mul(deltaPosition, tMin));
-  newPosition = PositionCorrect(tileMap, &newPosition);
-  entity->position = newPosition;
+  entity->position = PositionOffset(tileMap, oldPosition, v2_mul(deltaPosition, tMin));
 
   /* update player position */
   if (!PositionTileMapSameTile(&oldPosition, &entity->position)) {
@@ -879,13 +874,13 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
       struct v2 center = {.x = screenCenter.x /* screen offset */
                                /* follow camera */
-                               - state->cameraPos.offset.x * metersToPixels
+                               - state->cameraPos.offset_.x * metersToPixels
                                /* tile offset */
                                + (f32)relColumn * (f32)tileSideInPixels,
 
                           .y = screenCenter.y /* screen offset */
                                /* follow camera */
-                               + state->cameraPos.offset.y * metersToPixels
+                               + state->cameraPos.offset_.y * metersToPixels
                                /* tile offset */
                                - (f32)relRow * (f32)tileSideInPixels};
 
