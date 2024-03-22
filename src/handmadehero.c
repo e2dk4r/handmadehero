@@ -457,52 +457,60 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
   //   // clang-format on
   //   }
 
-  u32 minTileX = minimum(oldPosition.absTileX, newPosition.absTileX);
-  u32 minTileY = minimum(oldPosition.absTileY, newPosition.absTileY);
-  u32 maxTileX = maximum(oldPosition.absTileX, newPosition.absTileX)
-                 /* +1 is for wrapping */
-                 + 1;
-  u32 maxTileY = maximum(oldPosition.absTileY, newPosition.absTileY)
-                 /* +1 is for wrapping */
-                 + 1;
+  u32 startTileX = oldPosition.absTileX;
+  u32 startTileY = oldPosition.absTileY;
+  u32 endTileX = newPosition.absTileX;
+  u32 endTileY = newPosition.absTileY;
+
+  i32 deltaX = SignOf((i32)endTileX - (i32)startTileX);
+  i32 deltaY = SignOf((i32)endTileY - (i32)startTileY);
 
   u32 absTileZ = entity->position.absTileZ;
   f32 tMin = 1.0f;
-  for (u32 absTileX = minTileX; absTileX != maxTileX; absTileX++) {
-    for (u32 absTileY = minTileY; absTileY != maxTileY; absTileY++) {
+
+  u32 absTileY = startTileY;
+  while (1) {
+    u32 absTileX = startTileX;
+    while (1) {
       u32 tileValue = TileGetValue(tileMap, absTileX, absTileY, absTileZ);
 
-      /* if tile is entity, can move to it */
-      if (TileIsEmpty(tileValue))
-        continue;
+      if (!TileIsEmpty(tileValue)) {
+        struct position_tile_map testPosition =
+            PositionTileMapCentered(absTileX, absTileY, absTileZ);
 
-      struct position_tile_map testPosition =
-          PositionTileMapCentered(absTileX, absTileY, absTileZ);
+        struct v2 minCorner = {
+            .x = tileMap->tileSideInMeters * -0.5f,
+            .y = tileMap->tileSideInMeters * -0.5f,
+        };
 
-      struct v2 minCorner = {
-          .x = tileMap->tileSideInMeters * -0.5f,
-          .y = tileMap->tileSideInMeters * -0.5f,
-      };
+        struct v2 maxCorner = {
+            .x = tileMap->tileSideInMeters * 0.5f,
+            .y = tileMap->tileSideInMeters * 0.5f,
+        };
 
-      struct v2 maxCorner = {
-          .x = tileMap->tileSideInMeters * 0.5f,
-          .y = tileMap->tileSideInMeters * 0.5f,
-      };
+        struct position_difference relOldPosition =
+            PositionDifference(tileMap, &oldPosition, &testPosition);
+        struct v2 rel = relOldPosition.dXY;
 
-      struct position_difference relOldPosition =
-          PositionDifference(tileMap, &oldPosition, &testPosition);
-      struct v2 rel = relOldPosition.dXY;
+        /* test all 4 walls and take minimum t. */
+        WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x,
+                 deltaPosition.y, minCorner.y, maxCorner.y);
+        WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x,
+                 deltaPosition.y, minCorner.y, maxCorner.y);
+        WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
+                 deltaPosition.x, minCorner.x, maxCorner.x);
+        WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
+                 deltaPosition.x, minCorner.x, maxCorner.x);
+      }
 
-      /* test all 4 walls and take minimum t. */
-      WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x,
-               deltaPosition.y, minCorner.y, maxCorner.y);
-      WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x,
-               deltaPosition.y, minCorner.y, maxCorner.y);
-      WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
-               deltaPosition.x, minCorner.x, maxCorner.x);
-      WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
-               deltaPosition.x, minCorner.x, maxCorner.x);
+      if (absTileX == endTileX)
+        break;
+      absTileX += (u32)deltaX;
     }
+
+    if (absTileY == endTileY)
+      break;
+    absTileY += (u32)deltaY;
   }
 
   /*****************************************************************
