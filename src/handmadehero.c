@@ -459,11 +459,11 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
 
         if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
                      deltaPosition.x, minCorner.x, maxCorner.x))
-          wallNormal = (struct v2){.x = 0, .y = 1};
+          wallNormal = (struct v2){.x = 0, .y = -1};
 
         if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
                      deltaPosition.x, minCorner.x, maxCorner.x))
-          wallNormal = (struct v2){.x = 0, .y = -1};
+          wallNormal = (struct v2){.x = 0, .y = 1};
       }
     }
 
