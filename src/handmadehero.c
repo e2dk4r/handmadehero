@@ -421,70 +421,86 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
   assert(maxTileY - minTileY < 32);
 
   u32 absTileZ = entity->position.absTileZ;
-  f32 tMin = 1.0f;
   struct v2 wallNormal = {};
 
-  for (u32 absTileY = minTileY; absTileY <= maxTileY; absTileY++) {
-    for (u32 absTileX = minTileX; absTileX <= maxTileX; absTileX++) {
-      u32 tileValue = TileGetValue(tileMap, absTileX, absTileY, absTileZ);
-      if (TileIsEmpty(tileValue))
-        continue;
+  f32 tRemaining = 1.0f;
+  for (u32 iteration = 0; iteration < 4 && tRemaining > 0.0f; iteration++) {
+    f32 tMin = tRemaining;
 
-      struct position_tile_map testPosition =
-          PositionTileMapCentered(absTileX, absTileY, absTileZ);
+    for (u32 absTileY = minTileY; absTileY <= maxTileY; absTileY++) {
+      for (u32 absTileX = minTileX; absTileX <= maxTileX; absTileX++) {
+        u32 tileValue = TileGetValue(tileMap, absTileX, absTileY, absTileZ);
+        if (TileIsEmpty(tileValue))
+          continue;
 
-      struct v2 diameter = {
-          .x = tileMap->tileSideInMeters + entity->width,
-          .y = tileMap->tileSideInMeters + entity->height,
-      };
+        struct position_tile_map testPosition =
+            PositionTileMapCentered(absTileX, absTileY, absTileZ);
 
-      struct v2 minCorner = v2_mul(diameter, -0.5f);
-      struct v2 maxCorner = v2_mul(diameter, 0.5f);
+        struct v2 diameter = {
+            .x = tileMap->tileSideInMeters + entity->width,
+            .y = tileMap->tileSideInMeters + entity->height,
+        };
 
-      struct position_difference relOldPosition =
-          PositionDifference(tileMap, &oldPosition, &testPosition);
-      struct v2 rel = relOldPosition.dXY;
+        struct v2 minCorner = v2_mul(diameter, -0.5f);
+        struct v2 maxCorner = v2_mul(diameter, 0.5f);
 
-      /* test all 4 walls and take minimum t. */
-      if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x,
-                   deltaPosition.y, minCorner.y, maxCorner.y))
-        wallNormal = (struct v2){.x = -1, .y = 0};
+        struct position_difference relOldPosition =
+            PositionDifference(tileMap, &entity->position, &testPosition);
+        struct v2 rel = relOldPosition.dXY;
 
-      if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x,
-                   deltaPosition.y, minCorner.y, maxCorner.y))
-        wallNormal = (struct v2){.x = 1, .y = 0};
+        /* test all 4 walls and take minimum t. */
+        if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x,
+                     deltaPosition.y, minCorner.y, maxCorner.y))
+          wallNormal = (struct v2){.x = -1, .y = 0};
 
-      if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
-                   deltaPosition.x, minCorner.x, maxCorner.x))
-        wallNormal = (struct v2){.x = 0, .y = 1};
+        if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x,
+                     deltaPosition.y, minCorner.y, maxCorner.y))
+          wallNormal = (struct v2){.x = 1, .y = 0};
 
-      if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
-                   deltaPosition.x, minCorner.x, maxCorner.x))
-        wallNormal = (struct v2){.x = 0, .y = -1};
+        if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
+                     deltaPosition.x, minCorner.x, maxCorner.x))
+          wallNormal = (struct v2){.x = 0, .y = 1};
+
+        if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
+                     deltaPosition.x, minCorner.x, maxCorner.x))
+          wallNormal = (struct v2){.x = 0, .y = -1};
+      }
     }
+
+    /* tMin (1/2 a t² + v t) + p */
+    entity->position =
+        PositionOffset(tileMap, entity->position, v2_mul(deltaPosition, tMin));
+
+    /*
+     * add gliding to velocity
+     */
+    // clang-format off
+
+    /* v - vTr r */
+    v2_sub_ref(&entity->dPosition,
+        /* vTr r */
+        v2_mul(
+          /* r */
+          wallNormal,
+          /* vTr */
+          v2_dot(entity->dPosition, wallNormal)
+        )
+    );
+
+    v2_sub_ref(&deltaPosition,
+        /* pTr r */
+        v2_mul(
+          /* r */
+          wallNormal,
+          /* pTr */
+          v2_dot(deltaPosition, wallNormal)
+        )
+    );
+
+    // clang-format on
+
+    tRemaining -= tMin * tRemaining;
   }
-
-  /* tMin (1/2 a t² + v t) + p */
-  entity->position =
-      PositionOffset(tileMap, oldPosition, v2_mul(deltaPosition, tMin));
-
-  /*
-   * add gliding to velocity
-   */
-  // clang-format off
-
-  /* v - vTr r */
-  v2_sub_ref(&entity->dPosition,
-      /* vTr r */
-      v2_mul(
-        /* r */
-        wallNormal,
-        /* vTr */
-        v2_dot(entity->dPosition, wallNormal)
-      )
-  );
-
-  // clang-format on
 
   /*****************************************************************
    * COLLUSION HANDLING
