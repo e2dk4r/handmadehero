@@ -451,6 +451,9 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
 
   entity->position =
       PositionOffset(tileMap, oldPosition, v2_mul(deltaPosition, tMin));
+  if (tMin < 1.0f) {
+    entity->dPosition = (struct v2){};
+  }
 
   /*****************************************************************
    * COLLUSION HANDLING
