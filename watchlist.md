@@ -187,7 +187,7 @@
 - [x] Handmade Hero Day 049 - Debugging Canonical Coordinates
       https://www.youtube.com/watch?v=CIe8J9ScmRo
 
-- [ ] Handmade Hero Day 050 - Basic Minkowski-based Collision Detection
+- [x] Handmade Hero Day 050 - Basic Minkowski-based Collision Detection
       https://www.youtube.com/watch?v=_g8DLrNyVsQ
 
 - [ ] Handmade Hero Day 051 - Separating Entities By Update Frequency
