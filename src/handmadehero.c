@@ -278,17 +278,18 @@ static inline void EntityReset(struct entity *entity) {
   entity->width = 1.0f;
 }
 
-static void WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
-                     f32 deltaY, f32 minY, f32 maxY) {
+static u8 WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
+                   f32 deltaY, f32 minY, f32 maxY) {
   f32 tEpsilon = 0.0001f;
+  u8 collided = 0;
 
   /* no movement, no sweet */
   if (deltaX == 0)
-    return;
+    goto exit;
 
   f32 tResult = (wallX - relX) / deltaX;
   if (tResult < 0)
-    return;
+    goto exit;
 
   f32 y = relY + tResult * deltaY;
 
@@ -296,8 +297,12 @@ static void WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
   if (*tMin > tResult) {
     if (y >= minY && y < maxY) {
       *tMin = maximum(0.0f, tResult - tEpsilon);
+      collided = 1;
     }
   }
+
+exit:
+  return collided;
 }
 
 static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
@@ -415,6 +420,7 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
 
   u32 absTileZ = entity->position.absTileZ;
   f32 tMin = 1.0f;
+  struct v2 wallNormal = {};
 
   for (u32 absTileY = minTileY; absTileY <= maxTileY; absTileY++) {
     for (u32 absTileX = minTileX; absTileX <= maxTileX; absTileX++) {
@@ -438,22 +444,45 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
       struct v2 rel = relOldPosition.dXY;
 
       /* test all 4 walls and take minimum t. */
-      WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x,
-               deltaPosition.y, minCorner.y, maxCorner.y);
-      WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x,
-               deltaPosition.y, minCorner.y, maxCorner.y);
-      WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
-               deltaPosition.x, minCorner.x, maxCorner.x);
-      WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
-               deltaPosition.x, minCorner.x, maxCorner.x);
+      if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x,
+                   deltaPosition.y, minCorner.y, maxCorner.y))
+        wallNormal = (struct v2){.x = -1, .y = 0};
+
+      if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x,
+                   deltaPosition.y, minCorner.y, maxCorner.y))
+        wallNormal = (struct v2){.x = 1, .y = 0};
+
+      if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
+                   deltaPosition.x, minCorner.x, maxCorner.x))
+        wallNormal = (struct v2){.x = 0, .y = 1};
+
+      if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
+                   deltaPosition.x, minCorner.x, maxCorner.x))
+        wallNormal = (struct v2){.x = 0, .y = -1};
     }
   }
 
+  /* tMin (1/2 a t² + v t) + p */
   entity->position =
       PositionOffset(tileMap, oldPosition, v2_mul(deltaPosition, tMin));
-  if (tMin < 1.0f) {
-    entity->dPosition = (struct v2){};
-  }
+
+  /*
+   * add gliding to velocity
+   */
+  // clang-format off
+
+  /* v - vTr r */
+  v2_sub_ref(&entity->dPosition,
+      /* vTr r */
+      v2_mul(
+        /* r */
+        wallNormal,
+        /* vTr */
+        v2_dot(entity->dPosition, wallNormal)
+      )
+  );
+
+  // clang-format on
 
   /*****************************************************************
    * COLLUSION HANDLING
