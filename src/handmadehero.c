@@ -280,7 +280,7 @@ static inline void EntityReset(struct entity *entity) {
 
 static u8 WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
                    f32 deltaY, f32 minY, f32 maxY) {
-  f32 tEpsilon = 0.0001f;
+  const f32 tEpsilon = 0.0001f;
   u8 collided = 0;
 
   /* no movement, no sweet */
@@ -290,16 +290,18 @@ static u8 WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
   f32 tResult = (wallX - relX) / deltaX;
   if (tResult < 0)
     goto exit;
+  /* do not care, if entity needs to go back to hit */
+  if (tResult >= *tMin)
+    goto exit;
 
   f32 y = relY + tResult * deltaY;
+  if (y < minY)
+    goto exit;
+  if (y > maxY)
+    goto exit;
 
-  /* do not care, if entity needs to go back to hit */
-  if (*tMin > tResult) {
-    if (y >= minY && y < maxY) {
-      *tMin = maximum(0.0f, tResult - tEpsilon);
-      collided = 1;
-    }
-  }
+  *tMin = maximum(0.0f, tResult - tEpsilon);
+  collided = 1;
 
 exit:
   return collided;
