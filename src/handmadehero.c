@@ -274,8 +274,8 @@ static inline void EntityReset(struct entity *entity) {
   entity->dPosition.y = 0;
 
   /* set player size */
-  entity->height = 1.4f;
-  entity->width = 0.75f * entity->height;
+  entity->height = 0.5f;
+  entity->width = 1.0f;
 }
 
 static void WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
