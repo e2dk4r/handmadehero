@@ -373,7 +373,8 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
       );
   // clang-format on
   /* 1/2 a t² + v t + p */
-  struct position_tile_map newPosition = PositionOffset(tileMap, oldPosition, deltaPosition);
+  struct position_tile_map newPosition =
+      PositionOffset(tileMap, oldPosition, deltaPosition);
 
   /* new velocity */
   // clang-format off
@@ -514,7 +515,8 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
   /*****************************************************************
    * COLLUSION HANDLING
    *****************************************************************/
-  entity->position = PositionOffset(tileMap, oldPosition, v2_mul(deltaPosition, tMin));
+  entity->position =
+      PositionOffset(tileMap, oldPosition, v2_mul(deltaPosition, tMin));
 
   /* update player position */
   if (!PositionTileMapSameTile(&oldPosition, &entity->position)) {
