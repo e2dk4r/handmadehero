@@ -460,14 +460,24 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
   u32 minTileY = minimum(oldPosition.absTileY, newPosition.absTileY);
   u32 maxTileX = maximum(oldPosition.absTileX, newPosition.absTileX);
   u32 maxTileY = maximum(oldPosition.absTileY, newPosition.absTileY);
+
+  u32 entityTileWidth =
+      (u32)ceilf32toi32(entity->width / tileMap->tileSideInMeters);
+  u32 entityTileHeight =
+      (u32)ceilf32toi32(entity->height / tileMap->tileSideInMeters);
+  minTileX -= entityTileWidth;
+  minTileY -= entityTileHeight;
+  maxTileX += entityTileWidth;
+  maxTileY += entityTileHeight;
+
   assert(maxTileX - minTileX < 32);
   assert(maxTileY - minTileY < 32);
 
   u32 absTileZ = entity->position.absTileZ;
   f32 tMin = 1.0f;
 
-  for (u32 absTileY = minTileY; absTileY < maxTileY; absTileY++) {
-    for (u32 absTileX = minTileX; absTileX < maxTileX; absTileX++) {
+  for (u32 absTileY = minTileY; absTileY <= maxTileY; absTileY++) {
+    for (u32 absTileX = minTileX; absTileX <= maxTileX; absTileX++) {
       u32 tileValue = TileGetValue(tileMap, absTileX, absTileY, absTileZ);
       if (TileIsEmpty(tileValue))
         continue;
@@ -475,15 +485,13 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
       struct position_tile_map testPosition =
           PositionTileMapCentered(absTileX, absTileY, absTileZ);
 
-      struct v2 minCorner = {
-          .x = tileMap->tileSideInMeters * -0.5f,
-          .y = tileMap->tileSideInMeters * -0.5f,
+      struct v2 diameter = {
+          .x = tileMap->tileSideInMeters + entity->width,
+          .y = tileMap->tileSideInMeters + entity->height,
       };
 
-      struct v2 maxCorner = {
-          .x = tileMap->tileSideInMeters * 0.5f,
-          .y = tileMap->tileSideInMeters * 0.5f,
-      };
+      struct v2 minCorner = v2_mul(diameter, -0.5f);
+      struct v2 maxCorner = v2_mul(diameter, 0.5f);
 
       struct position_difference relOldPosition =
           PositionDifference(tileMap, &oldPosition, &testPosition);
