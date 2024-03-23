@@ -917,7 +917,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
     struct v2 playerLeftTop = (struct v2){
         .x = playerGroundPoint.x - 0.5f * entity->width * metersToPixels,
-        .y = playerGroundPoint.y - entity->height * metersToPixels,
+        .y = playerGroundPoint.y - 0.5f * entity->height * metersToPixels,
     };
 
     struct v2 playerWidthHeight = (struct v2){
