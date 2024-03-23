@@ -393,69 +393,9 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
     );
   // clang-format on
 
-  // struct position_tile_map oldPosition = entity->position;
-  // struct position_tile_map newPosition = entity->position;
-
-  ///*****************************************************************
-  // * COLLUSION DETECTION
-  // *****************************************************************/
-
-  // struct position_tile_map left = newPosition;
-  // v2_sub_ref(&left.offset, (struct v2){.x = entity->width * 0.5f});
-  // left = PositionCorrect(tileMap, &left);
-
-  // struct position_tile_map right = newPosition;
-  // v2_add_ref(&right.offset, (struct v2){.x = entity->width * 0.5f});
-  // right = PositionCorrect(tileMap, &right);
-
-  // u8 collided = 0;
-  // struct position_tile_map *collisionPos;
-  // if (!TileMapIsPointEmpty(tileMap, &left)) {
-  //   collided = 1;
-  //   collisionPos = &left;
-  // }
-  // if (!TileMapIsPointEmpty(tileMap, &right)) {
-  //   collided = 1;
-  //   collisionPos = &right;
-  // }
-
-  // /*****************************************************************
-  //  * COLLUSION HANDLING
-  //  *****************************************************************/
-  // if (!collided)
-  //   entity->position = newPosition;
-  // else {
-  //   /* |r| = 1 */
-  //   struct v2 r = {0, 0};
-  //   /* collision accoured in west of player */
-  //   if (collisionPos->absTileX < entity->position.absTileX)
-  //     r = (struct v2){1, 0};
-  //   /* collision accoured in east of player */
-  //   if (collisionPos->absTileX > entity->position.absTileX)
-  //     r = (struct v2){-1, 0};
-  //   /* collision accoured in north of player */
-  //   if (collisionPos->absTileY > entity->position.absTileY)
-  //     r = (struct v2){0, 1};
-  //   /* collision accoured in south of player */
-  //   if (collisionPos->absTileY < entity->position.absTileY)
-  //     r = (struct v2){0, -1};
-
-  //   // clang-format off
-  //   entity->dPosition =
-  //     /* v - vTr r */
-  //     v2_sub(
-  //         /* v */
-  //         entity->dPosition,
-  //         /* - vTr r */
-  //         v2_mul(
-  //           r,
-  //           /* vTr */
-  //           v2_dot(entity->dPosition, r)
-  //         )
-  //     );
-  //   // clang-format on
-  //   }
-
+  /*****************************************************************
+   * COLLUSION DETECTION
+   *****************************************************************/
   u32 minTileX = minimum(oldPosition.absTileX, newPosition.absTileX);
   u32 minTileY = minimum(oldPosition.absTileY, newPosition.absTileY);
   u32 maxTileX = maximum(oldPosition.absTileX, newPosition.absTileX);
@@ -509,12 +449,12 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
     }
   }
 
-  /*****************************************************************
-   * COLLUSION HANDLING
-   *****************************************************************/
   entity->position =
       PositionOffset(tileMap, oldPosition, v2_mul(deltaPosition, tMin));
 
+  /*****************************************************************
+   * COLLUSION HANDLING
+   *****************************************************************/
   /* update player position */
   if (!PositionTileMapSameTile(&oldPosition, &entity->position)) {
     u32 newTileValue = TileGetValue2(tileMap, &entity->position);
