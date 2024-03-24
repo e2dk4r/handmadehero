@@ -190,7 +190,7 @@
 - [x] Handmade Hero Day 050 - Basic Minkowski-based Collision Detection
       https://www.youtube.com/watch?v=_g8DLrNyVsQ
 
-- [ ] Handmade Hero Day 051 - Separating Entities By Update Frequency
+- [x] Handmade Hero Day 051 - Separating Entities By Update Frequency
       https://www.youtube.com/watch?v=RQUP4ql86k0
 
 - [ ] Handmade Hero Day 052 - Entity Movement in Camera Space
