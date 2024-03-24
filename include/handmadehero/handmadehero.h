@@ -23,13 +23,32 @@ struct bitmap_hero {
   struct bitmap cape;
 };
 
-struct entity {
-  u8 exists : 1;
-  u8 facingDirection;
+#define ENTITY_RESIDENCE_NONEXISTENT 0
+#define ENTITY_RESIDENCE_DORMANT 1 << 0
+#define ENTITY_RESIDENCE_LOW 1 << 1
+#define ENTITY_RESIDENCE_HIGH 1 << 2
+
+struct entity_dormant {
   f32 width;
   f32 height;
   struct position_tile_map position;
+};
+
+struct entity_low {};
+
+struct entity_high {
+  u8 exists : 1;
+  struct v2 position;
+  /* velocity, differencial of position */
   struct v2 dPosition;
+  u8 facingDirection;
+};
+
+struct entity {
+  u8 residence;
+  struct entity_dormant *dormant;
+  struct entity_low *low;
+  struct entity_high *high;
 };
 
 struct game_state {
@@ -41,6 +60,10 @@ struct game_state {
 
 #define HANDMADEHERO_ENTITY_TOTAL 256
   struct entity entities[HANDMADEHERO_ENTITY_TOTAL];
+  u8 entityResidences[HANDMADEHERO_ENTITY_TOTAL];
+  struct entity_dormant entityDormants[HANDMADEHERO_ENTITY_TOTAL];
+  struct entity_low entityLows[HANDMADEHERO_ENTITY_TOTAL];
+  struct entity_high entityHighs[HANDMADEHERO_ENTITY_TOTAL];
   u32 entityCount;
   u32 playerIndexForController[HANDMADEHERO_CONTROLLER_COUNT];
 

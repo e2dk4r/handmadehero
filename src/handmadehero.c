@@ -232,28 +232,34 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
   return result;
 }
 
-static inline struct entity *EntityGet(struct game_state *state, u32 index) {
+static inline struct entity *EntityGet(struct game_state *state, u8 residence,
+                                       u32 index) {
   /* index 0 is reserved for null */
   if (index == 0)
     return 0;
 
-  if (index >= HANDMADEHERO_ENTITY_TOTAL)
+  if (index >= state->entityCount)
     return 0;
 
-  return &state->entities[index];
+  struct entity *entity = &state->entities[index];
+
+  entity->residence = residence;
+  entity->dormant = &state->entityDormants[index];
+  entity->low = &state->entityLows[index];
+  entity->high = &state->entityHighs[index];
+
+  return entity;
 }
 
 static inline u32 EntityAdd(struct game_state *state) {
-  struct entity *entity;
-
   u32 entityIndex = state->entityCount;
   assert(entityIndex < HANDMADEHERO_ENTITY_TOTAL);
 
-  entity = &state->entities[entityIndex];
-  assert(entity);
-
-  /* clear entity */
-  *entity = (struct entity){};
+  state->entityResidences[entityIndex] = ENTITY_RESIDENCE_DORMANT;
+  state->entityHighs[entityIndex] = (struct entity_high){};
+  state->entityLows[entityIndex] = (struct entity_low){};
+  state->entityDormants[entityIndex] = (struct entity_dormant){};
+  state->entities[entityIndex] = (struct entity){};
 
   state->entityCount++;
 
@@ -262,20 +268,19 @@ static inline u32 EntityAdd(struct game_state *state) {
 
 static inline void EntityReset(struct entity *entity) {
   assert(entity);
-  entity->exists = 1;
 
   /* set initial player position */
-  entity->position.absTileX = 1;
-  entity->position.absTileY = 3;
-  entity->position.offset_ = (struct v2){.x = 0.0f, .y = 0.0f};
+  entity->dormant->position.absTileX = 1;
+  entity->dormant->position.absTileY = 3;
+  entity->dormant->position.offset_ = (struct v2){.x = 0.0f, .y = 0.0f};
 
   /* set initial player velocity */
-  entity->dPosition.x = 0;
-  entity->dPosition.y = 0;
+  entity->high->dPosition.x = 0;
+  entity->high->dPosition.y = 0;
 
   /* set player size */
-  entity->height = 0.5f;
-  entity->width = 1.0f;
+  entity->dormant->height = 0.5f;
+  entity->dormant->width = 1.0f;
 }
 
 static u8 WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
@@ -330,13 +335,13 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
   /*
    * apply friction opposite force to acceleration
    */
-  v2_add_ref(&ddPosition, v2_neg(v2_mul(entity->dPosition, 8.0f)));
+  v2_add_ref(&ddPosition, v2_neg(v2_mul(entity->high->dPosition, 8.0f)));
 
   /*****************************************************************
    * CALCULATION OF NEW PLAYER POSITION
    *****************************************************************/
 
-  struct position_tile_map oldPosition = entity->position;
+  struct v2 oldPosition = entity->high->position;
 
   /*
    *  (position)      f(t) = 1/2 a t² + v t + p
@@ -373,19 +378,18 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
         /* v t */
         v2_mul(
           /* v */
-          entity->dPosition,
+          entity->high->dPosition,
           /* t */
           dt
         ) /* end: v t */
       );
   // clang-format on
   /* 1/2 a t² + v t + p */
-  struct position_tile_map newPosition =
-      PositionOffset(tileMap, oldPosition, deltaPosition);
+  struct v2 newPosition = v2_add(oldPosition, deltaPosition);
 
   /* new velocity */
   // clang-format off
-  entity->dPosition =
+  entity->high->dPosition =
     /* a t + v */
     v2_add(
       /* a t */
@@ -396,10 +400,11 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
           dt
       ),
       /* v */
-      entity->dPosition
+      entity->high->dPosition
     );
   // clang-format on
 
+#if 0
   /*****************************************************************
    * COLLUSION DETECTION
    *****************************************************************/
@@ -538,6 +543,9 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
     else
       entity->facingDirection = BITMAP_HERO_FRONT;
   }
+#else
+  entity->high->position = newPosition;
+#endif
 }
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
@@ -736,14 +744,15 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct game_controller_input *controller =
         GetController(input, controllerIndex);
     struct entity *controlledEntity =
-        EntityGet(state, state->playerIndexForController[controllerIndex]);
+        EntityGet(state, ENTITY_RESIDENCE_HIGH,
+                  state->playerIndexForController[controllerIndex]);
 
     /* if there is no entity associated with this controller */
     if (!controlledEntity) {
       /* wait for start button pressed to enable */
       if (controller->start.pressed) {
         u32 entityIndex = EntityAdd(state);
-        controlledEntity = EntityGet(state, entityIndex);
+        controlledEntity = EntityGet(state, ENTITY_RESIDENCE_HIGH, entityIndex);
         assert(entityIndex < HANDMADEHERO_ENTITY_TOTAL);
         state->playerIndexForController[controllerIndex] = entityIndex;
         EntityReset(controlledEntity);
@@ -754,6 +763,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       }
       continue;
     }
+
+    if (controlledEntity->residence == ENTITY_RESIDENCE_NONEXISTENT)
+      continue;
 
     /* acceleration */
     struct v2 ddPosition = {};
@@ -790,12 +802,14 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   }
 
   /* sync camera with followed entity */
-  struct entity *followedEntity = EntityGet(state, state->followedEntityIndex);
+  struct entity *followedEntity =
+      EntityGet(state, ENTITY_RESIDENCE_HIGH, state->followedEntityIndex);
+#if 0
   if (followedEntity) {
-    state->cameraPos.absTileZ = followedEntity->position.absTileZ;
+    state->cameraPos.absTileZ = followedEntity->dormant->position.absTileZ;
 
     struct position_difference diff = PositionDifference(
-        tileMap, &followedEntity->position, &state->cameraPos);
+        tileMap, &followedEntity->dormant->position, &state->cameraPos);
 
     f32 maxDiffX = (f32)tilesPerWidth * 0.5f * tileMap->tileSideInMeters;
     if (diff.dXY.x > maxDiffX)
@@ -809,6 +823,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     else if (diff.dXY.y < -maxDiffY)
       state->cameraPos.absTileY -= tilesPerHeight;
   }
+#endif
 
   /****************************************************************
    * RENDERING
@@ -887,41 +902,39 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
   /* render entities */
   for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
-    struct entity *entity = EntityGet(state, entityIndex);
-    if (!entity->exists)
+    struct entity *entity = &state->entities[entityIndex];
+    if (!(entity->residence & ENTITY_RESIDENCE_HIGH))
       continue;
-
-    struct position_difference diff =
-        PositionDifference(tileMap, &entity->position, &state->cameraPos);
-    /* convert from meters to pixel */
-    v2_mul_ref(&diff.dXY, metersToPixels);
 
     f32 playerR = 1.0f;
     f32 playerG = 1.0f;
     f32 playerB = 0.0f;
 
-    struct v2 playerGroundPoint = {
-        .x = screenCenter.x + diff.dXY.x,
-        .y = screenCenter.y - diff.dXY.y,
-    };
+    struct v2 playerScreenPosition = entity->high->position;
+    /* screen's coordinate system uses y values inverse,
+     * so that means going up in space means negative y values
+     */
+    playerScreenPosition.y *= -1;
+    v2_mul_ref(&playerScreenPosition, metersToPixels);
 
-    struct v2 playerLeftTop = (struct v2){
-        .x = playerGroundPoint.x - 0.5f * entity->width * metersToPixels,
-        .y = playerGroundPoint.y - 0.5f * entity->height * metersToPixels,
-    };
+    struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
 
     struct v2 playerWidthHeight = (struct v2){
-        .x = entity->width,
-        .y = entity->height,
+        .x = entity->dormant->width,
+        .y = entity->dormant->height,
     };
     v2_mul_ref(&playerWidthHeight, metersToPixels);
+
+    struct v2 playerLeftTop =
+        v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));
     struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
 
     DrawRectangle(backbuffer, playerLeftTop, playerRightBottom,
                   /* color */
                   playerR, playerG, playerB);
 
-    struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
+    struct bitmap_hero *bitmap =
+        &state->bitmapHero[entity->high->facingDirection];
     DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
                bitmap->alignY);
     DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->alignX,
