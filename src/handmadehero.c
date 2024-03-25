@@ -3,6 +3,14 @@
 #include <handmadehero/math.h>
 #include <handmadehero/random.h>
 
+static const u32 TILES_PER_WIDTH = 17;
+static const u32 TILES_PER_HEIGHT = 9;
+
+static const struct v2 TilesPerScreenInHalf = {
+    .x = (f32)TILES_PER_WIDTH * 0.5f,
+    .y = (f32)TILES_PER_HEIGHT * 0.5f,
+};
+
 static void DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min,
                           struct v2 max, f32 r, f32 g, f32 b) {
   assert(min.x < max.x);
@@ -551,14 +559,44 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
       state->world->tileMap, &state->cameraPos, entity->high->position);
 }
 
+static void CameraSet(struct game_state *state,
+                      struct position_tile_map *newCameraPosition) {
+  struct tile_map *tileMap = state->world->tileMap;
+  struct position_difference diff =
+      PositionDifference(tileMap, newCameraPosition, &state->cameraPos);
+  state->cameraPos = *newCameraPosition;
+
+  struct v2 entityOffsetPerFrame = v2_neg(diff.dXY);
+
+  for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
+    struct entity *entity = state->entities + entityIndex;
+    if (!(entity->residence & ENTITY_RESIDENCE_HIGH))
+      continue;
+
+    /*
+     *  when camera moves,
+     *  negative of camera offset must be applied
+     * to entites so that they are not moving with
+     * camera
+     * ________________ ________________
+     * |              | |              |
+     * |              | |              |
+     * |   x         x| |x'            |
+     * |       c      | |       c'     |
+     * |              | |              |
+     * |              | |              |
+     * |______________| |______________|
+     */
+    v2_add_ref(&entity->high->position, entityOffsetPerFrame);
+  }
+}
+
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
 
   /****************************************************************
    * INITIALIZATION
    ****************************************************************/
-  static const u32 tilesPerWidth = 17;
-  static const u32 tilesPerHeight = 9;
   if (!memory->initialized) {
     /* load background */
     state->bitmapBackground =
@@ -610,8 +648,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     bitmapHero->alignY = 182;
 
     /* set initial camera position */
-    state->cameraPos.absTileX = tilesPerWidth / 2;
-    state->cameraPos.absTileY = tilesPerHeight / 2;
+    state->cameraPos.absTileX = TILES_PER_WIDTH / 2;
+    state->cameraPos.absTileY = TILES_PER_HEIGHT / 2;
 
     /* use entity with 0 index as null */
     EntityAdd(state);
@@ -674,26 +712,26 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       else
         isDoorTop = 1;
 
-      for (u32 tileY = 0; tileY < tilesPerHeight; tileY++) {
-        for (u32 tileX = 0; tileX < tilesPerWidth; tileX++) {
+      for (u32 tileY = 0; tileY < TILES_PER_HEIGHT; tileY++) {
+        for (u32 tileX = 0; tileX < TILES_PER_WIDTH; tileX++) {
 
-          u32 absTileX = screenX * tilesPerWidth + tileX;
-          u32 absTileY = screenY * tilesPerHeight + tileY;
+          u32 absTileX = screenX * TILES_PER_WIDTH + tileX;
+          u32 absTileY = screenY * TILES_PER_HEIGHT + tileY;
 
           u32 value = TILE_WALKABLE;
 
-          if (tileX == 0 && (!isDoorLeft || tileY != tilesPerHeight / 2))
+          if (tileX == 0 && (!isDoorLeft || tileY != TILES_PER_HEIGHT / 2))
             value = TILE_BLOCKED;
 
-          if (tileX == tilesPerWidth - 1 &&
-              (!isDoorRight || tileY != tilesPerHeight / 2))
+          if (tileX == TILES_PER_WIDTH - 1 &&
+              (!isDoorRight || tileY != TILES_PER_HEIGHT / 2))
             value = TILE_BLOCKED;
 
-          if (tileY == 0 && (!isDoorBottom || tileX != tilesPerWidth / 2))
+          if (tileY == 0 && (!isDoorBottom || tileX != TILES_PER_WIDTH / 2))
             value = TILE_BLOCKED;
 
-          if (tileY == tilesPerHeight - 1 &&
-              (!isDoorTop || tileX != tilesPerWidth / 2))
+          if (tileY == TILES_PER_HEIGHT - 1 &&
+              (!isDoorTop || tileX != TILES_PER_WIDTH / 2))
             value = TILE_BLOCKED;
 
           if (tileX == 10 && tileY == 6) {
@@ -813,41 +851,25 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   }
 
   /* sync camera with followed entity */
-  struct v2 entityOffsetPerFrame = {};
   struct entity *followedEntity = EntityGet(state, state->followedEntityIndex);
   if (followedEntity && followedEntity->residence & ENTITY_RESIDENCE_HIGH) {
-    struct position_tile_map oldCameraPos = state->cameraPos;
+    struct position_tile_map newCameraPosition = state->cameraPos;
 
-    state->cameraPos.absTileZ = followedEntity->dormant->position.absTileZ;
+    newCameraPosition.absTileZ = followedEntity->dormant->position.absTileZ;
 
-    f32 maxDiffX = (f32)tilesPerWidth * 0.5f * tileMap->tileSideInMeters;
+    f32 maxDiffX = (f32)TILES_PER_WIDTH * 0.5f * tileMap->tileSideInMeters;
     if (followedEntity->high->position.x > maxDiffX)
-      state->cameraPos.absTileX += tilesPerWidth;
+      newCameraPosition.absTileX += TILES_PER_WIDTH;
     else if (followedEntity->high->position.x < -maxDiffX)
-      state->cameraPos.absTileX -= tilesPerWidth;
+      newCameraPosition.absTileX -= TILES_PER_WIDTH;
 
-    f32 maxDiffY = (f32)tilesPerHeight * 0.5f * tileMap->tileSideInMeters;
+    f32 maxDiffY = (f32)TILES_PER_HEIGHT * 0.5f * tileMap->tileSideInMeters;
     if (followedEntity->high->position.y > maxDiffY)
-      state->cameraPos.absTileY += tilesPerHeight;
+      newCameraPosition.absTileY += TILES_PER_HEIGHT;
     else if (followedEntity->high->position.y < -maxDiffY)
-      state->cameraPos.absTileY -= tilesPerHeight;
+      newCameraPosition.absTileY -= TILES_PER_HEIGHT;
 
-    struct position_difference diff =
-        PositionDifference(tileMap, &state->cameraPos, &oldCameraPos);
-    /*
-     *  when camera moves,
-     *  negative of camera offset must be applied to entites
-     *  so that they are not moving with camera
-     * ________________ ________________
-     * |              | |              |
-     * |              | |              |
-     * |   x         x| |x'            |
-     * |       c      | |       c'     |
-     * |              | |              |
-     * |              | |              |
-     * |______________| |______________|
-     */
-    entityOffsetPerFrame = v2_neg(diff.dXY);
+    CameraSet(state, &newCameraPosition);
   }
 
   /****************************************************************
@@ -930,8 +952,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct entity *entity = &state->entities[entityIndex];
     if (!(entity->residence & ENTITY_RESIDENCE_HIGH))
       continue;
-
-    v2_add_ref(&entity->high->position, entityOffsetPerFrame);
 
     f32 playerR = 1.0f;
     f32 playerG = 1.0f;
