@@ -601,16 +601,23 @@ static void CameraSet(struct game_state *state,
   state->cameraPos = *newCameraPosition;
 
   /* camera size that contains collection high frequency entities */
-  struct rectangle2 cameraBounds = RectCenterDim(
-      (struct v2){0, 0},
-      v2_mul(v2_mul(TilesPerScreenInHalf, tileMap->tileSideInMeters), 3));
+  const u32 tileSpanMultipler = 3;
+  const u32 tileSpanX = TILES_PER_WIDTH * tileSpanMultipler;
+  const u32 tileSpanY = TILES_PER_HEIGHT * tileSpanMultipler;
+  const struct v2 tileSpan = {(f32)tileSpanX, (f32)tileSpanY};
+  struct rectangle2 cameraBounds = RectCenterDim((struct v2){0, 0}, tileSpan);
 
   struct v2 entityOffsetPerFrame = v2_neg(diff.dXY);
 
   for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
     struct entity *entity = state->entities + entityIndex;
+#if 1
     if (entity->residence == ENTITY_RESIDENCE_NONEXISTENT)
       continue;
+#else
+    if (!(entity->residence & ENTITY_RESIDENCE_HIGH))
+      continue;
+#endif
 
     /*
      *  when camera moves,
@@ -637,6 +644,30 @@ static void CameraSet(struct game_state *state,
       EntityChangeResidence(state, entity, ENTITY_RESIDENCE_HIGH);
     }
   }
+
+#if 0
+  u32 minTileX = newCameraPosition->absTileX - tileSpanX / 2;
+  u32 minTileY = newCameraPosition->absTileY - tileSpanY / 2;
+  u32 maxTileX = newCameraPosition->absTileX + tileSpanX / 2;
+  u32 maxTileY = newCameraPosition->absTileY + tileSpanY / 2;
+  for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
+    struct entity *entity = state->entities + entityIndex;
+    if (!(entity->residence & ENTITY_RESIDENCE_DORMANT))
+      continue;
+
+    if (/* z axis */
+        entity->dormant->position.absTileZ == newCameraPosition->absTileZ &&
+        /* x axis */
+        entity->dormant->position.absTileX >= minTileX &&
+        entity->dormant->position.absTileX <= maxTileX &&
+        /* y axis */
+        entity->dormant->position.absTileY >= minTileY &&
+        entity->dormant->position.absTileY <= maxTileY) {
+
+      EntityChangeResidence(state, entity, ENTITY_RESIDENCE_HIGH);
+    }
+  }
+#endif
 }
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
@@ -694,10 +725,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                                "test/test_hero_right_cape.bmp");
     bitmapHero->alignX = 72;
     bitmapHero->alignY = 182;
-
-    /* set initial camera position */
-    state->cameraPos.absTileX = TILES_PER_WIDTH / 2;
-    state->cameraPos.absTileY = TILES_PER_HEIGHT / 2;
 
     /* use entity with 0 index as null */
     EntityAdd(state, ENTITY_TYPE_INVALID);
@@ -823,6 +850,13 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       else
         screenY += 1;
     }
+
+    /* set initial camera position */
+    struct position_tile_map newCameraPosition = {
+        .absTileX = TILES_PER_WIDTH / 2,
+        .absTileY = TILES_PER_HEIGHT / 2,
+    };
+    CameraSet(state, &newCameraPosition);
 
     memory->initialized = 1;
   }
