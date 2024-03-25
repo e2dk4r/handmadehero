@@ -582,7 +582,7 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
       );
 
       // clang-format on
-      entity->high->absTileZ += entity->dormant->dAbsTileZ;
+      entity->high->absTileZ += hitEntity->dormant->dAbsTileZ;
     } else {
       break;
     }
