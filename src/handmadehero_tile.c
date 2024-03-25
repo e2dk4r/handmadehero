@@ -47,12 +47,15 @@ static inline void PositionCorrectCoord(struct tile_map *tileMap, u32 *tile,
   assert(*tileRel <= 0.5f * tileMap->tileSideInMeters);
 }
 
-struct position_tile_map PositionCorrect(struct tile_map *tileMap,
-                                         struct position_tile_map *pos) {
-  struct position_tile_map result = *pos;
+struct position_tile_map
+PositionMapIntoTilesSpace(struct tile_map *tileMap,
+                          struct position_tile_map *basePosition,
+                          struct v2 offset) {
+  struct position_tile_map result = *basePosition;
+  v2_add_ref(&result.offset, offset);
 
-  PositionCorrectCoord(tileMap, &result.absTileX, &result.offset_.x);
-  PositionCorrectCoord(tileMap, &result.absTileY, &result.offset_.y);
+  PositionCorrectCoord(tileMap, &result.absTileX, &result.offset.x);
+  PositionCorrectCoord(tileMap, &result.absTileY, &result.offset.y);
 
   return result;
 }
@@ -132,7 +135,7 @@ struct position_difference PositionDifference(struct tile_map *tileMap,
   f32 dTileZ = (f32)a->absTileZ - (f32)b->absTileZ;
 
   result.dXY = v2_add(v2_mul(dTileXY, tileMap->tileSideInMeters),
-                      v2_sub(a->offset_, b->offset_));
+                      v2_sub(a->offset, b->offset));
   result.dZ = tileMap->tileSideInMeters * dTileZ;
 
   return result;

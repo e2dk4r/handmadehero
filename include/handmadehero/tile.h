@@ -37,7 +37,7 @@ struct position_tile_map {
   u32 absTileZ;
 
   /* offset from tile center */
-  struct v2 offset_;
+  struct v2 offset;
 };
 
 struct position_tile_chunk {
@@ -74,16 +74,10 @@ static inline u32 TileGetValue2(struct tile_map *tileMap,
 void TileSetValue(struct memory_arena *arena, struct tile_map *tileMap,
                   u32 absTileX, u32 absTileY, u32 absTileZ, u32 value);
 
-struct position_tile_map PositionCorrect(struct tile_map *tileMap,
-                                         struct position_tile_map *pos);
-
-static inline struct position_tile_map
-PositionOffset(struct tile_map *tileMap, struct position_tile_map pos,
-               struct v2 offset) {
-  v2_add_ref(&pos.offset_, offset);
-  struct position_tile_map result = PositionCorrect(tileMap, &pos);
-  return result;
-}
+struct position_tile_map
+PositionMapIntoTilesSpace(struct tile_map *tileMap,
+                          struct position_tile_map *basePosition,
+                          struct v2 offset);
 
 static inline u8 PositionTileMapSameTile(struct position_tile_map *left,
                                          struct position_tile_map *right) {

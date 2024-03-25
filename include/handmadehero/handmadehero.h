@@ -32,6 +32,7 @@ struct entity_dormant {
   f32 width;
   f32 height;
   struct position_tile_map position;
+  u32 dAbsTileZ;
 };
 
 struct entity_low {};
@@ -40,10 +41,12 @@ struct entity_high {
   struct v2 position;
   /* velocity, differencial of position */
   struct v2 dPosition;
+  u32 absTileZ;
   u8 facingDirection;
 };
 
 struct entity {
+  u8 collides : 1;
   u8 residence;
   struct entity_dormant *dormant;
   struct entity_low *low;

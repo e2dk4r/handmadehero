@@ -243,7 +243,6 @@ static inline struct entity *EntityGet(struct game_state *state, u8 residence,
 
   struct entity *entity = &state->entities[index];
 
-  entity->residence = residence;
   entity->dormant = &state->entityDormants[index];
   entity->low = &state->entityLows[index];
   entity->high = &state->entityHighs[index];
@@ -259,11 +258,34 @@ static inline u32 EntityAdd(struct game_state *state) {
   state->entityHighs[entityIndex] = (struct entity_high){};
   state->entityLows[entityIndex] = (struct entity_low){};
   state->entityDormants[entityIndex] = (struct entity_dormant){};
-  state->entities[entityIndex] = (struct entity){};
+  state->entities[entityIndex] = (struct entity){
+      .collides = 1,
+  };
 
   state->entityCount++;
 
   return entityIndex;
+}
+
+static inline void EntityChangeResidence(struct game_state *state,
+                                         struct entity *entity, u8 residence) {
+  if (residence & ENTITY_RESIDENCE_HIGH) {
+    if (!(entity->residence & ENTITY_RESIDENCE_HIGH)) {
+      /* if transitioning to high:
+       * - map the entity to camera space
+       */
+
+      struct position_difference diff = PositionDifference(
+          state->world->tileMap, &entity->dormant->position, &state->cameraPos);
+
+      entity->high->position = diff.dXY;
+      entity->high->dPosition = (struct v2){0, 0};
+      entity->high->absTileZ = entity->dormant->position.absTileZ;
+      entity->high->facingDirection = 0;
+    }
+  }
+
+  entity->residence = residence;
 }
 
 static inline void EntityReset(struct entity *entity) {
@@ -272,7 +294,7 @@ static inline void EntityReset(struct entity *entity) {
   /* set initial player position */
   entity->dormant->position.absTileX = 1;
   entity->dormant->position.absTileY = 3;
-  entity->dormant->position.offset_ = (struct v2){.x = 0.0f, .y = 0.0f};
+  entity->dormant->position.offset = (struct v2){.x = 0.0f, .y = 0.0f};
 
   /* set initial player velocity */
   entity->high->dPosition.x = 0;
@@ -285,7 +307,7 @@ static inline void EntityReset(struct entity *entity) {
 
 static u8 WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
                    f32 deltaY, f32 minY, f32 maxY) {
-  const f32 tEpsilon = 0.0001f;
+  const f32 tEpsilon = 0.001f;
   u8 collided = 0;
 
   /* no movement, no sweet */
@@ -314,7 +336,6 @@ exit:
 
 static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
                        struct v2 ddPosition) {
-  struct tile_map *tileMap = state->world->tileMap;
 
   /*****************************************************************
    * CORRECTING ACCELERATION
@@ -404,125 +425,100 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
     );
   // clang-format on
 
-#if 0
   /*****************************************************************
    * COLLUSION DETECTION
    *****************************************************************/
-  u32 minTileX = minimum(oldPosition.absTileX, newPosition.absTileX);
-  u32 minTileY = minimum(oldPosition.absTileY, newPosition.absTileY);
-  u32 maxTileX = maximum(oldPosition.absTileX, newPosition.absTileX);
-  u32 maxTileY = maximum(oldPosition.absTileY, newPosition.absTileY);
-
-  u32 entityTileWidth =
-      (u32)ceilf32toi32(entity->width / tileMap->tileSideInMeters);
-  u32 entityTileHeight =
-      (u32)ceilf32toi32(entity->height / tileMap->tileSideInMeters);
-  minTileX -= entityTileWidth;
-  minTileY -= entityTileHeight;
-  maxTileX += entityTileWidth;
-  maxTileY += entityTileHeight;
-
-  assert(maxTileX - minTileX < 32);
-  assert(maxTileY - minTileY < 32);
-
-  u32 absTileZ = entity->position.absTileZ;
-  struct v2 wallNormal = {};
-
+  struct entity *hitEntity = 0;
   f32 tRemaining = 1.0f;
   for (u32 iteration = 0; iteration < 4 && tRemaining > 0.0f; iteration++) {
     f32 tMin = tRemaining;
+    struct v2 wallNormal = {};
 
-    for (u32 absTileY = minTileY; absTileY <= maxTileY; absTileY++) {
-      for (u32 absTileX = minTileX; absTileX <= maxTileX; absTileX++) {
-        u32 tileValue = TileGetValue(tileMap, absTileX, absTileY, absTileZ);
-        if (TileIsEmpty(tileValue))
-          continue;
+    for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
+      struct entity *testEntity =
+          EntityGet(state, ENTITY_RESIDENCE_HIGH, entityIndex);
+      assert(testEntity);
 
-        struct position_tile_map testPosition =
-            PositionTileMapCentered(absTileX, absTileY, absTileZ);
+      if (!(testEntity->residence & ENTITY_RESIDENCE_HIGH))
+        continue;
 
-        struct v2 diameter = {
-            .x = tileMap->tileSideInMeters + entity->width,
-            .y = tileMap->tileSideInMeters + entity->height,
-        };
+      if (!testEntity->collides)
+        continue;
 
-        struct v2 minCorner = v2_mul(diameter, -0.5f);
-        struct v2 maxCorner = v2_mul(diameter, 0.5f);
+      struct v2 diameter = {
+          .x = testEntity->dormant->width + entity->dormant->width,
+          .y = testEntity->dormant->height + entity->dormant->height,
+      };
 
-        struct position_difference relOldPosition =
-            PositionDifference(tileMap, &entity->position, &testPosition);
-        struct v2 rel = relOldPosition.dXY;
+      struct v2 minCorner = v2_mul(diameter, -0.5f);
+      struct v2 maxCorner = v2_mul(diameter, 0.5f);
 
-        /* test all 4 walls and take minimum t. */
-        if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x,
-                     deltaPosition.y, minCorner.y, maxCorner.y))
-          wallNormal = (struct v2){.x = -1, .y = 0};
+      struct v2 rel =
+          v2_sub(entity->high->position, testEntity->high->position);
 
-        if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x,
-                     deltaPosition.y, minCorner.y, maxCorner.y))
-          wallNormal = (struct v2){.x = 1, .y = 0};
+      /* test all 4 walls and take minimum t. */
+      if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x,
+                   deltaPosition.y, minCorner.y, maxCorner.y)) {
+        wallNormal = (struct v2){.x = -1, .y = 0};
+        hitEntity = testEntity;
+      }
 
-        if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
-                     deltaPosition.x, minCorner.x, maxCorner.x))
-          wallNormal = (struct v2){.x = 0, .y = -1};
+      if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x,
+                   deltaPosition.y, minCorner.y, maxCorner.y)) {
+        wallNormal = (struct v2){.x = 1, .y = 0};
+        hitEntity = testEntity;
+      }
 
-        if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
-                     deltaPosition.x, minCorner.x, maxCorner.x))
-          wallNormal = (struct v2){.x = 0, .y = 1};
+      if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
+                   deltaPosition.x, minCorner.x, maxCorner.x)) {
+        wallNormal = (struct v2){.x = 0, .y = -1};
+        hitEntity = testEntity;
+      }
+
+      if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
+                   deltaPosition.x, minCorner.x, maxCorner.x)) {
+        wallNormal = (struct v2){.x = 0, .y = 1};
+        hitEntity = testEntity;
       }
     }
 
-    /* tMin (1/2 a t² + v t) + p */
-    entity->position =
-        PositionOffset(tileMap, entity->position, v2_mul(deltaPosition, tMin));
+    /* p' = tMin (1/2 a t² + v t) + p */
+    v2_add_ref(&entity->high->position, v2_mul(deltaPosition, tMin));
 
-    /*
-     * add gliding to velocity
-     */
-    // clang-format off
+    /*****************************************************************
+     * COLLUSION HANDLING
+     *****************************************************************/
+    if (hitEntity) {
+      /*
+       * add gliding to velocity
+       */
+      // clang-format off
+      /* v' = v - vTr r */
+      v2_sub_ref(&entity->high->dPosition,
+          /* vTr r */
+          v2_mul(
+            /* r */
+            wallNormal,
+            /* vTr */
+            v2_dot(entity->high->dPosition, wallNormal)
+          )
+      );
 
-    /* v - vTr r */
-    v2_sub_ref(&entity->dPosition,
-        /* vTr r */
-        v2_mul(
-          /* r */
-          wallNormal,
-          /* vTr */
-          v2_dot(entity->dPosition, wallNormal)
-        )
-    );
+      v2_sub_ref(&deltaPosition,
+          /* pTr r */
+          v2_mul(
+            /* r */
+            wallNormal,
+            /* pTr */
+            v2_dot(deltaPosition, wallNormal)
+          )
+      );
 
-    v2_sub_ref(&deltaPosition,
-        /* pTr r */
-        v2_mul(
-          /* r */
-          wallNormal,
-          /* pTr */
-          v2_dot(deltaPosition, wallNormal)
-        )
-    );
-
-    // clang-format on
+      // clang-format on
+      entity->high->absTileZ += entity->dormant->dAbsTileZ;
+    }
 
     tRemaining -= tMin * tRemaining;
-  }
-
-  /*****************************************************************
-   * COLLUSION HANDLING
-   *****************************************************************/
-  /* update player position */
-  if (!PositionTileMapSameTile(&oldPosition, &entity->position)) {
-    u32 newTileValue = TileGetValue2(tileMap, &entity->position);
-
-    if (newTileValue & TILE_LADDER_UP) {
-      entity->position.absTileZ++;
-    }
-
-    if (newTileValue & TILE_LADDER_DOWN) {
-      entity->position.absTileZ--;
-    }
-
-    assert(entity->position.absTileZ < tileMap->tileChunkCountZ);
   }
 
   /*****************************************************************
@@ -530,22 +526,24 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
    *****************************************************************/
   /* use player velocity to face the direction */
 
-  if (entity->dPosition.x == 0.0f && entity->dPosition.y == 0.0f)
+  if (entity->high->dPosition.x == 0.0f && entity->high->dPosition.y == 0.0f)
     ;
-  else if (absolute(entity->dPosition.x) > absolute(entity->dPosition.y)) {
-    if (entity->dPosition.x < 0)
-      entity->facingDirection = BITMAP_HERO_LEFT;
+  else if (absolute(entity->high->dPosition.x) >
+           absolute(entity->high->dPosition.y)) {
+    if (entity->high->dPosition.x < 0)
+      entity->high->facingDirection = BITMAP_HERO_LEFT;
     else
-      entity->facingDirection = BITMAP_HERO_RIGHT;
+      entity->high->facingDirection = BITMAP_HERO_RIGHT;
   } else {
-    if (entity->dPosition.y > 0)
-      entity->facingDirection = BITMAP_HERO_BACK;
+    if (entity->high->dPosition.y > 0)
+      entity->high->facingDirection = BITMAP_HERO_BACK;
     else
-      entity->facingDirection = BITMAP_HERO_FRONT;
+      entity->high->facingDirection = BITMAP_HERO_FRONT;
   }
-#else
-  entity->high->position = newPosition;
-#endif
+
+  /* always write back into tile space */
+  entity->dormant->position = PositionMapIntoTilesSpace(
+      state->world->tileMap, &state->cameraPos, entity->high->position);
 }
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
@@ -756,6 +754,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         assert(entityIndex < HANDMADEHERO_ENTITY_TOTAL);
         state->playerIndexForController[controllerIndex] = entityIndex;
         EntityReset(controlledEntity);
+        EntityChangeResidence(state, controlledEntity, ENTITY_RESIDENCE_HIGH);
 
         if (state->followedEntityIndex == 0) {
           state->followedEntityIndex = entityIndex;
@@ -876,17 +875,17 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
         gray = 0.0f;
       }
 
-      struct v2 center = {.x = screenCenter.x /* screen offset */
-                               /* follow camera */
-                               - state->cameraPos.offset_.x * metersToPixels
-                               /* tile offset */
-                               + (f32)relColumn * (f32)tileSideInPixels,
+      struct v2 tileOffset = {
+          .x = (f32)relColumn,
+          .y = (f32)-relRow,
+      };
+      v2_mul_ref(&tileOffset, (f32)tileSideInPixels);
 
-                          .y = screenCenter.y /* screen offset */
-                               /* follow camera */
-                               + state->cameraPos.offset_.y * metersToPixels
-                               /* tile offset */
-                               - (f32)relRow * (f32)tileSideInPixels};
+      struct v2 cameraOffset = state->cameraPos.offset;
+      cameraOffset.y *= -1;
+      v2_mul_ref(&cameraOffset, metersToPixels);
+
+      struct v2 center = v2_add(screenCenter, v2_add(cameraOffset, tileOffset));
 
       struct v2 tileSide = {
           .x = 0.5f * (f32)tileSideInPixels,
