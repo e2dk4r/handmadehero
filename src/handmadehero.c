@@ -798,27 +798,42 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   }
 
   /* sync camera with followed entity */
+  struct v2 entityOffsetPerFrame = {};
   struct entity *followedEntity = EntityGet(state, state->followedEntityIndex);
-#if 0
-  if (followedEntity) {
+  if (followedEntity && followedEntity->residence & ENTITY_RESIDENCE_HIGH) {
+    struct position_tile_map oldCameraPos = state->cameraPos;
+
     state->cameraPos.absTileZ = followedEntity->dormant->position.absTileZ;
 
-    struct position_difference diff = PositionDifference(
-        tileMap, &followedEntity->dormant->position, &state->cameraPos);
-
     f32 maxDiffX = (f32)tilesPerWidth * 0.5f * tileMap->tileSideInMeters;
-    if (diff.dXY.x > maxDiffX)
+    if (followedEntity->high->position.x > maxDiffX)
       state->cameraPos.absTileX += tilesPerWidth;
-    else if (diff.dXY.x < -maxDiffX)
+    else if (followedEntity->high->position.x < -maxDiffX)
       state->cameraPos.absTileX -= tilesPerWidth;
 
     f32 maxDiffY = (f32)tilesPerHeight * 0.5f * tileMap->tileSideInMeters;
-    if (diff.dXY.y > maxDiffY)
+    if (followedEntity->high->position.y > maxDiffY)
       state->cameraPos.absTileY += tilesPerHeight;
-    else if (diff.dXY.y < -maxDiffY)
+    else if (followedEntity->high->position.y < -maxDiffY)
       state->cameraPos.absTileY -= tilesPerHeight;
+
+    struct position_difference diff =
+        PositionDifference(tileMap, &state->cameraPos, &oldCameraPos);
+    /*
+     *  when camera moves,
+     *  negative of camera offset must be applied to entites
+     *  so that they are not moving with camera
+     * ________________ ________________
+     * |              | |              |
+     * |              | |              |
+     * |   x         x| |x'            |
+     * |       c      | |       c'     |
+     * |              | |              |
+     * |              | |              |
+     * |______________| |______________|
+     */
+    entityOffsetPerFrame = v2_neg(diff.dXY);
   }
-#endif
 
   /****************************************************************
    * RENDERING
@@ -900,6 +915,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct entity *entity = &state->entities[entityIndex];
     if (!(entity->residence & ENTITY_RESIDENCE_HIGH))
       continue;
+
+    v2_add_ref(&entity->high->position, entityOffsetPerFrame);
 
     f32 playerR = 1.0f;
     f32 playerG = 1.0f;
