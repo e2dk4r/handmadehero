@@ -566,6 +566,11 @@ static void CameraSet(struct game_state *state,
       PositionDifference(tileMap, newCameraPosition, &state->cameraPos);
   state->cameraPos = *newCameraPosition;
 
+  /* camera size that contains collection high frequency entities */
+  struct rectangle2 cameraBounds = RectCenterDim(
+      (struct v2){0, 0},
+      v2_mul(v2_mul(TilesPerScreenInHalf, tileMap->tileSideInMeters), 3));
+
   struct v2 entityOffsetPerFrame = v2_neg(diff.dXY);
 
   for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
@@ -588,6 +593,11 @@ static void CameraSet(struct game_state *state,
      * |______________| |______________|
      */
     v2_add_ref(&entity->high->position, entityOffsetPerFrame);
+
+    /* check if entity still accessed at a high frequency */
+    if (!RectIsPointInside(cameraBounds, entity->high->position)) {
+      EntityChangeResidence(state, entity, ENTITY_RESIDENCE_LOW);
+    }
   }
 }
 

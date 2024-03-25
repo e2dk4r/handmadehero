@@ -100,4 +100,45 @@ static inline f32 v2_length_square(struct v2 a) {
   return value;
 }
 
+struct rectangle2 {
+  struct v2 min;
+  struct v2 max;
+};
+
+static inline struct rectangle2 RectMinMax(struct v2 min, struct v2 max) {
+  return (struct rectangle2){
+      .min = min,
+      .max = max,
+  };
+}
+
+static inline struct rectangle2 RectMinDim(struct v2 min, struct v2 dim) {
+  return (struct rectangle2){
+      .min = min,
+      .max = v2_add(min, dim),
+  };
+}
+
+static inline struct rectangle2 RectCenterHalfDim(struct v2 center,
+                                                  struct v2 halfDim) {
+  return (struct rectangle2){
+      .min = v2_sub(center, halfDim),
+      .max = v2_add(center, halfDim),
+  };
+}
+
+static inline struct rectangle2 RectCenterDim(struct v2 center, struct v2 dim) {
+  return RectCenterHalfDim(center, v2_mul(dim, 0.5f));
+}
+
+static inline u8 RectIsPointInside(struct rectangle2 rect,
+                                   struct v2 testPoint) {
+  return
+      /* x boundries */
+      testPoint.x >= rect.min.x &&
+      testPoint.x < rect.max.x
+      /* y boundries */
+      && testPoint.y >= rect.min.y && testPoint.y < rect.max.y;
+}
+
 #endif /* HANDMADEHERO_MATH_H */
