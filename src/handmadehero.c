@@ -232,8 +232,7 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
   return result;
 }
 
-static inline struct entity *EntityGet(struct game_state *state, u8 residence,
-                                       u32 index) {
+static inline struct entity *EntityGet(struct game_state *state, u32 index) {
   /* index 0 is reserved for null */
   if (index == 0)
     return 0;
@@ -435,8 +434,7 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
     struct v2 wallNormal = {};
 
     for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
-      struct entity *testEntity =
-          EntityGet(state, ENTITY_RESIDENCE_HIGH, entityIndex);
+      struct entity *testEntity = EntityGet(state, entityIndex);
       assert(testEntity);
 
       if (!(testEntity->residence & ENTITY_RESIDENCE_HIGH))
@@ -742,15 +740,14 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct game_controller_input *controller =
         GetController(input, controllerIndex);
     struct entity *controlledEntity =
-        EntityGet(state, ENTITY_RESIDENCE_HIGH,
-                  state->playerIndexForController[controllerIndex]);
+        EntityGet(state, state->playerIndexForController[controllerIndex]);
 
     /* if there is no entity associated with this controller */
     if (!controlledEntity) {
       /* wait for start button pressed to enable */
       if (controller->start.pressed) {
         u32 entityIndex = EntityAdd(state);
-        controlledEntity = EntityGet(state, ENTITY_RESIDENCE_HIGH, entityIndex);
+        controlledEntity = EntityGet(state, entityIndex);
         assert(entityIndex < HANDMADEHERO_ENTITY_TOTAL);
         state->playerIndexForController[controllerIndex] = entityIndex;
         EntityReset(controlledEntity);
@@ -801,8 +798,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   }
 
   /* sync camera with followed entity */
-  struct entity *followedEntity =
-      EntityGet(state, ENTITY_RESIDENCE_HIGH, state->followedEntityIndex);
+  struct entity *followedEntity = EntityGet(state, state->followedEntityIndex);
 #if 0
   if (followedEntity) {
     state->cameraPos.absTileZ = followedEntity->dormant->position.absTileZ;
