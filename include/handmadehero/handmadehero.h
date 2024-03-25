@@ -37,7 +37,6 @@ struct entity_dormant {
 struct entity_low {};
 
 struct entity_high {
-  u8 exists : 1;
   struct v2 position;
   /* velocity, differencial of position */
   struct v2 dPosition;
