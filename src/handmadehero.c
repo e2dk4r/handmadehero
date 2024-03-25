@@ -794,6 +794,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       }
     }
 
+    if (controller->actionUp.pressed) {
+      controlledEntity->high->dZ = 3.0f;
+    }
+
     PlayerMove(state, controlledEntity, input->dtPerFrame, ddPosition);
   }
 
@@ -922,6 +926,19 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     f32 playerG = 1.0f;
     f32 playerB = 0.0f;
 
+    f32 ddZ = -9.8f;
+    entity->high->z +=
+        /* 1/2 a t² */
+        0.5f * ddZ * square(input->dtPerFrame)
+        /* + v t */
+        + entity->high->dZ * input->dtPerFrame;
+    entity->high->dZ +=
+        /* a t */
+        ddZ * input->dtPerFrame;
+    if (entity->high->z < 0)
+      entity->high->z = 0;
+    f32 z = entity->high->z * metersToPixels;
+
     struct v2 playerScreenPosition = entity->high->position;
     /* screen's coordinate system uses y values inverse,
      * so that means going up in space means negative y values
@@ -930,6 +947,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     v2_mul_ref(&playerScreenPosition, metersToPixels);
 
     struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
+    playerGroundPoint.y -= z;
 
     struct v2 playerWidthHeight = (struct v2){
         .x = entity->dormant->width,

@@ -43,6 +43,8 @@ struct entity_high {
   struct v2 dPosition;
   u32 absTileZ;
   u8 facingDirection;
+  f32 z;
+  f32 dZ;
 };
 
 struct entity {
