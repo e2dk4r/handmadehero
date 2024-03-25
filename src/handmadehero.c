@@ -477,9 +477,9 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
    * COLLUSION DETECTION
    *****************************************************************/
   struct entity *hitEntity = 0;
-  f32 tRemaining = 1.0f;
-  for (u32 iteration = 0; iteration < 4 && tRemaining > 0.0f; iteration++) {
-    f32 tMin = tRemaining;
+  struct v2 desiredPosition = v2_add(entity->high->position, deltaPosition);
+  for (u32 iteration = 0; iteration < 4; iteration++) {
+    f32 tMin = 1.0f;
     struct v2 wallNormal = {};
 
     for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
@@ -551,6 +551,26 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
           )
       );
 
+      /*
+       *    wall
+       *      |    p
+       *      |  /
+       *      |/
+       *     /||
+       *   /  ||
+       * d    |▼ p'
+       *      ||
+       *      ||
+       *      |▼ w
+       *      |
+       *  p  = starting point
+       *  d  = desired point
+       *  p' = dot product with normal clipped vector
+       *  w  = not clipped vector
+       *
+       *  clip the delta position by gone amount
+       */
+      deltaPosition = v2_sub(desiredPosition, entity->high->position);
       v2_sub_ref(&deltaPosition,
           /* pTr r */
           v2_mul(
@@ -563,9 +583,9 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
 
       // clang-format on
       entity->high->absTileZ += entity->dormant->dAbsTileZ;
+    } else {
+      break;
     }
-
-    tRemaining -= tMin * tRemaining;
   }
 
   /*****************************************************************
