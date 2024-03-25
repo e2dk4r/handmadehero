@@ -72,6 +72,7 @@ struct game_state {
   u32 playerIndexForController[HANDMADEHERO_CONTROLLER_COUNT];
 
   struct bitmap bitmapBackground;
+  struct bitmap bitmapShadow;
 
 #define BITMAP_HERO_FRONT 3
 #define BITMAP_HERO_BACK 1

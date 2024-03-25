@@ -47,10 +47,9 @@ static void DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min,
     row += backbuffer->stride;
   }
 }
-
-static void DrawBitmap(struct bitmap *bitmap,
-                       struct game_backbuffer *backbuffer, struct v2 pos,
-                       i32 alignX, i32 alignY) {
+static void DrawBitmap2(struct bitmap *bitmap,
+                        struct game_backbuffer *backbuffer, struct v2 pos,
+                        i32 alignX, i32 alignY, f32 cAlpha) {
   v2_sub_ref(&pos, (struct v2){
                        .x = (f32)alignX,
                        .y = (f32)alignY,
@@ -98,6 +97,8 @@ static void DrawBitmap(struct bitmap *bitmap,
     for (i32 x = minX; x < maxX; x++) {
       // source channels
       f32 a = (f32)((*src >> 24) & 0xff) / 255.0f;
+      a *= cAlpha;
+
       f32 sR = (f32)((*src >> 16) & 0xff);
       f32 sG = (f32)((*src >> 8) & 0xff);
       f32 sB = (f32)((*src >> 0) & 0xff);
@@ -144,6 +145,12 @@ static void DrawBitmap(struct bitmap *bitmap,
     /* bitmap file pixels goes bottom to up */
     srcRow -= bitmap->width;
   }
+}
+
+static void DrawBitmap(struct bitmap *bitmap,
+                       struct game_backbuffer *backbuffer, struct v2 pos,
+                       i32 alignX, i32 alignY) {
+  DrawBitmap2(bitmap, backbuffer, pos, alignX, alignY, 1.0f);
 }
 
 #define BITMAP_COMPRESSION_RGB 0
@@ -557,6 +564,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     state->bitmapBackground =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
 
+    /* load shadow */
+    state->bitmapShadow =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_shadow.bmp");
+
     /* load hero bitmaps */
     struct bitmap_hero *bitmapHero = &state->bitmapHero[BITMAP_HERO_FRONT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile,
@@ -939,6 +950,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       entity->high->z = 0;
     f32 z = entity->high->z * metersToPixels;
 
+    f32 cAlphaShadow = 1.0f - entity->high->z;
+    if (cAlphaShadow < 0.0f)
+      cAlphaShadow = 0.0f;
+
     struct v2 playerScreenPosition = entity->high->position;
     /* screen's coordinate system uses y values inverse,
      * so that means going up in space means negative y values
@@ -947,24 +962,24 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     v2_mul_ref(&playerScreenPosition, metersToPixels);
 
     struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
-    playerGroundPoint.y -= z;
 
-    struct v2 playerWidthHeight = (struct v2){
-        .x = entity->dormant->width,
-        .y = entity->dormant->height,
-    };
-    v2_mul_ref(&playerWidthHeight, metersToPixels);
+    // struct v2 playerWidthHeight = (struct v2){
+    //     .x = entity->dormant->width,
+    //     .y = entity->dormant->height,
+    // };
+    // v2_mul_ref(&playerWidthHeight, metersToPixels);
 
-    struct v2 playerLeftTop =
-        v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));
-    struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
-
-    DrawRectangle(backbuffer, playerLeftTop, playerRightBottom,
-                  /* color */
-                  playerR, playerG, playerB);
+    // struct v2 playerLeftTop =
+    //     v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));
+    // struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
 
     struct bitmap_hero *bitmap =
         &state->bitmapHero[entity->high->facingDirection];
+
+    DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
+                bitmap->alignX, bitmap->alignY, cAlphaShadow);
+    playerGroundPoint.y -= z;
+
     DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
                bitmap->alignY);
     DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->alignX,
