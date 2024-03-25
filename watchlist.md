@@ -196,7 +196,7 @@
 - [x] Handmade Hero Day 052 - Entity Movement in Camera Space
       https://www.youtube.com/watch?v=TfZUAFh-WJg
 
-- [ ] Handmade Hero Day 053 - Environment Elements as Entities
+- [x] Handmade Hero Day 053 - Environment Elements as Entities
       https://www.youtube.com/watch?v=KAZrNrcgrRc
 
 - [ ] Handmade Hero Day 054 - Removing the Dormant Entity Concept
