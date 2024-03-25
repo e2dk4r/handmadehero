@@ -302,7 +302,7 @@ static inline void EntityChangeResidence(struct game_state *state,
   entity->residence = residence;
 }
 
-static inline void EntityReset(struct entity *entity) {
+static inline void EntityPlayerReset(struct entity *entity) {
   assert(entity);
 
   /* set initial player position */
@@ -317,6 +317,39 @@ static inline void EntityReset(struct entity *entity) {
   /* set player size */
   entity->dormant->height = 0.5f;
   entity->dormant->width = 1.0f;
+}
+
+static inline u32 EntityPlayerAdd(struct game_state *state) {
+  u32 entityIndex = EntityAdd(state);
+  struct entity *entity = EntityGet(state, entityIndex);
+  assert(entity);
+  EntityPlayerReset(entity);
+  EntityChangeResidence(state, entity, ENTITY_RESIDENCE_HIGH);
+
+  if (/* if followed entity, does not exits */
+      state->followedEntityIndex == 0
+      /* or if followed entity, became non existent */
+      || EntityGet(state, state->followedEntityIndex)->residence ==
+             ENTITY_RESIDENCE_NONEXISTENT) {
+    state->followedEntityIndex = entityIndex;
+  }
+  return entityIndex;
+}
+
+static inline u32 EntityWallAdd(struct game_state *state, u32 absTileX,
+                                u32 absTileY, u32 absTileZ) {
+  u32 entityIndex = EntityAdd(state);
+  struct entity *entity = EntityGet(state, entityIndex);
+  assert(entity);
+
+  struct tile_map *tileMap = state->world->tileMap;
+  entity->dormant->position.absTileX = absTileX;
+  entity->dormant->position.absTileY = absTileY;
+  entity->dormant->height = tileMap->tileSideInMeters;
+  entity->dormant->width = tileMap->tileSideInMeters;
+  EntityChangeResidence(state, entity, ENTITY_RESIDENCE_HIGH);
+
+  return entityIndex;
 }
 
 static u8 WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX,
@@ -754,6 +787,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
           TileSetValue(&state->worldArena, tileMap, absTileX, absTileY,
                        absTileZ, value);
+
+          if (value & TILE_BLOCKED) {
+            EntityWallAdd(state, absTileX, absTileY, absTileZ);
+          }
         }
       }
 
@@ -805,16 +842,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     if (!controlledEntity) {
       /* wait for start button pressed to enable */
       if (controller->start.pressed) {
-        u32 entityIndex = EntityAdd(state);
-        controlledEntity = EntityGet(state, entityIndex);
-        assert(entityIndex < HANDMADEHERO_ENTITY_TOTAL);
+        u32 entityIndex = EntityPlayerAdd(state);
         state->playerIndexForController[controllerIndex] = entityIndex;
-        EntityReset(controlledEntity);
-        EntityChangeResidence(state, controlledEntity, ENTITY_RESIDENCE_HIGH);
-
-        if (state->followedEntityIndex == 0) {
-          state->followedEntityIndex = entityIndex;
-        }
       }
       continue;
     }
