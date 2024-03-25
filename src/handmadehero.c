@@ -264,7 +264,7 @@ static inline struct entity *EntityGet(struct game_state *state, u32 index) {
   return entity;
 }
 
-static inline u32 EntityAdd(struct game_state *state) {
+static inline u32 EntityAdd(struct game_state *state, u8 type) {
   u32 entityIndex = state->entityCount;
   assert(entityIndex < HANDMADEHERO_ENTITY_TOTAL);
 
@@ -275,6 +275,7 @@ static inline u32 EntityAdd(struct game_state *state) {
   state->entities[entityIndex] = (struct entity){
       .collides = 1,
   };
+  state->entityDormants[entityIndex].type = type;
 
   state->entityCount++;
 
@@ -320,7 +321,7 @@ static inline void EntityPlayerReset(struct entity *entity) {
 }
 
 static inline u32 EntityPlayerAdd(struct game_state *state) {
-  u32 entityIndex = EntityAdd(state);
+  u32 entityIndex = EntityAdd(state, ENTITY_TYPE_HERO);
   struct entity *entity = EntityGet(state, entityIndex);
   assert(entity);
   EntityPlayerReset(entity);
@@ -338,7 +339,7 @@ static inline u32 EntityPlayerAdd(struct game_state *state) {
 
 static inline u32 EntityWallAdd(struct game_state *state, u32 absTileX,
                                 u32 absTileY, u32 absTileZ) {
-  u32 entityIndex = EntityAdd(state);
+  u32 entityIndex = EntityAdd(state, ENTITY_TYPE_WALL);
   struct entity *entity = EntityGet(state, entityIndex);
   assert(entity);
 
@@ -347,7 +348,7 @@ static inline u32 EntityWallAdd(struct game_state *state, u32 absTileX,
   entity->dormant->position.absTileY = absTileY;
   entity->dormant->height = tileMap->tileSideInMeters;
   entity->dormant->width = tileMap->tileSideInMeters;
-  EntityChangeResidence(state, entity, ENTITY_RESIDENCE_HIGH);
+  EntityChangeResidence(state, entity, ENTITY_RESIDENCE_DORMANT);
 
   return entityIndex;
 }
@@ -608,7 +609,7 @@ static void CameraSet(struct game_state *state,
 
   for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
     struct entity *entity = state->entities + entityIndex;
-    if (!(entity->residence & ENTITY_RESIDENCE_HIGH))
+    if (entity->residence == ENTITY_RESIDENCE_NONEXISTENT)
       continue;
 
     /*
@@ -629,7 +630,11 @@ static void CameraSet(struct game_state *state,
 
     /* check if entity still accessed at a high frequency */
     if (!RectIsPointInside(cameraBounds, entity->high->position)) {
+      /* transion from high to low */
       EntityChangeResidence(state, entity, ENTITY_RESIDENCE_LOW);
+    } else {
+      /* transion from dormant or low to high */
+      EntityChangeResidence(state, entity, ENTITY_RESIDENCE_HIGH);
     }
   }
 }
@@ -695,7 +700,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     state->cameraPos.absTileY = TILES_PER_HEIGHT / 2;
 
     /* use entity with 0 index as null */
-    EntityAdd(state);
+    EntityAdd(state, ENTITY_TYPE_INVALID);
 
     /* world creation */
     void *data = memory->permanentStorage + sizeof(*state);
@@ -990,6 +995,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
     struct entity *entity = &state->entities[entityIndex];
     if (!(entity->residence & ENTITY_RESIDENCE_HIGH))
+      continue;
+
+    if (!(entity->dormant->type & ENTITY_TYPE_HERO))
       continue;
 
     f32 playerR = 1.0f;

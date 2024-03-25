@@ -28,7 +28,12 @@ struct bitmap_hero {
 #define ENTITY_RESIDENCE_LOW 1 << 1
 #define ENTITY_RESIDENCE_HIGH 1 << 2
 
+#define ENTITY_TYPE_INVALID 0
+#define ENTITY_TYPE_HERO 1 << 0
+#define ENTITY_TYPE_WALL 1 << 2
+
 struct entity_dormant {
+  u8 type;
   f32 width;
   f32 height;
   struct position_tile_map position;
