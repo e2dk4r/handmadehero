@@ -1,9 +1,9 @@
 #ifndef HANDMADEHERO_TILE_H
 #define HANDMADEHERO_TILE_H
 
+#include "math.h"
 #include "memory_arena.h"
 #include "types.h"
-#include "math.h"
 
 #define TILE_INVALID 0
 #define TILE_WALKABLE (1 << 0)
