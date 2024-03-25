@@ -193,7 +193,7 @@
 - [x] Handmade Hero Day 051 - Separating Entities By Update Frequency
       https://www.youtube.com/watch?v=RQUP4ql86k0
 
-- [ ] Handmade Hero Day 052 - Entity Movement in Camera Space
+- [x] Handmade Hero Day 052 - Entity Movement in Camera Space
       https://www.youtube.com/watch?v=TfZUAFh-WJg
 
 - [ ] Handmade Hero Day 053 - Environment Elements as Entities
