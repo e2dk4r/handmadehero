@@ -740,10 +740,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     u8 isDoorUp = 0;
     u8 isDoorDown = 0;
 
-    for (u32 screenIndex = 0; screenIndex < 1; screenIndex++) {
+    for (u32 screenIndex = 0; screenIndex < 2; screenIndex++) {
       u32 randomValue;
 
-      if (isDoorUp || isDoorDown)
+      if (1) // (isDoorUp || isDoorDown)
         randomValue = RandomNumber() % 2;
       else
         randomValue = RandomNumber() % 3;
@@ -931,6 +931,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       .y = 0.5f * (f32)backbuffer->height,
   };
 
+#if 0
   /* render tiles relative to camera position */
   for (i32 relRow = -10; relRow < 10; relRow++) {
     for (i32 relColumn = -20; relColumn < 20; relColumn++) {
@@ -990,14 +991,12 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       DrawRectangle(backbuffer, min, max, gray, gray, gray);
     }
   }
+#endif
 
   /* render entities */
   for (u32 entityIndex = 1; entityIndex < state->entityCount; entityIndex++) {
     struct entity *entity = &state->entities[entityIndex];
     if (!(entity->residence & ENTITY_RESIDENCE_HIGH))
-      continue;
-
-    if (!(entity->dormant->type & ENTITY_TYPE_HERO))
       continue;
 
     f32 playerR = 1.0f;
@@ -1030,28 +1029,33 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
     struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
 
-    // struct v2 playerWidthHeight = (struct v2){
-    //     .x = entity->dormant->width,
-    //     .y = entity->dormant->height,
-    // };
-    // v2_mul_ref(&playerWidthHeight, metersToPixels);
+    if (entity->dormant->type & ENTITY_TYPE_HERO) {
+      struct bitmap_hero *bitmap =
+          &state->bitmapHero[entity->high->facingDirection];
 
-    // struct v2 playerLeftTop =
-    //     v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));
-    // struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
+      DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
+                  bitmap->alignX, bitmap->alignY, cAlphaShadow);
+      playerGroundPoint.y -= z;
 
-    struct bitmap_hero *bitmap =
-        &state->bitmapHero[entity->high->facingDirection];
+      DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
+                 bitmap->alignY);
+      DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->alignX,
+                 bitmap->alignY);
+      DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
+                 bitmap->alignY);
+    } else {
+      struct v2 playerWidthHeight = (struct v2){
+          .x = entity->dormant->width,
+          .y = entity->dormant->height,
+      };
+      v2_mul_ref(&playerWidthHeight, metersToPixels);
 
-    DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
-                bitmap->alignX, bitmap->alignY, cAlphaShadow);
-    playerGroundPoint.y -= z;
-
-    DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
-               bitmap->alignY);
-    DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->alignX,
-               bitmap->alignY);
-    DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
-               bitmap->alignY);
+      struct v2 playerLeftTop =
+          v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));
+      struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
+      DrawRectangle(backbuffer, playerLeftTop, playerRightBottom,
+                    /* colors */
+                    playerR, playerG, playerB);
+    }
   }
 }
