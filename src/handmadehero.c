@@ -901,17 +901,25 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
     newCameraPosition.absTileZ = followedEntity->dormant->position.absTileZ;
 
-    f32 maxDiffX = (f32)TILES_PER_WIDTH * 0.5f * tileMap->tileSideInMeters;
-    if (followedEntity->high->position.x > maxDiffX)
-      newCameraPosition.absTileX += TILES_PER_WIDTH;
-    else if (followedEntity->high->position.x < -maxDiffX)
-      newCameraPosition.absTileX -= TILES_PER_WIDTH;
+#if 1
+    const u32 scrollWidth = TILES_PER_WIDTH;
+    const u32 scrollHeight = TILES_PER_HEIGHT;
+#else
+    const u32 scrollWidth = 1;
+    const u32 scrollHeight = 1;
+#endif
 
-    f32 maxDiffY = (f32)TILES_PER_HEIGHT * 0.5f * tileMap->tileSideInMeters;
+    f32 maxDiffX = (f32)scrollWidth * 0.5f * tileMap->tileSideInMeters;
+    if (followedEntity->high->position.x > maxDiffX)
+      newCameraPosition.absTileX += scrollWidth;
+    else if (followedEntity->high->position.x < -maxDiffX)
+      newCameraPosition.absTileX -= scrollWidth;
+
+    f32 maxDiffY = (f32)scrollHeight * 0.5f * tileMap->tileSideInMeters;
     if (followedEntity->high->position.y > maxDiffY)
-      newCameraPosition.absTileY += TILES_PER_HEIGHT;
+      newCameraPosition.absTileY += scrollHeight;
     else if (followedEntity->high->position.y < -maxDiffY)
-      newCameraPosition.absTileY -= TILES_PER_HEIGHT;
+      newCameraPosition.absTileY -= scrollHeight;
 
     CameraSet(state, &newCameraPosition);
   }
