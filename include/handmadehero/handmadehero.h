@@ -24,7 +24,6 @@ struct bitmap_hero {
 };
 
 #define ENTITY_RESIDENCE_NONEXISTENT 0
-#define ENTITY_RESIDENCE_DORMANT 1 << 0
 #define ENTITY_RESIDENCE_LOW 1 << 1
 #define ENTITY_RESIDENCE_HIGH 1 << 2
 
@@ -32,15 +31,13 @@ struct bitmap_hero {
 #define ENTITY_TYPE_HERO 1 << 0
 #define ENTITY_TYPE_WALL 1 << 2
 
-struct entity_dormant {
+struct entity_low {
   u8 type;
   f32 width;
   f32 height;
   struct position_tile_map position;
   u32 dAbsTileZ;
 };
-
-struct entity_low {};
 
 struct entity_high {
   struct v2 position;
@@ -55,7 +52,6 @@ struct entity_high {
 struct entity {
   u8 collides : 1;
   u8 residence;
-  struct entity_dormant *dormant;
   struct entity_low *low;
   struct entity_high *high;
 };
@@ -70,7 +66,6 @@ struct game_state {
 #define HANDMADEHERO_ENTITY_TOTAL 256
   struct entity entities[HANDMADEHERO_ENTITY_TOTAL];
   u8 entityResidences[HANDMADEHERO_ENTITY_TOTAL];
-  struct entity_dormant entityDormants[HANDMADEHERO_ENTITY_TOTAL];
   struct entity_low entityLows[HANDMADEHERO_ENTITY_TOTAL];
   struct entity_high entityHighs[HANDMADEHERO_ENTITY_TOTAL];
   u32 entityCount;

@@ -257,7 +257,6 @@ static inline struct entity *EntityGet(struct game_state *state, u32 index) {
 
   struct entity *entity = &state->entities[index];
 
-  entity->dormant = &state->entityDormants[index];
   entity->low = &state->entityLows[index];
   entity->high = &state->entityHighs[index];
 
@@ -268,14 +267,13 @@ static inline u32 EntityAdd(struct game_state *state, u8 type) {
   u32 entityIndex = state->entityCount;
   assert(entityIndex < HANDMADEHERO_ENTITY_TOTAL);
 
-  state->entityResidences[entityIndex] = ENTITY_RESIDENCE_DORMANT;
+  state->entityResidences[entityIndex] = ENTITY_RESIDENCE_LOW;
   state->entityHighs[entityIndex] = (struct entity_high){};
   state->entityLows[entityIndex] = (struct entity_low){};
-  state->entityDormants[entityIndex] = (struct entity_dormant){};
   state->entities[entityIndex] = (struct entity){
       .collides = 1,
   };
-  state->entityDormants[entityIndex].type = type;
+  state->entityLows[entityIndex].type = type;
 
   state->entityCount++;
 
@@ -291,11 +289,11 @@ static inline void EntityChangeResidence(struct game_state *state,
        */
 
       struct position_difference diff = PositionDifference(
-          state->world->tileMap, &entity->dormant->position, &state->cameraPos);
+          state->world->tileMap, &entity->low->position, &state->cameraPos);
 
       entity->high->position = diff.dXY;
       entity->high->dPosition = (struct v2){0, 0};
-      entity->high->absTileZ = entity->dormant->position.absTileZ;
+      entity->high->absTileZ = entity->low->position.absTileZ;
       entity->high->facingDirection = 0;
     }
   }
@@ -307,17 +305,17 @@ static inline void EntityPlayerReset(struct entity *entity) {
   assert(entity);
 
   /* set initial player position */
-  entity->dormant->position.absTileX = 1;
-  entity->dormant->position.absTileY = 3;
-  entity->dormant->position.offset = (struct v2){.x = 0.0f, .y = 0.0f};
+  entity->low->position.absTileX = 1;
+  entity->low->position.absTileY = 3;
+  entity->low->position.offset = (struct v2){.x = 0.0f, .y = 0.0f};
 
   /* set initial player velocity */
   entity->high->dPosition.x = 0;
   entity->high->dPosition.y = 0;
 
   /* set player size */
-  entity->dormant->height = 0.5f;
-  entity->dormant->width = 1.0f;
+  entity->low->height = 0.5f;
+  entity->low->width = 1.0f;
 }
 
 static inline u32 EntityPlayerAdd(struct game_state *state) {
@@ -344,11 +342,11 @@ static inline u32 EntityWallAdd(struct game_state *state, u32 absTileX,
   assert(entity);
 
   struct tile_map *tileMap = state->world->tileMap;
-  entity->dormant->position.absTileX = absTileX;
-  entity->dormant->position.absTileY = absTileY;
-  entity->dormant->height = tileMap->tileSideInMeters;
-  entity->dormant->width = tileMap->tileSideInMeters;
-  EntityChangeResidence(state, entity, ENTITY_RESIDENCE_DORMANT);
+  entity->low->position.absTileX = absTileX;
+  entity->low->position.absTileY = absTileY;
+  entity->low->height = tileMap->tileSideInMeters;
+  entity->low->width = tileMap->tileSideInMeters;
+  EntityChangeResidence(state, entity, ENTITY_RESIDENCE_LOW);
 
   return entityIndex;
 }
@@ -493,8 +491,8 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
         continue;
 
       struct v2 diameter = {
-          .x = testEntity->dormant->width + entity->dormant->width,
-          .y = testEntity->dormant->height + entity->dormant->height,
+          .x = testEntity->low->width + entity->low->width,
+          .y = testEntity->low->height + entity->low->height,
       };
 
       struct v2 minCorner = v2_mul(diameter, -0.5f);
@@ -582,7 +580,7 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
       );
 
       // clang-format on
-      entity->high->absTileZ += hitEntity->dormant->dAbsTileZ;
+      entity->high->absTileZ += hitEntity->low->dAbsTileZ;
     } else {
       break;
     }
@@ -609,7 +607,7 @@ static void PlayerMove(struct game_state *state, struct entity *entity, f32 dt,
   }
 
   /* always write back into tile space */
-  entity->dormant->position = PositionMapIntoTilesSpace(
+  entity->low->position = PositionMapIntoTilesSpace(
       state->world->tileMap, &state->cameraPos, entity->high->position);
 }
 
@@ -676,13 +674,13 @@ static void CameraSet(struct game_state *state,
       continue;
 
     if (/* z axis */
-        entity->dormant->position.absTileZ == newCameraPosition->absTileZ &&
+        entity->low->position.absTileZ == newCameraPosition->absTileZ &&
         /* x axis */
-        entity->dormant->position.absTileX >= minTileX &&
-        entity->dormant->position.absTileX <= maxTileX &&
+        entity->low->position.absTileX >= minTileX &&
+        entity->low->position.absTileX <= maxTileX &&
         /* y axis */
-        entity->dormant->position.absTileY >= minTileY &&
-        entity->dormant->position.absTileY <= maxTileY) {
+        entity->low->position.absTileY >= minTileY &&
+        entity->low->position.absTileY <= maxTileY) {
 
       EntityChangeResidence(state, entity, ENTITY_RESIDENCE_HIGH);
     }
@@ -953,7 +951,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   if (followedEntity && followedEntity->residence & ENTITY_RESIDENCE_HIGH) {
     struct position_tile_map newCameraPosition = state->cameraPos;
 
-    newCameraPosition.absTileZ = followedEntity->dormant->position.absTileZ;
+    newCameraPosition.absTileZ = followedEntity->low->position.absTileZ;
 
 #if 1
     const u32 scrollWidth = TILES_PER_WIDTH;
@@ -1091,7 +1089,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
     struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
 
-    if (entity->dormant->type & ENTITY_TYPE_HERO) {
+    if (entity->low->type & ENTITY_TYPE_HERO) {
       struct bitmap_hero *bitmap =
           &state->bitmapHero[entity->high->facingDirection];
 
@@ -1107,8 +1105,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                  bitmap->alignY);
     } else {
       struct v2 playerWidthHeight = (struct v2){
-          .x = entity->dormant->width,
-          .y = entity->dormant->height,
+          .x = entity->low->width,
+          .y = entity->low->height,
       };
       v2_mul_ref(&playerWidthHeight, metersToPixels);
 
