@@ -199,7 +199,7 @@
 - [x] Handmade Hero Day 053 - Environment Elements as Entities
       https://www.youtube.com/watch?v=KAZrNrcgrRc
 
-- [ ] Handmade Hero Day 054 - Removing the Dormant Entity Concept
+- [x] Handmade Hero Day 054 - Removing the Dormant Entity Concept
       https://www.youtube.com/watch?v=yqM04duWiiU
 
 - [ ] Handmade Hero Day 055 - Hash-based World Storage
