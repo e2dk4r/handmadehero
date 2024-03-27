@@ -6,4 +6,6 @@
     __builtin_trap();                                                          \
   }
 
+#define InvalidCodePath __builtin_trap()
+
 #endif /* HANDMADEHERO_ASSERT_H */

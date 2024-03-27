@@ -23,20 +23,18 @@ struct bitmap_hero {
   struct bitmap cape;
 };
 
-#define ENTITY_RESIDENCE_NONEXISTENT 0
-#define ENTITY_RESIDENCE_LOW 1 << 1
-#define ENTITY_RESIDENCE_HIGH 1 << 2
-
 #define ENTITY_TYPE_INVALID 0
 #define ENTITY_TYPE_HERO 1 << 0
 #define ENTITY_TYPE_WALL 1 << 2
 
 struct entity_low {
+  u8 collides : 1;
   u8 type;
   f32 width;
   f32 height;
   struct position_tile_map position;
   u32 dAbsTileZ;
+  u32 highIndex;
 };
 
 struct entity_high {
@@ -47,11 +45,11 @@ struct entity_high {
   u8 facingDirection;
   f32 z;
   f32 dZ;
+
+  u32 lowIndex;
 };
 
 struct entity {
-  u8 collides : 1;
-  u8 residence;
   struct entity_low *low;
   struct entity_high *high;
 };
@@ -63,12 +61,13 @@ struct game_state {
   u32 followedEntityIndex;
   struct position_tile_map cameraPos;
 
-#define HANDMADEHERO_ENTITY_TOTAL 256
-  struct entity entities[HANDMADEHERO_ENTITY_TOTAL];
-  u8 entityResidences[HANDMADEHERO_ENTITY_TOTAL];
-  struct entity_low entityLows[HANDMADEHERO_ENTITY_TOTAL];
-  struct entity_high entityHighs[HANDMADEHERO_ENTITY_TOTAL];
-  u32 entityCount;
+#define HANDMADEHERO_ENTITY_HIGH_TOTAL 256
+#define HANDMADEHERO_ENTITY_LOW_TOTAL 4096
+  u32 entityLowCount;
+  struct entity_low entityLows[HANDMADEHERO_ENTITY_HIGH_TOTAL];
+  u32 entityHighCount;
+  struct entity_high entityHighs[HANDMADEHERO_ENTITY_LOW_TOTAL];
+
   u32 playerIndexForController[HANDMADEHERO_CONTROLLER_COUNT];
 
   struct bitmap bitmapBackground;
