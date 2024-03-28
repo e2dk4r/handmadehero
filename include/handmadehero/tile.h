@@ -28,10 +28,6 @@ struct tile_map {
   u32 chunkMask;
   u32 chunkDim;
 
-  u32 tileChunkCountX;
-  u32 tileChunkCountY;
-  u32 tileChunkCountZ;
-
 #define TILE_CHUNK_TOTAL 4096
   struct tile_chunk tileChunks[TILE_CHUNK_TOTAL];
 };
