@@ -202,7 +202,7 @@
 - [x] Handmade Hero Day 054 - Removing the Dormant Entity Concept
       https://www.youtube.com/watch?v=yqM04duWiiU
 
-- [ ] Handmade Hero Day 055 - Hash-based World Storage
+- [x] Handmade Hero Day 055 - Hash-based World Storage
       https://www.youtube.com/watch?v=WyXBawK1jpE
 
 - [ ] Handmade Hero Day 056 - Switching from Tiles to Entities
