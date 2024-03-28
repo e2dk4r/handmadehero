@@ -13,6 +13,12 @@
 
 struct tile_chunk {
   u32 *tiles;
+
+  u32 tileChunkX;
+  u32 tileChunkY;
+  u32 tileChunkZ;
+
+  struct tile_chunk *next;
 };
 
 struct tile_map {
@@ -25,7 +31,9 @@ struct tile_map {
   u32 tileChunkCountX;
   u32 tileChunkCountY;
   u32 tileChunkCountZ;
-  struct tile_chunk *tileChunks;
+
+#define TILE_CHUNK_TOTAL 4096
+  struct tile_chunk tileChunks[TILE_CHUNK_TOTAL];
 };
 
 struct position_tile_map {
@@ -54,6 +62,7 @@ struct position_difference {
   f32 dZ;
 };
 
+void TileMapInit(struct tile_map *tileMap, f32 tileSideInMeters);
 struct position_difference PositionDifference(struct tile_map *tileMap,
                                               struct position_tile_map *a,
                                               struct position_tile_map *b);
