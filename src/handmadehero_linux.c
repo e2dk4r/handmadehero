@@ -906,12 +906,18 @@ comptime struct wl_registry_listener registry_listener = {
 
 #define OP_WAYLAND (1 << 0)
 #define OP_INOTIFY_WATCH (1 << 1)
-#define OP_JOYSTICK_POLL (1 << 2)
-#define OP_JOYSTICK_READ (1 << 3)
+#define OP_DEVICE_OPEN (1 << 2)
+#define OP_JOYSTICK_POLL (1 << 3)
+#define OP_JOYSTICK_READ (1 << 4)
 
 struct op {
   u8 type;
   int fd;
+};
+
+struct op_device_open {
+  u8 type;
+  const char *path;
 };
 
 struct op_joystick_read {
@@ -1247,8 +1253,10 @@ int main(int argc, char *argv[]) {
     }
 
     struct op *op = io_uring_cqe_get_data(cqe);
-    if (op == 0)
+    if (op == 0) {
+      wl_display_cancel_read(wl_display);
       goto cqe_seen;
+    }
 
     /* on wayland events */
     if (op->type & OP_WAYLAND) {
@@ -1278,9 +1286,16 @@ int main(int argc, char *argv[]) {
         break;
       }
 
-      /* note: reading one inotify_event (16 bytes) fails */
-      u8 buf[32];
-      ssize_t readBytes = read(op->fd, buf, sizeof(buf));
+      /*
+       * get the number of bytes available to read from an
+       * inotify file descriptor.
+       * see: inotify(7)
+       */
+      u32 bufsz;
+      ioctl(op->fd, FIONREAD, &bufsz);
+
+      u8 buf[bufsz];
+      ssize_t readBytes = read(op->fd, buf, bufsz);
       if (readBytes < 0) {
         goto cqe_seen;
       }
@@ -1288,12 +1303,6 @@ int main(int argc, char *argv[]) {
       struct inotify_event *event = (struct inotify_event *)buf;
       if (event->len <= 0)
         goto cqe_seen;
-
-      u8 action = 0;
-      if (event->mask & IN_CREATE)
-        action = ACTION_ADD;
-      else if (event->mask & IN_DELETE)
-        action = ACTION_REMOVE;
 
       if (event->mask & IN_ISDIR)
         goto cqe_seen;
@@ -1304,49 +1313,54 @@ int main(int argc, char *argv[]) {
         *dest = *src;
       }
 
-      if (action & ACTION_REMOVE)
+      if (event->mask & IN_DELETE)
         goto cqe_seen;
 
+      struct op_device_open *op = &(struct op_device_open){
+          .type = OP_DEVICE_OPEN,
+          .path = path,
+      };
+
+      /* wait for device initialization */
+      sqe = io_uring_get_sqe(&ring);
+      struct __kernel_timespec *ts = &(struct __kernel_timespec){
+          .tv_nsec = 75000000, /* 750ms */
+      };
+      io_uring_prep_timeout(sqe, ts, 0, 0);
+      io_uring_sqe_set_data(sqe, op);
+      io_uring_submit(&ring);
+    }
+
+    /* on device open events */
+    else if (op->type & OP_DEVICE_OPEN) {
+      wl_display_cancel_read(wl_display);
+
+      if (cqe->res < 0 && cqe->res != -ETIME) {
+        debug("waiting for device initialiation failed\n");
+        goto cqe_seen;
+      }
+      struct op_device_open *currentOp = (struct op_device_open *)op;
       struct op_joystick_read *op = &(struct op_joystick_read){
           .type = OP_JOYSTICK_READ,
       };
 
-      /* try loop for opening file until is ready.
-       *
-       * if we try to open file that is not ready,
-       * we get errno 13 EACCESS.
-       */
-      u32 try = 1 << 17;
-      while (1) {
-        if (try == 0) {
-          debug("open failed\n");
-          goto cqe_seen;
-        }
-
-        op->fd = open(path, O_RDONLY | O_NONBLOCK);
-        if (op->fd >= 0) {
-          break;
-        }
-
-        try--;
+      op->fd = open(currentOp->path, O_RDONLY | O_NONBLOCK);
+      if (op->fd < 0) {
+        debug("opening device failed\n");
+        goto cqe_seen;
       }
 
       struct libevdev *evdev;
       int rc = libevdev_new_from_fd(op->fd, &evdev);
       if (rc < 0) {
         debug("libevdev failed\n");
-        close(op->fd);
-        if (evdev)
-          libevdev_free(evdev);
-        goto cqe_seen;
+        goto error;
       }
 
       /* detect joystick */
       if (!libevdev_is_joystick(evdev)) {
         debug("This device does not look like a joystick\n");
-        close(op->fd);
-        libevdev_free(evdev);
-        goto cqe_seen;
+        goto error;
       }
 
       debugf("Input device name: \"%s\"\n", libevdev_get_name(evdev));
@@ -1360,6 +1374,15 @@ int main(int argc, char *argv[]) {
       io_uring_submit(&ring);
 
       libevdev_free(evdev);
+      goto cqe_seen;
+
+    error:
+      if (evdev)
+        libevdev_free(evdev);
+      sqe = io_uring_get_sqe(&ring);
+      io_uring_prep_close(sqe, op->fd);
+      io_uring_sqe_set_data(sqe, 0);
+      io_uring_submit(&ring);
     }
 
     /* on joystick events */
@@ -1368,8 +1391,10 @@ int main(int argc, char *argv[]) {
       /* on joystick read error (eg. joystick removed), close the fd */
       if (cqe->res < 0) {
         /* TODO: when joystick disconnected reset controller */
-        if (op->fd >= 0)
-          close(op->fd);
+        sqe = io_uring_get_sqe(&ring);
+        io_uring_prep_close(sqe, op->fd);
+        io_uring_sqe_set_data(sqe, 0);
+        io_uring_submit(&ring);
         goto cqe_seen;
       }
 
