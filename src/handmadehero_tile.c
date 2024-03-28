@@ -52,8 +52,8 @@ WorldGetTileChunk(struct tile_map *tileMap, u32 tileChunkX, u32 tileChunkY,
      */
     if (arena && chunk->tileChunkX != 0 && !chunk->next) {
       chunk->next = MemoryArenaPush(arena, sizeof(*chunk));
-      chunk->tileChunkX = 0;
       chunk = chunk->next;
+      chunk->tileChunkX = 0;
     }
 
     /* if we are on empty slot */
