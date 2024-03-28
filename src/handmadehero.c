@@ -1058,68 +1058,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       .y = 0.5f * (f32)backbuffer->height,
   };
 
-#if 0
-  /* render tiles relative to camera position */
-  for (i32 relRow = -10; relRow < 10; relRow++) {
-    for (i32 relColumn = -20; relColumn < 20; relColumn++) {
-      i32 testColumn = (i32)state->cameraPos.absTileX + relColumn;
-      i32 testRow = (i32)state->cameraPos.absTileY + relRow;
-
-      if (testColumn < 0)
-        continue;
-      if (testRow < 0)
-        continue;
-
-      u32 column = (u32)testColumn;
-      u32 row = (u32)testRow;
-      u32 plane = state->cameraPos.absTileZ;
-
-      u32 tileid = TileGetValue(tileMap, column, row, plane);
-      f32 gray = 0.0f;
-
-      if (tileid == TILE_INVALID)
-        continue;
-
-      else if (tileid & TILE_WALKABLE)
-        continue;
-
-      else if (tileid & TILE_BLOCKED)
-        gray = 1.0f;
-
-      else if (tileid & (TILE_LADDER_UP | TILE_LADDER_DOWN))
-        gray = 0.25f;
-
-      /* player tile x, y */
-      if (state->cameraPos.absTileX == column &&
-          state->cameraPos.absTileY == row) {
-        gray = 0.0f;
-      }
-
-      struct v2 tileOffset = {
-          .x = (f32)relColumn,
-          .y = (f32)-relRow,
-      };
-      v2_mul_ref(&tileOffset, (f32)tileSideInPixels);
-
-      struct v2 cameraOffset = state->cameraPos.offset;
-      cameraOffset.y *= -1;
-      v2_mul_ref(&cameraOffset, metersToPixels);
-
-      struct v2 center = v2_add(screenCenter, v2_add(cameraOffset, tileOffset));
-
-      struct v2 tileSide = {
-          .x = 0.5f * (f32)tileSideInPixels,
-          .y = 0.5f * (f32)tileSideInPixels,
-      };
-      /* left top */
-      struct v2 min = v2_sub(center, tileSide);
-      /* right bottom */
-      struct v2 max = v2_add(center, tileSide);
-      DrawRectangle(backbuffer, min, max, gray, gray, gray);
-    }
-  }
-#endif
-
   /* render entities */
   for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;
        entityHighIndex++) {
