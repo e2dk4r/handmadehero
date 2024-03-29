@@ -706,14 +706,19 @@ static void CameraSet(struct game_state *state,
      * ________________ ________________
      * |              | |              |
      * |              | |              |
-     * |   x         x| |x'            |
+     * |             x| |x'            |
      * |       c      | |       c'     |
      * |              | |              |
      * |              | |              |
      * |______________| |______________|
      */
     v2_add_ref(&entityHigh->position, entityOffsetPerFrame);
+  }
 
+  for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;
+       entityHighIndex++) {
+    struct entity_high *entityHigh = EntityHighGet(state, entityHighIndex);
+    assert(entityHigh);
     /* check if entity is in camera bounds */
     if (RectIsPointInside(cameraBounds, entityHigh->position))
       continue;
