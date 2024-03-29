@@ -2,11 +2,7 @@
 
 #include "memory_arena.h"
 #include "platform.h"
-#include "tile.h"
-
-struct world {
-  struct tile_map *tileMap;
-};
+#include "world.h"
 
 struct bitmap {
   u32 width;
@@ -32,7 +28,7 @@ struct entity_low {
   u8 type;
   f32 width;
   f32 height;
-  struct position_tile_map position;
+  struct world_position position;
   u32 dAbsTileZ;
   u32 highIndex;
 };
@@ -59,14 +55,15 @@ struct game_state {
   struct world *world;
 
   u32 followedEntityIndex;
-  struct position_tile_map cameraPos;
+  struct world_position cameraPos;
+
+#define HANDMADEHERO_ENTITY_LOW_TOTAL 10000
+  u32 entityLowCount;
+  struct entity_low entityLows[HANDMADEHERO_ENTITY_LOW_TOTAL];
 
 #define HANDMADEHERO_ENTITY_HIGH_TOTAL 256
-#define HANDMADEHERO_ENTITY_LOW_TOTAL 4096
-  u32 entityLowCount;
-  struct entity_low entityLows[HANDMADEHERO_ENTITY_HIGH_TOTAL];
   u32 entityHighCount;
-  struct entity_high entityHighs[HANDMADEHERO_ENTITY_LOW_TOTAL];
+  struct entity_high entityHighs[HANDMADEHERO_ENTITY_HIGH_TOTAL];
 
   u32 playerIndexForController[HANDMADEHERO_CONTROLLER_COUNT];
 

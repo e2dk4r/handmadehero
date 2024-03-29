@@ -298,8 +298,8 @@ static inline void EntityMakeHighFreq(struct game_state *state, u32 lowIndex) {
   entityHigh->lowIndex = lowIndex;
 
   /* map the entity to camera space */
-  struct position_difference diff = PositionDifference(
-      state->world->tileMap, &entityLow->position, &state->cameraPos);
+  struct world_difference diff =
+      WorldPositionSub(state->world, &entityLow->position, &state->cameraPos);
 
   entityHigh->position = diff.dXY;
   entityHigh->dPosition = (struct v2){0, 0};
@@ -401,12 +401,11 @@ static inline u32 EntityWallAdd(struct game_state *state, u32 absTileX,
   struct entity_low *entityLow = EntityLowGet(state, entityIndex);
   assert(entityLow);
 
-  struct tile_map *tileMap = state->world->tileMap;
   entityLow->position.absTileX = absTileX;
   entityLow->position.absTileY = absTileY;
   entityLow->position.absTileZ = absTileZ;
-  entityLow->height = tileMap->tileSideInMeters;
-  entityLow->width = tileMap->tileSideInMeters;
+  entityLow->height = state->world->tileSideInMeters;
+  entityLow->width = state->world->tileSideInMeters;
 
   return entityIndex;
 }
@@ -672,15 +671,15 @@ static void PlayerMove(struct game_state *state, u32 entityLowIndex, f32 dt,
   }
 
   /* always write back into tile space */
-  entityLow->position = PositionMapIntoTilesSpace(
-      state->world->tileMap, &state->cameraPos, entityHigh->position);
+  entityLow->position = WorldPositionCalculate(state->world, &state->cameraPos,
+                                               entityHigh->position);
 }
 
 static void CameraSet(struct game_state *state,
-                      struct position_tile_map *newCameraPosition) {
-  struct tile_map *tileMap = state->world->tileMap;
-  struct position_difference diff =
-      PositionDifference(tileMap, newCameraPosition, &state->cameraPos);
+                      struct world_position *newCameraPosition) {
+  struct world *world = state->world;
+  struct world_difference diff =
+      WorldPositionSub(world, newCameraPosition, &state->cameraPos);
   state->cameraPos = *newCameraPosition;
 
   /* camera size that contains collection high frequency entities */
@@ -688,7 +687,7 @@ static void CameraSet(struct game_state *state,
   const u32 tileSpanX = TILES_PER_WIDTH * tileSpanMultipler;
   const u32 tileSpanY = TILES_PER_HEIGHT * tileSpanMultipler;
   struct v2 tileSpan = {(f32)tileSpanX, (f32)tileSpanY};
-  v2_mul_ref(&tileSpan, tileMap->tileSideInMeters);
+  v2_mul_ref(&tileSpan, world->tileSideInMeters);
   struct rectangle2 cameraBounds = RectCenterDim((struct v2){0, 0}, tileSpan);
 
   struct v2 entityOffsetPerFrame = v2_neg(diff.dXY);
@@ -818,11 +817,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
     struct world *world = MemoryArenaPush(&state->worldArena, sizeof(*world));
     state->world = world;
-    struct tile_map *tileMap =
-        MemoryArenaPush(&state->worldArena, sizeof(*tileMap));
-    world->tileMap = tileMap;
-
-    TileMapInit(tileMap, 1.4f);
+    WorldInit(world, 1.4f);
 
     /* generate procedural tile map */
     u32 screenBaseX = (I16_MAX / TILES_PER_WIDTH) / 2;
@@ -889,9 +884,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
               value = TILE_LADDER_DOWN;
           }
 
-          TileSetValue(&state->worldArena, tileMap, absTileX, absTileY,
-                       absTileZ, value);
-
           if (value & TILE_BLOCKED) {
             EntityWallAdd(state, absTileX, absTileY, absTileZ);
           }
@@ -924,7 +916,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     /* set initial camera position */
-    struct position_tile_map newCameraPosition = {
+    struct world_position newCameraPosition = {
         .absTileX = screenBaseX * TILES_PER_WIDTH + TILES_PER_WIDTH / 2,
         .absTileY = screenBaseY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2,
         .absTileZ = screenBaseZ,
@@ -936,8 +928,6 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
   struct world *world = state->world;
   assert(world);
-  struct tile_map *tileMap = world->tileMap;
-  assert(tileMap);
 
   /****************************************************************
    * CONTROLLER INPUT HANDLING
@@ -1009,7 +999,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct entity_high *followedEntityHigh =
         EntityHighGet(state, followedEntityLow->highIndex);
     assert(followedEntityHigh);
-    struct position_tile_map newCameraPosition = state->cameraPos;
+    struct world_position newCameraPosition = state->cameraPos;
 
     newCameraPosition.absTileZ = followedEntityLow->position.absTileZ;
 
@@ -1021,13 +1011,13 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     const u32 scrollHeight = 1;
 #endif
 
-    f32 maxDiffX = (f32)scrollWidth * 0.5f * tileMap->tileSideInMeters;
+    f32 maxDiffX = (f32)scrollWidth * 0.5f * world->tileSideInMeters;
     if (followedEntityHigh->position.x > maxDiffX)
       newCameraPosition.absTileX += scrollWidth;
     else if (followedEntityHigh->position.x < -maxDiffX)
       newCameraPosition.absTileX -= scrollWidth;
 
-    f32 maxDiffY = (f32)scrollHeight * 0.5f * tileMap->tileSideInMeters;
+    f32 maxDiffY = (f32)scrollHeight * 0.5f * world->tileSideInMeters;
     if (followedEntityHigh->position.y > maxDiffY)
       newCameraPosition.absTileY += scrollHeight;
     else if (followedEntityHigh->position.y < -maxDiffY)
@@ -1042,7 +1032,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /* unit: pixels */
   const u32 tileSideInPixels = 60;
   /* unit: pixels/meters */
-  const f32 metersToPixels = (f32)tileSideInPixels / tileMap->tileSideInMeters;
+  const f32 metersToPixels = (f32)tileSideInPixels / world->tileSideInMeters;
 
   DrawBitmap(&state->bitmapBackground, backbuffer, (struct v2){}, 0, 0);
 
