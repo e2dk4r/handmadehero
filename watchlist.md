@@ -205,7 +205,7 @@
 - [x] Handmade Hero Day 055 - Hash-based World Storage
       https://www.youtube.com/watch?v=WyXBawK1jpE
 
-- [ ] Handmade Hero Day 056 - Switching from Tiles to Entities
+- [x] Handmade Hero Day 056 - Switching from Tiles to Entities
       https://www.youtube.com/watch?v=NMfx9eVrNmQ
 
 - [ ] Handmade Hero Day 057 - Spatially Partitioning Entities
