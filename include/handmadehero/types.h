@@ -34,4 +34,6 @@ typedef double f64;
 #define comptime static const
 #define internal static
 
+#define ARRAY_COUNT(array) (sizeof(array) / sizeof(*array))
+
 #endif /* HANDMADEHERO_TYPES_H */

@@ -13,7 +13,7 @@
 
 struct world_entity_block {
   u32 entityCount;
-  u32 lowEntities[16];
+  u32 entityLowIndexes[16];
   struct world_entity_block *next;
 };
 
@@ -29,22 +29,19 @@ struct world_chunk {
 #define WORLD_CHUNK_TOTAL 4096
 struct world {
   f32 tileSideInMeters;
+  f32 chunkSideInMeters;
 
-  u32 chunkShift;
-  u32 chunkMask;
-  u32 chunkDim;
-  struct world_chunk worldChunkHash[WORLD_CHUNK_TOTAL];
+  struct world_entity_block *firstFreeBlock;
+
+  struct world_chunk chunkHash[WORLD_CHUNK_TOTAL];
 };
 
 struct world_position {
-  /* packed. high bits for tile map x, low bits for tile x */
-  u32 absTileX;
-  /* packed. high bits for tile map y, low bits for tile y */
-  u32 absTileY;
-  /* packed. high bits for tile map y, low bits for tile y */
-  u32 absTileZ;
+  u32 chunkX;
+  u32 chunkY;
+  u32 chunkZ;
 
-  /* offset from tile center */
+  /* offset from chunk center */
   struct v2 offset;
 };
 
@@ -63,19 +60,13 @@ struct world_position
 WorldPositionCalculate(struct world *world, struct world_position *basePosition,
                        struct v2 offset);
 
+struct world_position ChunkPositionFromTilePosition(struct world *world,
+                                                           u32 absTileX,
+                                                           u32 absTileY,
+                                                           u32 absTileZ);
+
 struct world_difference WorldPositionSub(struct world *world,
                                          struct world_position *a,
                                          struct world_position *b);
-
-static inline u8 WorldPositionSame(struct world_position *left,
-                                   struct world_position *right) {
-  return
-      /* x */
-      left->absTileX == right->absTileX
-      /* y */
-      && left->absTileY == right->absTileY
-      /* z */
-      && left->absTileZ == right->absTileZ;
-}
 
 #endif /* HANDMADEHERO_WORLD_H */

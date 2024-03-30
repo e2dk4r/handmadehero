@@ -37,17 +37,12 @@ struct entity_high {
   struct v2 position;
   /* velocity, differencial of position */
   struct v2 dPosition;
-  u32 absTileZ;
+  u32 chunkZ;
   u8 facingDirection;
   f32 z;
   f32 dZ;
 
   u32 lowIndex;
-};
-
-struct entity {
-  struct entity_low *low;
-  struct entity_high *high;
 };
 
 struct game_state {
