@@ -470,8 +470,6 @@ static void PlayerMove(struct game_state *state, u32 entityLowIndex, f32 dt,
    * CALCULATION OF NEW PLAYER POSITION
    *****************************************************************/
 
-  struct v2 oldPosition = entityHigh->position;
-
   /*
    *  (position)      f(t) = 1/2 a t² + v t + p
    *     where p is old position
@@ -513,8 +511,6 @@ static void PlayerMove(struct game_state *state, u32 entityLowIndex, f32 dt,
         ) /* end: v t */
       );
   // clang-format on
-  /* 1/2 a t² + v t + p */
-  struct v2 newPosition = v2_add(oldPosition, deltaPosition);
 
   /* new velocity */
   // clang-format off
