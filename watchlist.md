@@ -208,7 +208,7 @@
 - [x] Handmade Hero Day 056 - Switching from Tiles to Entities
       https://www.youtube.com/watch?v=NMfx9eVrNmQ
 
-- [ ] Handmade Hero Day 057 - Spatially Partitioning Entities
+- [x] Handmade Hero Day 057 - Spatially Partitioning Entities
       https://www.youtube.com/watch?v=nAFuhA8xqTk
 
 - [ ] Handmade Hero Day 058 - Using the Spatial Partition
