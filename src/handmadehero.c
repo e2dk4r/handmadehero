@@ -834,7 +834,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     u8 isDoorUp = 0;
     u8 isDoorDown = 0;
 
-    for (u32 screenIndex = 0; screenIndex < 2; screenIndex++) {
+    for (u32 screenIndex = 0; screenIndex < 2000; screenIndex++) {
       u32 randomValue;
 
       if (1) // (isDoorUp || isDoorDown)

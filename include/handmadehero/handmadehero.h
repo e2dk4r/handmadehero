@@ -57,7 +57,7 @@ struct game_state {
   u32 followedEntityIndex;
   struct world_position cameraPos;
 
-#define HANDMADEHERO_ENTITY_LOW_TOTAL 10000
+#define HANDMADEHERO_ENTITY_LOW_TOTAL 100000
   u32 entityLowCount;
   struct entity_low entityLows[HANDMADEHERO_ENTITY_LOW_TOTAL];
 
