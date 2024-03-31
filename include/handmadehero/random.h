@@ -693,7 +693,7 @@ u32 RandomNumber(void) {
 
   static u32 index = 0;
 
-  assert(index < sizeof(table) / sizeof(*table));
+  assert(index < ARRAY_COUNT(table));
   u32 value = table[index];
 
   index++;
