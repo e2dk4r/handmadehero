@@ -953,10 +953,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     /* set initial camera position */
-    struct world_position newCameraPosition = ChunkPositionFromTilePosition(
+    struct world_position initialCameraPosition = ChunkPositionFromTilePosition(
         state->world, screenBaseX * TILES_PER_WIDTH + TILES_PER_WIDTH / 2,
         screenBaseY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2, screenBaseZ);
-    CameraSet(state, &newCameraPosition);
+    CameraSet(state, &initialCameraPosition);
 
     memory->initialized = 1;
   }
