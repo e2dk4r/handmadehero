@@ -400,6 +400,20 @@ static inline u32 EntityPlayerAdd(struct game_state *state) {
   return lowIndex;
 }
 
+static inline u32 EntityMonsterAdd(struct game_state *state, u32 absTileX,
+                                   u32 absTileY, u32 absTileZ) {
+  struct world_position entityPosition =
+      ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
+  u32 entityIndex = EntityLowAdd(state, ENTITY_TYPE_MONSTER, &entityPosition);
+  struct entity_low *entityLow = EntityLowGet(state, entityIndex);
+  assert(entityLow);
+
+  entityLow->height = state->world->tileSideInMeters;
+  entityLow->width = state->world->tileSideInMeters;
+
+  return entityIndex;
+}
+
 static inline u32 EntityWallAdd(struct game_state *state, u32 absTileX,
                                 u32 absTileY, u32 absTileZ) {
   struct world_position entityPosition =
@@ -953,9 +967,14 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     /* set initial camera position */
+    u32 initialCameraX = screenBaseX * TILES_PER_WIDTH + TILES_PER_WIDTH / 2;
+    u32 initialCameraY = screenBaseY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2;
+    u32 initialCameraZ = screenBaseZ;
+    EntityMonsterAdd(state, initialCameraX + 2, initialCameraY + 2,
+                     initialCameraZ);
+
     struct world_position initialCameraPosition = ChunkPositionFromTilePosition(
-        state->world, screenBaseX * TILES_PER_WIDTH + TILES_PER_WIDTH / 2,
-        screenBaseY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2, screenBaseZ);
+        state->world, initialCameraX, initialCameraY, initialCameraZ);
     CameraSet(state, &initialCameraPosition);
 
     memory->initialized = 1;
