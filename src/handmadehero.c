@@ -537,11 +537,11 @@ static void PlayerMove(struct game_state *state, u32 entityLowIndex, f32 dt,
   /*****************************************************************
    * COLLUSION DETECTION
    *****************************************************************/
-  struct entity_low *hitEntityLow = 0;
-  struct v2 desiredPosition = v2_add(entityHigh->position, deltaPosition);
   for (u32 iteration = 0; iteration < 4; iteration++) {
     f32 tMin = 1.0f;
-    struct v2 wallNormal = {};
+    struct v2 wallNormal;
+    struct v2 desiredPosition = v2_add(entityHigh->position, deltaPosition);
+    struct entity_low *hitEntityLow = 0;
 
     for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;
          entityHighIndex++) {
