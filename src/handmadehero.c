@@ -408,8 +408,8 @@ static inline u32 EntityMonsterAdd(struct game_state *state, u32 absTileX,
   struct entity_low *entityLow = EntityLowGet(state, entityIndex);
   assert(entityLow);
 
-  entityLow->height = state->world->tileSideInMeters;
-  entityLow->width = state->world->tileSideInMeters;
+  entityLow->height = 0.5f;
+  entityLow->width = 1.0f;
 
   return entityIndex;
 }
