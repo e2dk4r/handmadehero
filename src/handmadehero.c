@@ -54,10 +54,7 @@ static void DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min,
 static void DrawBitmap2(struct bitmap *bitmap,
                         struct game_backbuffer *backbuffer, struct v2 pos,
                         i32 alignX, i32 alignY, f32 cAlpha) {
-  v2_sub_ref(&pos, (struct v2){
-                       .x = (f32)alignX,
-                       .y = (f32)alignY,
-                   });
+  v2_sub_ref(&pos, v2((f32)alignX, (f32)alignY));
 
   i32 minX = roundf32toi32(pos.x);
   i32 minY = roundf32toi32(pos.y);
@@ -312,7 +309,7 @@ static inline void EntityMakeHighFreq(struct game_state *state, u32 lowIndex) {
       WorldPositionSub(state->world, &entityLow->position, &state->cameraPos);
 
   entityHigh->position = diff.dXY;
-  entityHigh->dPosition = (struct v2){0, 0};
+  entityHigh->dPosition = v2(0.0f, 0.0f);
   entityHigh->chunkZ = entityLow->position.chunkZ;
   entityHigh->facingDirection = 0;
 
@@ -571,25 +568,25 @@ static void PlayerMove(struct game_state *state, u32 entityLowIndex, f32 dt,
       /* test all 4 walls and take minimum t. */
       if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x,
                    deltaPosition.y, minCorner.y, maxCorner.y)) {
-        wallNormal = (struct v2){.x = -1, .y = 0};
+        wallNormal = v2(-1, 0);
         hitEntityLow = testEntityLow;
       }
 
       if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x,
                    deltaPosition.y, minCorner.y, maxCorner.y)) {
-        wallNormal = (struct v2){.x = 1, .y = 0};
+        wallNormal = v2(1, 0);
         hitEntityLow = testEntityLow;
       }
 
       if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y,
                    deltaPosition.x, minCorner.x, maxCorner.x)) {
-        wallNormal = (struct v2){.x = 0, .y = -1};
+        wallNormal = v2(0, -1);
         hitEntityLow = testEntityLow;
       }
 
       if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y,
                    deltaPosition.x, minCorner.x, maxCorner.x)) {
-        wallNormal = (struct v2){.x = 0, .y = 1};
+        wallNormal = v2(0, 1);
         hitEntityLow = testEntityLow;
       }
     }
@@ -709,7 +706,7 @@ static void CameraSet(struct game_state *state,
   const u32 tileSpanY = TILES_PER_HEIGHT * tileSpanMultipler;
   struct v2 tileSpan = {(f32)tileSpanX, (f32)tileSpanY};
   v2_mul_ref(&tileSpan, world->tileSideInMeters);
-  struct rectangle2 cameraBounds = RectCenterDim((struct v2){0, 0}, tileSpan);
+  struct rectangle2 cameraBounds = RectCenterDim(v2(0.0f, 0.0f), tileSpan);
 
   struct v2 entityOffsetPerFrame = v2_neg(diff.dXY);
 
@@ -993,10 +990,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
 
     /* analog controller */
     if (controller->isAnalog) {
-      ddPosition = (struct v2){
-          .x = controller->stickAverageX,
-          .y = controller->stickAverageY,
-      };
+      ddPosition = v2(controller->stickAverageX, controller->stickAverageY);
     }
 
     /* digital controller */
@@ -1071,9 +1065,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /* unit: pixels/meters */
   const f32 metersToPixels = (f32)tileSideInPixels / world->tileSideInMeters;
 
-  /* drawing background */
+/* drawing background */
 #if 0
-  DrawBitmap(&state->bitmapBackground, backbuffer, (struct v2){}, 0, 0);
+  DrawBitmap(&state->bitmapBackground, backbuffer, v2(0.0f, 0.0f), 0, 0);
 #else
   DrawRectangle(backbuffer, v2(0.0f, 0.0f),
                 v2((f32)backbuffer->width, (f32)backbuffer->height), 0.5f, 0.5f,
@@ -1138,10 +1132,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
                  bitmap->alignY);
     } else {
-      struct v2 playerWidthHeight = (struct v2){
-          .x = entityLow->width,
-          .y = entityLow->height,
-      };
+      struct v2 playerWidthHeight = v2(entityLow->width, entityLow->height);
       v2_mul_ref(&playerWidthHeight, metersToPixels);
 
       struct v2 playerLeftTop =
