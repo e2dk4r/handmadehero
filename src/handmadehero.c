@@ -414,6 +414,21 @@ static inline u32 EntityMonsterAdd(struct game_state *state, u32 absTileX,
   return entityIndex;
 }
 
+static inline u32 EntityFamiliarAdd(struct game_state *state, u32 absTileX,
+                                    u32 absTileY, u32 absTileZ) {
+  struct world_position entityPosition =
+      ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
+  u32 entityIndex = EntityLowAdd(state, ENTITY_TYPE_FAMILIAR, &entityPosition);
+  struct entity_low *entityLow = EntityLowGet(state, entityIndex);
+  assert(entityLow);
+
+  entityLow->height = 0.5f;
+  entityLow->width = 1.0f;
+  entityLow->collides = 0;
+
+  return entityIndex;
+}
+
 static inline u32 EntityWallAdd(struct game_state *state, u32 absTileX,
                                 u32 absTileY, u32 absTileZ) {
   struct world_position entityPosition =
@@ -972,6 +987,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     u32 initialCameraZ = screenBaseZ;
     EntityMonsterAdd(state, initialCameraX + 2, initialCameraY + 2,
                      initialCameraZ);
+    EntityFamiliarAdd(state, initialCameraX - 2, initialCameraY + 2,
+                      initialCameraZ);
 
     struct world_position initialCameraPosition = ChunkPositionFromTilePosition(
         state->world, initialCameraX, initialCameraY, initialCameraZ);
