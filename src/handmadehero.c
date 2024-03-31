@@ -1126,9 +1126,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     struct entity_low *entityLow = EntityLowGet(state, entityHigh->lowIndex);
     assert(entityLow);
 
-    f32 playerR = 1.0f;
-    f32 playerG = 1.0f;
-    f32 playerB = 0.0f;
+    comptime f32 playerR = 1.0f;
+    comptime f32 playerG = 1.0f;
+    comptime f32 playerB = 0.0f;
 
     f32 ddZ = -9.8f;
     entityHigh->z +=
