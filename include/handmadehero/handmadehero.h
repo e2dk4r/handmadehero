@@ -21,7 +21,7 @@ struct bitmap_hero {
 
 #define ENTITY_TYPE_INVALID 0
 #define ENTITY_TYPE_HERO 1 << 0
-#define ENTITY_TYPE_WALL 1 << 2
+#define ENTITY_TYPE_WALL 1 << 1
 
 struct entity_low {
   u8 collides : 1;

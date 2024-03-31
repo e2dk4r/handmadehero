@@ -1,3 +1,4 @@
+#include "handmadehero/world.h"
 #include <handmadehero/assert.h>
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/math.h>
@@ -269,17 +270,26 @@ static inline struct entity_high *EntityHighGet(struct game_state *state,
   return result;
 }
 
-static inline u32 EntityLowAdd(struct game_state *state, u8 type) {
-  u32 entityIndex = state->entityLowCount;
-  assert(entityIndex < HANDMADEHERO_ENTITY_LOW_TOTAL);
+static inline u32 EntityLowAdd(struct game_state *state, u8 type,
+                               struct world_position *position) {
+  u32 entityLowIndex = state->entityLowCount;
+  assert(entityLowIndex < HANDMADEHERO_ENTITY_LOW_TOTAL);
 
-  state->entityLows[entityIndex] = (struct entity_low){};
-  state->entityLows[entityIndex].collides = 1;
-  state->entityLows[entityIndex].type = type;
+  struct entity_low *entityLow = state->entityLows + entityLowIndex;
+  assert(entityLow);
+  *entityLow = (struct entity_low){};
+  entityLow->collides = 1;
+  entityLow->type = type;
+
+  if (position) {
+    entityLow->position = *position;
+    EntityChangeLocation(&state->worldArena, state->world, entityLowIndex, 0,
+                         position);
+  }
 
   state->entityLowCount++;
 
-  return entityIndex;
+  return entityLowIndex;
 }
 
 static inline void EntityMakeHighFreq(struct game_state *state, u32 lowIndex) {
@@ -366,9 +376,6 @@ static inline void EntityPlayerReset(struct game_state *state, u32 lowIndex) {
   struct entity_low *entityLow = EntityLowGet(state, lowIndex);
   assert(entityLow);
 
-  /* set initial player position */
-  entityLow->position = state->cameraPos;
-
   /* set player size */
   entityLow->height = 0.5f;
   entityLow->width = 1.0f;
@@ -382,7 +389,8 @@ static inline void EntityPlayerReset(struct game_state *state, u32 lowIndex) {
 }
 
 static inline u32 EntityPlayerAdd(struct game_state *state) {
-  u32 lowIndex = EntityLowAdd(state, ENTITY_TYPE_HERO);
+  struct world_position *entityPosition = &state->cameraPos;
+  u32 lowIndex = EntityLowAdd(state, ENTITY_TYPE_HERO, entityPosition);
   struct entity_low *entity = EntityLowGet(state, lowIndex);
   assert(entity);
   EntityPlayerReset(state, lowIndex);
@@ -397,12 +405,12 @@ static inline u32 EntityPlayerAdd(struct game_state *state) {
 
 static inline u32 EntityWallAdd(struct game_state *state, u32 absTileX,
                                 u32 absTileY, u32 absTileZ) {
-  u32 entityIndex = EntityLowAdd(state, ENTITY_TYPE_WALL);
+  struct world_position entityPosition =
+      ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
+  u32 entityIndex = EntityLowAdd(state, ENTITY_TYPE_WALL, &entityPosition);
   struct entity_low *entityLow = EntityLowGet(state, entityIndex);
   assert(entityLow);
 
-  entityLow->position =
-      ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
   entityLow->height = state->world->tileSideInMeters;
   entityLow->width = state->world->tileSideInMeters;
 
@@ -672,6 +680,22 @@ static void PlayerMove(struct game_state *state, u32 entityLowIndex, f32 dt,
                                                entityHigh->position);
 }
 
+static u8 IsEntityHighSetValid(struct game_state *state) {
+  for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;
+       entityHighIndex++) {
+    struct entity_high *entityHigh = EntityHighGet(state, entityHighIndex);
+    assert(entityHigh);
+
+    struct entity_low *entityLow = EntityLowGet(state, entityHigh->lowIndex);
+    assert(entityLow);
+
+    if (entityLow->highIndex != entityHighIndex)
+      return 0;
+  }
+
+  return 1;
+}
+
 static void CameraSet(struct game_state *state,
                       struct world_position *newCameraPosition) {
   struct world *world = state->world;
@@ -689,8 +713,7 @@ static void CameraSet(struct game_state *state,
 
   struct v2 entityOffsetPerFrame = v2_neg(diff.dXY);
 
-  for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;
-       entityHighIndex++) {
+  for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;) {
     struct entity_high *entityHigh = EntityHighGet(state, entityHighIndex);
     assert(entityHigh);
 
@@ -709,45 +732,59 @@ static void CameraSet(struct game_state *state,
      * |______________| |______________|
      */
     v2_add_ref(&entityHigh->position, entityOffsetPerFrame);
-  }
 
-  for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;
-       entityHighIndex++) {
-    struct entity_high *entityHigh = EntityHighGet(state, entityHighIndex);
-    assert(entityHigh);
     /* check if entity is in camera bounds */
-    if (RectIsPointInside(cameraBounds, entityHigh->position))
+    if (RectIsPointInside(cameraBounds, entityHigh->position)) {
+      entityHighIndex++;
       continue;
+    }
 
     /* transion from high to low */
     EntityMakeLowFreq(state, entityHigh->lowIndex);
   }
 
-  // TODO: Do this in terms of tile chunks
-#if 0
-  u32 minTileX = newCameraPosition->absTileX - tileSpanX / 2;
-  u32 minTileY = newCameraPosition->absTileY - tileSpanY / 2;
-  u32 maxTileX = newCameraPosition->absTileX + tileSpanX / 2;
-  u32 maxTileY = newCameraPosition->absTileY + tileSpanY / 2;
-  for (u32 entityLowIndex = 1; entityLowIndex < state->entityLowCount;
-       entityLowIndex++) {
-    struct entity_low *entityLow = EntityLowGet(state, entityLowIndex);
-    assert(entityLow);
+  assert(IsEntityHighSetValid(state));
 
-    if (entityLow->highIndex != 0)
-      continue;
+  struct world_position minChunkPosition =
+      WorldPositionCalculate(world, newCameraPosition, RectMin(&cameraBounds));
+  struct world_position maxChunkPosition =
+      WorldPositionCalculate(world, newCameraPosition, RectMax(&cameraBounds));
+  for (u32 chunkX = minChunkPosition.chunkX; chunkX < maxChunkPosition.chunkX;
+       chunkX++) {
+    for (u32 chunkY = minChunkPosition.chunkY; chunkY < maxChunkPosition.chunkY;
+         chunkY++) {
+      struct world_chunk *chunk =
+          WorldChunkGet(world, chunkX, chunkY, newCameraPosition->chunkZ, 0);
+      if (!chunk)
+        continue;
 
-    if (/* z axis */
-        entityLow->position.absTileZ == newCameraPosition->absTileZ &&
-        /* x axis */
-        entityLow->position.absTileX >= minTileX &&
-        entityLow->position.absTileX <= maxTileX &&
-        /* y axis */
-        entityLow->position.absTileY >= minTileY &&
-        entityLow->position.absTileY <= maxTileY)
-      EntityMakeHighFreq(state, entityLowIndex);
+      for (struct world_entity_block *block = &chunk->firstBlock; block;
+           block = block->next) {
+        for (u32 entityIndex = 0; entityIndex < block->entityCount;
+             entityIndex++) {
+          u32 entityLowIndex = block->entityLowIndexes[entityIndex];
+          struct entity_low *entityLow = EntityLowGet(state, entityLowIndex);
+          assert(entityLow);
+
+          if (entityLow->type == ENTITY_TYPE_INVALID)
+            continue;
+
+          if (entityLow->highIndex != 0)
+            continue;
+
+          struct world_difference diff =
+              WorldPositionSub(world, &entityLow->position, newCameraPosition);
+          struct v2 entityPositionRelativeToCamera = diff.dXY;
+          if (!RectIsPointInside(cameraBounds, entityPositionRelativeToCamera))
+            continue;
+
+          EntityMakeHighFreq(state, entityLowIndex);
+        }
+      }
+    }
   }
-#endif
+
+  assert(IsEntityHighSetValid(state));
 }
 
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
@@ -807,7 +844,7 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     bitmapHero->alignY = 182;
 
     /* use entity with 0 index as null */
-    EntityLowAdd(state, ENTITY_TYPE_INVALID);
+    EntityLowAdd(state, ENTITY_TYPE_INVALID, 0);
     state->entityHighCount = 1;
 
     /* world creation */

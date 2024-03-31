@@ -17,9 +17,9 @@ void WorldInit(struct world *world, f32 tileSideInMeters) {
   }
 }
 
-static inline struct world_chunk *WorldChunkGet(struct world *world, u32 chunkX,
-                                                u32 chunkY, u32 chunkZ,
-                                                struct memory_arena *arena) {
+inline struct world_chunk *WorldChunkGet(struct world *world, u32 chunkX,
+                                         u32 chunkY, u32 chunkZ,
+                                         struct memory_arena *arena) {
   assert(chunkX > WORLD_CHUNK_SAFE_MARGIN);
   assert(chunkY > WORLD_CHUNK_SAFE_MARGIN);
   assert(chunkZ > WORLD_CHUNK_SAFE_MARGIN);
@@ -66,7 +66,6 @@ static inline struct world_chunk *WorldChunkGet(struct world *world, u32 chunkX,
 }
 
 static inline u8 WorldPositionIsCalculated(struct world *world, f32 chunkRel) {
-
   return (chunkRel >= -0.5f * world->chunkSideInMeters) &&
          (chunkRel <= 0.5f * world->chunkSideInMeters);
 }
@@ -117,7 +116,7 @@ inline struct world_position ChunkPositionFromTilePosition(struct world *world,
 
   result.offset.x = (f32)(absTileX - (result.chunkX * TILES_PER_CHUNK)) *
                     world->tileSideInMeters;
-  result.offset.y = (f32)(absTileX - (result.chunkX * TILES_PER_CHUNK)) *
+  result.offset.y = (f32)(absTileY - (result.chunkY * TILES_PER_CHUNK)) *
                     world->tileSideInMeters;
 
   return result;
@@ -155,10 +154,10 @@ static inline u8 WorldPositionSame(struct world *world,
       && left->chunkZ == right->chunkZ;
 }
 
-static inline void EntityChangeLocation(struct memory_arena *arena,
-                                        struct world *world, u32 entityLowIndex,
-                                        struct world_position *oldPosition,
-                                        struct world_position *newPosition) {
+inline void EntityChangeLocation(struct memory_arena *arena,
+                                 struct world *world, u32 entityLowIndex,
+                                 struct world_position *oldPosition,
+                                 struct world_position *newPosition) {
   if (oldPosition && WorldPositionSame(world, oldPosition, newPosition))
     // leave entity where it is
     return;
@@ -171,7 +170,8 @@ static inline void EntityChangeLocation(struct memory_arena *arena,
     assert(chunk);
     if (chunk) {
       struct world_entity_block *firstBlock = &chunk->firstBlock;
-      for (struct world_entity_block *block = firstBlock; block;
+      u8 found = 0;
+      for (struct world_entity_block *block = firstBlock; !found && block;
            block = block->next) {
         for (u32 blockEntityIndex = 0; blockEntityIndex < block->entityCount;
              blockEntityIndex++) {
@@ -194,7 +194,7 @@ static inline void EntityChangeLocation(struct memory_arena *arena,
               }
             }
 
-            block = 0;
+            found = 1;
             break;
           }
         }

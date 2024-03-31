@@ -141,4 +141,12 @@ static inline u8 RectIsPointInside(struct rectangle2 rect,
       && testPoint.y >= rect.min.y && testPoint.y < rect.max.y;
 }
 
+static inline struct v2 RectMin(struct rectangle2 *rect) { return rect->min; }
+
+static inline struct v2 RectMax(struct rectangle2 *rect) { return rect->max; }
+
+static inline struct v2 RectCenter(struct rectangle2 *rect) {
+  return v2_mul(v2_add(rect->min, rect->max), 0.5f);
+}
+
 #endif /* HANDMADEHERO_MATH_H */
