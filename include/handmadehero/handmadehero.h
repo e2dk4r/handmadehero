@@ -64,6 +64,7 @@ struct game_state {
 
   struct bitmap bitmapBackground;
   struct bitmap bitmapShadow;
+  struct bitmap bitmapTree;
 
 #define BITMAP_HERO_FRONT 3
 #define BITMAP_HERO_BACK 1

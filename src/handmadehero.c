@@ -802,6 +802,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     state->bitmapShadow =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_shadow.bmp");
 
+    state->bitmapTree =
+        LoadBmp(memory->PlatformReadEntireFile, "test2/tree00.bmp");
+
     /* load hero bitmaps */
     struct bitmap_hero *bitmapHero = &state->bitmapHero[BITMAP_HERO_FRONT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile,
@@ -1068,7 +1071,14 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   /* unit: pixels/meters */
   const f32 metersToPixels = (f32)tileSideInPixels / world->tileSideInMeters;
 
+  /* drawing background */
+#if 0
   DrawBitmap(&state->bitmapBackground, backbuffer, (struct v2){}, 0, 0);
+#else
+  DrawRectangle(backbuffer, v2(0.0f, 0.0f),
+                v2((f32)backbuffer->width, (f32)backbuffer->height), 0.5f, 0.5f,
+                0.5f);
+#endif
 
   struct v2 screenCenter = {
       .x = 0.5f * (f32)backbuffer->width,
@@ -1137,9 +1147,14 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       struct v2 playerLeftTop =
           v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));
       struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
+
+#if 1
+      DrawBitmap(&state->bitmapTree, backbuffer, playerGroundPoint, 40, 80);
+#else
       DrawRectangle(backbuffer, playerLeftTop, playerRightBottom,
                     /* colors */
                     playerR, playerG, playerB);
+#endif
     }
   }
 }

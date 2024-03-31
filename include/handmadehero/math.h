@@ -43,6 +43,15 @@ struct v2 {
   };
 };
 
+static inline struct v2 v2(f32 x, f32 y) {
+  struct v2 result;
+
+  result.x = x;
+  result.y = y;
+
+  return result;
+}
+
 static inline void v2_add_ref(struct v2 *a, struct v2 b) {
   a->x += b.x;
   a->y += b.y;
