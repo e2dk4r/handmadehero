@@ -1150,7 +1150,33 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                  bitmap->alignY);
       DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
                  bitmap->alignY);
-    } else {
+    }
+
+    else if (entityLow->type & ENTITY_TYPE_FAMILIAR) {
+      struct bitmap_hero *bitmap =
+          &state->bitmapHero[entityHigh->facingDirection];
+
+      DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
+                  bitmap->alignX, bitmap->alignY, cAlphaShadow);
+      playerGroundPoint.y -= z;
+
+      DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
+                 bitmap->alignY);
+    }
+
+    else if (entityLow->type & ENTITY_TYPE_MONSTER) {
+      struct bitmap_hero *bitmap =
+          &state->bitmapHero[entityHigh->facingDirection];
+
+      DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
+                  bitmap->alignX, bitmap->alignY, cAlphaShadow);
+      playerGroundPoint.y -= z;
+
+      DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
+                 bitmap->alignY);
+    }
+
+    else if (entityLow->type & ENTITY_TYPE_WALL) {
       struct v2 playerWidthHeight = v2(entityLow->width, entityLow->height);
       v2_mul_ref(&playerWidthHeight, metersToPixels);
 
@@ -1165,6 +1191,10 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
                     /* colors */
                     playerR, playerG, playerB);
 #endif
+    }
+
+    else {
+      InvalidCodePath;
     }
   }
 }
