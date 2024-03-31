@@ -702,8 +702,11 @@ static void PlayerMove(struct game_state *state, u32 entityLowIndex, f32 dt,
   }
 
   /* always write back into tile space */
-  entityLow->position = WorldPositionCalculate(state->world, &state->cameraPos,
-                                               entityHigh->position);
+  struct world_position newPosition = WorldPositionCalculate(
+      state->world, &state->cameraPos, entityHigh->position);
+  EntityChangeLocation(&state->worldArena, state->world, entityLowIndex,
+                       &entityLow->position, &newPosition);
+  entityLow->position = newPosition;
 }
 
 static u8 IsEntityHighSetValid(struct game_state *state) {
