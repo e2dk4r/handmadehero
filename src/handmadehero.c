@@ -1192,10 +1192,6 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
         .high = entityHigh,
     };
 
-    comptime f32 playerR = 1.0f;
-    comptime f32 playerG = 1.0f;
-    comptime f32 playerB = 0.0f;
-
     f32 ddZ = -9.8f;
     entityHigh->z +=
         /* 1/2 a t² */
@@ -1267,16 +1263,19 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
     }
 
     else if (entityLow->type & ENTITY_TYPE_WALL) {
+#if 1
+      DrawBitmap(&state->bitmapTree, backbuffer, playerGroundPoint, 40, 80);
+#else
+      comptime f32 playerR = 1.0f;
+      comptime f32 playerG = 1.0f;
+      comptime f32 playerB = 0.0f;
+
       struct v2 playerWidthHeight = v2(entityLow->width, entityLow->height);
       v2_mul_ref(&playerWidthHeight, metersToPixels);
 
       struct v2 playerLeftTop =
           v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));
       struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
-
-#if 1
-      DrawBitmap(&state->bitmapTree, backbuffer, playerGroundPoint, 40, 80);
-#else
       DrawRectangle(backbuffer, playerLeftTop, playerRightBottom,
                     /* colors */
                     playerR, playerG, playerB);
