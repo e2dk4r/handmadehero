@@ -1182,34 +1182,28 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
   /* render entities */
   for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;
        entityHighIndex++) {
-    struct entity_high *entityHigh = EntityHighGet(state, entityHighIndex);
-    assert(entityHigh);
-    struct entity_low *entityLow = EntityLowGet(state, entityHigh->lowIndex);
-    assert(entityLow);
-    struct entity entity = {
-        .lowIndex = entityHigh->lowIndex,
-        .low = entityLow,
-        .high = entityHigh,
-    };
+    struct entity entity = EntityGetFromHigh(state, entityHighIndex);
+    assert(entity.high);
+    assert(entity.low);
 
     f32 ddZ = -9.8f;
-    entityHigh->z +=
+    entity.high->z +=
         /* 1/2 a t² */
         0.5f * ddZ * square(input->dtPerFrame)
         /* + v t */
-        + entityHigh->dZ * input->dtPerFrame;
-    entityHigh->dZ +=
+        + entity.high->dZ * input->dtPerFrame;
+    entity.high->dZ +=
         /* a t */
         ddZ * input->dtPerFrame;
-    if (entityHigh->z < 0)
-      entityHigh->z = 0;
-    f32 z = entityHigh->z * metersToPixels;
+    if (entity.high->z < 0)
+      entity.high->z = 0;
+    f32 z = entity.high->z * metersToPixels;
 
-    f32 cAlphaShadow = 1.0f - entityHigh->z;
+    f32 cAlphaShadow = 1.0f - entity.high->z;
     if (cAlphaShadow < 0.0f)
       cAlphaShadow = 0.0f;
 
-    struct v2 playerScreenPosition = entityHigh->position;
+    struct v2 playerScreenPosition = entity.high->position;
     /* screen's coordinate system uses y values inverse,
      * so that means going up in space means negative y values
      */
@@ -1218,9 +1212,9 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
 
     struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
 
-    if (entityLow->type & ENTITY_TYPE_HERO) {
+    if (entity.low->type & ENTITY_TYPE_HERO) {
       struct bitmap_hero *bitmap =
-          &state->bitmapHero[entityHigh->facingDirection];
+          &state->bitmapHero[entity.high->facingDirection];
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   bitmap->alignX, bitmap->alignY, cAlphaShadow);
@@ -1234,11 +1228,11 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
                  bitmap->alignY);
     }
 
-    else if (entityLow->type & ENTITY_TYPE_FAMILIAR) {
+    else if (entity.low->type & ENTITY_TYPE_FAMILIAR) {
       UpdateFamiliar(state, &entity, input->dtPerFrame);
 
       struct bitmap_hero *bitmap =
-          &state->bitmapHero[entityHigh->facingDirection];
+          &state->bitmapHero[entity.high->facingDirection];
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   bitmap->alignX, bitmap->alignY, cAlphaShadow);
@@ -1248,11 +1242,11 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
                  bitmap->alignY);
     }
 
-    else if (entityLow->type & ENTITY_TYPE_MONSTER) {
+    else if (entity.low->type & ENTITY_TYPE_MONSTER) {
       UpdateMonster(state, &entity, input->dtPerFrame);
 
       struct bitmap_hero *bitmap =
-          &state->bitmapHero[entityHigh->facingDirection];
+          &state->bitmapHero[entity.high->facingDirection];
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   bitmap->alignX, bitmap->alignY, cAlphaShadow);
@@ -1262,7 +1256,7 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
                  bitmap->alignY);
     }
 
-    else if (entityLow->type & ENTITY_TYPE_WALL) {
+    else if (entity.low->type & ENTITY_TYPE_WALL) {
 #if 1
       DrawBitmap(&state->bitmapTree, backbuffer, playerGroundPoint, 40, 80);
 #else
