@@ -838,7 +838,7 @@ internal inline void UpdateFamiliar(struct game_state *state,
                                     struct entity *familiarEntity, f32 dt) {
   struct entity closestHero = {};
   /* 10m maximum search radius */
-  f32 closestHeroDistanceSq = 10.0f;
+  f32 closestHeroDistanceSq = square(10.0f);
 
   for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;
        entityHighIndex++) {
