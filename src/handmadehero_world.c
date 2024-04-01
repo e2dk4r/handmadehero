@@ -113,9 +113,13 @@ inline struct world_position ChunkPositionFromTilePosition(struct world *world,
   result.chunkZ = absTileZ / TILES_PER_CHUNK;
 
   result.offset.x = (f32)(absTileX - (result.chunkX * TILES_PER_CHUNK)) *
-                    world->tileSideInMeters;
+                        world->tileSideInMeters -
+                    world->chunkSideInMeters / 2;
   result.offset.y = (f32)(absTileY - (result.chunkY * TILES_PER_CHUNK)) *
-                    world->tileSideInMeters;
+                        world->tileSideInMeters -
+                    world->chunkSideInMeters / 2;
+
+  assert(WorldPositionIsCalculatedOffset(world, &result.offset));
 
   return result;
 }
