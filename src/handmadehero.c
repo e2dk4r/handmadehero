@@ -949,9 +949,9 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
     WorldInit(world, 1.4f);
 
     /* generate procedural tile map */
-    u32 screenBaseX = (I16_MAX / TILES_PER_WIDTH) / 2;
-    u32 screenBaseY = (I16_MAX / TILES_PER_HEIGHT) / 2;
-    u32 screenBaseZ = I16_MAX / 2;
+    u32 screenBaseX = (U32_MAX / TILES_PER_WIDTH) / 2;
+    u32 screenBaseY = (U32_MAX / TILES_PER_HEIGHT) / 2;
+    u32 screenBaseZ = U32_MAX / 2;
     u32 screenX = screenBaseX;
     u32 screenY = screenBaseY;
     u32 absTileZ = screenBaseZ;
