@@ -796,9 +796,9 @@ static void CameraSet(struct game_state *state,
       WorldPositionCalculate(world, newCameraPosition, RectMin(&cameraBounds));
   struct world_position maxChunkPosition =
       WorldPositionCalculate(world, newCameraPosition, RectMax(&cameraBounds));
-  for (u32 chunkX = minChunkPosition.chunkX; chunkX < maxChunkPosition.chunkX;
+  for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX;
        chunkX++) {
-    for (u32 chunkY = minChunkPosition.chunkY; chunkY < maxChunkPosition.chunkY;
+    for (u32 chunkY = minChunkPosition.chunkY; chunkY <= maxChunkPosition.chunkY;
          chunkY++) {
       struct world_chunk *chunk =
           WorldChunkGet(world, chunkX, chunkY, newCameraPosition->chunkZ, 0);
