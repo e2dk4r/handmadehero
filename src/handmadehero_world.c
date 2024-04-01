@@ -125,11 +125,17 @@ struct world_difference WorldPositionSub(struct world *world,
                                          struct world_position *b) {
   struct world_difference result = {};
 
-  struct v2 dTileXY = {
-      .x = (f32)(a->chunkX - b->chunkX),
-      .y = (f32)(a->chunkY - b->chunkY),
-  };
+  struct v2 dTileXY =
+      v2((f32)(a->chunkX - b->chunkX), (f32)(a->chunkY - b->chunkY));
   f32 dTileZ = (f32)(a->chunkZ - b->chunkZ);
+
+  /* overflowed check */
+  if (a->chunkX < b->chunkX)
+    dTileXY.x = (f32)(b->chunkX - a->chunkX) * -1;
+  if (a->chunkY < b->chunkY)
+    dTileXY.y = (f32)(b->chunkY - a->chunkY) * -1;
+  if (a->chunkZ < b->chunkZ)
+    dTileZ = (f32)(b->chunkZ - a->chunkZ) * -1;
 
   result.dXY = v2_add(v2_mul(dTileXY, world->chunkSideInMeters),
                       v2_sub(a->offset, b->offset));
