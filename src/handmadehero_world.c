@@ -168,36 +168,33 @@ inline void EntityChangeLocation(struct memory_arena *arena,
         WorldChunkGet(world, oldPosition->chunkX, oldPosition->chunkY,
                       oldPosition->chunkZ, 0);
     assert(chunk);
-    if (chunk) {
-      struct world_entity_block *firstBlock = &chunk->firstBlock;
-      u8 found = 0;
-      for (struct world_entity_block *block = firstBlock; !found && block;
-           block = block->next) {
-        for (u32 blockEntityIndex = 0; blockEntityIndex < block->entityCount;
-             blockEntityIndex++) {
+    struct world_entity_block *firstBlock = &chunk->firstBlock;
+    u8 found = 0;
+    for (struct world_entity_block *block = firstBlock; !found && block;
+         block = block->next) {
+      for (u32 blockEntityIndex = 0;
+           !found && blockEntityIndex < block->entityCount;
+           blockEntityIndex++) {
 
-          if (block->entityLowIndexes[blockEntityIndex] != entityLowIndex)
-            continue;
+        if (block->entityLowIndexes[blockEntityIndex] != entityLowIndex)
+          continue;
 
-          if (firstBlock == block) {
-            u32 blockEntityLastIndex = firstBlock->entityCount - 1;
-            firstBlock->entityLowIndexes[blockEntityIndex] =
-                firstBlock->entityLowIndexes[blockEntityLastIndex];
-            firstBlock->entityCount--;
-            if (firstBlock->entityCount == 0) {
-              if (firstBlock->next) {
-                struct world_entity_block *nextBlock = firstBlock->next;
-                *firstBlock = *firstBlock->next;
+        u32 firstBlockEntityLastIndex = firstBlock->entityCount - 1;
+        block->entityLowIndexes[blockEntityIndex] =
+            firstBlock->entityLowIndexes[firstBlockEntityLastIndex];
+        firstBlock->entityCount--;
 
-                nextBlock->next = world->firstFreeBlock;
-                world->firstFreeBlock = nextBlock;
-              }
-            }
+        if (firstBlock->entityCount == 0) {
+          if (firstBlock->next) {
+            struct world_entity_block *nextBlock = firstBlock->next;
+            *firstBlock = *firstBlock->next;
 
-            found = 1;
-            break;
+            nextBlock->next = world->firstFreeBlock;
+            world->firstFreeBlock = nextBlock;
           }
         }
+
+        found = 1;
       }
     }
   }
