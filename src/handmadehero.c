@@ -868,14 +868,15 @@ internal inline void UpdateFamiliar(struct game_state *state,
   }
 
   /* familiar speed at m/s² */
-  comptime f32 familiarSpeed = 0.0f;
+  comptime f32 familiarSpeed = 30.0f;
   EntityMove(state, familiarEntity->lowIndex, dt, ddPosition, familiarSpeed);
 }
 
 internal inline void UpdateMonster(struct game_state *state,
                                    struct entity *entity, f32 dt) {}
 
-GAMEUPDATEANDRENDER(GameUpdateAndRender) {
+void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
+                         struct game_backbuffer *backbuffer) {
   struct game_state *state = memory->permanentStorage;
 
   /****************************************************************

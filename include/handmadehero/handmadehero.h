@@ -81,10 +81,10 @@ struct game_state {
   struct bitmap_hero bitmapHero[4];
 };
 
-#define GAMEUPDATEANDRENDER(name)                                              \
-  void name(struct game_memory *memory, struct game_input *input,              \
-            struct game_backbuffer *backbuffer)
-GAMEUPDATEANDRENDER(GameUpdateAndRender);
-typedef GAMEUPDATEANDRENDER((*pfnGameUpdateAndRender));
+
+void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
+                         struct game_backbuffer *backbuffer);
+typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_input *input,
+                         struct game_backbuffer *backbuffer);
 
 #endif
