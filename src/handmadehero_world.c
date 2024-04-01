@@ -32,7 +32,7 @@ inline struct world_chunk *WorldChunkGet(struct world *world, u32 chunkX,
   assert(hashSlot < WORLD_CHUNK_TOTAL);
 
   struct world_chunk *chunk = &world->chunkHash[hashSlot];
-  while (1) {
+  while (chunk) {
     /* match found */
     if (chunkX == chunk->chunkX && chunkY == chunk->chunkY &&
         chunkZ == chunk->chunkZ)
@@ -58,8 +58,6 @@ inline struct world_chunk *WorldChunkGet(struct world *world, u32 chunkX,
     }
 
     chunk = chunk->next;
-    if (!chunk)
-      break;
   }
 
   return chunk;
@@ -158,6 +156,7 @@ inline void EntityChangeLocation(struct memory_arena *arena,
                                  struct world *world, u32 entityLowIndex,
                                  struct world_position *oldPosition,
                                  struct world_position *newPosition) {
+  assert(newPosition);
   if (oldPosition && WorldPositionSame(world, oldPosition, newPosition))
     // leave entity where it is
     return;
@@ -192,6 +191,9 @@ inline void EntityChangeLocation(struct memory_arena *arena,
             nextBlock->next = world->firstFreeBlock;
             world->firstFreeBlock = nextBlock;
           }
+
+          found = 1;
+          break;
         }
 
         found = 1;

@@ -47,6 +47,12 @@ struct entity_high {
   u32 lowIndex;
 };
 
+struct entity {
+  u32 lowIndex;
+  struct entity_low *low;
+  struct entity_high *high;
+};
+
 struct game_state {
   struct memory_arena worldArena;
   struct world *world;

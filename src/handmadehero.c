@@ -240,6 +240,24 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
   return result;
 }
 
+internal inline struct entity EntityGetFromHigh(struct game_state *state,
+                                                u32 index) {
+  struct entity result = {};
+
+  /* index 0 is reserved for null */
+  if (index == 0)
+    return result;
+
+  if (index >= state->entityHighCount)
+    return result;
+
+  result.high = state->entityHighs + index;
+  result.lowIndex = result.high->lowIndex;
+  result.low = state->entityLows + result.lowIndex;
+
+  return result;
+}
+
 static inline struct entity_low *EntityLowGet(struct game_state *state,
                                               u32 index) {
   struct entity_low *result = 0;
@@ -253,6 +271,7 @@ static inline struct entity_low *EntityLowGet(struct game_state *state,
   result = &state->entityLows[index];
   return result;
 }
+
 static inline struct entity_high *EntityHighGet(struct game_state *state,
                                                 u32 index) {
   struct entity_high *result = 0;
@@ -472,8 +491,8 @@ exit:
   return collided;
 }
 
-static void PlayerMove(struct game_state *state, u32 entityLowIndex, f32 dt,
-                       struct v2 ddPosition) {
+static void EntityMove(struct game_state *state, u32 entityLowIndex, f32 dt,
+                       struct v2 ddPosition, f32 entitySpeed) {
   struct entity_low *entityLow = EntityLowGet(state, entityLowIndex);
   assert(entityLow);
   struct entity_high *entityHigh = EntityHighGet(state, entityLow->highIndex);
@@ -488,12 +507,11 @@ static void PlayerMove(struct game_state *state, u32 entityLowIndex, f32 dt,
    * fixes moving diagonally √2 times faster
    */
   if (ddPositionLength > 1.0f) {
-    v2_mul_ref(&ddPosition, 1 / square_root(ddPositionLength));
+    v2_mul_ref(&ddPosition, 1 / SquareRoot(ddPositionLength));
   }
 
-  /* set player speed in m/s² */
-  f32 playerSpeed = 50.0f;
-  v2_mul_ref(&ddPosition, playerSpeed);
+  /* set entity speed in m/s² */
+  v2_mul_ref(&ddPosition, entitySpeed);
 
   /*
    * apply friction opposite force to acceleration
@@ -816,6 +834,47 @@ static void CameraSet(struct game_state *state,
   assert(IsEntityHighSetValid(state));
 }
 
+internal inline void UpdateFamiliar(struct game_state *state,
+                                    struct entity *familiarEntity, f32 dt) {
+  struct entity closestHero = {};
+  /* 10m maximum search radius */
+  f32 closestHeroDistanceSq = 10.0f;
+
+  for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;
+       entityHighIndex++) {
+    struct entity testEntity = EntityGetFromHigh(state, entityHighIndex);
+    assert(testEntity.high);
+    assert(testEntity.low);
+
+    if (!(testEntity.low->type & ENTITY_TYPE_HERO))
+      continue;
+
+    f32 testDistanceSq = v2_length_square(
+        v2_sub(familiarEntity->high->position, testEntity.high->position));
+    if (testDistanceSq < closestHeroDistanceSq) {
+      closestHero = testEntity;
+      closestHeroDistanceSq = testDistanceSq;
+    }
+  }
+
+  struct v2 ddPosition = {};
+  if (closestHero.high != 0) {
+    /* there is hero nearby, follow him */
+
+    f32 oneOverLength = 1.0f / SquareRoot(closestHeroDistanceSq);
+    ddPosition = v2_mul(
+        v2_sub(closestHero.high->position, familiarEntity->high->position),
+        oneOverLength);
+  }
+
+  /* familiar speed at m/s² */
+  comptime f32 familiarSpeed = 0.0f;
+  EntityMove(state, familiarEntity->lowIndex, dt, ddPosition, familiarSpeed);
+}
+
+internal inline void UpdateMonster(struct game_state *state,
+                                   struct entity *entity, f32 dt) {}
+
 GAMEUPDATEANDRENDER(GameUpdateAndRender) {
   struct game_state *state = memory->permanentStorage;
 
@@ -1059,8 +1118,9 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
       controlledEntityHigh->dZ = 3.0f;
     }
 
-    PlayerMove(state, state->playerIndexForController[controllerIndex],
-               input->dtPerFrame, ddPosition);
+    comptime f32 playerSpeed = 50.0f;
+    EntityMove(state, state->playerIndexForController[controllerIndex],
+               input->dtPerFrame, ddPosition, playerSpeed);
   }
 
   /* sync camera with followed entity */
@@ -1125,6 +1185,11 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     assert(entityHigh);
     struct entity_low *entityLow = EntityLowGet(state, entityHigh->lowIndex);
     assert(entityLow);
+    struct entity entity = {
+        .lowIndex = entityHigh->lowIndex,
+        .low = entityLow,
+        .high = entityHigh,
+    };
 
     comptime f32 playerR = 1.0f;
     comptime f32 playerG = 1.0f;
@@ -1173,6 +1238,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     else if (entityLow->type & ENTITY_TYPE_FAMILIAR) {
+      UpdateFamiliar(state, &entity, input->dtPerFrame);
+
       struct bitmap_hero *bitmap =
           &state->bitmapHero[entityHigh->facingDirection];
 
@@ -1185,6 +1252,8 @@ GAMEUPDATEANDRENDER(GameUpdateAndRender) {
     }
 
     else if (entityLow->type & ENTITY_TYPE_MONSTER) {
+      UpdateMonster(state, &entity, input->dtPerFrame);
+
       struct bitmap_hero *bitmap =
           &state->bitmapHero[entityHigh->facingDirection];
 
