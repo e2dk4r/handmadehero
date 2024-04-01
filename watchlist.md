@@ -214,7 +214,7 @@
 - [x] Handmade Hero Day 058 - Using the Spatial Partition
       https://www.youtube.com/watch?v=W_z9VN1m2Oo
 
-- [ ] Handmade Hero Day 059 - Adding a Basic Familiar Entity
+- [x] Handmade Hero Day 059 - Adding a Basic Familiar Entity
       https://www.youtube.com/watch?v=KBCNjjeXezM
 
 - [ ] Handmade Hero Day 060 - Adding Hitpoints
