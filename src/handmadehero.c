@@ -858,7 +858,7 @@ internal inline void UpdateFamiliar(struct game_state *state,
   }
 
   struct v2 ddPosition = {};
-  if (closestHero.high != 0 && closestHeroDistanceSq > 0.1f) {
+  if (closestHero.high != 0 && closestHeroDistanceSq > square(3.0f)) {
     /* there is hero nearby, follow him */
 
     f32 oneOverLength = 1.0f / SquareRoot(closestHeroDistanceSq);
