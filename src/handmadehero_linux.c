@@ -234,7 +234,8 @@ static void RecordInputBegin(struct linux_state *state, u8 index) {
 
   ssize_t bytesWritten =
       write(state->recordInputFd, state->game_memory->permanentStorage,
-            state->game_memory->permanentStorageSize);
+            state->game_memory->permanentStorageSize +
+                state->game_memory->transientStorageSize);
   assert(bytesWritten > 0);
 }
 
@@ -262,7 +263,8 @@ static void PlaybackInputBegin(struct linux_state *state, u8 index) {
 
   ssize_t bytesRead =
       read(state->playbackInputFd, state->game_memory->permanentStorage,
-           state->game_memory->permanentStorageSize);
+           state->game_memory->permanentStorageSize +
+               state->game_memory->transientStorageSize);
   assert(bytesRead > 0);
 }
 
@@ -288,7 +290,8 @@ begin:
     assert(result >= 0);
     ssize_t bytesRead =
         read(state->playbackInputFd, state->game_memory->permanentStorage,
-             state->game_memory->permanentStorageSize);
+             state->game_memory->permanentStorageSize +
+                 state->game_memory->transientStorageSize);
     assert(bytesRead > 0);
     goto begin;
   }
@@ -1049,7 +1052,7 @@ int main(int argc, char *argv[]) {
 
   /* game: mem allocation */
   static struct game_memory game_memory;
-  if (game_memory_allocation(&game_memory, 1 * GIGABYTES, 2 * MEGABYTES)) {
+  if (game_memory_allocation(&game_memory, 256 * MEGABYTES, 1 * GIGABYTES)) {
     fprintf(stderr, "error: cannot allocate memory!\n");
     error_code = HANDMADEHERO_ERROR_ALLOCATION;
     goto wl_exit;
