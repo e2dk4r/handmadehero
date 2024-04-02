@@ -386,6 +386,13 @@ static inline void EntityMakeLowFreq(struct game_state *state, u32 lowIndex) {
   state->entityHighCount--;
 }
 
+static inline void EntityHitPointsReset(struct entity_low *entityLow) {
+  /* set hit points */
+  entityLow->hitPointMax = 3;
+  entityLow->hitPoints[2].filledAmount = HIT_POINT_SUB_COUNT;
+  entityLow->hitPoints[0] = entityLow->hitPoints[1] = entityLow->hitPoints[2];
+}
+
 static inline void EntityPlayerReset(struct game_state *state, u32 lowIndex) {
   assert(lowIndex < state->entityLowCount);
 
@@ -396,10 +403,7 @@ static inline void EntityPlayerReset(struct game_state *state, u32 lowIndex) {
   entityLow->height = 0.5f;
   entityLow->width = 1.0f;
 
-  /* set hit points */
-  entityLow->hitPointMax = 3;
-  entityLow->hitPoints[2].filledAmount = HIT_POINT_SUB_COUNT;
-  entityLow->hitPoints[0] = entityLow->hitPoints[1] = entityLow->hitPoints[2];
+  EntityHitPointsReset(entityLow);
 
   struct entity_high *highEntity = EntityHighGet(state, entityLow->highIndex);
   if (highEntity) {
@@ -434,6 +438,8 @@ static inline u32 EntityMonsterAdd(struct game_state *state, u32 absTileX,
 
   entityLow->height = 0.5f;
   entityLow->width = 1.0f;
+
+  EntityHitPointsReset(entityLow);
 
   return entityIndex;
 }
@@ -880,6 +886,42 @@ internal inline void UpdateFamiliar(struct game_state *state,
 internal inline void UpdateMonster(struct game_state *state,
                                    struct entity *entity, f32 dt) {}
 
+internal inline void DrawHitPoints(struct game_backbuffer *backbuffer,
+                                   struct entity *entity,
+                                   struct v2 *entityGroundPoint,
+                                   f32 metersToPixels) {
+  if (entity->low->hitPointMax == 0)
+    return;
+
+  struct v2 healthDim = v2(0.2f, 0.2f);
+  f32 spacingX = 1.5f * healthDim.x;
+  struct v2 hitPosition =
+      v2(-0.5f * (f32)(entity->low->hitPointMax - 1) * spacingX, 0.25f);
+  v2_sub_ref(&hitPosition, v2(healthDim.x * 0.5f, 0));
+  struct v2 dHitPosition = v2(spacingX, 0);
+
+  v2_mul_ref(&healthDim, metersToPixels);
+  v2_mul_ref(&hitPosition, metersToPixels);
+  v2_mul_ref(&dHitPosition, metersToPixels);
+
+  for (u32 healthIndex = 0; healthIndex < entity->low->hitPointMax;
+       healthIndex++) {
+    struct hit_point *hitPoint = entity->low->hitPoints + healthIndex;
+
+    struct v2 min = v2_add(*entityGroundPoint, hitPosition);
+    struct v2 max = v2_add(min, healthDim);
+
+    struct v3 color = v3(1.0f, 0.0f, 0.0f);
+    if (hitPoint->filledAmount == 0) {
+      color = v3(0.2f, 0.2f, 0.2f);
+    }
+
+    DrawRectangle(backbuffer, min, max, &color);
+
+    v2_add_ref(&hitPosition, dHitPosition);
+  }
+}
+
 void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
                          struct game_backbuffer *backbuffer) {
   struct game_state *state = memory->permanentStorage;
@@ -1221,35 +1263,7 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
       if (cAlphaShadow < 0.0f)
         cAlphaShadow = 0.0f;
 
-      if (entity.low->hitPointMax != 0) {
-        struct v2 healthDim = v2(0.2f, 0.2f);
-        f32 spacingX = 1.5f * healthDim.x;
-        struct v2 hitPosition =
-            v2(-0.5f * (f32)(entity.low->hitPointMax - 1) * spacingX, 0.25f);
-        v2_sub_ref(&hitPosition, v2(healthDim.x * 0.5f, 0));
-        struct v2 dHitPosition = v2(spacingX, 0);
-
-        v2_mul_ref(&healthDim, metersToPixels);
-        v2_mul_ref(&hitPosition, metersToPixels);
-        v2_mul_ref(&dHitPosition, metersToPixels);
-
-        for (u32 healthIndex = 0; healthIndex < entity.low->hitPointMax;
-             healthIndex++) {
-          struct hit_point *hitPoint = entity.low->hitPoints + healthIndex;
-
-          struct v2 min = v2_add(playerGroundPoint, hitPosition);
-          struct v2 max = v2_add(min, healthDim);
-
-          struct v3 color = v3(1.0f, 0.0f, 0.0f);
-          if (hitPoint->filledAmount == 0) {
-            color = v3(0.2f, 0.2f, 0.2f);
-          }
-
-          DrawRectangle(backbuffer, min, max, &color);
-
-          v2_add_ref(&hitPosition, dHitPosition);
-        }
-      }
+      DrawHitPoints(backbuffer, &entity, &playerGroundPoint, metersToPixels);
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   bitmap->alignX, bitmap->alignY, cAlphaShadow);
@@ -1290,6 +1304,7 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
           &state->bitmapHero[entity.high->facingDirection];
       f32 cAlphaShadow = 1.0f;
 
+      DrawHitPoints(backbuffer, &entity, &playerGroundPoint, metersToPixels);
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   bitmap->alignX, bitmap->alignY, cAlphaShadow);
       playerGroundPoint.y -= z;
