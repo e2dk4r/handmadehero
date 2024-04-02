@@ -1199,10 +1199,6 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
       entity.high->z = 0;
     f32 z = entity.high->z * metersToPixels;
 
-    f32 cAlphaShadow = 1.0f - entity.high->z;
-    if (cAlphaShadow < 0.0f)
-      cAlphaShadow = 0.0f;
-
     struct v2 playerScreenPosition = entity.high->position;
     /* screen's coordinate system uses y values inverse,
      * so that means going up in space means negative y values
@@ -1215,6 +1211,9 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
     if (entity.low->type & ENTITY_TYPE_HERO) {
       struct bitmap_hero *bitmap =
           &state->bitmapHero[entity.high->facingDirection];
+      f32 cAlphaShadow = 1.0f - entity.high->z;
+      if (cAlphaShadow < 0.0f)
+        cAlphaShadow = 0.0f;
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   bitmap->alignX, bitmap->alignY, cAlphaShadow);
@@ -1238,9 +1237,11 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
       struct bitmap_hero *bitmap =
           &state->bitmapHero[entity.high->facingDirection];
 
+      f32 cAlphaShadow = (0.5f * 1.0f) - (0.2f * bobSin);
+
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   bitmap->alignX, bitmap->alignY, cAlphaShadow);
-      playerGroundPoint.y -= 15 *bobSin;
+      playerGroundPoint.y -= 15 * bobSin;
 
       DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
                  bitmap->alignY);
@@ -1251,6 +1252,7 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
 
       struct bitmap_hero *bitmap =
           &state->bitmapHero[entity.high->facingDirection];
+      f32 cAlphaShadow = 1.0f;
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   bitmap->alignX, bitmap->alignY, cAlphaShadow);
