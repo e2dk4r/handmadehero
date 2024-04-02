@@ -25,6 +25,13 @@ struct bitmap_hero {
 #define ENTITY_TYPE_FAMILIAR 1 << 2
 #define ENTITY_TYPE_MONSTER 1 << 3
 
+#define HIT_POINT_SUB_COUNT 4
+struct hit_point {
+  /* TODO: bake this down to one variable */
+  u8 flags;
+  u8 filledAmount;
+};
+
 struct entity_low {
   u8 collides : 1;
   u8 type;
@@ -33,6 +40,9 @@ struct entity_low {
   struct world_position position;
   u32 dAbsTileZ;
   u32 highIndex;
+
+  u32 hitPointMax;
+  struct hit_point hitPoints[16];
 };
 
 struct entity_high {

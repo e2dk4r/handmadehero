@@ -396,6 +396,11 @@ static inline void EntityPlayerReset(struct game_state *state, u32 lowIndex) {
   entityLow->height = 0.5f;
   entityLow->width = 1.0f;
 
+  /* set hit points */
+  entityLow->hitPointMax = 3;
+  entityLow->hitPoints[2].filledAmount = HIT_POINT_SUB_COUNT;
+  entityLow->hitPoints[0] = entityLow->hitPoints[1] = entityLow->hitPoints[2];
+
   struct entity_high *highEntity = EntityHighGet(state, entityLow->highIndex);
   if (highEntity) {
     /* set initial player velocity */
@@ -1214,6 +1219,40 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
       f32 cAlphaShadow = 1.0f - entity.high->z;
       if (cAlphaShadow < 0.0f)
         cAlphaShadow = 0.0f;
+
+      if (entity.low->hitPointMax != 0) {
+        struct v2 healthDim = v2(0.2f, 0.2f);
+        f32 spacingX = 1.5f * healthDim.x;
+        struct v2 hitPosition =
+            v2(-0.5f * (f32)(entity.low->hitPointMax - 1) * spacingX, 0.25f);
+        v2_sub_ref(&hitPosition, v2(healthDim.x * 0.5f, 0));
+        struct v2 dHitPosition = v2(spacingX, 0);
+
+        v2_mul_ref(&healthDim, metersToPixels);
+        v2_mul_ref(&hitPosition, metersToPixels);
+        v2_mul_ref(&dHitPosition, metersToPixels);
+
+        for (u32 healthIndex = 0; healthIndex < entity.low->hitPointMax;
+             healthIndex++) {
+          struct hit_point *hitPoint = entity.low->hitPoints + healthIndex;
+
+          struct v2 min = v2_add(playerGroundPoint, hitPosition);
+          struct v2 max = v2_add(min, healthDim);
+
+          f32 r = 1.0f;
+          f32 g = 0.0f;
+          f32 b = 0.0f;
+          if (hitPoint->filledAmount == 0) {
+            r = 0.2f;
+            g = 0.2f;
+            b = 0.2f;
+          }
+
+          DrawRectangle(backbuffer, min, max, r, g, b);
+
+          v2_add_ref(&hitPosition, dHitPosition);
+        }
+      }
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   bitmap->alignX, bitmap->alignY, cAlphaShadow);
