@@ -386,11 +386,16 @@ static inline void EntityMakeLowFreq(struct game_state *state, u32 lowIndex) {
   state->entityHighCount--;
 }
 
-static inline void EntityHitPointsReset(struct entity_low *entityLow) {
-  /* set hit points */
-  entityLow->hitPointMax = 3;
-  entityLow->hitPoints[2].filledAmount = HIT_POINT_SUB_COUNT;
-  entityLow->hitPoints[0] = entityLow->hitPoints[1] = entityLow->hitPoints[2];
+static inline void EntityHitPointsReset(struct entity_low *entityLow,
+                                        u32 hitPointMax) {
+  assert(hitPointMax < ARRAY_COUNT(entityLow->hitPoints));
+  entityLow->hitPointMax = hitPointMax;
+
+  for (u32 hitPointIndex = 0; hitPointIndex < hitPointMax; hitPointIndex++) {
+    struct hit_point *hitPoint = entityLow->hitPoints + hitPointIndex;
+    hitPoint->flags = 0;
+    hitPoint->filledAmount = HIT_POINT_SUB_COUNT;
+  }
 }
 
 static inline void EntityPlayerReset(struct game_state *state, u32 lowIndex) {
@@ -403,7 +408,7 @@ static inline void EntityPlayerReset(struct game_state *state, u32 lowIndex) {
   entityLow->height = 0.5f;
   entityLow->width = 1.0f;
 
-  EntityHitPointsReset(entityLow);
+  EntityHitPointsReset(entityLow, 3);
 
   struct entity_high *highEntity = EntityHighGet(state, entityLow->highIndex);
   if (highEntity) {
@@ -439,7 +444,7 @@ static inline u32 EntityMonsterAdd(struct game_state *state, u32 absTileX,
   entityLow->height = 0.5f;
   entityLow->width = 1.0f;
 
-  EntityHitPointsReset(entityLow);
+  EntityHitPointsReset(entityLow, 3);
 
   return entityIndex;
 }
