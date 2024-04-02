@@ -44,6 +44,8 @@ struct entity_high {
   f32 z;
   f32 dZ;
 
+  f32 tBob;
+
   u32 lowIndex;
 };
 

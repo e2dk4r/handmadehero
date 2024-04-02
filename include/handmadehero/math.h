@@ -6,6 +6,8 @@
 #define minimum(a, b) (a < b) ? a : b
 #define maximum(a, b) (a > b) ? a : b
 
+comptime f32 PI32 = 3.14159274101257324f;
+
 static inline i32 roundf32toi32(f32 value) {
   return (i32)__builtin_round(value);
 }
@@ -32,6 +34,8 @@ static inline f32 square(f32 value) { return value * value; }
 static inline f32 absolute(f32 value) { return __builtin_fabsf(value); }
 static inline f32 SquareRoot(f32 value) { return __builtin_sqrtf(value); }
 static inline i32 SignOf(i32 value) { return value >= 0 ? 1 : -1; }
+
+static inline f32 Sin(f32 value) { return __builtin_sinf(value); };
 
 struct v2 {
   union {

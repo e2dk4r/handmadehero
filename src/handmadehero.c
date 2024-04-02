@@ -1230,13 +1230,17 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
 
     else if (entity.low->type & ENTITY_TYPE_FAMILIAR) {
       UpdateFamiliar(state, &entity, input->dtPerFrame);
+      entity.high->tBob += input->dtPerFrame;
+      if (entity.high->tBob > 2.0f * PI32)
+        entity.high->tBob -= 2.0f * PI32;
+      f32 bobSin = Sin(2.0f * entity.high->tBob);
 
       struct bitmap_hero *bitmap =
           &state->bitmapHero[entity.high->facingDirection];
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   bitmap->alignX, bitmap->alignY, cAlphaShadow);
-      playerGroundPoint.y -= z;
+      playerGroundPoint.y -= 15 *bobSin;
 
       DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
                  bitmap->alignY);
