@@ -217,7 +217,7 @@
 - [x] Handmade Hero Day 059 - Adding a Basic Familiar Entity
       https://www.youtube.com/watch?v=KBCNjjeXezM
 
-- [ ] Handmade Hero Day 060 - Adding Hitpoints
+- [x] Handmade Hero Day 060 - Adding Hitpoints
       https://www.youtube.com/watch?v=0_xzS8zxuq4
 
 - [ ] Handmade Hero Day 061 - Adding a Simple Attack
