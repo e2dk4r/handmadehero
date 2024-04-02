@@ -1048,16 +1048,10 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
     u32 initialCameraX = screenBaseX * TILES_PER_WIDTH + TILES_PER_WIDTH / 2;
     u32 initialCameraY = screenBaseY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2;
     u32 initialCameraZ = screenBaseZ;
-
     EntityMonsterAdd(state, initialCameraX + 2, initialCameraY + 2,
                      initialCameraZ);
-
-    for (u32 familiarIndex = 0; familiarIndex < 5; familiarIndex++) {
-      u32 familiarOffsetX = (RandomNumber() % 10) - 5;
-      u32 familiarOffsetY = (RandomNumber() % 10) - 3;
-      EntityFamiliarAdd(state, initialCameraX + familiarOffsetX,
-                        initialCameraY + familiarOffsetY, initialCameraZ);
-    }
+    EntityFamiliarAdd(state, initialCameraX - 2, initialCameraY + 2,
+                      initialCameraZ);
 
     struct world_position initialCameraPosition = ChunkPositionFromTilePosition(
         state->world, initialCameraX, initialCameraY, initialCameraZ);
