@@ -8,7 +8,7 @@ static const u32 TILES_PER_WIDTH = 17;
 static const u32 TILES_PER_HEIGHT = 9;
 
 static void DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min,
-                          struct v2 max, f32 r, f32 g, f32 b) {
+                          struct v2 max, const struct v3 *color) {
   assert(min.x < max.x);
   assert(min.y < max.y);
 
@@ -35,17 +35,17 @@ static void DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min,
             /* y offset */
             + ((u32)minY * backbuffer->stride);
 
-  u32 color = /* red */
-      roundf32tou32(r * 255.0f) << 16
+  u32 colorRGB = /* red */
+      roundf32tou32(color->r * 255.0f) << 16
       /* green */
-      | roundf32tou32(g * 255.0f) << 8
+      | roundf32tou32(color->g * 255.0f) << 8
       /* blue */
-      | roundf32tou32(b * 255.0f) << 0;
+      | roundf32tou32(color->b * 255.0f) << 0;
 
   for (i32 y = minY; y < maxY; y++) {
     u32 *pixel = (u32 *)row;
     for (i32 x = minX; x < maxX; x++) {
-      *pixel = color;
+      *pixel = colorRGB;
       pixel++;
     }
     row += backbuffer->stride;
@@ -1174,9 +1174,10 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
 #if 0
   DrawBitmap(&state->bitmapBackground, backbuffer, v2(0.0f, 0.0f), 0, 0);
 #else
+  struct v3 backgroundColor = v3(0.5f, 0.5f, 0.5f);
   DrawRectangle(backbuffer, v2(0.0f, 0.0f),
-                v2((f32)backbuffer->width, (f32)backbuffer->height), 0.5f, 0.5f,
-                0.5f);
+                v2((f32)backbuffer->width, (f32)backbuffer->height),
+                &backgroundColor);
 #endif
 
   struct v2 screenCenter = {
@@ -1239,16 +1240,12 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
           struct v2 min = v2_add(playerGroundPoint, hitPosition);
           struct v2 max = v2_add(min, healthDim);
 
-          f32 r = 1.0f;
-          f32 g = 0.0f;
-          f32 b = 0.0f;
+          struct v3 color = v3(1.0f, 0.0f, 0.0f);
           if (hitPoint->filledAmount == 0) {
-            r = 0.2f;
-            g = 0.2f;
-            b = 0.2f;
+            color = v3(0.2f, 0.2f, 0.2f);
           }
 
-          DrawRectangle(backbuffer, min, max, r, g, b);
+          DrawRectangle(backbuffer, min, max, &color);
 
           v2_add_ref(&hitPosition, dHitPosition);
         }
@@ -1305,19 +1302,15 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
 #if 1
       DrawBitmap(&state->bitmapTree, backbuffer, playerGroundPoint, 40, 80);
 #else
-      comptime f32 playerR = 1.0f;
-      comptime f32 playerG = 1.0f;
-      comptime f32 playerB = 0.0f;
+      comptime struct v3 color = {1.0f, 1.0f, 0.0f};
 
-      struct v2 playerWidthHeight = v2(entityLow->width, entityLow->height);
+      struct v2 playerWidthHeight = v2(entity.low->width, entity.low->height);
       v2_mul_ref(&playerWidthHeight, metersToPixels);
 
       struct v2 playerLeftTop =
           v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));
       struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
-      DrawRectangle(backbuffer, playerLeftTop, playerRightBottom,
-                    /* colors */
-                    playerR, playerG, playerB);
+      DrawRectangle(backbuffer, playerLeftTop, playerRightBottom, &color);
 #endif
     }
 

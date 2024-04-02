@@ -47,6 +47,40 @@ struct v2 {
   };
 };
 
+struct v3 {
+  union {
+    struct {
+      f32 x;
+      f32 y;
+      f32 z;
+    };
+    struct {
+      f32 r;
+      f32 g;
+      f32 b;
+    };
+    f32 e[3];
+  };
+};
+
+struct v4 {
+  union {
+    struct {
+      f32 x;
+      f32 y;
+      f32 z;
+      f32 w;
+    };
+    struct {
+      f32 r;
+      f32 g;
+      f32 b;
+      f32 a;
+    };
+    f32 e[4];
+  };
+};
+
 static inline struct v2 v2(f32 x, f32 y) {
   struct v2 result;
 
@@ -110,6 +144,147 @@ static inline f32 v2_length_square(struct v2 a) {
 
   value = v2_dot(a, a);
 
+  return value;
+}
+
+static inline struct v3 v3(f32 x, f32 y, f32 z) {
+  struct v3 result;
+  result.x = x;
+  result.y = y;
+  result.z = z;
+  return result;
+}
+
+static inline void v3_add_ref(struct v3 *a, struct v3 b) {
+  a->x += b.x;
+  a->y += b.y;
+  a->z += b.z;
+}
+
+static inline struct v3 v3_add(struct v3 a, struct v3 b) {
+  struct v3 result = a;
+  v3_add_ref(&result, b);
+  return result;
+}
+
+static inline void v3_sub_ref(struct v3 *a, struct v3 b) {
+  a->x -= b.x;
+  a->y -= b.y;
+  a->z -= b.z;
+}
+
+static inline struct v3 v3_sub(struct v3 a, struct v3 b) {
+  struct v3 result = a;
+  v3_sub_ref(&result, b);
+  return result;
+}
+
+static inline void v3_neg_ref(struct v3 *a) {
+  a->x = -a->x;
+  a->y = -a->y;
+  a->z = -a->z;
+}
+
+static inline struct v3 v3_neg(struct v3 a) {
+  struct v3 result = a;
+  v3_neg_ref(&result);
+  return result;
+}
+
+static inline void v3_mul_ref(struct v3 *a, f32 value) {
+  a->x *= value;
+  a->y *= value;
+  a->z *= value;
+}
+
+/* scaler multiplication */
+static inline struct v3 v3_mul(struct v3 a, f32 value) {
+  struct v3 result = a;
+  v3_mul_ref(&result, value);
+  return result;
+}
+
+static inline f32 v3_dot(struct v3 a, struct v3 b) {
+  f32 value = a.x * b.x + a.y * b.y + a.z * b.z;
+  return value;
+}
+
+static inline f32 v3_length_square(struct v3 a) {
+  f32 value;
+  value = v3_dot(a, a);
+  return value;
+}
+
+static inline struct v4 v4(f32 x, f32 y, f32 z, f32 w) {
+  struct v4 result;
+  result.x = x;
+  result.y = y;
+  result.z = z;
+  result.w = w;
+  return result;
+}
+
+static inline void v4_add_ref(struct v4 *a, struct v4 b) {
+  a->x += b.x;
+  a->y += b.y;
+  a->z += b.z;
+  a->w += b.w;
+}
+
+static inline struct v4 v4_add(struct v4 a, struct v4 b) {
+  struct v4 result = a;
+  v4_add_ref(&result, b);
+  return result;
+}
+
+static inline void v4_sub_ref(struct v4 *a, struct v4 b) {
+  a->x -= b.x;
+  a->y -= b.y;
+  a->z -= b.z;
+  a->w -= b.w;
+}
+
+static inline struct v4 v4_sub(struct v4 a, struct v4 b) {
+  struct v4 result = a;
+  v4_sub_ref(&result, b);
+  return result;
+}
+
+static inline void v4_neg_ref(struct v4 *a) {
+  a->x = -a->x;
+  a->y = -a->y;
+  a->z = -a->z;
+  a->w = -a->w;
+}
+
+static inline struct v4 v4_neg(struct v4 a) {
+  struct v4 result = a;
+  v4_neg_ref(&result);
+  return result;
+}
+
+static inline void v4_mul_ref(struct v4 *a, f32 value) {
+  a->x *= value;
+  a->y *= value;
+  a->z *= value;
+  a->w *= value;
+}
+
+/* scaler multiplication */
+static inline struct v4 v4_mul(struct v4 a, f32 value) {
+  struct v4 result = a;
+  v4_mul_ref(&result, value);
+  return result;
+}
+
+static inline f32 v4_dot(struct v4 a, struct v4 b) {
+  f32 value = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+  return value;
+}
+
+static inline f32 v4_length_square(struct v4 a) {
+  f32 value;
+  value = v4_dot(a, a);
   return value;
 }
 
