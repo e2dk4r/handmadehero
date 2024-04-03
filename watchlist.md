@@ -223,7 +223,7 @@
 - [x] Handmade Hero Day 061 - Adding a Simple Attack
       https://www.youtube.com/watch?v=bHGLcGgwpWg
 
-- [ ] Handmade Hero Day 062 - Basic Moving Projectiles
+- [x] Handmade Hero Day 062 - Basic Moving Projectiles
       https://www.youtube.com/watch?v=F7feQINaRnk
 
 - [ ] Handmade Hero Day 063 - Simulation Regions
