@@ -241,6 +241,21 @@ static struct bitmap LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile,
   return result;
 }
 
+internal inline void EntityChangeLocation(struct memory_arena *arena,
+                                          struct world *world,
+                                          u32 entityLowIndex,
+                                          struct entity_low *entityLow,
+                                          struct world_position *oldPosition,
+                                          struct world_position *newPosition) {
+  if (newPosition) {
+    entityLow->position = *newPosition;
+    EntityChangeLocationRaw(arena, world, entityLowIndex, oldPosition,
+                            newPosition);
+  } else {
+    entityLow->position = WorldPositionInvalid();
+  }
+}
+
 internal inline struct entity EntityGetFromHigh(struct game_state *state,
                                                 u32 index) {
   struct entity result = {};
@@ -299,9 +314,10 @@ static inline u32 EntityLowAdd(struct game_state *state, u8 type,
   entityLow->type = type;
 
   if (position) {
-    entityLow->position = *position;
-    EntityChangeLocation(&state->worldArena, state->world, entityLowIndex, 0,
-                         position);
+    EntityChangeLocation(&state->worldArena, state->world, entityLowIndex,
+                         entityLow, 0, position);
+  } else {
+    entityLow->position = WorldPositionInvalid();
   }
 
   state->entityLowCount++;
@@ -399,6 +415,18 @@ static inline void EntityHitPointsReset(struct entity_low *entityLow,
   }
 }
 
+internal inline u32 EntitySwordAdd(struct game_state *state) {
+  u32 entityIndex = EntityLowAdd(state, ENTITY_TYPE_SWORD, 0);
+  struct entity_low *entityLow = EntityLowGet(state, entityIndex);
+  assert(entityLow);
+
+  entityLow->height = state->world->tileSideInMeters;
+  entityLow->width = state->world->tileSideInMeters;
+  entityLow->collides = 0;
+
+  return entityIndex;
+}
+
 static inline void EntityPlayerReset(struct game_state *state, u32 lowIndex) {
   assert(lowIndex < state->entityLowCount);
 
@@ -422,10 +450,14 @@ static inline void EntityPlayerReset(struct game_state *state, u32 lowIndex) {
 static inline u32 EntityPlayerAdd(struct game_state *state) {
   struct world_position *entityPosition = &state->cameraPos;
   u32 lowIndex = EntityLowAdd(state, ENTITY_TYPE_HERO, entityPosition);
-  struct entity_low *entity = EntityLowGet(state, lowIndex);
-  assert(entity);
+  struct entity_low *entityLow = EntityLowGet(state, lowIndex);
+  assert(entityLow);
   EntityPlayerReset(state, lowIndex);
   EntityMakeHighFreq(state, lowIndex);
+
+  u32 swordLowIndex = EntitySwordAdd(state);
+  entityLow->swordLowIndex = swordLowIndex;
+  entityLow->distanceRemaining = 3.0f;
 
   /* if followed entity, does not exits */
   if (state->followedEntityIndex == 0)
@@ -740,8 +772,7 @@ static void EntityMove(struct game_state *state, u32 entityLowIndex, f32 dt,
   struct world_position newPosition = WorldPositionCalculate(
       state->world, &state->cameraPos, entityHigh->position);
   EntityChangeLocation(&state->worldArena, state->world, entityLowIndex,
-                       &entityLow->position, &newPosition);
-  entityLow->position = newPosition;
+                       entityLow, &entityLow->position, &newPosition);
 }
 
 static u8 IsEntityHighSetValid(struct game_state *state) {
@@ -946,6 +977,9 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
 
     state->bitmapTree =
         LoadBmp(memory->PlatformReadEntireFile, "test2/tree00.bmp");
+
+    state->bitmapSword =
+        LoadBmp(memory->PlatformReadEntireFile, "test2/rock03.bmp");
 
     /* load hero bitmaps */
     struct bitmap_hero *bitmapHero = &state->bitmapHero[BITMAP_HERO_FRONT];
@@ -1168,9 +1202,31 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
       controlledEntityHigh->dZ = 3.0f;
     }
 
+    struct v2 dSword = {};
+    if (controller->actionUp.pressed) {
+      dSword = v2(0.0f, 1.0f);
+    } else if (controller->actionDown.pressed) {
+      dSword = v2(0.0f, -1.0f);
+    } else if (controller->actionLeft.pressed) {
+      dSword = v2(-1.0f, 0.0f);
+    } else if (controller->actionRight.pressed) {
+      dSword = v2(1.0f, 0.0f);
+    }
+
     comptime f32 playerSpeed = 50.0f;
     EntityMove(state, state->playerIndexForController[controllerIndex],
                input->dtPerFrame, ddPosition, playerSpeed);
+
+    if (dSword.x != 0.0f || dSword.y != 0.0f) {
+      u32 swordLowIndex = controlledEntityLow->swordLowIndex;
+      struct entity_low *swordEntityLow = EntityLowGet(state, swordLowIndex);
+      if (swordEntityLow && !WorldPositionIsValid(&swordEntityLow->position)) {
+        struct world_position swordPosition = controlledEntityLow->position;
+        EntityChangeLocation(&state->worldArena, state->world, swordLowIndex,
+                             swordEntityLow, 0, &swordPosition);
+        EntityMakeHighFreq(state, swordLowIndex);
+      }
+    }
   }
 
   /* sync camera with followed entity */
@@ -1308,6 +1364,14 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
       playerGroundPoint.y -= z;
 
       DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->align);
+    }
+
+    else if (entity.low->type & ENTITY_TYPE_SWORD) {
+      DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
+                  v2(72, 182), 1.0f);
+      playerGroundPoint.y -= z;
+      DrawBitmap(&state->bitmapSword, backbuffer, playerGroundPoint,
+                 v2(29, 10));
     }
 
     else if (entity.low->type & ENTITY_TYPE_WALL) {

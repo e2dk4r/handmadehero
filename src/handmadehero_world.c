@@ -162,11 +162,12 @@ static inline u8 WorldPositionSame(struct world *world,
       && left->chunkZ == right->chunkZ;
 }
 
-inline void EntityChangeLocation(struct memory_arena *arena,
-                                 struct world *world, u32 entityLowIndex,
-                                 struct world_position *oldPosition,
-                                 struct world_position *newPosition) {
-  assert(newPosition);
+inline void EntityChangeLocationRaw(struct memory_arena *arena,
+                                    struct world *world, u32 entityLowIndex,
+                                    struct world_position *oldPosition,
+                                    struct world_position *newPosition) {
+  assert(!oldPosition || WorldPositionIsValid(oldPosition));
+  assert(newPosition && WorldPositionIsValid(newPosition));
   if (oldPosition && WorldPositionSame(world, oldPosition, newPosition))
     // leave entity where it is
     return;

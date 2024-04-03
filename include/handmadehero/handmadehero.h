@@ -23,6 +23,7 @@ struct bitmap_hero {
 #define ENTITY_TYPE_WALL 1 << 1
 #define ENTITY_TYPE_FAMILIAR 1 << 2
 #define ENTITY_TYPE_MONSTER 1 << 3
+#define ENTITY_TYPE_SWORD 1 << 4
 
 #define HIT_POINT_SUB_COUNT 4
 struct hit_point {
@@ -42,6 +43,9 @@ struct entity_low {
 
   u32 hitPointMax;
   struct hit_point hitPoints[16];
+
+  u32 swordLowIndex;
+  f32 distanceRemaining;
 };
 
 struct entity_high {
@@ -84,6 +88,7 @@ struct game_state {
   struct bitmap bitmapBackground;
   struct bitmap bitmapShadow;
   struct bitmap bitmapTree;
+  struct bitmap bitmapSword;
 
 #define BITMAP_HERO_FRONT 3
 #define BITMAP_HERO_BACK 1
