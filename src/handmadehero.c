@@ -1164,7 +1164,7 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
       }
     }
 
-    if (controller->actionUp.pressed) {
+    if (controller->start.pressed) {
       struct entity_high *controlledEntityHigh =
           EntityHighGet(state, controlledEntityLow->highIndex);
       assert(controlledEntityHigh);

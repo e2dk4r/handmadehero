@@ -56,7 +56,7 @@ jobs:
         echo '| a     | Go to left        |' >> notes
         echo '| s     | Go to down        |' >> notes
         echo '| d     | Go to right       |' >> notes
-        echo '| k     | Jump              |' >> notes
+        echo '| space | Jump              |' >> notes
 
         echo '' >> notes
         echo '# Gamepad Input' >> notes
@@ -65,6 +65,6 @@ jobs:
         echo '| start      | Create player               |' >> notes
         echo '| dpad       | Go to up, left, down, right |' >> notes
         echo '| left stick | Go to up, left, down, right |' >> notes
-        echo '| north      | Jump                        |' >> notes
+        echo '| start      | Jump                        |' >> notes
 
         gh release create day-$day --notes-file notes $file
