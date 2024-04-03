@@ -51,10 +51,11 @@ static void DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min,
     row += backbuffer->stride;
   }
 }
-static void DrawBitmap2(struct bitmap *bitmap,
-                        struct game_backbuffer *backbuffer, struct v2 pos,
-                        i32 alignX, i32 alignY, f32 cAlpha) {
-  v2_sub_ref(&pos, v2((f32)alignX, (f32)alignY));
+
+internal inline void DrawBitmap2(struct bitmap *bitmap,
+                                 struct game_backbuffer *backbuffer,
+                                 struct v2 pos, struct v2 align, f32 cAlpha) {
+  v2_sub_ref(&pos, align);
 
   i32 minX = roundf32toi32(pos.x);
   i32 minY = roundf32toi32(pos.y);
@@ -148,10 +149,10 @@ static void DrawBitmap2(struct bitmap *bitmap,
   }
 }
 
-static void DrawBitmap(struct bitmap *bitmap,
-                       struct game_backbuffer *backbuffer, struct v2 pos,
-                       i32 alignX, i32 alignY) {
-  DrawBitmap2(bitmap, backbuffer, pos, alignX, alignY, 1.0f);
+internal inline void DrawBitmap(struct bitmap *bitmap,
+                                struct game_backbuffer *backbuffer,
+                                struct v2 pos, struct v2 align) {
+  DrawBitmap2(bitmap, backbuffer, pos, align, 1.0f);
 }
 
 #define BITMAP_COMPRESSION_RGB 0
@@ -954,8 +955,7 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
                                 "test/test_hero_front_torso.bmp");
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile,
                                "test/test_hero_front_cape.bmp");
-    bitmapHero->alignX = 72;
-    bitmapHero->alignY = 182;
+    bitmapHero->align = v2(72, 182);
 
     bitmapHero = &state->bitmapHero[BITMAP_HERO_BACK];
     bitmapHero->head =
@@ -964,8 +964,7 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
                                 "test/test_hero_back_torso.bmp");
     bitmapHero->cape =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_cape.bmp");
-    bitmapHero->alignX = 72;
-    bitmapHero->alignY = 182;
+    bitmapHero->align = v2(72, 182);
 
     bitmapHero = &state->bitmapHero[BITMAP_HERO_LEFT];
     bitmapHero->head =
@@ -974,8 +973,7 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
                                 "test/test_hero_left_torso.bmp");
     bitmapHero->cape =
         LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_cape.bmp");
-    bitmapHero->alignX = 72;
-    bitmapHero->alignY = 182;
+    bitmapHero->align = v2(72, 182);
 
     bitmapHero = &state->bitmapHero[BITMAP_HERO_RIGHT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile,
@@ -984,8 +982,7 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
                                 "test/test_hero_right_torso.bmp");
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile,
                                "test/test_hero_right_cape.bmp");
-    bitmapHero->alignX = 72;
-    bitmapHero->alignY = 182;
+    bitmapHero->align = v2(72, 182);
 
     /* use entity with 0 index as null */
     EntityLowAdd(state, ENTITY_TYPE_INVALID, 0);
@@ -1219,7 +1216,7 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
 
 /* drawing background */
 #if 0
-  DrawBitmap(&state->bitmapBackground, backbuffer, v2(0.0f, 0.0f), 0, 0);
+  DrawBitmap(&state->bitmapBackground, backbuffer, v2(0.0f, 0.0f), v2(0, 0));
 #else
   struct v3 backgroundColor = v3(0.5f, 0.5f, 0.5f);
   DrawRectangle(backbuffer, v2(0.0f, 0.0f),
@@ -1271,15 +1268,12 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
       DrawHitPoints(backbuffer, &entity, &playerGroundPoint, metersToPixels);
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
-                  bitmap->alignX, bitmap->alignY, cAlphaShadow);
+                  bitmap->align, cAlphaShadow);
       playerGroundPoint.y -= z;
 
-      DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
-                 bitmap->alignY);
-      DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->alignX,
-                 bitmap->alignY);
-      DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
-                 bitmap->alignY);
+      DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->align);
+      DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->align);
+      DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->align);
     }
 
     else if (entity.low->type & ENTITY_TYPE_FAMILIAR) {
@@ -1295,11 +1289,10 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
       f32 cAlphaShadow = (0.5f * 1.0f) - (0.2f * bobSin);
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
-                  bitmap->alignX, bitmap->alignY, cAlphaShadow);
+                  bitmap->align, cAlphaShadow);
       playerGroundPoint.y -= 15 * bobSin;
 
-      DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->alignX,
-                 bitmap->alignY);
+      DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->align);
     }
 
     else if (entity.low->type & ENTITY_TYPE_MONSTER) {
@@ -1311,16 +1304,15 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
 
       DrawHitPoints(backbuffer, &entity, &playerGroundPoint, metersToPixels);
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
-                  bitmap->alignX, bitmap->alignY, cAlphaShadow);
+                  bitmap->align, cAlphaShadow);
       playerGroundPoint.y -= z;
 
-      DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->alignX,
-                 bitmap->alignY);
+      DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->align);
     }
 
     else if (entity.low->type & ENTITY_TYPE_WALL) {
 #if 1
-      DrawBitmap(&state->bitmapTree, backbuffer, playerGroundPoint, 40, 80);
+      DrawBitmap(&state->bitmapTree, backbuffer, playerGroundPoint, v2(40, 80));
 #else
       comptime struct v3 color = {1.0f, 1.0f, 0.0f};
 
