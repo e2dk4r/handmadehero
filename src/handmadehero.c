@@ -857,8 +857,12 @@ static void CameraSet(struct game_state *state,
      */
     v2_add_ref(&entityHigh->position, entityOffsetPerFrame);
 
+    struct entity_low *entityLow = EntityLowGet(state, entityHigh->lowIndex);
+    assert(entityLow);
+
     /* check if entity is in camera bounds */
-    if (RectIsPointInside(cameraBounds, entityHigh->position)) {
+    if (WorldPositionIsValid(&entityLow->position) &&
+        RectIsPointInside(cameraBounds, entityHigh->position)) {
       entityHighIndex++;
       continue;
     }
@@ -960,7 +964,6 @@ internal inline void UpdateSword(struct game_state *state,
 
   swordEntity->low->distanceRemaining -= distanceTraveled;
   if (swordEntity->low->distanceRemaining <= 0.0f) {
-    swordEntity->high->position = v2(10000, 10000);
     EntityChangeLocation(&state->worldArena, state->world,
                          swordEntity->lowIndex, swordEntity->low,
                          &swordEntity->low->position, 0);
