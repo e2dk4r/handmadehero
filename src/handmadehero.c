@@ -540,8 +540,33 @@ exit:
   return collided;
 }
 
+struct move_spec {
+  u8 unitMaxAccel : 1;
+  /* speed at m/s² */
+  f32 speed;
+  f32 drag;
+};
+
+comptime struct move_spec PlayerMoveSpec = {
+    .unitMaxAccel = 1,
+    .speed = 50.0f,
+    .drag = 8.0f,
+};
+
+comptime struct move_spec FamiliarMoveSpec = {
+    .unitMaxAccel = 1,
+    .speed = 30.0f,
+    .drag = 8.0f,
+};
+
+comptime struct move_spec SwordMoveSpec = {
+    .unitMaxAccel = 0,
+    .speed = 0.0f,
+    .drag = 0.0f,
+};
+
 static void EntityMove(struct game_state *state, u32 entityLowIndex, f32 dt,
-                       struct v2 ddPosition, f32 entitySpeed) {
+                       const struct move_spec *moveSpec, struct v2 ddPosition) {
   struct entity_low *entityLow = EntityLowGet(state, entityLowIndex);
   assert(entityLow);
   struct entity_high *entityHigh = EntityHighGet(state, entityLow->highIndex);
@@ -550,22 +575,25 @@ static void EntityMove(struct game_state *state, u32 entityLowIndex, f32 dt,
   /*****************************************************************
    * CORRECTING ACCELERATION
    *****************************************************************/
-  f32 ddPositionLength = v2_length_square(ddPosition);
-  /*
-   * scale down acceleration to unit vector
-   * fixes moving diagonally √2 times faster
-   */
-  if (ddPositionLength > 1.0f) {
-    v2_mul_ref(&ddPosition, 1 / SquareRoot(ddPositionLength));
+  if (moveSpec->unitMaxAccel) {
+    f32 ddPositionLength = v2_length_square(ddPosition);
+    /*
+     * scale down acceleration to unit vector
+     * fixes moving diagonally √2 times faster
+     */
+    if (ddPositionLength > 1.0f) {
+      v2_mul_ref(&ddPosition, 1 / SquareRoot(ddPositionLength));
+    }
   }
 
   /* set entity speed in m/s² */
-  v2_mul_ref(&ddPosition, entitySpeed);
+  v2_mul_ref(&ddPosition, moveSpec->speed);
 
   /*
    * apply friction opposite force to acceleration
    */
-  v2_add_ref(&ddPosition, v2_neg(v2_mul(entityHigh->dPosition, 8.0f)));
+  v2_add_ref(&ddPosition,
+             v2_neg(v2_mul(entityHigh->dPosition, moveSpec->drag)));
 
   /*****************************************************************
    * CALCULATION OF NEW PLAYER POSITION
@@ -639,7 +667,8 @@ static void EntityMove(struct game_state *state, u32 entityLowIndex, f32 dt,
     struct v2 desiredPosition = v2_add(entityHigh->position, deltaPosition);
     struct entity_low *hitEntityLow = 0;
 
-    for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;
+    for (u32 entityHighIndex = 1;
+         entityLow->collides && entityHighIndex < state->entityHighCount;
          entityHighIndex++) {
       struct entity_high *testEntityHigh =
           EntityHighGet(state, entityHighIndex);
@@ -915,13 +944,28 @@ internal inline void UpdateFamiliar(struct game_state *state,
         oneOverLength);
   }
 
-  /* familiar speed at m/s² */
-  comptime f32 familiarSpeed = 30.0f;
-  EntityMove(state, familiarEntity->lowIndex, dt, ddPosition, familiarSpeed);
+  EntityMove(state, familiarEntity->lowIndex, dt, &FamiliarMoveSpec,
+             ddPosition);
 }
 
 internal inline void UpdateMonster(struct game_state *state,
                                    struct entity *entity, f32 dt) {}
+
+internal inline void UpdateSword(struct game_state *state,
+                                 struct entity *swordEntity, f32 dt) {
+  struct v2 oldPosition = swordEntity->high->position;
+  EntityMove(state, swordEntity->lowIndex, dt, &SwordMoveSpec, v2(0, 0));
+  f32 distanceTraveled =
+      v2_length(v2_sub(swordEntity->high->position, oldPosition));
+
+  swordEntity->low->distanceRemaining -= distanceTraveled;
+  if (swordEntity->low->distanceRemaining <= 0.0f) {
+    swordEntity->high->position = v2(10000, 10000);
+    EntityChangeLocation(&state->worldArena, state->world,
+                         swordEntity->lowIndex, swordEntity->low,
+                         &swordEntity->low->position, 0);
+  }
+}
 
 internal inline void DrawHitPoints(struct game_backbuffer *backbuffer,
                                    struct entity *entity,
@@ -1213,18 +1257,24 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
       dSword = v2(1.0f, 0.0f);
     }
 
-    comptime f32 playerSpeed = 50.0f;
     EntityMove(state, state->playerIndexForController[controllerIndex],
-               input->dtPerFrame, ddPosition, playerSpeed);
+               input->dtPerFrame, &PlayerMoveSpec, ddPosition);
 
     if (dSword.x != 0.0f || dSword.y != 0.0f) {
       u32 swordLowIndex = controlledEntityLow->swordLowIndex;
       struct entity_low *swordEntityLow = EntityLowGet(state, swordLowIndex);
+      assert(swordEntityLow);
       if (swordEntityLow && !WorldPositionIsValid(&swordEntityLow->position)) {
         struct world_position swordPosition = controlledEntityLow->position;
         EntityChangeLocation(&state->worldArena, state->world, swordLowIndex,
                              swordEntityLow, 0, &swordPosition);
         EntityMakeHighFreq(state, swordLowIndex);
+        struct entity_high *swordEntityHigh =
+            EntityHighGet(state, swordEntityLow->highIndex);
+        assert(swordEntityHigh);
+
+        swordEntityLow->distanceRemaining = 5.0f;
+        swordEntityHigh->dPosition = v2_mul(dSword, 2.0f);
       }
     }
   }
@@ -1367,6 +1417,8 @@ void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
     }
 
     else if (entity.low->type & ENTITY_TYPE_SWORD) {
+      UpdateSword(state, &entity, input->dtPerFrame);
+
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint,
                   v2(72, 182), 1.0f);
       playerGroundPoint.y -= z;

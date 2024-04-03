@@ -167,8 +167,9 @@ inline void EntityChangeLocationRaw(struct memory_arena *arena,
                                     struct world_position *oldPosition,
                                     struct world_position *newPosition) {
   assert(!oldPosition || WorldPositionIsValid(oldPosition));
-  assert(newPosition && WorldPositionIsValid(newPosition));
-  if (oldPosition && WorldPositionSame(world, oldPosition, newPosition))
+  assert(!newPosition || WorldPositionIsValid(newPosition));
+  if (oldPosition && newPosition &&
+      WorldPositionSame(world, oldPosition, newPosition))
     // leave entity where it is
     return;
 

@@ -147,6 +147,12 @@ static inline f32 v2_length_square(struct v2 a) {
   return value;
 }
 
+static inline f32 v2_length(struct v2 a) {
+  f32 value;
+  value = SquareRoot(v2_length_square(a));
+  return value;
+}
+
 static inline struct v3 v3(f32 x, f32 y, f32 z) {
   struct v3 result;
   result.x = x;
