@@ -920,7 +920,7 @@ struct op {
 
 struct op_device_open {
   u8 type;
-  const char *path;
+  const char path[32];
 };
 
 struct op_joystick_read {
@@ -1069,6 +1069,7 @@ int main(int argc, char *argv[]) {
   u32 backbuffer_size = state.backbuffer->height * state.backbuffer->stride *
                         backbuffer_multiplier;
   /* setup arenas */
+  struct memory_arena event_arena;
   {
     u64 used = 0;
     u64 size;
@@ -1083,6 +1084,11 @@ int main(int argc, char *argv[]) {
     size = 1 * MEGABYTES;
     MemoryArenaInit(&state.xkb_arena, game_memory.permanentStorage + used,
                     size);
+    used += size;
+
+    // for event allocations
+    size = 256 * KILOBYTES;
+    MemoryArenaInit(&event_arena, game_memory.permanentStorage + used, size);
     used += size;
 
     // decrease permanent storage
@@ -1141,6 +1147,13 @@ int main(int argc, char *argv[]) {
     goto io_uring_exit;
   }
 
+  struct memory_chunk *MemoryForEvents =
+      MemoryArenaPushChunk(&event_arena, sizeof(struct op), 10);
+  struct memory_chunk *MemoryForDeviceOpenEvents =
+      MemoryArenaPushChunk(&event_arena, sizeof(struct op_device_open), 5);
+  struct memory_chunk *MemoryForJoystickReadEvents =
+      MemoryArenaPushChunk(&event_arena, sizeof(struct op_joystick_read), 10);
+
   sqe = io_uring_get_sqe(&ring);
   io_uring_prep_poll_multishot(sqe, fd_wl_display, POLLIN);
   io_uring_sqe_set_data(sqe,
@@ -1160,10 +1173,13 @@ int main(int argc, char *argv[]) {
     goto inotify_exit;
   }
 
-  sqe = io_uring_get_sqe(&ring);
-  struct op *op = &(struct op){.type = OP_INOTIFY_WATCH, .fd = fd_inotify};
-  io_uring_prep_poll_multishot(sqe, op->fd, POLLIN);
-  io_uring_sqe_set_data(sqe, op);
+  if (fd_inotify >= 0) {
+    sqe = io_uring_get_sqe(&ring);
+    struct op *submitOp =
+        &(struct op){.type = OP_INOTIFY_WATCH, .fd = fd_inotify};
+    io_uring_prep_poll_multishot(sqe, submitOp->fd, POLLIN);
+    io_uring_sqe_set_data(sqe, submitOp);
+  }
 
   /* add already connected joysticks to queue */
   DIR *dir = opendir("/dev/input");
@@ -1198,19 +1214,17 @@ int main(int argc, char *argv[]) {
       *dest = *src;
     }
 
-    struct op_joystick_read *op = &(struct op_joystick_read){
-        .type = OP_JOYSTICK_READ,
-    };
-
-    op->fd = open(path, O_RDONLY | O_NONBLOCK);
-    if (op->fd < 0)
+    struct op_joystick_read stagedOp = {};
+    stagedOp.type = OP_JOYSTICK_READ,
+    stagedOp.fd = open(path, O_RDONLY | O_NONBLOCK);
+    if (stagedOp.fd < 0)
       continue;
 
     struct libevdev *evdev;
-    int rc = libevdev_new_from_fd(op->fd, &evdev);
+    int rc = libevdev_new_from_fd(stagedOp.fd, &evdev);
     if (rc < 0) {
       debug("libevdev failed\n");
-      close(op->fd);
+      close(stagedOp.fd);
       if (evdev)
         libevdev_free(evdev);
       continue;
@@ -1218,7 +1232,7 @@ int main(int argc, char *argv[]) {
 
     /* detect joystick */
     if (!libevdev_is_joystick(evdev)) {
-      close(op->fd);
+      close(stagedOp.fd);
       libevdev_free(evdev);
       continue;
     }
@@ -1228,9 +1242,13 @@ int main(int argc, char *argv[]) {
            libevdev_get_id_bustype(evdev), libevdev_get_id_vendor(evdev),
            libevdev_get_id_product(evdev));
 
+    struct op_joystick_read *submitOp =
+        MemoryChunkPush(MemoryForJoystickReadEvents);
+    *submitOp = stagedOp;
     struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-    io_uring_prep_read(sqe, op->fd, &op->event, sizeof(op->event), 0);
-    io_uring_sqe_set_data(sqe, op);
+    io_uring_prep_read(sqe, submitOp->fd, &submitOp->event,
+                       sizeof(submitOp->event), 0);
+    io_uring_sqe_set_data(sqe, submitOp);
 
     libevdev_free(evdev);
   }
@@ -1319,10 +1337,12 @@ int main(int argc, char *argv[]) {
       if (event->mask & IN_DELETE)
         goto cqe_seen;
 
-      struct op_device_open *op = &(struct op_device_open){
-          .type = OP_DEVICE_OPEN,
-          .path = path,
-      };
+      struct op_device_open *submitOp =
+          MemoryChunkPush(MemoryForDeviceOpenEvents);
+      submitOp->type = OP_DEVICE_OPEN;
+      for (char *dest = (char *)submitOp->path, *src = path; *src;
+           src++, dest++)
+        *dest = *src;
 
       /* wait for device initialization */
       sqe = io_uring_get_sqe(&ring);
@@ -1330,7 +1350,7 @@ int main(int argc, char *argv[]) {
           .tv_nsec = 75000000, /* 750ms */
       };
       io_uring_prep_timeout(sqe, ts, 0, 0);
-      io_uring_sqe_set_data(sqe, op);
+      io_uring_sqe_set_data(sqe, submitOp);
       io_uring_submit(&ring);
     }
 
@@ -1340,21 +1360,21 @@ int main(int argc, char *argv[]) {
 
       if (cqe->res < 0 && cqe->res != -ETIME) {
         debug("waiting for device initialiation failed\n");
+        MemoryChunkPop(MemoryForDeviceOpenEvents, op);
         goto cqe_seen;
       }
-      struct op_device_open *currentOp = (struct op_device_open *)op;
-      struct op_joystick_read *op = &(struct op_joystick_read){
-          .type = OP_JOYSTICK_READ,
-      };
-
-      op->fd = open(currentOp->path, O_RDONLY | O_NONBLOCK);
-      if (op->fd < 0) {
+      struct op_device_open *op = io_uring_cqe_get_data(cqe);
+      struct op_joystick_read stagedOp = {};
+      stagedOp.type = OP_JOYSTICK_READ;
+      stagedOp.fd = open(op->path, O_RDONLY | O_NONBLOCK);
+      MemoryChunkPop(MemoryForDeviceOpenEvents, op);
+      if (stagedOp.fd < 0) {
         debug("opening device failed\n");
         goto cqe_seen;
       }
 
       struct libevdev *evdev;
-      int rc = libevdev_new_from_fd(op->fd, &evdev);
+      int rc = libevdev_new_from_fd(stagedOp.fd, &evdev);
       if (rc < 0) {
         debug("libevdev failed\n");
         goto error;
@@ -1371,9 +1391,13 @@ int main(int argc, char *argv[]) {
              libevdev_get_id_bustype(evdev), libevdev_get_id_vendor(evdev),
              libevdev_get_id_product(evdev));
 
-      sqe = io_uring_get_sqe(&ring);
-      io_uring_prep_read(sqe, op->fd, &op->event, sizeof(op->event), 0);
-      io_uring_sqe_set_data(sqe, op);
+      struct op_joystick_read *submitOp =
+          MemoryChunkPush(MemoryForJoystickReadEvents);
+      *submitOp = stagedOp;
+      struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
+      io_uring_prep_read(sqe, submitOp->fd, &submitOp->event,
+                         sizeof(submitOp->event), 0);
+      io_uring_sqe_set_data(sqe, submitOp);
       io_uring_submit(&ring);
 
       libevdev_free(evdev);
@@ -1383,7 +1407,7 @@ int main(int argc, char *argv[]) {
       if (evdev)
         libevdev_free(evdev);
       sqe = io_uring_get_sqe(&ring);
-      io_uring_prep_close(sqe, op->fd);
+      io_uring_prep_close(sqe, stagedOp.fd);
       io_uring_sqe_set_data(sqe, 0);
       io_uring_submit(&ring);
     }
@@ -1398,6 +1422,7 @@ int main(int argc, char *argv[]) {
         io_uring_prep_close(sqe, op->fd);
         io_uring_sqe_set_data(sqe, 0);
         io_uring_submit(&ring);
+        MemoryChunkPop(MemoryForJoystickReadEvents, op);
         goto cqe_seen;
       }
 

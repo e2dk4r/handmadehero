@@ -1,7 +1,8 @@
 #include <handmadehero/assert.h>
 #include <handmadehero/memory_arena.h>
 
-void MemoryArenaInit(struct memory_arena *mem, void *data, memory_arena_size_t size) {
+void MemoryArenaInit(struct memory_arena *mem, void *data,
+                     memory_arena_size_t size) {
   mem->used = 0;
   mem->size = size;
   mem->data = data;
@@ -16,3 +17,39 @@ void *MemoryArenaPush(struct memory_arena *mem, memory_arena_size_t size) {
   return data;
 }
 
+void *MemoryChunkPush(struct memory_chunk *chunk) {
+  void *result = 0;
+  void *dataBlock = chunk->block + sizeof(u8) * chunk->max;
+  for (u64 index = 0; index < chunk->max; index++) {
+    u8 *flag = chunk->block + sizeof(u8) * index;
+    if (*flag == 0) {
+      result = dataBlock + index * chunk->size;
+      *flag = 1;
+      return result;
+    }
+  }
+
+  return result;
+}
+
+void MemoryChunkPop(struct memory_chunk *chunk, void *block) {
+  void *dataBlock = chunk->block + sizeof(u8) * chunk->max;
+  assert(block > dataBlock);
+  u64 index = (u64)(block - dataBlock) / chunk->size;
+  u8 *flag = chunk->block + sizeof(u8) * index;
+  *flag = 0;
+}
+
+struct memory_chunk *MemoryArenaPushChunk(struct memory_arena *mem, u64 size,
+                                          u64 max) {
+  struct memory_chunk *chunk =
+      MemoryArenaPush(mem, sizeof(*chunk) + max * sizeof(u8) + max * size);
+  chunk->block = chunk + sizeof(*chunk);
+  chunk->size = size;
+  chunk->max = max;
+  for (u64 index = 0; index < chunk->max; index++) {
+    u8 *flag = chunk->block + sizeof(u8) * index;
+    *flag = 0;
+  }
+  return chunk;
+}
