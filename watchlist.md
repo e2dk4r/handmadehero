@@ -220,7 +220,7 @@
 - [x] Handmade Hero Day 060 - Adding Hitpoints
       https://www.youtube.com/watch?v=0_xzS8zxuq4
 
-- [ ] Handmade Hero Day 061 - Adding a Simple Attack
+- [x] Handmade Hero Day 061 - Adding a Simple Attack
       https://www.youtube.com/watch?v=bHGLcGgwpWg
 
 - [ ] Handmade Hero Day 062 - Basic Moving Projectiles
