@@ -226,7 +226,7 @@
 - [x] Handmade Hero Day 062 - Basic Moving Projectiles
       https://www.youtube.com/watch?v=F7feQINaRnk
 
-- [ ] Handmade Hero Day 063 - Simulation Regions
+- [x] Handmade Hero Day 063 - Simulation Regions
       https://www.youtube.com/watch?v=a7_vSEEgArQ
 
 - [ ] Handmade Hero Day 064 - Mapping Entity Indexes to Pointers
