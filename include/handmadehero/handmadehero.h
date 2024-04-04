@@ -1,4 +1,5 @@
 #ifndef HANDMADEHERO_H
+#define HANDMADEHERO_H
 
 #include "memory_arena.h"
 #include "platform.h"
@@ -103,4 +104,4 @@ typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory,
                                        struct game_input *input,
                                        struct game_backbuffer *backbuffer);
 
-#endif
+#endif /* HANDMADEHERO_H */
