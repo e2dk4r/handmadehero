@@ -4,9 +4,15 @@
 
 #include <stdio.h>
 
-void debug(const char *string) { fputs(string, stdout); }
+void
+debug(const char *string)
+{
+  fputs(string, stdout);
+}
 
-void debugf(const char *format, ...) {
+void
+debugf(const char *format, ...)
+{
   va_list ap;
   va_start(ap, format);
   vfprintf(stdout, format, ap);

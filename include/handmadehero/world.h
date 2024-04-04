@@ -50,40 +50,42 @@ struct world_difference {
   f32 dZ;
 };
 
-internal inline struct world_position WorldPositionInvalid() {
+internal inline struct world_position
+WorldPositionInvalid()
+{
   struct world_position result = {};
   return result;
 }
 
-internal inline u8 WorldPositionIsValid(struct world_position *position) {
+internal inline u8
+WorldPositionIsValid(struct world_position *position)
+{
   return position->chunkX != 0;
 }
 
-void WorldInit(struct world *world, f32 tileSideInMeters);
+void
+WorldInit(struct world *world, f32 tileSideInMeters);
 
-struct world_chunk *WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY,
-                                  u32 chunkZ, struct memory_arena *arena);
+struct world_chunk *
+WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, struct memory_arena *arena);
 
 static inline struct world_position
-WorldPositionCentered(u32 absTileX, u32 absTileY, u32 absTileZ) {
+WorldPositionCentered(u32 absTileX, u32 absTileY, u32 absTileZ)
+{
   return (struct world_position){absTileX, absTileY, absTileZ, 0, 0};
 }
 
 struct world_position
-WorldPositionCalculate(struct world *world, struct world_position *basePosition,
-                       struct v2 offset);
+WorldPositionCalculate(struct world *world, struct world_position *basePosition, struct v2 offset);
 
-struct world_position ChunkPositionFromTilePosition(struct world *world,
-                                                    u32 absTileX, u32 absTileY,
-                                                    u32 absTileZ);
+struct world_position
+ChunkPositionFromTilePosition(struct world *world, u32 absTileX, u32 absTileY, u32 absTileZ);
 
-struct world_difference WorldPositionSub(struct world *world,
-                                         struct world_position *a,
-                                         struct world_position *b);
+struct world_difference
+WorldPositionSub(struct world *world, struct world_position *a, struct world_position *b);
 
-void EntityChangeLocationRaw(struct memory_arena *arena, struct world *world,
-                             u32 entityLowIndex,
-                             struct world_position *oldPosition,
-                             struct world_position *newPosition);
+void
+EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 entityLowIndex,
+                        struct world_position *oldPosition, struct world_position *newPosition);
 
 #endif /* HANDMADEHERO_WORLD_H */

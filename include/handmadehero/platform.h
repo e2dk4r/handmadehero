@@ -11,13 +11,16 @@ struct read_file_result {
   void *data;
 };
 
-struct read_file_result PlatformReadEntireFile(char *path);
+struct read_file_result
+PlatformReadEntireFile(char *path);
 typedef struct read_file_result (*pfnPlatformReadEntireFile)(char *path);
 
-u8 PlatformWriteEntireFile(char *path, u64 size, void *data);
+u8
+PlatformWriteEntireFile(char *path, u64 size, void *data);
 typedef u8 (*pfnPlatformWriteEntireFile)(char *path, u64 size, void *data);
 
-void PlatformFreeMemory(void *address);
+void
+PlatformFreeMemory(void *address);
 typedef void (*pfnPlatformFreeMemory)(void *address);
 
 #endif
@@ -81,7 +84,8 @@ struct game_input {
 };
 
 static inline struct game_controller_input *
-GetController(struct game_input *input, u8 index) {
+GetController(struct game_input *input, u8 index)
+{
   assert(index < HANDMADEHERO_CONTROLLER_COUNT);
   return &input->controllers[index];
 }

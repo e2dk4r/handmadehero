@@ -98,10 +98,9 @@ struct game_state {
   struct bitmap_hero bitmapHero[4];
 };
 
-void GameUpdateAndRender(struct game_memory *memory, struct game_input *input,
-                         struct game_backbuffer *backbuffer);
-typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory,
-                                       struct game_input *input,
+void
+GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer);
+typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_input *input,
                                        struct game_backbuffer *backbuffer);
 
 #endif /* HANDMADEHERO_H */

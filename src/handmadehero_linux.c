@@ -41,7 +41,9 @@
 
 #if HANDMADEHERO_INTERNAL
 
-struct read_file_result PlatformReadEntireFile(char *path) {
+struct read_file_result
+PlatformReadEntireFile(char *path)
+{
   int fd = open(path, O_RDONLY);
   if (fd < 0)
     return (struct read_file_result){};
@@ -66,7 +68,9 @@ struct read_file_result PlatformReadEntireFile(char *path) {
   };
 }
 
-u8 PlatformWriteEntireFile(char *path, u64 size, void *data) {
+u8
+PlatformWriteEntireFile(char *path, u64 size, void *data)
+{
   int fd = open(path, O_WRONLY);
   if (fd < 0)
     return 0;
@@ -79,7 +83,9 @@ u8 PlatformWriteEntireFile(char *path, u64 size, void *data) {
   return 1;
 }
 
-void PlatformFreeMemory(void *address) {
+void
+PlatformFreeMemory(void *address)
+{
   free(address);
   address = 0;
 }
@@ -93,15 +99,14 @@ const u64 KILOBYTES = 1024;
 const u64 MEGABYTES = 1024 * KILOBYTES;
 const u64 GIGABYTES = 1024 * MEGABYTES;
 
-static u8 game_memory_allocation(struct game_memory *memory,
-                                 u64 permanentStorageSize,
-                                 u64 transientStorageSize) {
+static u8
+game_memory_allocation(struct game_memory *memory, u64 permanentStorageSize, u64 transientStorageSize)
+{
   memory->permanentStorageSize = permanentStorageSize;
   memory->transientStorageSize = transientStorageSize;
   u64 len = memory->permanentStorageSize + memory->transientStorageSize;
 
-  void *data =
-      mmap(0, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  void *data = mmap(0, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
   memory->permanentStorage = data;
   memory->transientStorage = data + permanentStorageSize;
@@ -127,7 +132,9 @@ struct game_code {
 #ifdef HANDMADEHERO_DEBUG
 #include <dlfcn.h>
 
-void ReloadGameCode(struct game_code *lib) {
+void
+ReloadGameCode(struct game_code *lib)
+{
   struct stat sb;
 
   int fail = stat(lib->path, &sb);
@@ -222,24 +229,28 @@ struct linux_state {
 
 comptime char recordPath[] = "input.rec";
 
-static inline u8 RecordInputStarted(struct linux_state *state) {
+static inline u8
+RecordInputStarted(struct linux_state *state)
+{
   return state->recordInputIndex;
 }
 
-static void RecordInputBegin(struct linux_state *state, u8 index) {
+static void
+RecordInputBegin(struct linux_state *state, u8 index)
+{
   debug("[RecordInput] begin\n");
   state->recordInputIndex = index;
   state->recordInputFd = open(recordPath, O_CREAT | O_WRONLY | O_TRUNC, 0644);
   assert(state->recordInputFd >= 0);
 
-  ssize_t bytesWritten =
-      write(state->recordInputFd, state->game_memory->permanentStorage,
-            state->game_memory->permanentStorageSize +
-                state->game_memory->transientStorageSize);
+  ssize_t bytesWritten = write(state->recordInputFd, state->game_memory->permanentStorage,
+                               state->game_memory->permanentStorageSize + state->game_memory->transientStorageSize);
   assert(bytesWritten > 0);
 }
 
-static void RecordInputEnd(struct linux_state *state) {
+static void
+RecordInputEnd(struct linux_state *state)
+{
   debug("[RecordInput] end\n");
   state->recordInputIndex = 0;
   if (state->recordInputFd > 0)
@@ -247,28 +258,34 @@ static void RecordInputEnd(struct linux_state *state) {
   state->recordInputFd = -1;
 }
 
-static void RecordInput(struct linux_state *state, struct game_input *input) {
+static void
+RecordInput(struct linux_state *state, struct game_input *input)
+{
   write(state->recordInputFd, input, sizeof(*input));
 }
 
-static inline u8 PlaybackInputStarted(struct linux_state *state) {
+static inline u8
+PlaybackInputStarted(struct linux_state *state)
+{
   return state->playbackInputIndex;
 }
 
-static void PlaybackInputBegin(struct linux_state *state, u8 index) {
+static void
+PlaybackInputBegin(struct linux_state *state, u8 index)
+{
   debug("[PlaybackInput] begin\n");
   state->playbackInputIndex = index;
   state->playbackInputFd = open(recordPath, O_RDONLY);
   assert(state->playbackInputFd >= 0);
 
-  ssize_t bytesRead =
-      read(state->playbackInputFd, state->game_memory->permanentStorage,
-           state->game_memory->permanentStorageSize +
-               state->game_memory->transientStorageSize);
+  ssize_t bytesRead = read(state->playbackInputFd, state->game_memory->permanentStorage,
+                           state->game_memory->permanentStorageSize + state->game_memory->transientStorageSize);
   assert(bytesRead > 0);
 }
 
-static void PlaybackInputEnd(struct linux_state *state) {
+static void
+PlaybackInputEnd(struct linux_state *state)
+{
   debug("[PlaybackInput] end\n");
   state->playbackInputIndex = 0;
   if (state->playbackInputFd > 0)
@@ -276,7 +293,9 @@ static void PlaybackInputEnd(struct linux_state *state) {
   state->playbackInputFd = -1;
 }
 
-static void PlaybackInput(struct linux_state *state, struct game_input *input) {
+static void
+PlaybackInput(struct linux_state *state, struct game_input *input)
+{
   ssize_t bytesRead;
 
 begin:
@@ -288,10 +307,8 @@ begin:
   if (bytesRead == 0) {
     off_t result = lseek(state->playbackInputFd, 0, SEEK_SET);
     assert(result >= 0);
-    ssize_t bytesRead =
-        read(state->playbackInputFd, state->game_memory->permanentStorage,
-             state->game_memory->permanentStorageSize +
-                 state->game_memory->transientStorageSize);
+    ssize_t bytesRead = read(state->playbackInputFd, state->game_memory->permanentStorage,
+                             state->game_memory->permanentStorageSize + state->game_memory->transientStorageSize);
     assert(bytesRead > 0);
     goto begin;
   }
@@ -303,12 +320,12 @@ begin:
  * input handling
  *****************************************************************/
 
-static void joystick_key(struct linux_state *state, u16 type, u16 code,
-                         i32 value) {
+static void
+joystick_key(struct linux_state *state, u16 type, u16 code, i32 value)
+{
   struct game_controller_input *controller = GetController(state->input, 1);
 
-  debugf("[joystick_key] time: type: %d code: %d value: %d\n", type, code,
-         value);
+  debugf("[joystick_key] time: type: %d code: %d value: %d\n", type, code, value);
   controller->isAnalog = 1;
 
   if (type == 0) {
@@ -378,20 +395,19 @@ static void joystick_key(struct linux_state *state, u16 type, u16 code,
   }
 }
 
-static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
-                               u32 format, i32 fd, u32 size) {
+static void
+wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 format, i32 fd, u32 size)
+{
   struct linux_state *state = data;
-  debugf("[wl_keyboard::keymap] format: %d fd: %d size: %d\n", format, fd,
-         size);
+  debugf("[wl_keyboard::keymap] format: %d fd: %d size: %d\n", format, fd, size);
 
   void *keymap_str = MemoryArenaPush(&state->xkb_arena, size);
   keymap_str = mmap(keymap_str, size, PROT_READ, MAP_PRIVATE, fd, 0);
   close(fd);
   assert(keymap_str != MAP_FAILED);
 
-  struct xkb_keymap *xkb_keymap = xkb_keymap_new_from_string(
-      state->xkb_context, keymap_str, XKB_KEYMAP_FORMAT_TEXT_V1,
-      XKB_KEYMAP_COMPILE_NO_FLAGS);
+  struct xkb_keymap *xkb_keymap = xkb_keymap_new_from_string(state->xkb_context, keymap_str, XKB_KEYMAP_FORMAT_TEXT_V1,
+                                                             XKB_KEYMAP_COMPILE_NO_FLAGS);
   struct xkb_state *xkb_state = xkb_state_new(xkb_keymap);
 
   xkb_keymap_unref(state->xkb_keymap);
@@ -401,12 +417,12 @@ static void wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
   state->xkb_state = xkb_state;
 }
 
-static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
-                            u32 serial, u32 time, u32 key,
-                            enum wl_keyboard_key_state keystate) {
+static void
+wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 time, u32 key,
+                enum wl_keyboard_key_state keystate)
+{
   struct linux_state *state = data;
-  debugf("[wl_keyboard::key] serial: %d time: %d key: %d state: %d\n", serial,
-         time, key, keystate);
+  debugf("[wl_keyboard::key] serial: %d time: %d key: %d state: %d\n", serial, time, key, keystate);
 
   u32 keycode = key + 8;
   xkb_keysym_t keysym = xkb_state_key_get_one_sym(state->xkb_state, keycode);
@@ -426,8 +442,7 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
 
     /* if key is pressed, toggle between record and playback */
     if (!RecordInputStarted(state)) {
-      memset(state->input->controllers, 0,
-             HANDMADEHERO_CONTROLLER_COUNT * sizeof(state->input->controllers));
+      memset(state->input->controllers, 0, HANDMADEHERO_CONTROLLER_COUNT * sizeof(state->input->controllers));
       PlaybackInputEnd(state);
       RecordInputBegin(state, 1);
     } else {
@@ -507,35 +522,37 @@ static void wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
   }
 }
 
-static void wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
-                                  u32 serial, u32 mods_depressed,
-                                  u32 mods_latched, u32 mods_locked,
-                                  u32 group) {
+static void
+wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 mods_depressed, u32 mods_latched,
+                      u32 mods_locked, u32 group)
+{
   struct linux_state *state = data;
   debugf("[wl_keyboard::modifiers] serial: %d depressed: %d latched: %d "
          "locked: %d group: %d\n",
          serial, mods_depressed, mods_latched, mods_locked, group);
 
-  xkb_state_update_mask(state->xkb_state, mods_depressed, mods_latched,
-                        mods_locked, 0, 0, group);
+  xkb_state_update_mask(state->xkb_state, mods_depressed, mods_latched, mods_locked, 0, 0, group);
 }
 
-static void wl_keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
-                                    i32 rate, i32 delay) {
+static void
+wl_keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard, i32 rate, i32 delay)
+{
   // struct my_state *state = data;
   debugf("[wl_keyboard::repeat_info] rate: %d delay: %d\n", rate, delay);
 }
 
-static void wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard,
-                              u32 serial, struct wl_surface *surface,
-                              struct wl_array *keys) {
+static void
+wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface,
+                  struct wl_array *keys)
+{
   debugf("[wl_keyboard::enter] serial: %d\n", serial);
   struct linux_state *state = data;
   state->resumed = 1;
 }
 
-static void wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard,
-                              u32 serial, struct wl_surface *surface) {
+static void
+wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface)
+{
   debugf("[wl_keyboard::leave] serial: %d\n", serial);
   struct linux_state *state = data;
   state->paused = 1;
@@ -551,28 +568,39 @@ comptime struct wl_keyboard_listener wl_keyboard_listener = {
     .repeat_info = wl_keyboard_repeat_info,
 };
 
-static void wl_pointer_enter(void *data, struct wl_pointer *wl_pointer,
-                             uint32_t serial, struct wl_surface *surface,
-                             wl_fixed_t surface_x, wl_fixed_t surface_y) {
+static void
+wl_pointer_enter(void *data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface,
+                 wl_fixed_t surface_x, wl_fixed_t surface_y)
+{
   /* hide cursor */
   wl_pointer_set_cursor(wl_pointer, serial, 0, 0, 0);
 }
 
-static void wl_pointer_leave(void *data, struct wl_pointer *wl_pointer,
-                             uint32_t serial, struct wl_surface *surface) {}
+static void
+wl_pointer_leave(void *data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface)
+{
+}
 
-static void wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
-                              uint32_t time, wl_fixed_t surface_x,
-                              wl_fixed_t surface_y) {}
+static void
+wl_pointer_motion(void *data, struct wl_pointer *wl_pointer, uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y)
+{
+}
 
-static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
-                              uint32_t serial, uint32_t time, uint32_t button,
-                              uint32_t state) {}
+static void
+wl_pointer_button(void *data, struct wl_pointer *wl_pointer, uint32_t serial, uint32_t time, uint32_t button,
+                  uint32_t state)
+{
+}
 
-static void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer,
-                            uint32_t time, uint32_t axis, wl_fixed_t value) {}
+static void
+wl_pointer_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis, wl_fixed_t value)
+{
+}
 
-static void wl_pointer_frame(void *data, struct wl_pointer *wl_pointer) {}
+static void
+wl_pointer_frame(void *data, struct wl_pointer *wl_pointer)
+{
+}
 
 comptime struct wl_pointer_listener wl_pointer_listener = {
     .enter = wl_pointer_enter,
@@ -583,8 +611,9 @@ comptime struct wl_pointer_listener wl_pointer_listener = {
     .frame = wl_pointer_frame,
 };
 
-static void wl_seat_capabilities(void *data, struct wl_seat *wl_seat,
-                                 u32 capabilities) {
+static void
+wl_seat_capabilities(void *data, struct wl_seat *wl_seat, u32 capabilities)
+{
   struct linux_state *state = data;
   debugf("[wl_seat::capabilities] capabilities: %d\n", capabilities);
 
@@ -607,8 +636,9 @@ static void wl_seat_capabilities(void *data, struct wl_seat *wl_seat,
   }
 }
 
-static void wl_seat_name(void *data, struct wl_seat *wl_seat,
-                         const char *name) {
+static void
+wl_seat_name(void *data, struct wl_seat *wl_seat, const char *name)
+{
   debugf("[wl_seat::name] name: %s\n", name);
 }
 
@@ -620,7 +650,9 @@ comptime struct wl_seat_listener wl_seat_listener = {
 /*****************************************************************
  * shared memory
  *****************************************************************/
-static i32 create_shared_memory(off_t size) {
+static i32
+create_shared_memory(off_t size)
+{
   int fd;
 
   fd = memfd_create("buff", 0);
@@ -643,14 +675,17 @@ static i32 create_shared_memory(off_t size) {
  * frame_callback events
  *****************************************************************/
 
-static void wp_presentation_feedback_sync_output(
-    void *data, struct wp_presentation_feedback *wp_presentation_feedback,
-    struct wl_output *output) {}
+static void
+wp_presentation_feedback_sync_output(void *data, struct wp_presentation_feedback *wp_presentation_feedback,
+                                     struct wl_output *output)
+{
+}
 
-static void wp_presentation_feedback_presented(
-    void *data, struct wp_presentation_feedback *wp_presentation_feedback,
-    uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec, uint32_t refresh,
-    uint32_t seq_hi, uint32_t seq_lo, uint32_t flags) {
+static void
+wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *wp_presentation_feedback,
+                                   uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec, uint32_t refresh,
+                                   uint32_t seq_hi, uint32_t seq_lo, uint32_t flags)
+{
   wp_presentation_feedback_destroy(wp_presentation_feedback);
   struct linux_state *state = data;
 
@@ -707,12 +742,9 @@ static void wp_presentation_feedback_presented(
     }
 #endif
 
-    state->lib->GameUpdateAndRender(state->game_memory, newInput,
-                                    state->backbuffer);
+    state->lib->GameUpdateAndRender(state->game_memory, newInput, state->backbuffer);
     wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
-    wl_surface_damage_buffer(state->wl_surface, 0, 0,
-                             (i32)state->backbuffer->width,
-                             (i32)state->backbuffer->height);
+    wl_surface_damage_buffer(state->wl_surface, 0, 0, (i32)state->backbuffer->width, (i32)state->backbuffer->height);
 
     state->frame++;
     state->last_ust = ust;
@@ -729,28 +761,27 @@ static void wp_presentation_feedback_presented(
   }
 }
 
-static void wp_presentation_feedback_discarded(
-    void *data, struct wp_presentation_feedback *wp_presentation_feedback) {
+static void
+wp_presentation_feedback_discarded(void *data, struct wp_presentation_feedback *wp_presentation_feedback)
+{
   wp_presentation_feedback_destroy(wp_presentation_feedback);
 }
 
-comptime struct wp_presentation_feedback_listener
-    wp_presentation_feedback_listener = {
-        .sync_output = wp_presentation_feedback_sync_output,
-        .presented = wp_presentation_feedback_presented,
-        .discarded = wp_presentation_feedback_discarded};
+comptime struct wp_presentation_feedback_listener wp_presentation_feedback_listener = {
+    .sync_output = wp_presentation_feedback_sync_output,
+    .presented = wp_presentation_feedback_presented,
+    .discarded = wp_presentation_feedback_discarded};
 
 comptime struct wl_callback_listener wl_surface_frame_listener;
 
-static void wl_surface_frame_done(void *data, struct wl_callback *wl_callback,
-                                  u32 time) {
+static void
+wl_surface_frame_done(void *data, struct wl_callback *wl_callback, u32 time)
+{
   wl_callback_destroy(wl_callback);
   struct linux_state *state = data;
 
-  struct wp_presentation_feedback *feedback =
-      wp_presentation_feedback(state->wp_presentation, state->wl_surface);
-  wp_presentation_feedback_add_listener(
-      feedback, &wp_presentation_feedback_listener, data);
+  struct wp_presentation_feedback *feedback = wp_presentation_feedback(state->wp_presentation, state->wl_surface);
+  wp_presentation_feedback_add_listener(feedback, &wp_presentation_feedback_listener, data);
 
   wl_callback = wl_surface_frame(state->wl_surface);
   wl_callback_add_listener(wl_callback, &wl_surface_frame_listener, data);
@@ -765,8 +796,9 @@ comptime struct wl_callback_listener wl_surface_frame_listener = {
 /*****************************************************************
  * xdg_wm_base events
  *****************************************************************/
-static void xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base,
-                             u32 serial) {
+static void
+xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base, u32 serial)
+{
   xdg_wm_base_pong(xdg_wm_base, serial);
   debugf("[xdg_wm_base::ping] pong(serial: %d)\n", serial);
 }
@@ -779,12 +811,11 @@ comptime struct xdg_wm_base_listener xdg_wm_base_listener = {
  * xdg_toplevel events
  *****************************************************************/
 
-static void xdg_toplevel_configure(void *data,
-                                   struct xdg_toplevel *xdg_toplevel,
-                                   i32 screen_width, i32 screen_height,
-                                   struct wl_array *states) {
-  debugf("[xdg_toplevel::configure] screen width: %d height: %d\n",
-         screen_width, screen_height);
+static void
+xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, i32 screen_width, i32 screen_height,
+                       struct wl_array *states)
+{
+  debugf("[xdg_toplevel::configure] screen width: %d height: %d\n", screen_width, screen_height);
   if (screen_width == 0 || screen_height == 0)
     return;
 
@@ -792,7 +823,8 @@ static void xdg_toplevel_configure(void *data,
 
   state->fullscreen = 0;
   enum xdg_toplevel_state *toplevel_state;
-  wl_array_for_each(toplevel_state, states) {
+  wl_array_for_each(toplevel_state, states)
+  {
     switch (*toplevel_state) {
     case XDG_TOPLEVEL_STATE_FULLSCREEN:
       state->fullscreen = 1;
@@ -807,14 +839,15 @@ static void xdg_toplevel_configure(void *data,
     state->wp_viewport = 0;
   }
 
-  state->wp_viewport =
-      wp_viewporter_get_viewport(state->wp_viewporter, state->wl_surface);
+  state->wp_viewport = wp_viewporter_get_viewport(state->wp_viewporter, state->wl_surface);
   wp_viewport_set_destination(state->wp_viewport, screen_width, screen_height);
 
   wl_surface_commit(state->wl_surface);
 }
 
-static void xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel) {
+static void
+xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel)
+{
   struct linux_state *state = data;
   state->running = 0;
 }
@@ -827,8 +860,9 @@ comptime struct xdg_toplevel_listener xdg_toplevel_listener = {
 /*****************************************************************
  * xdg_surface events
  *****************************************************************/
-static void xdg_surface_configure(void *data, struct xdg_surface *xdg_surface,
-                                  u32 serial) {
+static void
+xdg_surface_configure(void *data, struct xdg_surface *xdg_surface, u32 serial)
+{
   struct linux_state *state = data;
 
   /* ack */
@@ -854,47 +888,42 @@ comptime struct xdg_surface_listener xdg_surface_listener = {
 #define WP_PRESENTATION_MINIMUM_REQUIRED_VERSION 1
 #define EXT_IDLE_NOTIFIER_V1_MINIMUM_REQUIRED_VERSION 1
 
-static void wl_registry_global(void *data, struct wl_registry *wl_registry,
-                               u32 name, const char *interface, u32 version) {
+static void
+wl_registry_global(void *data, struct wl_registry *wl_registry, u32 name, const char *interface, u32 version)
+{
   struct linux_state *state = data;
 
   if (strcmp(interface, wl_compositor_interface.name) == 0) {
     state->wl_compositor =
-        wl_registry_bind(wl_registry, name, &wl_compositor_interface,
-                         WL_COMPOSITOR_MINIMUM_REQUIRED_VERSION);
+        wl_registry_bind(wl_registry, name, &wl_compositor_interface, WL_COMPOSITOR_MINIMUM_REQUIRED_VERSION);
     debug("[wl_registry::global] binded to wl_compositor_interface\n");
   }
 
   else if (strcmp(interface, wl_shm_interface.name) == 0) {
-    state->wl_shm = wl_registry_bind(wl_registry, name, &wl_shm_interface,
-                                     WL_SHM_MINIMUM_REQUIRED_VERSION);
+    state->wl_shm = wl_registry_bind(wl_registry, name, &wl_shm_interface, WL_SHM_MINIMUM_REQUIRED_VERSION);
     debug("[wl_registry::global] binded to wl_shm_interface\n");
   }
 
   else if (strcmp(interface, wl_seat_interface.name) == 0) {
-    state->wl_seat = wl_registry_bind(wl_registry, name, &wl_seat_interface,
-                                      WL_SEAT_MINIMUM_REQUIRED_VERSION);
+    state->wl_seat = wl_registry_bind(wl_registry, name, &wl_seat_interface, WL_SEAT_MINIMUM_REQUIRED_VERSION);
     debug("[wl_registry::global] binded to wl_seat\n");
   }
 
   else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
     state->xdg_wm_base =
-        wl_registry_bind(wl_registry, name, &xdg_wm_base_interface,
-                         XDG_WM_BASE_MINIMUM_REQUIRED_VERSION);
+        wl_registry_bind(wl_registry, name, &xdg_wm_base_interface, XDG_WM_BASE_MINIMUM_REQUIRED_VERSION);
     debug("[wl_registry::global] binded to xdg_wm_base_interface\n");
   }
 
   else if (strcmp(interface, wp_viewporter_interface.name) == 0) {
     state->wp_viewporter =
-        wl_registry_bind(wl_registry, name, &wp_viewporter_interface,
-                         WP_VIEWPORTER_MINIMUM_REQUIRED_VERSION);
+        wl_registry_bind(wl_registry, name, &wp_viewporter_interface, WP_VIEWPORTER_MINIMUM_REQUIRED_VERSION);
     debug("[wl_registry::global] binded to wp_viewporter_interface\n");
   }
 
   else if (strcmp(interface, wp_presentation_interface.name) == 0) {
     state->wp_presentation =
-        wl_registry_bind(wl_registry, name, &wp_presentation_interface,
-                         WP_PRESENTATION_MINIMUM_REQUIRED_VERSION);
+        wl_registry_bind(wl_registry, name, &wp_presentation_interface, WP_PRESENTATION_MINIMUM_REQUIRED_VERSION);
     debug("[wl_registry::global] binded to wp_presentation_interface\n");
   }
 }
@@ -932,12 +961,15 @@ struct op_joystick_read {
 #define ACTION_ADD (1 << 0)
 #define ACTION_REMOVE (1 << 1)
 
-static inline u8 libevdev_is_joystick(struct libevdev *evdev) {
-  return libevdev_has_event_type(evdev, EV_ABS) &&
-         libevdev_has_event_code(evdev, EV_ABS, ABS_RX);
+static inline u8
+libevdev_is_joystick(struct libevdev *evdev)
+{
+  return libevdev_has_event_type(evdev, EV_ABS) && libevdev_has_event_code(evdev, EV_ABS, ABS_RX);
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
   int error_code = 0;
   struct linux_state state = {
       .running = 1,
@@ -1020,8 +1052,8 @@ int main(int argc, char *argv[]) {
   debugf("xdg_wm_base: @%p\n", state.xdg_wm_base);
   debugf("wp_presentation: @%p\n", state.wp_presentation);
 
-  if (!state.wl_compositor || !state.wl_shm || !state.wl_seat ||
-      !state.xdg_wm_base || !state.wp_viewporter || !state.wp_presentation) {
+  if (!state.wl_compositor || !state.wl_shm || !state.wl_seat || !state.xdg_wm_base || !state.wp_viewporter ||
+      !state.wp_presentation) {
     fprintf(stderr, "error: cannot get wayland globals!\n");
     error_code = HANDMADEHERO_ERROR_WAYLAND_EXTENSIONS;
     goto wl_exit;
@@ -1033,8 +1065,7 @@ int main(int argc, char *argv[]) {
   /* wayland: application window */
   xdg_wm_base_add_listener(state.xdg_wm_base, &xdg_wm_base_listener, &state);
 
-  state.xdg_surface =
-      xdg_wm_base_get_xdg_surface(state.xdg_wm_base, state.wl_surface);
+  state.xdg_surface = xdg_wm_base_get_xdg_surface(state.xdg_wm_base, state.wl_surface);
 
   state.xdg_toplevel = xdg_surface_get_toplevel(state.xdg_surface);
   xdg_toplevel_set_title(state.xdg_toplevel, "handmadehero");
@@ -1066,8 +1097,7 @@ int main(int argc, char *argv[]) {
 
   /* wayland: create buffer */
   u32 backbuffer_multiplier = 1;
-  u32 backbuffer_size = state.backbuffer->height * state.backbuffer->stride *
-                        backbuffer_multiplier;
+  u32 backbuffer_size = state.backbuffer->height * state.backbuffer->stride * backbuffer_multiplier;
   /* setup arenas */
   struct memory_arena event_arena;
   {
@@ -1076,14 +1106,12 @@ int main(int argc, char *argv[]) {
 
     // for wayland allocations
     size = 2 * MEGABYTES;
-    MemoryArenaInit(&state.wayland_arena, game_memory.permanentStorage + used,
-                    size);
+    MemoryArenaInit(&state.wayland_arena, game_memory.permanentStorage + used, size);
     used += size;
 
     // for xkb keyboard allocations
     size = 1 * MEGABYTES;
-    MemoryArenaInit(&state.xkb_arena, game_memory.permanentStorage + used,
-                    size);
+    MemoryArenaInit(&state.xkb_arena, game_memory.permanentStorage + used, size);
     used += size;
 
     // for event allocations
@@ -1103,27 +1131,23 @@ int main(int argc, char *argv[]) {
     goto wl_exit;
   }
 
+  state.backbuffer->memory = MemoryArenaPush(&state.wayland_arena, (size_t)backbuffer_size);
   state.backbuffer->memory =
-      MemoryArenaPush(&state.wayland_arena, (size_t)backbuffer_size);
-  state.backbuffer->memory =
-      mmap(state.backbuffer->memory, (size_t)backbuffer_size,
-           PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+      mmap(state.backbuffer->memory, (size_t)backbuffer_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   if (state.backbuffer->memory == MAP_FAILED) {
     fprintf(stderr, "error: cannot create shared memory!\n");
     error_code = HANDMADEHERO_ERROR_ALLOCATION;
     goto shm_exit;
   }
 
-  struct wl_shm_pool *pool =
-      wl_shm_create_pool(state.wl_shm, shm_fd, (i32)backbuffer_size);
+  struct wl_shm_pool *pool = wl_shm_create_pool(state.wl_shm, shm_fd, (i32)backbuffer_size);
   if (!pool) {
     wl_shm_pool_destroy(pool);
     error_code = HANDMADEHERO_ERROR_WAYLAND_SHM_POOL;
     goto shm_exit;
   }
-  state.wl_buffer = wl_shm_pool_create_buffer(
-      pool, 0, (i32)state.backbuffer->width, (i32)state.backbuffer->height,
-      (i32)state.backbuffer->stride, WL_SHM_FORMAT_XRGB8888);
+  state.wl_buffer = wl_shm_pool_create_buffer(pool, 0, (i32)state.backbuffer->width, (i32)state.backbuffer->height,
+                                              (i32)state.backbuffer->stride, WL_SHM_FORMAT_XRGB8888);
   if (!state.wl_buffer) {
     wl_shm_pool_destroy(pool);
     error_code = HANDMADEHERO_ERROR_WAYLAND_SHM_POOL;
@@ -1147,17 +1171,14 @@ int main(int argc, char *argv[]) {
     goto io_uring_exit;
   }
 
-  struct memory_chunk *MemoryForEvents =
-      MemoryArenaPushChunk(&event_arena, sizeof(struct op), 10);
-  struct memory_chunk *MemoryForDeviceOpenEvents =
-      MemoryArenaPushChunk(&event_arena, sizeof(struct op_device_open), 5);
+  struct memory_chunk *MemoryForEvents = MemoryArenaPushChunk(&event_arena, sizeof(struct op), 10);
+  struct memory_chunk *MemoryForDeviceOpenEvents = MemoryArenaPushChunk(&event_arena, sizeof(struct op_device_open), 5);
   struct memory_chunk *MemoryForJoystickReadEvents =
       MemoryArenaPushChunk(&event_arena, sizeof(struct op_joystick_read), 10);
 
   sqe = io_uring_get_sqe(&ring);
   io_uring_prep_poll_multishot(sqe, fd_wl_display, POLLIN);
-  io_uring_sqe_set_data(sqe,
-                        &(struct op){.type = OP_WAYLAND, .fd = fd_wl_display});
+  io_uring_sqe_set_data(sqe, &(struct op){.type = OP_WAYLAND, .fd = fd_wl_display});
 
   /* inotify: notify when a new input added */
   int fd_inotify = inotify_init1(IN_NONBLOCK);
@@ -1166,8 +1187,7 @@ int main(int argc, char *argv[]) {
     goto io_uring_exit;
   }
 
-  int fd_watch =
-      inotify_add_watch(fd_inotify, "/dev/input", IN_CREATE | IN_DELETE);
+  int fd_watch = inotify_add_watch(fd_inotify, "/dev/input", IN_CREATE | IN_DELETE);
   if (fd_watch < 0) {
     error_code = HANDMADEHERO_ERROR_INOTIFY_WATCH_SETUP;
     goto inotify_exit;
@@ -1175,8 +1195,7 @@ int main(int argc, char *argv[]) {
 
   if (fd_inotify >= 0) {
     sqe = io_uring_get_sqe(&ring);
-    struct op *submitOp =
-        &(struct op){.type = OP_INOTIFY_WATCH, .fd = fd_inotify};
+    struct op *submitOp = &(struct op){.type = OP_INOTIFY_WATCH, .fd = fd_inotify};
     io_uring_prep_poll_multishot(sqe, submitOp->fd, POLLIN);
     io_uring_sqe_set_data(sqe, submitOp);
   }
@@ -1215,8 +1234,7 @@ int main(int argc, char *argv[]) {
     }
 
     struct op_joystick_read stagedOp = {};
-    stagedOp.type = OP_JOYSTICK_READ,
-    stagedOp.fd = open(path, O_RDONLY | O_NONBLOCK);
+    stagedOp.type = OP_JOYSTICK_READ, stagedOp.fd = open(path, O_RDONLY | O_NONBLOCK);
     if (stagedOp.fd < 0)
       continue;
 
@@ -1238,16 +1256,13 @@ int main(int argc, char *argv[]) {
     }
 
     debugf("Input device name: \"%s\"\n", libevdev_get_name(evdev));
-    debugf("Input device ID: bus %#x vendor %#x product %#x\n",
-           libevdev_get_id_bustype(evdev), libevdev_get_id_vendor(evdev),
-           libevdev_get_id_product(evdev));
+    debugf("Input device ID: bus %#x vendor %#x product %#x\n", libevdev_get_id_bustype(evdev),
+           libevdev_get_id_vendor(evdev), libevdev_get_id_product(evdev));
 
-    struct op_joystick_read *submitOp =
-        MemoryChunkPush(MemoryForJoystickReadEvents);
+    struct op_joystick_read *submitOp = MemoryChunkPush(MemoryForJoystickReadEvents);
     *submitOp = stagedOp;
     struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-    io_uring_prep_read(sqe, submitOp->fd, &submitOp->event,
-                       sizeof(submitOp->event), 0);
+    io_uring_prep_read(sqe, submitOp->fd, &submitOp->event, sizeof(submitOp->event), 0);
     io_uring_sqe_set_data(sqe, submitOp);
 
     libevdev_free(evdev);
@@ -1337,11 +1352,9 @@ int main(int argc, char *argv[]) {
       if (event->mask & IN_DELETE)
         goto cqe_seen;
 
-      struct op_device_open *submitOp =
-          MemoryChunkPush(MemoryForDeviceOpenEvents);
+      struct op_device_open *submitOp = MemoryChunkPush(MemoryForDeviceOpenEvents);
       submitOp->type = OP_DEVICE_OPEN;
-      for (char *dest = (char *)submitOp->path, *src = path; *src;
-           src++, dest++)
+      for (char *dest = (char *)submitOp->path, *src = path; *src; src++, dest++)
         *dest = *src;
 
       /* wait for device initialization */
@@ -1387,16 +1400,13 @@ int main(int argc, char *argv[]) {
       }
 
       debugf("Input device name: \"%s\"\n", libevdev_get_name(evdev));
-      debugf("Input device ID: bus %#x vendor %#x product %#x\n",
-             libevdev_get_id_bustype(evdev), libevdev_get_id_vendor(evdev),
-             libevdev_get_id_product(evdev));
+      debugf("Input device ID: bus %#x vendor %#x product %#x\n", libevdev_get_id_bustype(evdev),
+             libevdev_get_id_vendor(evdev), libevdev_get_id_product(evdev));
 
-      struct op_joystick_read *submitOp =
-          MemoryChunkPush(MemoryForJoystickReadEvents);
+      struct op_joystick_read *submitOp = MemoryChunkPush(MemoryForJoystickReadEvents);
       *submitOp = stagedOp;
       struct io_uring_sqe *sqe = io_uring_get_sqe(&ring);
-      io_uring_prep_read(sqe, submitOp->fd, &submitOp->event,
-                         sizeof(submitOp->event), 0);
+      io_uring_prep_read(sqe, submitOp->fd, &submitOp->event, sizeof(submitOp->event), 0);
       io_uring_sqe_set_data(sqe, submitOp);
       io_uring_submit(&ring);
 

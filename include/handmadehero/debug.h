@@ -4,8 +4,10 @@
 #if HANDMADEHERO_DEBUG
 
 #include <stdarg.h>
-void debug(const char *string);
-void debugf(const char *format, ...);
+void
+debug(const char *string);
+void
+debugf(const char *format, ...);
 
 #else
 

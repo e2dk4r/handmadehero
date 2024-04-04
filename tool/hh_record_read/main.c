@@ -9,7 +9,9 @@
 #define STDERR 2
 #define NEWLINE "\n"
 
-void usage(void) {
+void
+usage(void)
+{
   static const char msg[] =
       /* short description */
       "hh_record_read <filepath>" NEWLINE;
@@ -23,19 +25,25 @@ struct record_state {
   char *path;
 };
 
-static u8 PlaybackInputBegin(struct record_state *state) {
+static u8
+PlaybackInputBegin(struct record_state *state)
+{
   state->fd = open(state->path, O_RDONLY);
   return state->fd < 0;
 }
 
-static u8 PlaybackInputEnd(struct record_state *state) {
+static u8
+PlaybackInputEnd(struct record_state *state)
+{
   return close(state->fd) != 0;
 }
 
 #define PLAYBACK_FINISH 0
 #define PLAYBACK_ERROR 1
 #define PLAYBACK_CONTINUE 2
-static u8 PlaybackInput(struct record_state *state, struct game_input *input) {
+static u8
+PlaybackInput(struct record_state *state, struct game_input *input)
+{
   ssize_t bytesRead;
 
   bytesRead = read(state->fd, input, sizeof(*input));
@@ -51,18 +59,17 @@ static u8 PlaybackInput(struct record_state *state, struct game_input *input) {
   return PLAYBACK_CONTINUE;
 }
 
-u8 AnyKeyEvent(struct game_controller_input *prev,
-               struct game_controller_input *next) {
+u8
+AnyKeyEvent(struct game_controller_input *prev, struct game_controller_input *next)
+{
   if (prev->stickAverageX != next->stickAverageX)
     return 1;
 
   if (prev->stickAverageY != next->stickAverageY)
     return 1;
 
-  for (u8 buttonIndex = 0; buttonIndex < GAME_CONTROLLER_BUTTON_COUNT;
-       buttonIndex++) {
-    if (prev->buttons[buttonIndex].pressed !=
-        next->buttons[buttonIndex].pressed)
+  for (u8 buttonIndex = 0; buttonIndex < GAME_CONTROLLER_BUTTON_COUNT; buttonIndex++) {
+    if (prev->buttons[buttonIndex].pressed != next->buttons[buttonIndex].pressed)
       return 1;
   }
 
@@ -73,18 +80,20 @@ struct ButtonDescription {
   u64 len;
   char *name;
 } buttonDescriptionTable[GAME_CONTROLLER_BUTTON_COUNT] = {
-#define BUTTON_DESCRIPTION(x)                                                  \
-  { .len = sizeof(x) - 1, .name = x }
-    BUTTON_DESCRIPTION("moveDown"),     BUTTON_DESCRIPTION("moveUp"),
-    BUTTON_DESCRIPTION("moveLeft"),     BUTTON_DESCRIPTION("moveRight"),
-    BUTTON_DESCRIPTION("actionUp"),     BUTTON_DESCRIPTION("actionDown"),
-    BUTTON_DESCRIPTION("actionLeft"),   BUTTON_DESCRIPTION("actionRight"),
-    BUTTON_DESCRIPTION("leftShoulder"), BUTTON_DESCRIPTION("rightShoulder"),
-    BUTTON_DESCRIPTION("start"),        BUTTON_DESCRIPTION("back"),
+#define BUTTON_DESCRIPTION(x)                                                                                          \
+  {                                                                                                                    \
+    .len = sizeof(x) - 1, .name = x                                                                                    \
+  }
+    BUTTON_DESCRIPTION("moveDown"),      BUTTON_DESCRIPTION("moveUp"),      BUTTON_DESCRIPTION("moveLeft"),
+    BUTTON_DESCRIPTION("moveRight"),     BUTTON_DESCRIPTION("actionUp"),    BUTTON_DESCRIPTION("actionDown"),
+    BUTTON_DESCRIPTION("actionLeft"),    BUTTON_DESCRIPTION("actionRight"), BUTTON_DESCRIPTION("leftShoulder"),
+    BUTTON_DESCRIPTION("rightShoulder"), BUTTON_DESCRIPTION("start"),       BUTTON_DESCRIPTION("back"),
 #undef BUTTON_DESCRIPTION
 };
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
   if (argc - 1 == 0) {
     usage();
     return 1;
@@ -127,12 +136,9 @@ playback:
   }
 
   // printing
-  for (u8 controller_index = 0;
-       controller_index < HANDMADEHERO_CONTROLLER_COUNT; controller_index++) {
-    struct game_controller_input *prev_controller =
-        GetController(&prev, controller_index);
-    struct game_controller_input *controller =
-        GetController(&next, controller_index);
+  for (u8 controller_index = 0; controller_index < HANDMADEHERO_CONTROLLER_COUNT; controller_index++) {
+    struct game_controller_input *prev_controller = GetController(&prev, controller_index);
+    struct game_controller_input *controller = GetController(&next, controller_index);
 
     if (!AnyKeyEvent(prev_controller, controller))
       continue;
@@ -165,8 +171,7 @@ playback:
       write(STDOUT, msg_digital, msg_digital_len);
     }
 
-    u8 anyMovementX =
-        prev_controller->stickAverageX != controller->stickAverageX;
+    u8 anyMovementX = prev_controller->stickAverageX != controller->stickAverageX;
     if (anyMovementX) {
       static const char msg_stickX[] = " stickX: ";
       static const u64 msg_stickX_len = sizeof(msg_stickX) - 1;
@@ -174,8 +179,7 @@ playback:
       printf("%.2f", controller->stickAverageX);
       fflush(stdout);
     }
-    u8 anyMovementY =
-        prev_controller->stickAverageY != controller->stickAverageY;
+    u8 anyMovementY = prev_controller->stickAverageY != controller->stickAverageY;
     if (anyMovementY) {
       static const char msg_stickY[] = " stickY: ";
       static const u64 msg_stickY_len = sizeof(msg_stickY) - 1;
@@ -184,16 +188,13 @@ playback:
       fflush(stdout);
     }
 
-    for (u8 buttonIndex = 0; buttonIndex < GAME_CONTROLLER_BUTTON_COUNT;
-         buttonIndex++) {
+    for (u8 buttonIndex = 0; buttonIndex < GAME_CONTROLLER_BUTTON_COUNT; buttonIndex++) {
       /* only print changed button */
-      u8 anyButtonPress = prev_controller->buttons[buttonIndex].pressed !=
-                          controller->buttons[buttonIndex].pressed;
+      u8 anyButtonPress = prev_controller->buttons[buttonIndex].pressed != controller->buttons[buttonIndex].pressed;
       if (!anyButtonPress)
         continue;
 
-      const struct ButtonDescription *description =
-          &buttonDescriptionTable[buttonIndex];
+      const struct ButtonDescription *description = &buttonDescriptionTable[buttonIndex];
 
       write(STDOUT, " ", 1);
       write(STDOUT, description->name, description->len);

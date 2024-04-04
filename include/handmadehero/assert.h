@@ -3,9 +3,9 @@
 
 #if HANDMADEHERO_DEBUG
 
-#define assert(expression)                                                     \
-  if (!(expression)) {                                                         \
-    __builtin_trap();                                                          \
+#define assert(expression)                                                                                             \
+  if (!(expression)) {                                                                                                 \
+    __builtin_trap();                                                                                                  \
   }
 
 #define InvalidCodePath __builtin_trap()

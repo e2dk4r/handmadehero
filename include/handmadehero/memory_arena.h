@@ -16,13 +16,16 @@ struct memory_chunk {
   u64 max;
 };
 
-void MemoryArenaInit(struct memory_arena *mem, void *data,
-                     memory_arena_size_t size);
-void *MemoryArenaPush(struct memory_arena *mem, memory_arena_size_t size);
+void
+MemoryArenaInit(struct memory_arena *mem, void *data, memory_arena_size_t size);
+void *
+MemoryArenaPush(struct memory_arena *mem, memory_arena_size_t size);
 
-void *MemoryChunkPush(struct memory_chunk *chunk);
-void MemoryChunkPop(struct memory_chunk *chunk, void *block);
-struct memory_chunk *MemoryArenaPushChunk(struct memory_arena *mem, u64 size,
-                                          u64 max);
+void *
+MemoryChunkPush(struct memory_chunk *chunk);
+void
+MemoryChunkPop(struct memory_chunk *chunk, void *block);
+struct memory_chunk *
+MemoryArenaPushChunk(struct memory_arena *mem, u64 size, u64 max);
 
 #endif /* HANDMADEHERO_MEMORY_ARENA_H */

@@ -6,7 +6,9 @@
 #define WORLD_CHUNK_UNINITIALIZED 0
 #define TILES_PER_CHUNK 16
 
-void WorldInit(struct world *world, f32 tileSideInMeters) {
+void
+WorldInit(struct world *world, f32 tileSideInMeters)
+{
   world->tileSideInMeters = tileSideInMeters;
   world->chunkSideInMeters = (f32)TILES_PER_CHUNK * tileSideInMeters;
   world->firstFreeBlock = 0;
@@ -17,9 +19,9 @@ void WorldInit(struct world *world, f32 tileSideInMeters) {
   }
 }
 
-inline struct world_chunk *WorldChunkGet(struct world *world, u32 chunkX,
-                                         u32 chunkY, u32 chunkZ,
-                                         struct memory_arena *arena) {
+inline struct world_chunk *
+WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, struct memory_arena *arena)
+{
   assert(chunkX > WORLD_CHUNK_SAFE_MARGIN);
   assert(chunkY > WORLD_CHUNK_SAFE_MARGIN);
   assert(chunkZ > WORLD_CHUNK_SAFE_MARGIN);
@@ -34,8 +36,7 @@ inline struct world_chunk *WorldChunkGet(struct world *world, u32 chunkX,
   struct world_chunk *chunk = &world->chunkHash[hashSlot];
   while (chunk) {
     /* match found */
-    if (chunkX == chunk->chunkX && chunkY == chunk->chunkY &&
-        chunkZ == chunk->chunkZ)
+    if (chunkX == chunk->chunkX && chunkY == chunk->chunkY && chunkZ == chunk->chunkZ)
       break;
 
     /* if the chunk slot was filled and next is not filled
@@ -63,20 +64,22 @@ inline struct world_chunk *WorldChunkGet(struct world *world, u32 chunkX,
   return chunk;
 }
 
-static inline u8 WorldPositionIsCalculated(struct world *world, f32 chunkRel) {
-  return (chunkRel >= -0.5f * world->chunkSideInMeters) &&
-         (chunkRel <= 0.5f * world->chunkSideInMeters);
+static inline u8
+WorldPositionIsCalculated(struct world *world, f32 chunkRel)
+{
+  return (chunkRel >= -0.5f * world->chunkSideInMeters) && (chunkRel <= 0.5f * world->chunkSideInMeters);
 }
 
-static inline u8 WorldPositionIsCalculatedOffset(struct world *world,
-                                                 struct v2 *offset) {
+static inline u8
+WorldPositionIsCalculatedOffset(struct world *world, struct v2 *offset)
+{
 
-  return WorldPositionIsCalculated(world, offset->x) &&
-         WorldPositionIsCalculated(world, offset->y);
+  return WorldPositionIsCalculated(world, offset->x) && WorldPositionIsCalculated(world, offset->y);
 }
 
-static inline void WorldPositionCalculateAxis(struct world *world, u32 *chunk,
-                                              f32 *chunkRel) {
+static inline void
+WorldPositionCalculateAxis(struct world *world, u32 *chunk, f32 *chunkRel)
+{
   /* NOTE: world is assumed to be toroidal topology, if you step off one end
    * you come back on other.
    */
@@ -89,8 +92,8 @@ static inline void WorldPositionCalculateAxis(struct world *world, u32 *chunk,
 }
 
 struct world_position
-WorldPositionCalculate(struct world *world, struct world_position *basePosition,
-                       struct v2 offset) {
+WorldPositionCalculate(struct world *world, struct world_position *basePosition, struct v2 offset)
+{
   struct world_position result = *basePosition;
   v2_add_ref(&result.offset, offset);
 
@@ -100,10 +103,9 @@ WorldPositionCalculate(struct world *world, struct world_position *basePosition,
   return result;
 }
 
-inline struct world_position ChunkPositionFromTilePosition(struct world *world,
-                                                           u32 absTileX,
-                                                           u32 absTileY,
-                                                           u32 absTileZ) {
+inline struct world_position
+ChunkPositionFromTilePosition(struct world *world, u32 absTileX, u32 absTileY, u32 absTileZ)
+{
   struct world_position result = {};
 
   // TODO: move to z!!
@@ -112,25 +114,22 @@ inline struct world_position ChunkPositionFromTilePosition(struct world *world,
   result.chunkY = absTileY / TILES_PER_CHUNK;
   result.chunkZ = absTileZ / TILES_PER_CHUNK;
 
-  result.offset.x = (f32)(absTileX - (result.chunkX * TILES_PER_CHUNK)) *
-                        world->tileSideInMeters -
-                    world->chunkSideInMeters / 2;
-  result.offset.y = (f32)(absTileY - (result.chunkY * TILES_PER_CHUNK)) *
-                        world->tileSideInMeters -
-                    world->chunkSideInMeters / 2;
+  result.offset.x =
+      (f32)(absTileX - (result.chunkX * TILES_PER_CHUNK)) * world->tileSideInMeters - world->chunkSideInMeters / 2;
+  result.offset.y =
+      (f32)(absTileY - (result.chunkY * TILES_PER_CHUNK)) * world->tileSideInMeters - world->chunkSideInMeters / 2;
 
   assert(WorldPositionIsCalculatedOffset(world, &result.offset));
 
   return result;
 }
 
-struct world_difference WorldPositionSub(struct world *world,
-                                         struct world_position *a,
-                                         struct world_position *b) {
+struct world_difference
+WorldPositionSub(struct world *world, struct world_position *a, struct world_position *b)
+{
   struct world_difference result = {};
 
-  struct v2 dTileXY =
-      v2((f32)(a->chunkX - b->chunkX), (f32)(a->chunkY - b->chunkY));
+  struct v2 dTileXY = v2((f32)(a->chunkX - b->chunkX), (f32)(a->chunkY - b->chunkY));
   f32 dTileZ = (f32)(a->chunkZ - b->chunkZ);
 
   /* overflowed check */
@@ -141,16 +140,15 @@ struct world_difference WorldPositionSub(struct world *world,
   if (a->chunkZ < b->chunkZ)
     dTileZ = (f32)(b->chunkZ - a->chunkZ) * -1;
 
-  result.dXY = v2_add(v2_mul(dTileXY, world->chunkSideInMeters),
-                      v2_sub(a->offset, b->offset));
+  result.dXY = v2_add(v2_mul(dTileXY, world->chunkSideInMeters), v2_sub(a->offset, b->offset));
   result.dZ = world->chunkSideInMeters * dTileZ;
 
   return result;
 }
 
-static inline u8 WorldPositionSame(struct world *world,
-                                   struct world_position *left,
-                                   struct world_position *right) {
+static inline u8
+WorldPositionSame(struct world *world, struct world_position *left, struct world_position *right)
+{
   assert(WorldPositionIsCalculatedOffset(world, &left->offset));
   assert(WorldPositionIsCalculatedOffset(world, &right->offset));
   return
@@ -162,37 +160,30 @@ static inline u8 WorldPositionSame(struct world *world,
       && left->chunkZ == right->chunkZ;
 }
 
-inline void EntityChangeLocationRaw(struct memory_arena *arena,
-                                    struct world *world, u32 entityLowIndex,
-                                    struct world_position *oldPosition,
-                                    struct world_position *newPosition) {
+inline void
+EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 entityLowIndex,
+                        struct world_position *oldPosition, struct world_position *newPosition)
+{
   assert(!oldPosition || WorldPositionIsValid(oldPosition));
   assert(!newPosition || WorldPositionIsValid(newPosition));
-  if (oldPosition && newPosition &&
-      WorldPositionSame(world, oldPosition, newPosition))
+  if (oldPosition && newPosition && WorldPositionSame(world, oldPosition, newPosition))
     // leave entity where it is
     return;
 
   if (oldPosition) {
     // pull entity out of its old entity block
-    struct world_chunk *chunk =
-        WorldChunkGet(world, oldPosition->chunkX, oldPosition->chunkY,
-                      oldPosition->chunkZ, 0);
+    struct world_chunk *chunk = WorldChunkGet(world, oldPosition->chunkX, oldPosition->chunkY, oldPosition->chunkZ, 0);
     assert(chunk);
     struct world_entity_block *firstBlock = &chunk->firstBlock;
     u8 found = 0;
-    for (struct world_entity_block *block = firstBlock; !found && block;
-         block = block->next) {
-      for (u32 blockEntityIndex = 0;
-           !found && blockEntityIndex < block->entityCount;
-           blockEntityIndex++) {
+    for (struct world_entity_block *block = firstBlock; !found && block; block = block->next) {
+      for (u32 blockEntityIndex = 0; !found && blockEntityIndex < block->entityCount; blockEntityIndex++) {
 
         if (block->entityLowIndexes[blockEntityIndex] != entityLowIndex)
           continue;
 
         u32 firstBlockEntityLastIndex = firstBlock->entityCount - 1;
-        block->entityLowIndexes[blockEntityIndex] =
-            firstBlock->entityLowIndexes[firstBlockEntityLastIndex];
+        block->entityLowIndexes[blockEntityIndex] = firstBlock->entityLowIndexes[firstBlockEntityLastIndex];
         firstBlock->entityCount--;
 
         if (firstBlock->entityCount == 0) {
@@ -215,8 +206,7 @@ inline void EntityChangeLocationRaw(struct memory_arena *arena,
 
   // insert into its new entity block
   struct world_chunk *chunk =
-      WorldChunkGet(world, newPosition->chunkX, newPosition->chunkY,
-                    newPosition->chunkZ, arena);
+      WorldChunkGet(world, newPosition->chunkX, newPosition->chunkY, newPosition->chunkZ, arena);
   struct world_entity_block *block = &chunk->firstBlock;
   if (block->entityCount == ARRAY_COUNT(block->entityLowIndexes)) {
     // we're out of room, get a new block
