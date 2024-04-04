@@ -4,8 +4,8 @@
 #include <handmadehero/math.h>
 #include <handmadehero/random.h>
 
-static const u32 TILES_PER_WIDTH = 17;
-static const u32 TILES_PER_HEIGHT = 9;
+comptime u32 TILES_PER_WIDTH = 17;
+comptime u32 TILES_PER_HEIGHT = 9;
 
 static void
 DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min, struct v2 max, const struct v3 *color)
@@ -241,7 +241,7 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
   return result;
 }
 
-internal inline void
+inline void
 EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct entity_low *entityLow,
                      struct world_position *oldPosition, struct world_position *newPosition)
 {
@@ -253,233 +253,100 @@ EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entity
   }
 }
 
-internal inline struct entity
-EntityGetFromHigh(struct game_state *state, u32 index)
-{
-  struct entity result = {};
-
-  /* index 0 is reserved for null */
-  if (index == 0)
-    return result;
-
-  if (index >= state->entityHighCount)
-    return result;
-
-  result.high = state->entityHighs + index;
-  result.lowIndex = result.high->lowIndex;
-  result.low = state->entityLows + result.lowIndex;
-
-  return result;
-}
-
 static inline struct entity_low *
-EntityLowGet(struct game_state *state, u32 index)
+StoredEntityGet(struct game_state *state, u32 index)
 {
   struct entity_low *result = 0;
   /* index 0 is reserved for null */
   if (index == 0)
     return result;
 
-  if (index >= state->entityLowCount)
+  if (index >= state->storedEntityCount)
     return result;
 
-  result = &state->entityLows[index];
-  return result;
-}
-
-static inline struct entity_high *
-EntityHighGet(struct game_state *state, u32 index)
-{
-  struct entity_high *result = 0;
-  /* index 0 is reserved for null */
-  if (index == 0)
-    return result;
-
-  if (index >= state->entityHighCount)
-    return result;
-
-  result = &state->entityHighs[index];
+  result = state->storedEntities + index;
   return result;
 }
 
 static inline u32
-EntityLowAdd(struct game_state *state, u8 type, struct world_position *position)
+StoredEntityAdd(struct game_state *state, u8 type, struct world_position *position)
 {
-  u32 entityLowIndex = state->entityLowCount;
-  assert(entityLowIndex < HANDMADEHERO_ENTITY_LOW_TOTAL);
+  u32 storedEntityIndex = state->storedEntityCount;
+  assert(storedEntityIndex < HANDMADEHERO_STORED_ENTITY_TOTAL);
 
-  struct entity_low *entityLow = state->entityLows + entityLowIndex;
-  assert(entityLow);
-  *entityLow = (struct entity_low){};
-  entityLow->collides = 1;
-  entityLow->type = type;
+  struct entity_low *storedEntity = state->storedEntities + storedEntityIndex;
+  assert(storedEntity);
+  *storedEntity = (struct entity_low){};
+  storedEntity->collides = 1;
+  storedEntity->type = type;
 
   if (position) {
-    EntityChangeLocation(&state->worldArena, state->world, entityLowIndex, entityLow, 0, position);
+    EntityChangeLocation(&state->worldArena, state->world, storedEntityIndex, storedEntity, 0, position);
   } else {
-    entityLow->position = WorldPositionInvalid();
+    storedEntity->position = WorldPositionInvalid();
   }
 
-  state->entityLowCount++;
+  state->storedEntityCount++;
 
-  return entityLowIndex;
+  return storedEntityIndex;
 }
 
 static inline void
-EntityMakeHighFreq(struct game_state *state, u32 lowIndex)
+EntityHitPointsReset(struct entity_low *storedEntity, u32 hitPointMax)
 {
-  struct entity_low *entityLow = EntityLowGet(state, lowIndex);
-  assert(entityLow);
-  /* if it is already in high freq set */
-  if (entityLow->highIndex != 0)
-    return;
-
-  entityLow->highIndex = state->entityHighCount;
-  if (entityLow->highIndex == HANDMADEHERO_ENTITY_HIGH_TOTAL)
-    InvalidCodePath;
-
-  struct entity_high *entityHigh = &state->entityHighs[entityLow->highIndex];
-  *entityHigh = (struct entity_high){};
-  entityHigh->lowIndex = lowIndex;
-
-  /* map the entity to camera space */
-  struct world_difference diff = WorldPositionSub(state->world, &entityLow->position, &state->cameraPos);
-
-  entityHigh->position = diff.dXY;
-  entityHigh->dPosition = v2(0.0f, 0.0f);
-  entityHigh->chunkZ = entityLow->position.chunkZ;
-  entityHigh->facingDirection = 0;
-
-  state->entityHighCount++;
-}
-
-static inline void
-EntityMakeLowFreq(struct game_state *state, u32 lowIndex)
-{
-  struct entity_low *entityLow = EntityLowGet(state, lowIndex);
-  assert(entityLow);
-
-  /* if it is already in low freq set */
-  if (entityLow->highIndex == 0)
-    return;
-
-  /*
-   * if deleted index is last in high freq set
-   * before:
-   *   high |  0 |  1 |  2 |  3 |  4x |
-   *           ▲    ▲    ▲    ▲    ▲
-   *   low  | 10 | 20 | 30 | 40 | 50x |
-   *   x will be removed from high freq set
-   *
-   * after:
-   *   high |  0 |  1 |  2 |  3 |  4 |
-   *           ▲    ▲    ▲    ▲
-   *   low  | 10 | 20 | 30 | 40 | 50 |
-   ****************************************************************
-   * if deleted index is not last in high freq set
-   * before:
-   *   high |  0 |  1 |  2x |  3 |  4 |
-   *           ▲    ▲     ▲    ▲    ▲
-   *   low  | 10 | 20 | 30x | 40 | 50 |
-   *   x will be removed from high freq set
-   *
-   * after:
-   *   high |  0 |  1 |  2 |  3 |  4 |
-   *           ▲    ▲    ▲    ▲
-   *           ┃    ┃    ┃    ┃
-   *           ┃    ┃    ┗━━━━╋━━━━┓
-   *   low  | 10 | 20 | 30 | 40 | 50 |
-   */
-  u32 lastHighIndex = state->entityHighCount - 1;
-  assert(lastHighIndex < HANDMADEHERO_ENTITY_HIGH_TOTAL);
-  if (entityLow->highIndex != lastHighIndex) {
-    struct entity_high *lastHighEntity = &state->entityHighs[lastHighIndex];
-    struct entity_high *deletedEntity = &state->entityHighs[entityLow->highIndex];
-
-    *deletedEntity = *lastHighEntity;
-    state->entityLows[lastHighEntity->lowIndex].highIndex = entityLow->highIndex;
-  }
-
-  entityLow->highIndex = 0;
-  state->entityHighCount--;
-}
-
-static inline void
-EntityHitPointsReset(struct entity_low *entityLow, u32 hitPointMax)
-{
-  assert(hitPointMax < ARRAY_COUNT(entityLow->hitPoints));
-  entityLow->hitPointMax = hitPointMax;
+  assert(hitPointMax < ARRAY_COUNT(storedEntity->hitPoints));
+  storedEntity->hitPointMax = hitPointMax;
 
   for (u32 hitPointIndex = 0; hitPointIndex < hitPointMax; hitPointIndex++) {
-    struct hit_point *hitPoint = entityLow->hitPoints + hitPointIndex;
+    struct hit_point *hitPoint = storedEntity->hitPoints + hitPointIndex;
     hitPoint->flags = 0;
     hitPoint->filledAmount = HIT_POINT_SUB_COUNT;
   }
 }
 
 internal inline u32
-EntitySwordAdd(struct game_state *state)
+SwordAdd(struct game_state *state)
 {
-  u32 entityIndex = EntityLowAdd(state, ENTITY_TYPE_SWORD, 0);
-  struct entity_low *entityLow = EntityLowGet(state, entityIndex);
-  assert(entityLow);
+  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_SWORD, 0);
+  struct entity_low *storedEntity = StoredEntityGet(state, storedEntityIndex);
+  assert(storedEntity);
 
-  entityLow->height = state->world->tileSideInMeters;
-  entityLow->width = state->world->tileSideInMeters;
-  entityLow->collides = 0;
+  storedEntity->height = state->world->tileSideInMeters;
+  storedEntity->width = state->world->tileSideInMeters;
+  storedEntity->collides = 0;
 
-  return entityIndex;
-}
-
-static inline void
-EntityPlayerReset(struct game_state *state, u32 lowIndex)
-{
-  assert(lowIndex < state->entityLowCount);
-
-  struct entity_low *entityLow = EntityLowGet(state, lowIndex);
-  assert(entityLow);
-
-  /* set player size */
-  entityLow->height = 0.5f;
-  entityLow->width = 1.0f;
-
-  EntityHitPointsReset(entityLow, 3);
-
-  struct entity_high *highEntity = EntityHighGet(state, entityLow->highIndex);
-  if (highEntity) {
-    /* set initial player velocity */
-    highEntity->dPosition.x = 0;
-    highEntity->dPosition.y = 0;
-  }
+  return storedEntityIndex;
 }
 
 static inline u32
-EntityPlayerAdd(struct game_state *state)
+PlayerAdd(struct game_state *state)
 {
   struct world_position *entityPosition = &state->cameraPos;
-  u32 lowIndex = EntityLowAdd(state, ENTITY_TYPE_HERO, entityPosition);
-  struct entity_low *entityLow = EntityLowGet(state, lowIndex);
-  assert(entityLow);
-  EntityPlayerReset(state, lowIndex);
-  EntityMakeHighFreq(state, lowIndex);
+  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_HERO, entityPosition);
+  struct entity_low *storedEntity = StoredEntityGet(state, storedEntityIndex);
+  assert(storedEntity);
 
-  u32 swordLowIndex = EntitySwordAdd(state);
-  entityLow->swordLowIndex = swordLowIndex;
-  entityLow->distanceRemaining = 3.0f;
+  storedEntity->height = 0.5f;
+  storedEntity->width = 1.0f;
+  EntityHitPointsReset(storedEntity, 3);
+
+  u32 swordLowIndex = SwordAdd(state);
+  storedEntity->swordLowIndex = swordLowIndex;
+  storedEntity->distanceRemaining = 3.0f;
 
   /* if followed entity, does not exits */
   if (state->followedEntityIndex == 0)
-    state->followedEntityIndex = lowIndex;
+    state->followedEntityIndex = storedEntityIndex;
 
-  return lowIndex;
+  return storedEntityIndex;
 }
 
 static inline u32
-EntityMonsterAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
+MonsterAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
-  u32 entityIndex = EntityLowAdd(state, ENTITY_TYPE_MONSTER, &entityPosition);
-  struct entity_low *entityLow = EntityLowGet(state, entityIndex);
+  u32 entityIndex = StoredEntityAdd(state, ENTITY_TYPE_MONSTER, &entityPosition);
+  struct entity_low *entityLow = StoredEntityGet(state, entityIndex);
   assert(entityLow);
 
   entityLow->height = 0.5f;
@@ -491,11 +358,11 @@ EntityMonsterAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTi
 }
 
 static inline u32
-EntityFamiliarAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
+FamiliarAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
-  u32 entityIndex = EntityLowAdd(state, ENTITY_TYPE_FAMILIAR, &entityPosition);
-  struct entity_low *entityLow = EntityLowGet(state, entityIndex);
+  u32 entityIndex = StoredEntityAdd(state, ENTITY_TYPE_FAMILIAR, &entityPosition);
+  struct entity_low *entityLow = StoredEntityGet(state, entityIndex);
   assert(entityLow);
 
   entityLow->height = 0.5f;
@@ -506,11 +373,11 @@ EntityFamiliarAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absT
 }
 
 static inline u32
-EntityWallAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
+WallAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
-  u32 entityIndex = EntityLowAdd(state, ENTITY_TYPE_WALL, &entityPosition);
-  struct entity_low *entityLow = EntityLowGet(state, entityIndex);
+  u32 entityIndex = StoredEntityAdd(state, ENTITY_TYPE_WALL, &entityPosition);
+  struct entity_low *entityLow = StoredEntityGet(state, entityIndex);
   assert(entityLow);
 
   entityLow->height = state->world->tileSideInMeters;
@@ -577,10 +444,8 @@ comptime struct move_spec SwordMoveSpec = {
 static void
 EntityMove(struct game_state *state, u32 entityLowIndex, f32 dt, const struct move_spec *moveSpec, struct v2 ddPosition)
 {
-  struct entity_low *entityLow = EntityLowGet(state, entityLowIndex);
-  assert(entityLow);
-  struct entity_high *entityHigh = EntityHighGet(state, entityLow->highIndex);
-  assert(entityHigh);
+  struct entity_low *storedEntity = StoredEntityGet(state, entityLowIndex);
+  assert(storedEntity);
 
   /*****************************************************************
    * CORRECTING ACCELERATION
@@ -602,7 +467,7 @@ EntityMove(struct game_state *state, u32 entityLowIndex, f32 dt, const struct mo
   /*
    * apply friction opposite force to acceleration
    */
-  v2_add_ref(&ddPosition, v2_neg(v2_mul(entityHigh->dPosition, moveSpec->drag)));
+  v2_add_ref(&ddPosition, v2_neg(v2_mul(entity->dPosition, moveSpec->drag)));
 
   /*****************************************************************
    * CALCULATION OF NEW PLAYER POSITION
@@ -679,7 +544,7 @@ EntityMove(struct game_state *state, u32 entityLowIndex, f32 dt, const struct mo
     for (u32 entityHighIndex = 1; entityLow->collides && entityHighIndex < state->entityHighCount; entityHighIndex++) {
       struct entity_high *testEntityHigh = EntityHighGet(state, entityHighIndex);
       assert(testEntityHigh);
-      struct entity_low *testEntityLow = EntityLowGet(state, testEntityHigh->lowIndex);
+      struct entity_low *testEntityLow = StoredEntityGet(state, testEntityHigh->lowIndex);
       assert(testEntityLow);
 
       if (!testEntityLow->collides)
@@ -802,24 +667,7 @@ EntityMove(struct game_state *state, u32 entityLowIndex, f32 dt, const struct mo
   EntityChangeLocation(&state->worldArena, state->world, entityLowIndex, entityLow, &entityLow->position, &newPosition);
 }
 
-static u8
-IsEntityHighSetValid(struct game_state *state)
-{
-  for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount; entityHighIndex++) {
-    struct entity_high *entityHigh = EntityHighGet(state, entityHighIndex);
-    assert(entityHigh);
-
-    struct entity_low *entityLow = EntityLowGet(state, entityHigh->lowIndex);
-    assert(entityLow);
-
-    if (entityLow->highIndex != entityHighIndex)
-      return 0;
-  }
-
-  return 1;
-}
-
-static void
+void
 CameraSet(struct game_state *state, struct world_position *newCameraPosition)
 {
   struct world *world = state->world;
@@ -856,8 +704,8 @@ CameraSet(struct game_state *state, struct world_position *newCameraPosition)
      */
     v2_add_ref(&entityHigh->position, entityOffsetPerFrame);
 
-    struct entity_low *entityLow = EntityLowGet(state, entityHigh->lowIndex);
-    assert(entityLow);
+    struct entity_low *storedEntity = StoredEntityGet(state, entityHigh->lowIndex);
+    assert(storedEntity);
 
     /* check if entity is in camera bounds */
     if (WorldPositionIsValid(&entityLow->position) && RectIsPointInside(cameraBounds, entityHigh->position)) {
@@ -868,8 +716,6 @@ CameraSet(struct game_state *state, struct world_position *newCameraPosition)
     /* transion from high to low */
     EntityMakeLowFreq(state, entityHigh->lowIndex);
   }
-
-  assert(IsEntityHighSetValid(state));
 
   struct world_position minChunkPosition = WorldPositionCalculate(world, newCameraPosition, RectMin(&cameraBounds));
   struct world_position maxChunkPosition = WorldPositionCalculate(world, newCameraPosition, RectMax(&cameraBounds));
@@ -882,7 +728,7 @@ CameraSet(struct game_state *state, struct world_position *newCameraPosition)
       for (struct world_entity_block *block = &chunk->firstBlock; block; block = block->next) {
         for (u32 entityIndex = 0; entityIndex < block->entityCount; entityIndex++) {
           u32 entityLowIndex = block->entityLowIndexes[entityIndex];
-          struct entity_low *entityLow = EntityLowGet(state, entityLowIndex);
+          struct entity_low *entityLow = StoredEntityGet(state, entityLowIndex);
           assert(entityLow);
 
           if (entityLow->type == ENTITY_TYPE_INVALID)
@@ -901,12 +747,10 @@ CameraSet(struct game_state *state, struct world_position *newCameraPosition)
       }
     }
   }
-
-  assert(IsEntityHighSetValid(state));
 }
 
 internal inline void
-UpdateFamiliar(struct game_state *state, struct entity *familiarEntity, f32 dt)
+FamiliarUpdate(struct game_state *state, struct entity *familiarEntity, f32 dt)
 {
   struct entity closestHero = {};
   /* 10m maximum search radius */
@@ -939,12 +783,12 @@ UpdateFamiliar(struct game_state *state, struct entity *familiarEntity, f32 dt)
 }
 
 internal inline void
-UpdateMonster(struct game_state *state, struct entity *entity, f32 dt)
+MonsterUpdate(struct game_state *state, struct entity *entity, f32 dt)
 {
 }
 
 internal inline void
-UpdateSword(struct game_state *state, struct entity *swordEntity, f32 dt)
+SwordUpdate(struct game_state *state, struct entity *swordEntity, f32 dt)
 {
   struct v2 oldPosition = swordEntity->high->position;
   EntityMove(state, swordEntity->lowIndex, dt, &SwordMoveSpec, v2(0, 0));
@@ -1036,7 +880,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     bitmapHero->align = v2(72, 182);
 
     /* use entity with 0 index as null */
-    EntityLowAdd(state, ENTITY_TYPE_INVALID, 0);
+    StoredEntityAdd(state, ENTITY_TYPE_INVALID, 0);
     state->entityHighCount = 1;
 
     /* world creation */
@@ -1112,7 +956,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           }
 
           if (value & TILE_BLOCKED) {
-            EntityWallAdd(state, absTileX, absTileY, absTileZ);
+            WallAdd(state, absTileX, absTileY, absTileZ);
           }
         }
       }
@@ -1146,8 +990,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     u32 initialCameraX = screenBaseX * TILES_PER_WIDTH + TILES_PER_WIDTH / 2;
     u32 initialCameraY = screenBaseY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2;
     u32 initialCameraZ = screenBaseZ;
-    EntityMonsterAdd(state, initialCameraX + 2, initialCameraY + 2, initialCameraZ);
-    EntityFamiliarAdd(state, initialCameraX - 2, initialCameraY + 2, initialCameraZ);
+    MonsterAdd(state, initialCameraX + 2, initialCameraY + 2, initialCameraZ);
+    FamiliarAdd(state, initialCameraX - 2, initialCameraY + 2, initialCameraZ);
 
     struct world_position initialCameraPosition =
         ChunkPositionFromTilePosition(state->world, initialCameraX, initialCameraY, initialCameraZ);
@@ -1165,13 +1009,13 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
     struct game_controller_input *controller = GetController(input, controllerIndex);
-    struct entity_low *controlledEntityLow = EntityLowGet(state, state->playerIndexForController[controllerIndex]);
+    struct entity_low *controlledEntityLow = StoredEntityGet(state, state->playerIndexForController[controllerIndex]);
 
     /* if there is no entity associated with this controller */
     if (!controlledEntityLow) {
       /* wait for start button pressed to enable */
       if (controller->start.pressed) {
-        u32 entityLowIndex = EntityPlayerAdd(state);
+        u32 entityLowIndex = PlayerAdd(state);
         state->playerIndexForController[controllerIndex] = entityLowIndex;
       }
       continue;
@@ -1226,7 +1070,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     if (dSword.x != 0.0f || dSword.y != 0.0f) {
       u32 swordLowIndex = controlledEntityLow->swordLowIndex;
-      struct entity_low *swordEntityLow = EntityLowGet(state, swordLowIndex);
+      struct entity_low *swordEntityLow = StoredEntityGet(state, swordLowIndex);
       assert(swordEntityLow);
       if (swordEntityLow && !WorldPositionIsValid(&swordEntityLow->position)) {
         struct world_position swordPosition = controlledEntityLow->position;
@@ -1241,36 +1085,14 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
   }
 
-  /* sync camera with followed entity */
-  struct entity_low *followedEntityLow = EntityLowGet(state, state->followedEntityIndex);
-  if (followedEntityLow && followedEntityLow->highIndex != 0) {
-    struct entity_high *followedEntityHigh = EntityHighGet(state, followedEntityLow->highIndex);
-    assert(followedEntityHigh);
+  comptime u32 tileSpanMultipler = 3;
+  comptime u32 tileSpanX = TILES_PER_WIDTH * tileSpanMultipler;
+  comptime u32 tileSpanY = TILES_PER_HEIGHT * tileSpanMultipler;
+  v2 tileSpan = {(f32)tileSpanX, (f32)tileSpanY};
+  v2_mul_ref(&tileSpan, world->tileSideInMeters);
+  struct rectangle2 cameraBounds = RectCenterDim(v2(0.0f, 0.0f), tileSpan);
 
-#if 0
-    struct world_position newCameraPosition = state->cameraPos;
-    newCameraPosition.chunkZ = followedEntityLow->position.chunkZ;
-
-    const u32 scrollWidth = TILES_PER_WIDTH;
-    const u32 scrollHeight = TILES_PER_HEIGHT;
-
-    f32 maxDiffX = (f32)scrollWidth * 0.5f * world->tileSideInMeters;
-    if (followedEntityHigh->position.x > maxDiffX)
-      newCameraPosition.absTileX += scrollWidth;
-    else if (followedEntityHigh->position.x < -maxDiffX)
-      newCameraPosition.absTileX -= scrollWidth;
-
-    f32 maxDiffY = (f32)scrollHeight * 0.5f * world->tileSideInMeters;
-    if (followedEntityHigh->position.y > maxDiffY)
-      newCameraPosition.absTileY += scrollHeight;
-    else if (followedEntityHigh->position.y < -maxDiffY)
-      newCameraPosition.absTileY -= scrollHeight;
-#else
-    struct world_position newCameraPosition = followedEntityLow->position;
-#endif
-
-    CameraSet(state, &newCameraPosition);
-  }
+  struct sim_region *simRegion = BeginSimRegion(simArena, state, state->world, state->cameraPosition, cameraBounds);
 
   /****************************************************************
    * RENDERING
@@ -1294,25 +1116,25 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   };
 
   /* render entities */
-  for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount; entityHighIndex++) {
-    struct entity entity = EntityGetFromHigh(state, entityHighIndex);
-    assert(entity.high);
-    assert(entity.low);
+  for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
+    struct sim_entity *entity = simRegion->entities + entityIndex;
+    struct entity_low *storedEntity = StoredEntityGet(state, entity->storedIndex);
+    assert(entity);
 
     f32 ddZ = -9.8f;
-    entity.high->z +=
+    entity->z +=
         /* 1/2 a t² */
         0.5f * ddZ * square(input->dtPerFrame)
         /* + v t */
         + entity.high->dZ * input->dtPerFrame;
-    entity.high->dZ +=
+    entity->dZ +=
         /* a t */
         ddZ * input->dtPerFrame;
     if (entity.high->z < 0)
       entity.high->z = 0;
-    f32 z = entity.high->z * metersToPixels;
+    f32 z = entity->z * metersToPixels;
 
-    struct v2 playerScreenPosition = entity.high->position;
+    struct v2 playerScreenPosition = entity->position;
     /* screen's coordinate system uses y values inverse,
      * so that means going up in space means negative y values
      */
@@ -1322,8 +1144,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
 
     if (entity.low->type & ENTITY_TYPE_HERO) {
-      struct bitmap_hero *bitmap = &state->bitmapHero[entity.high->facingDirection];
-      f32 cAlphaShadow = 1.0f - entity.high->z;
+      struct bitmap_hero *bitmap = &state->bitmapHero[storedEntity->facingDirection];
+      f32 cAlphaShadow = 1.0f - entity->z;
       if (cAlphaShadow < 0.0f)
         cAlphaShadow = 0.0f;
 
@@ -1338,13 +1160,13 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     else if (entity.low->type & ENTITY_TYPE_FAMILIAR) {
-      UpdateFamiliar(state, &entity, input->dtPerFrame);
-      entity.high->tBob += input->dtPerFrame;
-      if (entity.high->tBob > 2.0f * PI32)
-        entity.high->tBob -= 2.0f * PI32;
-      f32 bobSin = Sin(2.0f * entity.high->tBob);
+      FamiliarUpdate(state, &entity, input->dtPerFrame);
+      storedEntity->tBob += input->dtPerFrame;
+      if (storedEntity->tBob > 2.0f * PI32)
+        storedEntity->tBob -= 2.0f * PI32;
+      f32 bobSin = Sin(2.0f * storedEntity->tBob);
 
-      struct bitmap_hero *bitmap = &state->bitmapHero[entity.high->facingDirection];
+      struct bitmap_hero *bitmap = &state->bitmapHero[storedEntity->facingDirection];
 
       f32 cAlphaShadow = (0.5f * 1.0f) - (0.2f * bobSin);
 
@@ -1355,9 +1177,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     else if (entity.low->type & ENTITY_TYPE_MONSTER) {
-      UpdateMonster(state, &entity, input->dtPerFrame);
+      MonsterUpdate(state, &entity, input->dtPerFrame);
 
-      struct bitmap_hero *bitmap = &state->bitmapHero[entity.high->facingDirection];
+      struct bitmap_hero *bitmap = &state->bitmapHero[storedEntity->facingDirection];
       f32 cAlphaShadow = 1.0f;
 
       DrawHitPoints(backbuffer, &entity, &playerGroundPoint, metersToPixels);
@@ -1368,7 +1190,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     else if (entity.low->type & ENTITY_TYPE_SWORD) {
-      UpdateSword(state, &entity, input->dtPerFrame);
+      SwordUpdate(state, &entity, input->dtPerFrame);
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, v2(72, 182), 1.0f);
       playerGroundPoint.y -= z;
@@ -1381,7 +1203,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #else
       comptime struct v3 color = {1.0f, 1.0f, 0.0f};
 
-      struct v2 playerWidthHeight = v2(entity.low->width, entity.low->height);
+      struct v2 playerWidthHeight = v2(storedEntity->width, storedEntity->height);
       v2_mul_ref(&playerWidthHeight, metersToPixels);
 
       struct v2 playerLeftTop = v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));
@@ -1394,4 +1216,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       InvalidCodePath;
     }
   }
+
+  EndSimRegion(simRegion, state);
 }

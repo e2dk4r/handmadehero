@@ -62,6 +62,7 @@ endif
 # debug builds have handmadehero as dynamic library
 # and does not need to link with because of hot reload logic
 handmadehero_sources = [
+  'src/handmadehero_sim_region.c',
   'src/handmadehero_world.c',
   'src/handmadehero.c',
 ]

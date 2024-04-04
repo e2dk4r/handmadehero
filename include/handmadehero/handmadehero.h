@@ -47,20 +47,9 @@ struct entity_low {
 
   u32 swordLowIndex;
   f32 distanceRemaining;
-};
 
-struct entity_high {
-  struct v2 position;
-  /* velocity, differencial of position */
-  struct v2 dPosition;
-  u32 chunkZ;
   u8 facingDirection;
-  f32 z;
-  f32 dZ;
-
   f32 tBob;
-
-  u32 lowIndex;
 };
 
 struct entity {
@@ -76,13 +65,9 @@ struct game_state {
   u32 followedEntityIndex;
   struct world_position cameraPos;
 
-#define HANDMADEHERO_ENTITY_LOW_TOTAL 100000
-  u32 entityLowCount;
-  struct entity_low entityLows[HANDMADEHERO_ENTITY_LOW_TOTAL];
-
-#define HANDMADEHERO_ENTITY_HIGH_TOTAL 256
-  u32 entityHighCount;
-  struct entity_high entityHighs[HANDMADEHERO_ENTITY_HIGH_TOTAL];
+#define HANDMADEHERO_STORED_ENTITY_TOTAL 100000
+  u32 storedEntityCount;
+  struct entity_low storedEntities[HANDMADEHERO_STORED_ENTITY_TOTAL];
 
   u32 playerIndexForController[HANDMADEHERO_CONTROLLER_COUNT];
 
@@ -102,5 +87,12 @@ void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer);
 typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_input *input,
                                        struct game_backbuffer *backbuffer);
+
+void
+CameraSet(struct game_state *state, struct world_position *newCameraPosition);
+
+void
+EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct entity_low *entityLow,
+                     struct world_position *oldPosition, struct world_position *newPosition);
 
 #endif /* HANDMADEHERO_H */
