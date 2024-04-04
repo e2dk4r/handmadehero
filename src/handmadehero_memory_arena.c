@@ -41,7 +41,7 @@ void
 MemoryChunkPop(struct memory_chunk *chunk, void *block)
 {
   void *dataBlock = chunk->block + sizeof(u8) * chunk->max;
-  assert(block > dataBlock);
+  assert(block >= dataBlock);
   u64 index = (u64)(block - dataBlock) / chunk->size;
   u8 *flag = chunk->block + sizeof(u8) * index;
   *flag = 0;
