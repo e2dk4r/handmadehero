@@ -1,7 +1,7 @@
 #include <handmadehero/assert.h>
 #include <handmadehero/memory_arena.h>
 
-void
+inline void
 MemoryArenaInit(struct memory_arena *mem, void *data, memory_arena_size_t size)
 {
   mem->used = 0;
@@ -9,7 +9,7 @@ MemoryArenaInit(struct memory_arena *mem, void *data, memory_arena_size_t size)
   mem->data = data;
 }
 
-void *
+inline void *
 MemoryArenaPush(struct memory_arena *mem, memory_arena_size_t size)
 {
   assert(mem->used + size <= mem->size && "arena capacity exceeded");
@@ -20,7 +20,7 @@ MemoryArenaPush(struct memory_arena *mem, memory_arena_size_t size)
   return data;
 }
 
-void *
+inline void *
 MemoryChunkPush(struct memory_chunk *chunk)
 {
   void *result = 0;
@@ -37,7 +37,7 @@ MemoryChunkPush(struct memory_chunk *chunk)
   return result;
 }
 
-void
+inline void
 MemoryChunkPop(struct memory_chunk *chunk, void *ptr)
 {
   void *dataBlock = chunk->block + sizeof(u8) * chunk->max;
@@ -47,7 +47,7 @@ MemoryChunkPop(struct memory_chunk *chunk, void *ptr)
   *flag = 0;
 }
 
-struct memory_chunk *
+inline struct memory_chunk *
 MemoryArenaPushChunk(struct memory_arena *mem, u64 size, u64 max)
 {
   assert(size > 0);
@@ -61,4 +61,10 @@ MemoryArenaPushChunk(struct memory_arena *mem, u64 size, u64 max)
     *flag = 0;
   }
   return chunk;
+}
+
+inline void
+ZeroMemory(void *ptr, memory_arena_size_t size)
+{
+  __builtin_bzero(ptr, size);
 }

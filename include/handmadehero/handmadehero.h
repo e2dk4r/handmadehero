@@ -1,9 +1,9 @@
 #ifndef HANDMADEHERO_H
 #define HANDMADEHERO_H
 
-#include "sim_region.h"
 #include "memory_arena.h"
 #include "platform.h"
+#include "sim_region.h"
 #include "world.h"
 
 struct bitmap {
@@ -20,15 +20,17 @@ struct bitmap_hero {
   struct bitmap cape;
 };
 
-struct entity_low {
+struct stored_entity {
   struct world_position position;
-  struct sim_entity sim;
+  struct entity sim;
 };
 
-struct entity {
-  u32 lowIndex;
-  struct entity_low *low;
-  struct entity_high *high;
+struct controlled_hero {
+  u32 entityIndex;
+
+  struct v2 ddPosition;
+  f32 dZ;
+  struct v2 dSword;
 };
 
 struct game_state {
@@ -36,13 +38,13 @@ struct game_state {
   struct world *world;
 
   u32 followedEntityIndex;
-  struct world_position cameraPos;
+  struct world_position cameraPosition;
 
 #define HANDMADEHERO_STORED_ENTITY_TOTAL 100000
   u32 storedEntityCount;
-  struct entity_low storedEntities[HANDMADEHERO_STORED_ENTITY_TOTAL];
+  struct stored_entity storedEntities[HANDMADEHERO_STORED_ENTITY_TOTAL];
 
-  u32 playerIndexForController[HANDMADEHERO_CONTROLLER_COUNT];
+  struct controlled_hero controlledHeroes[HANDMADEHERO_CONTROLLER_COUNT];
 
   struct bitmap bitmapBackground;
   struct bitmap bitmapShadow;
@@ -62,10 +64,10 @@ typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_i
                                        struct game_backbuffer *backbuffer);
 
 void
-EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct entity_low *entityLow,
+EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct stored_entity *entityLow,
                      struct world_position *oldPosition, struct world_position *newPosition);
 
-struct entity_low *
+struct stored_entity *
 StoredEntityGet(struct game_state *state, u32 index);
 
 #endif /* HANDMADEHERO_H */

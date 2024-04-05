@@ -1,5 +1,6 @@
 #include "handmadehero/world.h"
 #include <handmadehero/assert.h>
+#include <handmadehero/entity.h>
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/math.h>
 #include <handmadehero/random.h>
@@ -7,22 +8,10 @@
 comptime u32 TILES_PER_WIDTH = 17;
 comptime u32 TILES_PER_HEIGHT = 9;
 
-comptime struct move_spec PlayerMoveSpec = {
+comptime struct move_spec HeroMoveSpec = {
     .unitMaxAccel = 1,
     .speed = 50.0f,
     .drag = 8.0f,
-};
-
-comptime struct move_spec FamiliarMoveSpec = {
-    .unitMaxAccel = 1,
-    .speed = 30.0f,
-    .drag = 8.0f,
-};
-
-comptime struct move_spec SwordMoveSpec = {
-    .unitMaxAccel = 0,
-    .speed = 0.0f,
-    .drag = 0.0f,
 };
 
 static void
@@ -260,8 +249,9 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
 }
 
 inline void
-EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct entity_low *entityLow,
-                     struct world_position *oldPosition, struct world_position *newPosition)
+EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex,
+                     struct stored_entity *entityLow, struct world_position *oldPosition,
+                     struct world_position *newPosition)
 {
   if (newPosition) {
     entityLow->position = *newPosition;
@@ -271,10 +261,10 @@ EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entity
   }
 }
 
-inline struct entity_low *
+inline struct stored_entity *
 StoredEntityGet(struct game_state *state, u32 index)
 {
-  struct entity_low *result = 0;
+  struct stored_entity *result = 0;
   /* index 0 is reserved for null */
   if (index == 0)
     return result;
@@ -292,9 +282,9 @@ StoredEntityAdd(struct game_state *state, u8 type, struct world_position *positi
   u32 storedEntityIndex = state->storedEntityCount;
   assert(storedEntityIndex < HANDMADEHERO_STORED_ENTITY_TOTAL);
 
-  struct entity_low *storedEntity = state->storedEntities + storedEntityIndex;
+  struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
   assert(storedEntity);
-  *storedEntity = (struct entity_low){};
+  *storedEntity = (struct stored_entity){};
   storedEntity->sim.collides = 1;
   storedEntity->sim.type = type;
 
@@ -310,7 +300,7 @@ StoredEntityAdd(struct game_state *state, u8 type, struct world_position *positi
 }
 
 static inline void
-EntityHitPointsReset(struct entity_low *storedEntity, u32 hitPointMax)
+EntityHitPointsReset(struct stored_entity *storedEntity, u32 hitPointMax)
 {
   assert(hitPointMax < ARRAY_COUNT(storedEntity->sim.hitPoints));
   storedEntity->sim.hitPointMax = hitPointMax;
@@ -326,7 +316,7 @@ internal inline u32
 SwordAdd(struct game_state *state)
 {
   u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_SWORD, 0);
-  struct entity_low *storedEntity = StoredEntityGet(state, storedEntityIndex);
+  struct stored_entity *storedEntity = StoredEntityGet(state, storedEntityIndex);
   assert(storedEntity);
 
   storedEntity->sim.height = state->world->tileSideInMeters;
@@ -339,9 +329,9 @@ SwordAdd(struct game_state *state)
 static inline u32
 PlayerAdd(struct game_state *state)
 {
-  struct world_position *entityPosition = &state->cameraPos;
+  struct world_position *entityPosition = &state->cameraPosition;
   u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_HERO, entityPosition);
-  struct entity_low *storedEntity = StoredEntityGet(state, storedEntityIndex);
+  struct stored_entity *storedEntity = StoredEntityGet(state, storedEntityIndex);
   assert(storedEntity);
 
   storedEntity->sim.height = 0.5f;
@@ -364,7 +354,7 @@ MonsterAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
   u32 entityIndex = StoredEntityAdd(state, ENTITY_TYPE_MONSTER, &entityPosition);
-  struct entity_low *entityLow = StoredEntityGet(state, entityIndex);
+  struct stored_entity *entityLow = StoredEntityGet(state, entityIndex);
   assert(entityLow);
 
   entityLow->sim.height = 0.5f;
@@ -380,7 +370,7 @@ FamiliarAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
   u32 entityIndex = StoredEntityAdd(state, ENTITY_TYPE_FAMILIAR, &entityPosition);
-  struct entity_low *entityLow = StoredEntityGet(state, entityIndex);
+  struct stored_entity *entityLow = StoredEntityGet(state, entityIndex);
   assert(entityLow);
 
   entityLow->sim.height = 0.5f;
@@ -395,7 +385,7 @@ WallAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
   u32 entityIndex = StoredEntityAdd(state, ENTITY_TYPE_WALL, &entityPosition);
-  struct entity_low *entityLow = StoredEntityGet(state, entityIndex);
+  struct stored_entity *entityLow = StoredEntityGet(state, entityIndex);
   assert(entityLow);
 
   entityLow->sim.height = state->world->tileSideInMeters;
@@ -405,67 +395,15 @@ WallAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 }
 
 internal inline void
-FamiliarUpdate(struct game_state *state, struct entity *familiarEntity, f32 dt)
-{
-  struct entity closestHero = {};
-  /* 10m maximum search radius */
-  f32 closestHeroDistanceSq = square(10.0f);
-
-  for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount; entityHighIndex++) {
-    struct entity testEntity = EntityGetFromHigh(state, entityHighIndex);
-    assert(testEntity.high);
-    assert(testEntity.low);
-
-    if (!(testEntity.low->type & ENTITY_TYPE_HERO))
-      continue;
-
-    f32 testDistanceSq = v2_length_square(v2_sub(familiarEntity->high->position, testEntity.high->position));
-    if (testDistanceSq < closestHeroDistanceSq) {
-      closestHero = testEntity;
-      closestHeroDistanceSq = testDistanceSq;
-    }
-  }
-
-  struct v2 ddPosition = {};
-  if (closestHero.high != 0 && closestHeroDistanceSq > square(3.0f)) {
-    /* there is hero nearby, follow him */
-
-    f32 oneOverLength = 1.0f / SquareRoot(closestHeroDistanceSq);
-    ddPosition = v2_mul(v2_sub(closestHero.high->position, familiarEntity->high->position), oneOverLength);
-  }
-
-  EntityMove(state, familiarEntity->lowIndex, dt, &FamiliarMoveSpec, ddPosition);
-}
-
-internal inline void
-MonsterUpdate(struct game_state *state, struct entity *entity, f32 dt)
-{
-}
-
-internal inline void
-SwordUpdate(struct game_state *state, struct entity *swordEntity, f32 dt)
-{
-  struct v2 oldPosition = swordEntity->high->position;
-  EntityMove(state, swordEntity->lowIndex, dt, &SwordMoveSpec, v2(0, 0));
-  f32 distanceTraveled = v2_length(v2_sub(swordEntity->high->position, oldPosition));
-
-  swordEntity->low->distanceRemaining -= distanceTraveled;
-  if (swordEntity->low->distanceRemaining <= 0.0f) {
-    EntityChangeLocation(&state->worldArena, state->world, swordEntity->lowIndex, swordEntity->low,
-                         &swordEntity->low->position, 0);
-  }
-}
-
-internal inline void
 DrawHitPoints(struct game_backbuffer *backbuffer, struct entity *entity, struct v2 *entityGroundPoint,
               f32 metersToPixels)
 {
-  if (entity->low->hitPointMax == 0)
+  if (entity->hitPointMax == 0)
     return;
 
   struct v2 healthDim = v2(0.2f, 0.2f);
   f32 spacingX = 1.5f * healthDim.x;
-  struct v2 hitPosition = v2(-0.5f * (f32)(entity->low->hitPointMax - 1) * spacingX, 0.25f);
+  struct v2 hitPosition = v2(-0.5f * (f32)(entity->hitPointMax - 1) * spacingX, 0.25f);
   v2_sub_ref(&hitPosition, v2(healthDim.x * 0.5f, 0));
   struct v2 dHitPosition = v2(spacingX, 0);
 
@@ -473,8 +411,8 @@ DrawHitPoints(struct game_backbuffer *backbuffer, struct entity *entity, struct 
   v2_mul_ref(&hitPosition, metersToPixels);
   v2_mul_ref(&dHitPosition, metersToPixels);
 
-  for (u32 healthIndex = 0; healthIndex < entity->low->hitPointMax; healthIndex++) {
-    struct hit_point *hitPoint = entity->low->hitPoints + healthIndex;
+  for (u32 healthIndex = 0; healthIndex < entity->hitPointMax; healthIndex++) {
+    struct hit_point *hitPoint = entity->hitPoints + healthIndex;
 
     struct v2 min = v2_add(*entityGroundPoint, hitPosition);
     struct v2 max = v2_add(min, healthDim);
@@ -536,7 +474,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     /* use entity with 0 index as null */
     StoredEntityAdd(state, ENTITY_TYPE_INVALID, 0);
-    state->entityHighCount = 1;
 
     /* world creation */
     void *data = memory->permanentStorage + sizeof(*state);
@@ -650,6 +587,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     struct world_position initialCameraPosition =
         ChunkPositionFromTilePosition(state->world, initialCameraX, initialCameraY, initialCameraZ);
+    state->cameraPosition = initialCameraPosition;
 
     memory->initialized = 1;
   }
@@ -663,90 +601,72 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
     struct game_controller_input *controller = GetController(input, controllerIndex);
-    struct entity_low *controlledEntityLow = StoredEntityGet(state, state->playerIndexForController[controllerIndex]);
+    struct controlled_hero *conHero = state->controlledHeroes + controllerIndex;
 
     /* if there is no entity associated with this controller */
-    if (!controlledEntityLow) {
+    if (conHero->entityIndex == 0) {
       /* wait for start button pressed to enable */
       if (controller->start.pressed) {
-        u32 entityLowIndex = PlayerAdd(state);
-        state->playerIndexForController[controllerIndex] = entityLowIndex;
+        *conHero = (struct controlled_hero){};
+        conHero->entityIndex = PlayerAdd(state);
       }
       continue;
     }
 
     /* acceleration */
-    struct v2 ddPosition = {};
+    conHero->ddPosition = (struct v2){};
 
     /* analog controller */
     if (controller->isAnalog) {
-      ddPosition = v2(controller->stickAverageX, controller->stickAverageY);
+      conHero->ddPosition = v2(controller->stickAverageX, controller->stickAverageY);
     }
 
     /* digital controller */
     else {
 
       if (controller->moveLeft.pressed) {
-        ddPosition.x = -1.0f;
+        conHero->ddPosition.x = -1.0f;
       }
 
       if (controller->moveRight.pressed) {
-        ddPosition.x = 1.0f;
+        conHero->ddPosition.x = 1.0f;
       }
 
       if (controller->moveDown.pressed) {
-        ddPosition.y = -1.0f;
+        conHero->ddPosition.y = -1.0f;
       }
 
       if (controller->moveUp.pressed) {
-        ddPosition.y = 1.0f;
+        conHero->ddPosition.y = 1.0f;
       }
     }
 
     if (controller->start.pressed) {
-      struct entity_high *controlledEntityHigh = EntityHighGet(state, controlledEntityLow->highIndex);
-      assert(controlledEntityHigh);
-      controlledEntityHigh->dZ = 3.0f;
+      conHero->dZ = 3.0f;
     }
 
-    struct v2 dSword = {};
+    conHero->dSword = (struct v2){};
     if (controller->actionUp.pressed) {
-      dSword = v2(0.0f, 1.0f);
+      conHero->dSword = v2(0.0f, 1.0f);
     } else if (controller->actionDown.pressed) {
-      dSword = v2(0.0f, -1.0f);
+      conHero->dSword = v2(0.0f, -1.0f);
     } else if (controller->actionLeft.pressed) {
-      dSword = v2(-1.0f, 0.0f);
+      conHero->dSword = v2(-1.0f, 0.0f);
     } else if (controller->actionRight.pressed) {
-      dSword = v2(1.0f, 0.0f);
-    }
-
-    EntityMove(state, state->playerIndexForController[controllerIndex], input->dtPerFrame, &PlayerMoveSpec, ddPosition);
-
-    if (dSword.x != 0.0f || dSword.y != 0.0f) {
-      u32 swordLowIndex = controlledEntityLow->swordLowIndex;
-      struct entity_low *swordEntityLow = StoredEntityGet(state, swordLowIndex);
-      assert(swordEntityLow);
-      if (swordEntityLow && !WorldPositionIsValid(&swordEntityLow->position)) {
-        struct world_position swordPosition = controlledEntityLow->position;
-        EntityChangeLocation(&state->worldArena, state->world, swordLowIndex, swordEntityLow, 0, &swordPosition);
-        EntityMakeHighFreq(state, swordLowIndex);
-        struct entity_high *swordEntityHigh = EntityHighGet(state, swordEntityLow->highIndex);
-        assert(swordEntityHigh);
-
-        swordEntityLow->distanceRemaining = 5.0f;
-        swordEntityHigh->dPosition = v2_mul(dSword, 2.0f);
-      }
+      conHero->dSword = v2(1.0f, 0.0f);
     }
   }
 
   comptime u32 tileSpanMultipler = 3;
   comptime u32 tileSpanX = TILES_PER_WIDTH * tileSpanMultipler;
   comptime u32 tileSpanY = TILES_PER_HEIGHT * tileSpanMultipler;
-  v2 tileSpan = {(f32)tileSpanX, (f32)tileSpanY};
+  struct v2 tileSpan = {(f32)tileSpanX, (f32)tileSpanY};
   v2_mul_ref(&tileSpan, world->tileSideInMeters);
   struct rectangle2 cameraBounds = RectCenterDim(v2(0.0f, 0.0f), tileSpan);
 
-  struct sim_region *simRegion = BeginSimRegion(simArena, state, state->world, state->cameraPosition, cameraBounds);
+  struct memory_arena simArena;
+  MemoryArenaInit(&simArena, memory->transientStorage, memory->transientStorageSize);
+  struct sim_region *simRegion = BeginSimRegion(&simArena, state, state->world, state->cameraPosition, cameraBounds);
 
   /****************************************************************
    * RENDERING
@@ -770,22 +690,16 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   };
 
   /* render entities */
+  f32 dt = input->dtPerFrame;
   for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
-    struct sim_entity *entity = simRegion->entities + entityIndex;
-    struct entity_low *storedEntity = StoredEntityGet(state, entity->storedIndex);
+    struct entity *entity = simRegion->entities + entityIndex;
+    struct stored_entity *storedEntity = StoredEntityGet(state, entity->storageIndex);
     assert(entity);
 
-    f32 ddZ = -9.8f;
-    entity->z +=
-        /* 1/2 a t² */
-        0.5f * ddZ * square(input->dtPerFrame)
-        /* + v t */
-        + entity.high->dZ * input->dtPerFrame;
-    entity->dZ +=
-        /* a t */
-        ddZ * input->dtPerFrame;
-    if (entity.high->z < 0)
-      entity.high->z = 0;
+    if (entity->type == ENTITY_TYPE_INVALID)
+      continue;
+
+    EntityUpdate(simRegion, entity, dt);
     f32 z = entity->z * metersToPixels;
 
     struct v2 playerScreenPosition = entity->position;
@@ -797,13 +711,39 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
 
-    if (entity.low->type & ENTITY_TYPE_HERO) {
-      struct bitmap_hero *bitmap = &state->bitmapHero[storedEntity->facingDirection];
+    if (entity->type & ENTITY_TYPE_HERO) {
+      for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
+        struct controlled_hero *conHero = state->controlledHeroes + controllerIndex;
+        if (conHero->entityIndex != entity->storageIndex)
+          continue;
+
+        /* move */
+        EntityMove(simRegion, entity, dt, &HeroMoveSpec, conHero->ddPosition);
+
+        /* jump */
+        entity->dZ += conHero->dZ;
+
+        /* sword */
+        struct v2 dSword = conHero->dSword;
+        if (dSword.x != 0.0f || dSword.y != 0.0f) {
+          struct entity *sword = entity->sword.ptr;
+          assert(sword);
+          struct stored_entity *storedSword = StoredEntityGet(state, sword->storageIndex);
+
+          if (!WorldPositionIsValid(&storedSword->position)) {
+            sword->position = entity->position;
+            sword->distanceRemaining = 5.0f;
+            sword->dPosition = v2_mul(dSword, 5.0f);
+          }
+        }
+      }
+
+      struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
       f32 cAlphaShadow = 1.0f - entity->z;
       if (cAlphaShadow < 0.0f)
         cAlphaShadow = 0.0f;
 
-      DrawHitPoints(backbuffer, &entity, &playerGroundPoint, metersToPixels);
+      DrawHitPoints(backbuffer, entity, &playerGroundPoint, metersToPixels);
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, bitmap->align, cAlphaShadow);
       playerGroundPoint.y -= z;
@@ -813,14 +753,14 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->align);
     }
 
-    else if (entity.low->type & ENTITY_TYPE_FAMILIAR) {
-      FamiliarUpdate(state, &entity, input->dtPerFrame);
-      storedEntity->tBob += input->dtPerFrame;
-      if (storedEntity->tBob > 2.0f * PI32)
-        storedEntity->tBob -= 2.0f * PI32;
-      f32 bobSin = Sin(2.0f * storedEntity->tBob);
+    else if (entity->type & ENTITY_TYPE_FAMILIAR) {
+      FamiliarUpdate(simRegion, entity, dt);
+      entity->tBob += dt;
+      if (entity->tBob > 2.0f * PI32)
+        entity->tBob -= 2.0f * PI32;
+      f32 bobSin = Sin(2.0f * entity->tBob);
 
-      struct bitmap_hero *bitmap = &state->bitmapHero[storedEntity->facingDirection];
+      struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
 
       f32 cAlphaShadow = (0.5f * 1.0f) - (0.2f * bobSin);
 
@@ -830,34 +770,35 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->align);
     }
 
-    else if (entity.low->type & ENTITY_TYPE_MONSTER) {
-      MonsterUpdate(state, &entity, input->dtPerFrame);
+    else if (entity->type & ENTITY_TYPE_MONSTER) {
+      MonsterUpdate(simRegion, entity, dt);
 
-      struct bitmap_hero *bitmap = &state->bitmapHero[storedEntity->facingDirection];
+      struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
       f32 cAlphaShadow = 1.0f;
 
-      DrawHitPoints(backbuffer, &entity, &playerGroundPoint, metersToPixels);
+      DrawHitPoints(backbuffer, entity, &playerGroundPoint, metersToPixels);
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, bitmap->align, cAlphaShadow);
       playerGroundPoint.y -= z;
 
       DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->align);
     }
 
-    else if (entity.low->type & ENTITY_TYPE_SWORD) {
-      SwordUpdate(state, &entity, input->dtPerFrame);
+    else if (entity->type & ENTITY_TYPE_SWORD) {
+      SwordUpdate(simRegion, entity, dt);
 
-      DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, v2(72, 182), 1.0f);
+      f32 cAlphaShadow = 1.0f;
+      DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, v2(72, 182), cAlphaShadow);
       playerGroundPoint.y -= z;
       DrawBitmap(&state->bitmapSword, backbuffer, playerGroundPoint, v2(29, 10));
     }
 
-    else if (entity.low->type & ENTITY_TYPE_WALL) {
+    else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
       DrawBitmap(&state->bitmapTree, backbuffer, playerGroundPoint, v2(40, 80));
 #else
       comptime struct v3 color = {1.0f, 1.0f, 0.0f};
 
-      struct v2 playerWidthHeight = v2(storedEntity->width, storedEntity->height);
+      struct v2 playerWidthHeight = v2(entity->width, entity->height);
       v2_mul_ref(&playerWidthHeight, metersToPixels);
 
       struct v2 playerLeftTop = v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));

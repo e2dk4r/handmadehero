@@ -29,18 +29,17 @@ struct hit_point {
 };
 
 struct entity_reference {
-  union {
-    struct sim_entity *ptr;
-    u32 index;
-  };
+  struct entity *ptr;
+  u32 index;
 };
 
-struct sim_entity {
+struct entity {
   u32 storageIndex;
 
   u8 type;
 
   struct v2 position;
+  struct v2 dPosition;
   u32 chunkZ;
 
   f32 z;
@@ -63,7 +62,7 @@ struct sim_entity {
 };
 
 struct sim_entity_hash {
-  struct sim_entity *ptr;
+  struct entity *ptr;
   u32 index;
 };
 
@@ -75,7 +74,7 @@ struct sim_region {
 
   u32 entityTotal;
   u32 entityCount;
-  struct sim_entity *entities;
+  struct entity *entities;
 
   // NOTE: must be power of 2
   struct sim_entity_hash hashTable[4096];
@@ -86,5 +85,9 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
                struct world_position regionCenter, struct rectangle2 regionBounds);
 void
 EndSimRegion(struct sim_region *region, struct game_state *state);
+
+void
+EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const struct move_spec *moveSpec,
+           struct v2 ddPosition);
 
 #endif /* HANDMADEHERO_SIM_REGION_H */

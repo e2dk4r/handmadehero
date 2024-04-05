@@ -26,24 +26,6 @@ add_project_arguments(
   language: 'c',
 )
 
-wayland_client = dependency('wayland-client')
-wayland_protocols = dependency('wayland-protocols', native: true)
-xkbcommon = dependency('xkbcommon')
-libevdev = dependency('libevdev')
-liburing = dependency('liburing')
-vulkan = dependency('vulkan')
-libm = cc.find_library('m')
-
-subdir('protocol')
-
-common_src = [
-  'src/handmadehero_memory_arena.c'
-]
-
-platform_src = [
-  'src/handmadehero_linux.c',
-]
-
 if is_build_debug
   add_project_arguments(
     [
@@ -56,12 +38,34 @@ if is_build_debug
     ],
     language : 'c'
   )
+endif
+
+wayland_client = dependency('wayland-client')
+wayland_protocols = dependency('wayland-protocols', native: true)
+xkbcommon = dependency('xkbcommon')
+libevdev = dependency('libevdev')
+liburing = dependency('liburing')
+vulkan = dependency('vulkan')
+libm = cc.find_library('m')
+
+subdir('protocol')
+
+# used in both library and platform code
+common_src = [
+  'src/handmadehero_memory_arena.c'
+]
+
+platform_src = [
+  'src/handmadehero_linux.c',
+]
+if is_build_debug
   platform_src += 'src/debug.c'
 endif
 
 # debug builds have handmadehero as dynamic library
 # and does not need to link with because of hot reload logic
 handmadehero_sources = [
+  'src/handmadehero_entity.c',
   'src/handmadehero_sim_region.c',
   'src/handmadehero_world.c',
   'src/handmadehero.c',

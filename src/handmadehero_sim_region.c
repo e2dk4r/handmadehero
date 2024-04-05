@@ -2,8 +2,8 @@
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/sim_region.h>
 
-internal struct sim_entity *
-AddEntityRaw(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct entity_low *source);
+internal struct entity *
+AddEntityRaw(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct stored_entity *source);
 
 internal struct sim_entity_hash *
 GetHashFromStorageIndex(struct sim_region *simRegion, u32 storageIndex)
@@ -14,10 +14,11 @@ GetHashFromStorageIndex(struct sim_region *simRegion, u32 storageIndex)
   u32 hashValue = storageIndex;
 
   for (u32 offset = 0; offset < ARRAY_COUNT(simRegion->hashTable); offset++) {
-    struct sim_entity_hash *entry =
-        simRegion->hashTable + ((hashValue + offset) & (ARRAY_COUNT(simRegion->hashTable) - 1));
+    u32 hashMask = ARRAY_COUNT(simRegion->hashTable) - 1;
+    u32 hashIndex = (hashValue + offset) & hashMask;
+    struct sim_entity_hash *entry = simRegion->hashTable + hashIndex;
 
-    if (entry->index == 0 || entry->index == hashValue) {
+    if (entry->index == 0 || entry->index == storageIndex) {
       result = entry;
       break;
     }
@@ -26,18 +27,18 @@ GetHashFromStorageIndex(struct sim_region *simRegion, u32 storageIndex)
   return result;
 }
 
-internal struct sim_entity *
+internal struct entity *
 GetEntityFromStorageIndex(struct sim_region *simRegion, u32 storageIndex)
 {
   struct sim_entity_hash *entry = GetHashFromStorageIndex(simRegion, storageIndex);
   if (!entry)
     return 0;
-  struct sim_entity *result = entry->ptr;
+  struct entity *result = entry->ptr;
   return result;
 }
 
 internal void
-MapStorageIndexToEntity(struct sim_region *simRegion, u32 storageIndex, struct sim_entity *entity)
+MapStorageIndexToEntity(struct sim_region *simRegion, u32 storageIndex, struct entity *entity)
 {
   struct sim_entity_hash *entry = GetHashFromStorageIndex(simRegion, storageIndex);
   assert(entry->index == 0 || entry->index == storageIndex);
@@ -70,23 +71,24 @@ StoreEntityReference(struct entity_reference *ref)
 }
 
 internal struct v2
-GetPositionRelativeToOrigin(struct sim_region *simRegion, struct entity_low *stored)
+GetPositionRelativeToOrigin(struct sim_region *simRegion, struct stored_entity *stored)
 {
   struct world_difference diff = WorldPositionSub(simRegion->world, &stored->position, &simRegion->origin);
   struct v2 result = diff.dXY;
   return result;
 }
 
-internal struct sim_entity *
-AddEntityRaw(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct entity_low *source)
+internal struct entity *
+AddEntityRaw(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct stored_entity *source)
 {
-  struct sim_entity *entity = 0;
+  struct entity *entity = 0;
 
   if (simRegion->entityCount >= simRegion->entityTotal)
     InvalidCodePath;
 
   u32 entityIndex = simRegion->entityCount;
   entity = simRegion->entities + entityIndex;
+  simRegion->entityCount++;
   MapStorageIndexToEntity(simRegion, storageIndex, entity);
 
   if (source) {
@@ -96,16 +98,14 @@ AddEntityRaw(struct game_state *state, struct sim_region *simRegion, u32 storage
 
   entity->storageIndex = storageIndex;
 
-  simRegion->entityCount++;
-
   return entity;
 }
 
-internal struct sim_entity *
-AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct entity_low *source,
+internal struct entity *
+AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct stored_entity *source,
           struct v2 *simPosition)
 {
-  struct sim_entity *dest = AddEntityRaw(state, simRegion, storageIndex, source);
+  struct entity *dest = AddEntityRaw(state, simRegion, storageIndex, source);
   assert(dest);
   if (simPosition) {
     dest->position = *simPosition;
@@ -121,6 +121,7 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
                struct world_position regionCenter, struct rectangle2 regionBounds)
 {
   struct sim_region *simRegion = MemoryArenaPush(simArena, sizeof(*simRegion));
+  ZeroStruct(simRegion->hashTable);
 
   simRegion->world = world;
   simRegion->origin = regionCenter;
@@ -143,11 +144,11 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
       for (struct world_entity_block *block = &chunk->firstBlock; block; block = block->next) {
         for (u32 entityIndex = 0; entityIndex < block->entityCount; entityIndex++) {
           u32 storedEntityIndex = block->entityLowIndexes[entityIndex];
-          struct entity_low *storedEntity = state->storedEntities + storedEntityIndex;
+          struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
           assert(storedEntity);
 
-          // if (storedEntity->type == ENTITY_TYPE_INVALID)
-          //   continue;
+          if (storedEntity->sim.type == ENTITY_TYPE_INVALID)
+            continue;
 
           struct v2 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
           if (!RectIsPointInside(simRegion->bounds, positionRelativeToOrigin))
@@ -166,14 +167,14 @@ void
 EndSimRegion(struct sim_region *simRegion, struct game_state *state)
 {
   for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
-    struct sim_entity *entity = simRegion->entities + entityIndex;
-    struct entity_low *stored = state->storedEntities + entity->storageIndex;
+    struct entity *entity = simRegion->entities + entityIndex;
+    struct stored_entity *stored = state->storedEntities + entity->storageIndex;
     assert(stored);
 
     stored->sim = *entity;
     StoreEntityReference(&stored->sim.sword);
 
-    struct world_position newPosition = WorldPositionCalculate(state->world, &state->cameraPos, entity->position);
+    struct world_position newPosition = WorldPositionCalculate(state->world, &state->cameraPosition, entity->position);
     EntityChangeLocation(&state->worldArena, state->world, entity->storageIndex, stored, &stored->position,
                          &newPosition);
 
@@ -233,8 +234,8 @@ WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 m
   return collided;
 }
 
-internal void
-EntityMove(struct sim_region *simRegion, struct sim_entity *entity, f32 dt, const struct move_spec *moveSpec,
+void
+EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const struct move_spec *moveSpec,
            struct v2 ddPosition)
 {
   struct world *world = simRegion->world;
@@ -328,10 +329,10 @@ EntityMove(struct sim_region *simRegion, struct sim_entity *entity, f32 dt, cons
     f32 tMin = 1.0f;
     struct v2 wallNormal;
     struct v2 desiredPosition = v2_add(entity->position, deltaPosition);
-    struct sim_entity *hitEntity = 0;
+    struct entity *hitEntity = 0;
 
     for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
-      struct sim_entity *testEntity = simRegion->entities + testEntityIndex;
+      struct entity *testEntity = simRegion->entities + testEntityIndex;
 
       if (entity == testEntity || !testEntity->collides)
         continue;

@@ -67,7 +67,10 @@ WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, struct me
 static inline u8
 WorldPositionIsCalculated(struct world *world, f32 chunkRel)
 {
-  return (chunkRel >= -0.5f * world->chunkSideInMeters) && (chunkRel <= 0.5f * world->chunkSideInMeters);
+  const f32 epsilon = 0.0001f;
+  f32 max = 0.5f * world->chunkSideInMeters + epsilon;
+  f32 min = -max;
+  return (chunkRel >= min) && (chunkRel <= max);
 }
 
 static inline u8
