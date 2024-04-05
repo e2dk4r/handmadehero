@@ -1,6 +1,7 @@
 #ifndef HANDMADEHERO_H
 #define HANDMADEHERO_H
 
+#include "sim_region.h"
 #include "memory_arena.h"
 #include "platform.h"
 #include "world.h"
@@ -19,37 +20,9 @@ struct bitmap_hero {
   struct bitmap cape;
 };
 
-#define ENTITY_TYPE_INVALID 0
-#define ENTITY_TYPE_HERO 1 << 0
-#define ENTITY_TYPE_WALL 1 << 1
-#define ENTITY_TYPE_FAMILIAR 1 << 2
-#define ENTITY_TYPE_MONSTER 1 << 3
-#define ENTITY_TYPE_SWORD 1 << 4
-
-#define HIT_POINT_SUB_COUNT 4
-struct hit_point {
-  /* TODO: bake this down to one variable */
-  u8 flags;
-  u8 filledAmount;
-};
-
 struct entity_low {
-  u8 collides : 1;
-  u8 type;
-  f32 width;
-  f32 height;
   struct world_position position;
-  u32 dAbsTileZ;
-  u32 highIndex;
-
-  u32 hitPointMax;
-  struct hit_point hitPoints[16];
-
-  u32 swordLowIndex;
-  f32 distanceRemaining;
-
-  u8 facingDirection;
-  f32 tBob;
+  struct sim_entity sim;
 };
 
 struct entity {
@@ -89,10 +62,10 @@ typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_i
                                        struct game_backbuffer *backbuffer);
 
 void
-CameraSet(struct game_state *state, struct world_position *newCameraPosition);
-
-void
 EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct entity_low *entityLow,
                      struct world_position *oldPosition, struct world_position *newPosition);
+
+struct entity_low *
+StoredEntityGet(struct game_state *state, u32 index);
 
 #endif /* HANDMADEHERO_H */

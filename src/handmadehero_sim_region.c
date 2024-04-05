@@ -3,19 +3,70 @@
 #include <handmadehero/sim_region.h>
 
 internal struct sim_entity *
-AddEntityRaw(struct sim_region *simRegion)
+AddEntityRaw(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct entity_low *source);
+
+internal struct sim_entity_hash *
+GetHashFromStorageIndex(struct sim_region *simRegion, u32 storageIndex)
 {
-  struct sim_entity *entity = 0;
+  assert(storageIndex);
 
-  if (simRegion->entityCount >= simRegion->entityTotal)
-    InvalidCodePath;
+  struct sim_entity_hash *result = 0;
+  u32 hashValue = storageIndex;
 
-  u32 entityIndex = simRegion->entityCount;
-  entity = simRegion->entities + entityIndex;
-  *entity = (struct sim_entity){};
-  simRegion->entityCount++;
+  for (u32 offset = 0; offset < ARRAY_COUNT(simRegion->hashTable); offset++) {
+    struct sim_entity_hash *entry =
+        simRegion->hashTable + ((hashValue + offset) & (ARRAY_COUNT(simRegion->hashTable) - 1));
 
-  return entity;
+    if (entry->index == 0 || entry->index == hashValue) {
+      result = entry;
+      break;
+    }
+  }
+
+  return result;
+}
+
+internal struct sim_entity *
+GetEntityFromStorageIndex(struct sim_region *simRegion, u32 storageIndex)
+{
+  struct sim_entity_hash *entry = GetHashFromStorageIndex(simRegion, storageIndex);
+  if (!entry)
+    return 0;
+  struct sim_entity *result = entry->ptr;
+  return result;
+}
+
+internal void
+MapStorageIndexToEntity(struct sim_region *simRegion, u32 storageIndex, struct sim_entity *entity)
+{
+  struct sim_entity_hash *entry = GetHashFromStorageIndex(simRegion, storageIndex);
+  assert(entry->index == 0 || entry->index == storageIndex);
+  entry->index = storageIndex;
+  entry->ptr = entity;
+}
+
+internal inline void
+LoadEntityReference(struct game_state *state, struct sim_region *simRegion, struct entity_reference *ref)
+{
+  if (!ref->index)
+    return;
+
+  struct sim_entity_hash *entry = GetHashFromStorageIndex(simRegion, ref->index);
+  if (entry->ptr == 0) {
+    entry->index = ref->index;
+    entry->ptr = AddEntityRaw(state, simRegion, ref->index, StoredEntityGet(state, ref->index));
+  }
+
+  ref->ptr = entry->ptr;
+}
+
+internal inline void
+StoreEntityReference(struct entity_reference *ref)
+{
+  if (!ref->ptr)
+    return;
+
+  ref->index = ref->ptr->storageIndex;
 }
 
 internal struct v2
@@ -27,11 +78,35 @@ GetPositionRelativeToOrigin(struct sim_region *simRegion, struct entity_low *sto
 }
 
 internal struct sim_entity *
-AddEntity(struct sim_region *simRegion, struct entity_low *source, struct v2 *simPosition)
+AddEntityRaw(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct entity_low *source)
 {
-  struct sim_entity *dest = AddEntityRaw(simRegion);
-  assert(dest);
+  struct sim_entity *entity = 0;
 
+  if (simRegion->entityCount >= simRegion->entityTotal)
+    InvalidCodePath;
+
+  u32 entityIndex = simRegion->entityCount;
+  entity = simRegion->entities + entityIndex;
+  MapStorageIndexToEntity(simRegion, storageIndex, entity);
+
+  if (source) {
+    *entity = source->sim;
+    LoadEntityReference(state, simRegion, &entity->sword);
+  }
+
+  entity->storageIndex = storageIndex;
+
+  simRegion->entityCount++;
+
+  return entity;
+}
+
+internal struct sim_entity *
+AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct entity_low *source,
+          struct v2 *simPosition)
+{
+  struct sim_entity *dest = AddEntityRaw(state, simRegion, storageIndex, source);
+  assert(dest);
   if (simPosition) {
     dest->position = *simPosition;
   } else {
@@ -71,14 +146,14 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
           struct entity_low *storedEntity = state->storedEntities + storedEntityIndex;
           assert(storedEntity);
 
-          if (storedEntity->type == ENTITY_TYPE_INVALID)
-            continue;
+          // if (storedEntity->type == ENTITY_TYPE_INVALID)
+          //   continue;
 
           struct v2 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
           if (!RectIsPointInside(simRegion->bounds, positionRelativeToOrigin))
             continue;
 
-          AddEntity(simRegion, storedEntity, &positionRelativeToOrigin);
+          AddEntity(state, simRegion, storedEntityIndex, storedEntity, &positionRelativeToOrigin);
         }
       }
     }
@@ -88,43 +163,288 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
 }
 
 void
-EndSimRegion(struct sim_region *region, struct game_state *state)
+EndSimRegion(struct sim_region *simRegion, struct game_state *state)
 {
-  struct sim_entity *entity = region->entities;
-  for (u32 entityIndex = 1; entityIndex < region->entityCount; entityIndex++, entity++) {
+  for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
+    struct sim_entity *entity = simRegion->entities + entityIndex;
     struct entity_low *stored = state->storedEntities + entity->storageIndex;
     assert(stored);
+
+    stored->sim = *entity;
+    StoreEntityReference(&stored->sim.sword);
 
     struct world_position newPosition = WorldPositionCalculate(state->world, &state->cameraPos, entity->position);
     EntityChangeLocation(&state->worldArena, state->world, entity->storageIndex, stored, &stored->position,
                          &newPosition);
+
+    /* sync camera with followed entity */
+    if (entity->storageIndex == state->followedEntityIndex) {
+#if 0
+      struct world_position newCameraPosition = state->cameraPos;
+      newCameraPosition.chunkZ = followedEntityLow->position.chunkZ;
+
+      const u32 scrollWidth = TILES_PER_WIDTH;
+      const u32 scrollHeight = TILES_PER_HEIGHT;
+
+      f32 maxDiffX = (f32)scrollWidth * 0.5f * world->tileSideInMeters;
+      if (followedEntityHigh->position.x > maxDiffX)
+        newCameraPosition.absTileX += scrollWidth;
+      else if (followedEntityHigh->position.x < -maxDiffX)
+        newCameraPosition.absTileX -= scrollWidth;
+
+      f32 maxDiffY = (f32)scrollHeight * 0.5f * world->tileSideInMeters;
+      if (followedEntityHigh->position.y > maxDiffY)
+        newCameraPosition.absTileY += scrollHeight;
+      else if (followedEntityHigh->position.y < -maxDiffY)
+        newCameraPosition.absTileY -= scrollHeight;
+#else
+      struct world_position newCameraPosition = stored->position;
+#endif
+    }
+  }
+}
+
+internal u8
+WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 minY, f32 maxY)
+{
+  const f32 tEpsilon = 0.001f;
+  u8 collided = 0;
+
+  /* no movement, no sweet */
+  if (deltaX == 0)
+    return collided;
+
+  f32 tResult = (wallX - relX) / deltaX;
+  if (tResult < 0)
+    return collided;
+  /* do not care, if entity needs to go back to hit */
+  if (tResult >= *tMin)
+    return collided;
+
+  f32 y = relY + tResult * deltaY;
+  if (y < minY)
+    return collided;
+  if (y > maxY)
+    return collided;
+
+  *tMin = maximum(0.0f, tResult - tEpsilon);
+  collided = 1;
+
+  return collided;
+}
+
+internal void
+EntityMove(struct sim_region *simRegion, struct sim_entity *entity, f32 dt, const struct move_spec *moveSpec,
+           struct v2 ddPosition)
+{
+  struct world *world = simRegion->world;
+
+  /*****************************************************************
+   * CORRECTING ACCELERATION
+   *****************************************************************/
+  if (moveSpec->unitMaxAccel) {
+    f32 ddPositionLength = v2_length_square(ddPosition);
+    /*
+     * scale down acceleration to unit vector
+     * fixes moving diagonally √2 times faster
+     */
+    if (ddPositionLength > 1.0f) {
+      v2_mul_ref(&ddPosition, 1 / SquareRoot(ddPositionLength));
+    }
   }
 
-  /* sync camera with followed entity */
-  struct entity_low *followedEntityLow = state->storedEntities + state->followedEntityIndex;
-  if (followedEntityLow) {
-#if 0
-    struct world_position newCameraPosition = state->cameraPos;
-    newCameraPosition.chunkZ = followedEntityLow->position.chunkZ;
+  /* set entity speed in m/s² */
+  v2_mul_ref(&ddPosition, moveSpec->speed);
 
-    const u32 scrollWidth = TILES_PER_WIDTH;
-    const u32 scrollHeight = TILES_PER_HEIGHT;
+  /*
+   * apply friction opposite force to acceleration
+   */
+  v2_add_ref(&ddPosition, v2_neg(v2_mul(entity->dPosition, moveSpec->drag)));
 
-    f32 maxDiffX = (f32)scrollWidth * 0.5f * world->tileSideInMeters;
-    if (followedEntityHigh->position.x > maxDiffX)
-      newCameraPosition.absTileX += scrollWidth;
-    else if (followedEntityHigh->position.x < -maxDiffX)
-      newCameraPosition.absTileX -= scrollWidth;
+  /*****************************************************************
+   * CALCULATION OF NEW PLAYER POSITION
+   *****************************************************************/
 
-    f32 maxDiffY = (f32)scrollHeight * 0.5f * world->tileSideInMeters;
-    if (followedEntityHigh->position.y > maxDiffY)
-      newCameraPosition.absTileY += scrollHeight;
-    else if (followedEntityHigh->position.y < -maxDiffY)
-      newCameraPosition.absTileY -= scrollHeight;
-#else
-    struct world_position newCameraPosition = followedEntityLow->position;
-#endif
+  /*
+   *  (position)      f(t) = 1/2 a t² + v t + p
+   *     where p is old position
+   *           a is acceleration
+   *           t is time
+   *  (velocity)     f'(t) = a t + v
+   *  (acceleration) f"(t) = a
+   *     acceleration coming from user
+   *
+   *  calculated using integral of acceleration
+   *  (velocity) ∫(f"(t)) = f'(t) = a t + v
+   *             where v is old velocity
+   *             using integral of velocity
+   *  (position) ∫(f'(t)) = 1/2 a t² + v t + p
+   *             where p is old position
+   *
+   *        |-----|-----|-----|-----|-----|--->
+   *  frame 0     1     2     3     4     5
+   *        ⇐ ∆t  ⇒
+   *     ∆t comes from platform layer
+   */
+  // clang-format off
+  struct v2 deltaPosition =
+      /* 1/2 a t² + v t */
+      v2_add(
+        /* 1/2 a t² */
+        v2_mul(
+          /* 1/2 a */
+          v2_mul(ddPosition, 0.5f),
+          /* t² */
+          square(dt)
+        ), /* end: 1/2 a t² */
+        /* v t */
+        v2_mul(
+          /* v */
+          entity->dPosition,
+          /* t */
+          dt
+        ) /* end: v t */
+      );
+  // clang-format on
 
-    CameraSet(state, &newCameraPosition);
+  /* new velocity */
+  // clang-format off
+  /* v' = a t + v */
+  v2_add_ref(&entity->dPosition,
+    /* a t */
+    v2_mul(
+      /* a */
+      ddPosition,
+      /* t */
+      dt
+    )
+  );
+  // clang-format on
+
+  /*****************************************************************
+   * COLLUSION DETECTION
+   *****************************************************************/
+  for (u32 iteration = 0; iteration < 4; iteration++) {
+    f32 tMin = 1.0f;
+    struct v2 wallNormal;
+    struct v2 desiredPosition = v2_add(entity->position, deltaPosition);
+    struct sim_entity *hitEntity = 0;
+
+    for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
+      struct sim_entity *testEntity = simRegion->entities + testEntityIndex;
+
+      if (entity == testEntity || !testEntity->collides)
+        continue;
+
+      struct v2 diameter = {
+          .x = testEntity->width + entity->width,
+          .y = testEntity->height + entity->height,
+      };
+
+      struct v2 minCorner = v2_mul(diameter, -0.5f);
+      struct v2 maxCorner = v2_mul(diameter, 0.5f);
+
+      struct v2 rel = v2_sub(entity->position, testEntity->position);
+
+      /* test all 4 walls and take minimum t. */
+      if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
+        wallNormal = v2(-1, 0);
+        hitEntity = testEntity;
+      }
+
+      if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
+        wallNormal = v2(1, 0);
+        hitEntity = testEntity;
+      }
+
+      if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
+        wallNormal = v2(0, -1);
+        hitEntity = testEntity;
+      }
+
+      if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
+        wallNormal = v2(0, 1);
+        hitEntity = testEntity;
+      }
+    }
+
+    /* p' = tMin (1/2 a t² + v t) + p */
+    v2_add_ref(&entity->position, v2_mul(deltaPosition, tMin));
+
+    /*****************************************************************
+     * COLLUSION HANDLING
+     *****************************************************************/
+    if (hitEntity) {
+      /*
+       * add gliding to velocity
+       */
+      // clang-format off
+      /* v' = v - vTr r */
+      v2_sub_ref(&entity->dPosition,
+          /* vTr r */
+          v2_mul(
+            /* r */
+            wallNormal,
+            /* vTr */
+            v2_dot(entity->dPosition, wallNormal)
+          )
+      );
+
+      /*
+       *    wall
+       *      |    p
+       *      |  /
+       *      |/
+       *     /||
+       *   /  ||
+       * d    |▼ p'
+       *      ||
+       *      ||
+       *      |▼ w
+       *      |
+       *  p  = starting point
+       *  d  = desired point
+       *  p' = dot product with normal clipped vector
+       *  w  = not clipped vector
+       *
+       *  clip the delta position by gone amount
+       */
+      deltaPosition = v2_sub(desiredPosition, entity->position);
+      v2_sub_ref(&deltaPosition,
+          /* pTr r */
+          v2_mul(
+            /* r */
+            wallNormal,
+            /* pTr */
+            v2_dot(deltaPosition, wallNormal)
+          )
+      );
+
+      // clang-format on
+
+      // TODO: stairs
+      // entity->absTileZ += hitEntityLow->dAbsTileZ;
+    } else {
+      break;
+    }
+  }
+
+  /*****************************************************************
+   * VISUAL CORRECTIONS
+   *****************************************************************/
+  /* use player velocity to face the direction */
+
+  if (entity->dPosition.x == 0.0f && entity->dPosition.y == 0.0f)
+    ;
+  else if (absolute(entity->dPosition.x) > absolute(entity->dPosition.y)) {
+    if (entity->dPosition.x < 0)
+      entity->facingDirection = BITMAP_HERO_LEFT;
+    else
+      entity->facingDirection = BITMAP_HERO_RIGHT;
+  } else {
+    if (entity->dPosition.y > 0)
+      entity->facingDirection = BITMAP_HERO_BACK;
+    else
+      entity->facingDirection = BITMAP_HERO_FRONT;
   }
 }

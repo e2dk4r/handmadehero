@@ -7,6 +7,24 @@
 comptime u32 TILES_PER_WIDTH = 17;
 comptime u32 TILES_PER_HEIGHT = 9;
 
+comptime struct move_spec PlayerMoveSpec = {
+    .unitMaxAccel = 1,
+    .speed = 50.0f,
+    .drag = 8.0f,
+};
+
+comptime struct move_spec FamiliarMoveSpec = {
+    .unitMaxAccel = 1,
+    .speed = 30.0f,
+    .drag = 8.0f,
+};
+
+comptime struct move_spec SwordMoveSpec = {
+    .unitMaxAccel = 0,
+    .speed = 0.0f,
+    .drag = 0.0f,
+};
+
 static void
 DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min, struct v2 max, const struct v3 *color)
 {
@@ -253,7 +271,7 @@ EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entity
   }
 }
 
-static inline struct entity_low *
+inline struct entity_low *
 StoredEntityGet(struct game_state *state, u32 index)
 {
   struct entity_low *result = 0;
@@ -277,8 +295,8 @@ StoredEntityAdd(struct game_state *state, u8 type, struct world_position *positi
   struct entity_low *storedEntity = state->storedEntities + storedEntityIndex;
   assert(storedEntity);
   *storedEntity = (struct entity_low){};
-  storedEntity->collides = 1;
-  storedEntity->type = type;
+  storedEntity->sim.collides = 1;
+  storedEntity->sim.type = type;
 
   if (position) {
     EntityChangeLocation(&state->worldArena, state->world, storedEntityIndex, storedEntity, 0, position);
@@ -294,11 +312,11 @@ StoredEntityAdd(struct game_state *state, u8 type, struct world_position *positi
 static inline void
 EntityHitPointsReset(struct entity_low *storedEntity, u32 hitPointMax)
 {
-  assert(hitPointMax < ARRAY_COUNT(storedEntity->hitPoints));
-  storedEntity->hitPointMax = hitPointMax;
+  assert(hitPointMax < ARRAY_COUNT(storedEntity->sim.hitPoints));
+  storedEntity->sim.hitPointMax = hitPointMax;
 
   for (u32 hitPointIndex = 0; hitPointIndex < hitPointMax; hitPointIndex++) {
-    struct hit_point *hitPoint = storedEntity->hitPoints + hitPointIndex;
+    struct hit_point *hitPoint = storedEntity->sim.hitPoints + hitPointIndex;
     hitPoint->flags = 0;
     hitPoint->filledAmount = HIT_POINT_SUB_COUNT;
   }
@@ -311,9 +329,9 @@ SwordAdd(struct game_state *state)
   struct entity_low *storedEntity = StoredEntityGet(state, storedEntityIndex);
   assert(storedEntity);
 
-  storedEntity->height = state->world->tileSideInMeters;
-  storedEntity->width = state->world->tileSideInMeters;
-  storedEntity->collides = 0;
+  storedEntity->sim.height = state->world->tileSideInMeters;
+  storedEntity->sim.width = state->world->tileSideInMeters;
+  storedEntity->sim.collides = 0;
 
   return storedEntityIndex;
 }
@@ -326,13 +344,13 @@ PlayerAdd(struct game_state *state)
   struct entity_low *storedEntity = StoredEntityGet(state, storedEntityIndex);
   assert(storedEntity);
 
-  storedEntity->height = 0.5f;
-  storedEntity->width = 1.0f;
+  storedEntity->sim.height = 0.5f;
+  storedEntity->sim.width = 1.0f;
   EntityHitPointsReset(storedEntity, 3);
 
-  u32 swordLowIndex = SwordAdd(state);
-  storedEntity->swordLowIndex = swordLowIndex;
-  storedEntity->distanceRemaining = 3.0f;
+  u32 swordIndex = SwordAdd(state);
+  storedEntity->sim.sword.index = swordIndex;
+  storedEntity->sim.distanceRemaining = 3.0f;
 
   /* if followed entity, does not exits */
   if (state->followedEntityIndex == 0)
@@ -349,8 +367,8 @@ MonsterAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
   struct entity_low *entityLow = StoredEntityGet(state, entityIndex);
   assert(entityLow);
 
-  entityLow->height = 0.5f;
-  entityLow->width = 1.0f;
+  entityLow->sim.height = 0.5f;
+  entityLow->sim.width = 1.0f;
 
   EntityHitPointsReset(entityLow, 3);
 
@@ -365,9 +383,9 @@ FamiliarAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
   struct entity_low *entityLow = StoredEntityGet(state, entityIndex);
   assert(entityLow);
 
-  entityLow->height = 0.5f;
-  entityLow->width = 1.0f;
-  entityLow->collides = 0;
+  entityLow->sim.height = 0.5f;
+  entityLow->sim.width = 1.0f;
+  entityLow->sim.collides = 0;
 
   return entityIndex;
 }
@@ -380,373 +398,10 @@ WallAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
   struct entity_low *entityLow = StoredEntityGet(state, entityIndex);
   assert(entityLow);
 
-  entityLow->height = state->world->tileSideInMeters;
-  entityLow->width = state->world->tileSideInMeters;
+  entityLow->sim.height = state->world->tileSideInMeters;
+  entityLow->sim.width = state->world->tileSideInMeters;
 
   return entityIndex;
-}
-
-static u8
-WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 minY, f32 maxY)
-{
-  const f32 tEpsilon = 0.001f;
-  u8 collided = 0;
-
-  /* no movement, no sweet */
-  if (deltaX == 0)
-    goto exit;
-
-  f32 tResult = (wallX - relX) / deltaX;
-  if (tResult < 0)
-    goto exit;
-  /* do not care, if entity needs to go back to hit */
-  if (tResult >= *tMin)
-    goto exit;
-
-  f32 y = relY + tResult * deltaY;
-  if (y < minY)
-    goto exit;
-  if (y > maxY)
-    goto exit;
-
-  *tMin = maximum(0.0f, tResult - tEpsilon);
-  collided = 1;
-
-exit:
-  return collided;
-}
-
-struct move_spec {
-  u8 unitMaxAccel : 1;
-  /* speed at m/s² */
-  f32 speed;
-  f32 drag;
-};
-
-comptime struct move_spec PlayerMoveSpec = {
-    .unitMaxAccel = 1,
-    .speed = 50.0f,
-    .drag = 8.0f,
-};
-
-comptime struct move_spec FamiliarMoveSpec = {
-    .unitMaxAccel = 1,
-    .speed = 30.0f,
-    .drag = 8.0f,
-};
-
-comptime struct move_spec SwordMoveSpec = {
-    .unitMaxAccel = 0,
-    .speed = 0.0f,
-    .drag = 0.0f,
-};
-
-static void
-EntityMove(struct game_state *state, u32 entityLowIndex, f32 dt, const struct move_spec *moveSpec, struct v2 ddPosition)
-{
-  struct entity_low *storedEntity = StoredEntityGet(state, entityLowIndex);
-  assert(storedEntity);
-
-  /*****************************************************************
-   * CORRECTING ACCELERATION
-   *****************************************************************/
-  if (moveSpec->unitMaxAccel) {
-    f32 ddPositionLength = v2_length_square(ddPosition);
-    /*
-     * scale down acceleration to unit vector
-     * fixes moving diagonally √2 times faster
-     */
-    if (ddPositionLength > 1.0f) {
-      v2_mul_ref(&ddPosition, 1 / SquareRoot(ddPositionLength));
-    }
-  }
-
-  /* set entity speed in m/s² */
-  v2_mul_ref(&ddPosition, moveSpec->speed);
-
-  /*
-   * apply friction opposite force to acceleration
-   */
-  v2_add_ref(&ddPosition, v2_neg(v2_mul(entity->dPosition, moveSpec->drag)));
-
-  /*****************************************************************
-   * CALCULATION OF NEW PLAYER POSITION
-   *****************************************************************/
-
-  /*
-   *  (position)      f(t) = 1/2 a t² + v t + p
-   *     where p is old position
-   *           a is acceleration
-   *           t is time
-   *  (velocity)     f'(t) = a t + v
-   *  (acceleration) f"(t) = a
-   *     acceleration coming from user
-   *
-   *  calculated using integral of acceleration
-   *  (velocity) ∫(f"(t)) = f'(t) = a t + v
-   *             where v is old velocity
-   *             using integral of velocity
-   *  (position) ∫(f'(t)) = 1/2 a t² + v t + p
-   *             where p is old position
-   *
-   *        |-----|-----|-----|-----|-----|--->
-   *  frame 0     1     2     3     4     5
-   *        ⇐ ∆t  ⇒
-   *     ∆t comes from platform layer
-   */
-  // clang-format off
-  struct v2 deltaPosition =
-      /* 1/2 a t² + v t */
-      v2_add(
-        /* 1/2 a t² */
-        v2_mul(
-          /* 1/2 a */
-          v2_mul(ddPosition, 0.5f),
-          /* t² */
-          square(dt)
-        ), /* end: 1/2 a t² */
-        /* v t */
-        v2_mul(
-          /* v */
-          entityHigh->dPosition,
-          /* t */
-          dt
-        ) /* end: v t */
-      );
-  // clang-format on
-
-  /* new velocity */
-  // clang-format off
-  entityHigh->dPosition =
-    /* a t + v */
-    v2_add(
-      /* a t */
-      v2_mul(
-          /* a */
-          ddPosition,
-          /* t */
-          dt
-      ),
-      /* v */
-      entityHigh->dPosition
-    );
-  // clang-format on
-
-  /*****************************************************************
-   * COLLUSION DETECTION
-   *****************************************************************/
-  for (u32 iteration = 0; iteration < 4; iteration++) {
-    f32 tMin = 1.0f;
-    struct v2 wallNormal;
-    struct v2 desiredPosition = v2_add(entityHigh->position, deltaPosition);
-    struct entity_low *hitEntityLow = 0;
-
-    for (u32 entityHighIndex = 1; entityLow->collides && entityHighIndex < state->entityHighCount; entityHighIndex++) {
-      struct entity_high *testEntityHigh = EntityHighGet(state, entityHighIndex);
-      assert(testEntityHigh);
-      struct entity_low *testEntityLow = StoredEntityGet(state, testEntityHigh->lowIndex);
-      assert(testEntityLow);
-
-      if (!testEntityLow->collides)
-        continue;
-
-      struct v2 diameter = {
-          .x = testEntityLow->width + entityLow->width,
-          .y = testEntityLow->height + entityLow->height,
-      };
-
-      struct v2 minCorner = v2_mul(diameter, -0.5f);
-      struct v2 maxCorner = v2_mul(diameter, 0.5f);
-
-      struct v2 rel = v2_sub(entityHigh->position, testEntityHigh->position);
-
-      /* test all 4 walls and take minimum t. */
-      if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-        wallNormal = v2(-1, 0);
-        hitEntityLow = testEntityLow;
-      }
-
-      if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-        wallNormal = v2(1, 0);
-        hitEntityLow = testEntityLow;
-      }
-
-      if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-        wallNormal = v2(0, -1);
-        hitEntityLow = testEntityLow;
-      }
-
-      if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-        wallNormal = v2(0, 1);
-        hitEntityLow = testEntityLow;
-      }
-    }
-
-    /* p' = tMin (1/2 a t² + v t) + p */
-    v2_add_ref(&entityHigh->position, v2_mul(deltaPosition, tMin));
-
-    /*****************************************************************
-     * COLLUSION HANDLING
-     *****************************************************************/
-    if (hitEntityLow) {
-      /*
-       * add gliding to velocity
-       */
-      // clang-format off
-      /* v' = v - vTr r */
-      v2_sub_ref(&entityHigh->dPosition,
-          /* vTr r */
-          v2_mul(
-            /* r */
-            wallNormal,
-            /* vTr */
-            v2_dot(entityHigh->dPosition, wallNormal)
-          )
-      );
-
-      /*
-       *    wall
-       *      |    p
-       *      |  /
-       *      |/
-       *     /||
-       *   /  ||
-       * d    |▼ p'
-       *      ||
-       *      ||
-       *      |▼ w
-       *      |
-       *  p  = starting point
-       *  d  = desired point
-       *  p' = dot product with normal clipped vector
-       *  w  = not clipped vector
-       *
-       *  clip the delta position by gone amount
-       */
-      deltaPosition = v2_sub(desiredPosition, entityHigh->position);
-      v2_sub_ref(&deltaPosition,
-          /* pTr r */
-          v2_mul(
-            /* r */
-            wallNormal,
-            /* pTr */
-            v2_dot(deltaPosition, wallNormal)
-          )
-      );
-
-      // clang-format on
-
-      // TODO: stairs
-      // entityHigh->absTileZ += hitEntityLow->dAbsTileZ;
-    } else {
-      break;
-    }
-  }
-
-  /*****************************************************************
-   * VISUAL CORRECTIONS
-   *****************************************************************/
-  /* use player velocity to face the direction */
-
-  if (entityHigh->dPosition.x == 0.0f && entityHigh->dPosition.y == 0.0f)
-    ;
-  else if (absolute(entityHigh->dPosition.x) > absolute(entityHigh->dPosition.y)) {
-    if (entityHigh->dPosition.x < 0)
-      entityHigh->facingDirection = BITMAP_HERO_LEFT;
-    else
-      entityHigh->facingDirection = BITMAP_HERO_RIGHT;
-  } else {
-    if (entityHigh->dPosition.y > 0)
-      entityHigh->facingDirection = BITMAP_HERO_BACK;
-    else
-      entityHigh->facingDirection = BITMAP_HERO_FRONT;
-  }
-
-  /* always write back into tile space */
-  struct world_position newPosition = WorldPositionCalculate(state->world, &state->cameraPos, entityHigh->position);
-  EntityChangeLocation(&state->worldArena, state->world, entityLowIndex, entityLow, &entityLow->position, &newPosition);
-}
-
-void
-CameraSet(struct game_state *state, struct world_position *newCameraPosition)
-{
-  struct world *world = state->world;
-  struct world_difference diff = WorldPositionSub(world, newCameraPosition, &state->cameraPos);
-  state->cameraPos = *newCameraPosition;
-
-  /* camera size that contains collection high frequency entities */
-  const u32 tileSpanMultipler = 3;
-  const u32 tileSpanX = TILES_PER_WIDTH * tileSpanMultipler;
-  const u32 tileSpanY = TILES_PER_HEIGHT * tileSpanMultipler;
-  struct v2 tileSpan = {(f32)tileSpanX, (f32)tileSpanY};
-  v2_mul_ref(&tileSpan, world->tileSideInMeters);
-  struct rectangle2 cameraBounds = RectCenterDim(v2(0.0f, 0.0f), tileSpan);
-
-  struct v2 entityOffsetPerFrame = v2_neg(diff.dXY);
-
-  for (u32 entityHighIndex = 1; entityHighIndex < state->entityHighCount;) {
-    struct entity_high *entityHigh = EntityHighGet(state, entityHighIndex);
-    assert(entityHigh);
-
-    /*
-     *  when camera moves,
-     *  negative of camera offset must be applied
-     * to entites so that they are not moving with
-     * camera
-     * ________________ ________________
-     * |              | |              |
-     * |              | |              |
-     * |             x| |x'            |
-     * |       c      | |       c'     |
-     * |              | |              |
-     * |              | |              |
-     * |______________| |______________|
-     */
-    v2_add_ref(&entityHigh->position, entityOffsetPerFrame);
-
-    struct entity_low *storedEntity = StoredEntityGet(state, entityHigh->lowIndex);
-    assert(storedEntity);
-
-    /* check if entity is in camera bounds */
-    if (WorldPositionIsValid(&entityLow->position) && RectIsPointInside(cameraBounds, entityHigh->position)) {
-      entityHighIndex++;
-      continue;
-    }
-
-    /* transion from high to low */
-    EntityMakeLowFreq(state, entityHigh->lowIndex);
-  }
-
-  struct world_position minChunkPosition = WorldPositionCalculate(world, newCameraPosition, RectMin(&cameraBounds));
-  struct world_position maxChunkPosition = WorldPositionCalculate(world, newCameraPosition, RectMax(&cameraBounds));
-  for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
-    for (u32 chunkY = minChunkPosition.chunkY; chunkY <= maxChunkPosition.chunkY; chunkY++) {
-      struct world_chunk *chunk = WorldChunkGet(world, chunkX, chunkY, newCameraPosition->chunkZ, 0);
-      if (!chunk)
-        continue;
-
-      for (struct world_entity_block *block = &chunk->firstBlock; block; block = block->next) {
-        for (u32 entityIndex = 0; entityIndex < block->entityCount; entityIndex++) {
-          u32 entityLowIndex = block->entityLowIndexes[entityIndex];
-          struct entity_low *entityLow = StoredEntityGet(state, entityLowIndex);
-          assert(entityLow);
-
-          if (entityLow->type == ENTITY_TYPE_INVALID)
-            continue;
-
-          if (entityLow->highIndex != 0)
-            continue;
-
-          struct world_difference diff = WorldPositionSub(world, &entityLow->position, newCameraPosition);
-          struct v2 entityPositionRelativeToCamera = diff.dXY;
-          if (!RectIsPointInside(cameraBounds, entityPositionRelativeToCamera))
-            continue;
-
-          EntityMakeHighFreq(state, entityLowIndex);
-        }
-      }
-    }
-  }
 }
 
 internal inline void
@@ -995,7 +650,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     struct world_position initialCameraPosition =
         ChunkPositionFromTilePosition(state->world, initialCameraX, initialCameraY, initialCameraZ);
-    CameraSet(state, &initialCameraPosition);
 
     memory->initialized = 1;
   }
