@@ -229,7 +229,7 @@
 - [x] Handmade Hero Day 063 - Simulation Regions
       https://www.youtube.com/watch?v=a7_vSEEgArQ
 
-- [ ] Handmade Hero Day 064 - Mapping Entity Indexes to Pointers
+- [x] Handmade Hero Day 064 - Mapping Entity Indexes to Pointers
       https://www.youtube.com/watch?v=lHKso30LdU8
 
 - [ ] Handmade Hero Day 065 - Finishing the Simulation Region Change
