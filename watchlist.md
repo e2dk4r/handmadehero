@@ -232,7 +232,7 @@
 - [x] Handmade Hero Day 064 - Mapping Entity Indexes to Pointers
       https://www.youtube.com/watch?v=lHKso30LdU8
 
-- [ ] Handmade Hero Day 065 - Finishing the Simulation Region Change
+- [x] Handmade Hero Day 065 - Finishing the Simulation Region Change
       https://www.youtube.com/watch?v=XfBTNH0nL4I
 
 - [ ] Handmade Hero Day 066 - Adding Support for Non-spatial Entities
