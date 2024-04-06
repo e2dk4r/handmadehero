@@ -33,23 +33,25 @@ struct entity_reference {
   u32 index;
 };
 
+#define ENTITY_FLAG_COLLIDE (1 << 1)
+#define ENTITY_FLAG_NONSPACIAL (1 << 2)
+
 struct entity {
   u32 storageIndex;
 
   u8 type;
+  u8 flags;
 
   struct v2 position;
   struct v2 dPosition;
-  u32 chunkZ;
 
   f32 z;
   f32 dZ;
 
-  u8 collides : 1;
+  u32 chunkZ;
+
   f32 width;
   f32 height;
-  u32 dAbsTileZ;
-  u32 highIndex;
 
   u32 hitPointMax;
   struct hit_point hitPoints[16];
@@ -89,5 +91,9 @@ EndSimRegion(struct sim_region *region, struct game_state *state);
 void
 EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const struct move_spec *moveSpec,
            struct v2 ddPosition);
+
+internal inline u8 EntityCollides(struct entity *entity) {
+  return (entity->flags != 0) && (entity->flags & ENTITY_FLAG_COLLIDE);
+}
 
 #endif /* HANDMADEHERO_SIM_REGION_H */

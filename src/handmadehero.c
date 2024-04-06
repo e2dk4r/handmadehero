@@ -285,7 +285,7 @@ StoredEntityAdd(struct game_state *state, u8 type, struct world_position *positi
   struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
   assert(storedEntity);
   *storedEntity = (struct stored_entity){};
-  storedEntity->sim.collides = 1;
+  storedEntity->sim.flags = ENTITY_FLAG_COLLIDE;
   storedEntity->sim.type = type;
 
   if (position) {
@@ -321,7 +321,7 @@ SwordAdd(struct game_state *state)
 
   storedEntity->sim.height = state->world->tileSideInMeters;
   storedEntity->sim.width = state->world->tileSideInMeters;
-  storedEntity->sim.collides = 0;
+  storedEntity->sim.flags = ENTITY_FLAG_NONSPACIAL;
 
   return storedEntityIndex;
 }
@@ -375,7 +375,7 @@ FamiliarAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 
   entityLow->sim.height = 0.5f;
   entityLow->sim.width = 1.0f;
-  entityLow->sim.collides = 0;
+  entityLow->sim.flags = 0;
 
   return entityIndex;
 }
