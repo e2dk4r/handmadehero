@@ -334,7 +334,7 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
     for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
       struct entity *testEntity = simRegion->entities + testEntityIndex;
 
-      if (entity == testEntity || !EntityCollides(testEntity))
+      if (entity == testEntity || !EntityIsFlagSet(testEntity, ENTITY_FLAG_COLLIDE))
         continue;
 
       struct v2 diameter = {
