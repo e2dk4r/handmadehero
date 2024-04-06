@@ -64,8 +64,10 @@ struct entity {
 };
 
 struct sim_entity_hash {
-  struct entity *ptr;
-  u32 index;
+  union {
+    struct entity *ptr;
+    u32 index;
+  };
 };
 
 struct sim_region {
