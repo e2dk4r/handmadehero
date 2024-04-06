@@ -182,7 +182,7 @@ EndSimRegion(struct sim_region *simRegion, struct game_state *state)
     struct world_position *newPosition = 0;
     if (!EntityIsFlagSet(entity, ENTITY_FLAG_NONSPACIAL)) {
       struct world_position relativePositionFromOrigin =
-          WorldPositionCalculate(state->world, &state->cameraPosition, entity->position);
+          WorldPositionCalculate(state->world, &simRegion->origin, entity->position);
       newPosition = &relativePositionFromOrigin;
     }
 
@@ -192,26 +192,27 @@ EndSimRegion(struct sim_region *simRegion, struct game_state *state)
     /* sync camera with followed entity */
     if (entity->storageIndex == state->followedEntityIndex) {
 #if 0
-      struct world_position newCameraPosition = state->cameraPos;
-      newCameraPosition.chunkZ = followedEntityLow->position.chunkZ;
+      struct world_position newCameraPosition = state->cameraPosition;
+      newCameraPosition.chunkZ = stored->position.chunkZ;
 
-      const u32 scrollWidth = TILES_PER_WIDTH;
-      const u32 scrollHeight = TILES_PER_HEIGHT;
+      const u32 scrollWidth = 17;
+      const u32 scrollHeight = 9;
 
-      f32 maxDiffX = (f32)scrollWidth * 0.5f * world->tileSideInMeters;
-      if (followedEntityHigh->position.x > maxDiffX)
-        newCameraPosition.absTileX += scrollWidth;
-      else if (followedEntityHigh->position.x < -maxDiffX)
-        newCameraPosition.absTileX -= scrollWidth;
+      f32 maxDiffX = (f32)scrollWidth * 0.5f * simRegion->world->tileSideInMeters;
+      if (entity->position.x > maxDiffX)
+        newCameraPosition.chunkX += 1;
+      else if (entity->position.x < -maxDiffX)
+        newCameraPosition.chunkX -= 1;
 
-      f32 maxDiffY = (f32)scrollHeight * 0.5f * world->tileSideInMeters;
-      if (followedEntityHigh->position.y > maxDiffY)
-        newCameraPosition.absTileY += scrollHeight;
-      else if (followedEntityHigh->position.y < -maxDiffY)
-        newCameraPosition.absTileY -= scrollHeight;
+      f32 maxDiffY = (f32)scrollHeight * 0.5f * simRegion->world->tileSideInMeters;
+      if (entity->position.y > maxDiffY)
+        newCameraPosition.chunkY += 1;
+      else if (entity->position.y < -maxDiffY)
+        newCameraPosition.chunkY -= 1;
 #else
       struct world_position newCameraPosition = stored->position;
 #endif
+      state->cameraPosition = newCameraPosition;
     }
   }
 }
