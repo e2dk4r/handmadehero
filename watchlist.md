@@ -235,7 +235,7 @@
 - [x] Handmade Hero Day 065 - Finishing the Simulation Region Change
       https://www.youtube.com/watch?v=XfBTNH0nL4I
 
-- [ ] Handmade Hero Day 066 - Adding Support for Non-spatial Entities
+- [x] Handmade Hero Day 066 - Adding Support for Non-spatial Entities
       https://www.youtube.com/watch?v=vXPAE5UfcbA
 
 - [ ] Handmade Hero Day 067 - Making Updates Conditional
