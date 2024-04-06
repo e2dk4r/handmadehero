@@ -641,6 +641,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       }
     }
 
+    conHero->dZ = 0.0f;
     if (controller->start.pressed) {
       conHero->dZ = 3.0f;
     }
@@ -699,9 +700,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     if (entity->type == ENTITY_TYPE_INVALID)
       continue;
 
-    EntityUpdate(simRegion, entity, dt);
-    f32 z = entity->z * metersToPixels;
-
     struct v2 playerScreenPosition = entity->position;
     /* screen's coordinate system uses y values inverse,
      * so that means going up in space means negative y values
@@ -712,6 +710,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
 
     if (entity->type & ENTITY_TYPE_HERO) {
+      f32 z = 0.0f;
       for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
         struct controlled_hero *conHero = state->controlledHeroes + controllerIndex;
         if (conHero->entityIndex != entity->storageIndex)
@@ -721,7 +720,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         EntityMove(simRegion, entity, dt, &HeroMoveSpec, conHero->ddPosition);
 
         /* jump */
-        entity->dZ += conHero->dZ;
+        if (conHero->dZ != 0.0f)
+          entity->dZ = conHero->dZ;
+        EntityUpdate(simRegion, entity, dt);
+        z = entity->z * metersToPixels;
 
         /* sword */
         struct v2 dSword = conHero->dSword;
@@ -778,7 +780,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       DrawHitPoints(backbuffer, entity, &playerGroundPoint, metersToPixels);
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, bitmap->align, cAlphaShadow);
-      playerGroundPoint.y -= z;
 
       DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->align);
     }
@@ -788,7 +789,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       f32 cAlphaShadow = 1.0f;
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, v2(72, 182), cAlphaShadow);
-      playerGroundPoint.y -= z;
       DrawBitmap(&state->bitmapSword, backbuffer, playerGroundPoint, v2(29, 10));
     }
 
