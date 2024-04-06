@@ -249,15 +249,17 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
 }
 
 inline void
-EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex,
-                     struct stored_entity *entityLow, struct world_position *oldPosition,
-                     struct world_position *newPosition)
+EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct stored_entity *stored,
+                     struct world_position *oldPosition, struct world_position *newPosition)
 {
+  struct entity *entity = &stored->sim;
   if (newPosition) {
-    entityLow->position = *newPosition;
+    stored->position = *newPosition;
     EntityChangeLocationRaw(arena, world, entityLowIndex, oldPosition, newPosition);
+    EntityClearFlag(entity, ENTITY_FLAG_NONSPACIAL);
   } else {
-    entityLow->position = WorldPositionInvalid();
+    stored->position = WorldPositionInvalid();
+    EntityAddFlag(entity, ENTITY_FLAG_NONSPACIAL);
   }
 }
 
@@ -287,11 +289,7 @@ StoredEntityAdd(struct game_state *state, u8 type, struct world_position *positi
   *storedEntity = (struct stored_entity){};
   storedEntity->sim.type = type;
 
-  if (position) {
-    EntityChangeLocation(&state->worldArena, state->world, storedEntityIndex, storedEntity, 0, position);
-  } else {
-    storedEntity->position = WorldPositionInvalid();
-  }
+  EntityChangeLocation(&state->worldArena, state->world, storedEntityIndex, storedEntity, 0, position);
 
   state->storedEntityCount++;
 
@@ -320,7 +318,6 @@ SwordAdd(struct game_state *state)
 
   storedEntity->sim.height = state->world->tileSideInMeters;
   storedEntity->sim.width = state->world->tileSideInMeters;
-  EntityAddFlag(&storedEntity->sim, ENTITY_FLAG_NONSPACIAL);
 
   return storedEntityIndex;
 }

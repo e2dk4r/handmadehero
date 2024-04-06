@@ -11,6 +11,9 @@ void
 EntityAddFlag(struct entity *entity, u8 flag);
 
 void
+EntityClearFlag(struct entity *entity, u8 flag);
+
+void
 EntityUpdate(struct sim_region *simRegion, struct entity *entity, f32 dt);
 
 void

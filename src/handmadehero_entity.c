@@ -26,6 +26,12 @@ EntityAddFlag(struct entity *entity, u8 flag)
 }
 
 inline void
+EntityClearFlag(struct entity *entity, u8 flag)
+{
+  entity->flags &= ~flag;
+}
+
+inline void
 EntityUpdate(struct sim_region *simRegion, struct entity *entity, f32 dt)
 {
   /* apply gravity */
