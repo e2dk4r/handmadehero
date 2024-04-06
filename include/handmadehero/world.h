@@ -87,9 +87,6 @@ struct world_difference
 WorldPositionSub(struct world *world, struct world_position *a, struct world_position *b);
 
 void
-EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 entityLowIndex,
-                        struct world_position *oldPosition, struct world_position *newPosition);
-void
 EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct stored_entity *stored,
                      struct world_position *oldPosition, struct world_position *newPosition);
 

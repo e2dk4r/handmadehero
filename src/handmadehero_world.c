@@ -165,7 +165,7 @@ WorldPositionSame(struct world *world, struct world_position *left, struct world
       && left->chunkZ == right->chunkZ;
 }
 
-inline void
+internal inline void
 EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 entityLowIndex,
                         struct world_position *oldPosition, struct world_position *newPosition)
 {
