@@ -392,6 +392,7 @@ WallAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 
   entity->height = state->world->tileSideInMeters;
   entity->width = state->world->tileSideInMeters;
+  EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
 
   return storedEntityIndex;
 }
