@@ -5,6 +5,8 @@
 #include "memory_arena.h"
 #include "types.h"
 
+struct stored_entity;
+
 #define TILE_INVALID 0
 #define TILE_WALKABLE (1 << 0)
 #define TILE_BLOCKED (1 << 1)
@@ -87,5 +89,8 @@ WorldPositionSub(struct world *world, struct world_position *a, struct world_pos
 void
 EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 entityLowIndex,
                         struct world_position *oldPosition, struct world_position *newPosition);
+void
+EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct stored_entity *stored,
+                     struct world_position *oldPosition, struct world_position *newPosition);
 
 #endif /* HANDMADEHERO_WORLD_H */

@@ -1,4 +1,6 @@
 #include <handmadehero/assert.h>
+#include <handmadehero/entity.h>
+#include <handmadehero/handmadehero.h>
 #include <handmadehero/math.h>
 #include <handmadehero/world.h>
 
@@ -229,4 +231,19 @@ EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 ent
   assert(block->entityCount < ARRAY_COUNT(block->entityLowIndexes));
   block->entityLowIndexes[block->entityCount] = entityLowIndex;
   block->entityCount++;
+}
+
+inline void
+EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct stored_entity *stored,
+                     struct world_position *oldPosition, struct world_position *newPosition)
+{
+  struct entity *entity = &stored->sim;
+  if (newPosition) {
+    stored->position = *newPosition;
+    EntityChangeLocationRaw(arena, world, entityLowIndex, oldPosition, newPosition);
+    EntityClearFlag(entity, ENTITY_FLAG_NONSPACIAL);
+  } else {
+    stored->position = WorldPositionInvalid();
+    EntityAddFlag(entity, ENTITY_FLAG_NONSPACIAL);
+  }
 }

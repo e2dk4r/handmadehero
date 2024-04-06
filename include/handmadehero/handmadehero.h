@@ -63,10 +63,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_input *input,
                                        struct game_backbuffer *backbuffer);
 
-void
-EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct stored_entity *entityLow,
-                     struct world_position *oldPosition, struct world_position *newPosition);
-
 struct stored_entity *
 StoredEntityGet(struct game_state *state, u32 index);
 

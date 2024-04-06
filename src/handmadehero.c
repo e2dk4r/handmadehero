@@ -248,21 +248,6 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
   return result;
 }
 
-inline void
-EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct stored_entity *stored,
-                     struct world_position *oldPosition, struct world_position *newPosition)
-{
-  struct entity *entity = &stored->sim;
-  if (newPosition) {
-    stored->position = *newPosition;
-    EntityChangeLocationRaw(arena, world, entityLowIndex, oldPosition, newPosition);
-    EntityClearFlag(entity, ENTITY_FLAG_NONSPACIAL);
-  } else {
-    stored->position = WorldPositionInvalid();
-    EntityAddFlag(entity, ENTITY_FLAG_NONSPACIAL);
-  }
-}
-
 inline struct stored_entity *
 StoredEntityGet(struct game_state *state, u32 index)
 {
