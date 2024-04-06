@@ -331,41 +331,43 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
     struct v2 desiredPosition = v2_add(entity->position, deltaPosition);
     struct entity *hitEntity = 0;
 
-    for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
-      struct entity *testEntity = simRegion->entities + testEntityIndex;
+    if (EntityIsFlagSet(entity, ENTITY_FLAG_COLLIDE)) {
+      for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
+        struct entity *testEntity = simRegion->entities + testEntityIndex;
 
-      if (entity == testEntity || !EntityIsFlagSet(testEntity, ENTITY_FLAG_COLLIDE))
-        continue;
+        if (entity == testEntity || !EntityIsFlagSet(testEntity, ENTITY_FLAG_COLLIDE))
+          continue;
 
-      struct v2 diameter = {
-          .x = testEntity->width + entity->width,
-          .y = testEntity->height + entity->height,
-      };
+        struct v2 diameter = {
+            .x = testEntity->width + entity->width,
+            .y = testEntity->height + entity->height,
+        };
 
-      struct v2 minCorner = v2_mul(diameter, -0.5f);
-      struct v2 maxCorner = v2_mul(diameter, 0.5f);
+        struct v2 minCorner = v2_mul(diameter, -0.5f);
+        struct v2 maxCorner = v2_mul(diameter, 0.5f);
 
-      struct v2 rel = v2_sub(entity->position, testEntity->position);
+        struct v2 rel = v2_sub(entity->position, testEntity->position);
 
-      /* test all 4 walls and take minimum t. */
-      if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-        wallNormal = v2(-1, 0);
-        hitEntity = testEntity;
-      }
+        /* test all 4 walls and take minimum t. */
+        if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
+          wallNormal = v2(-1, 0);
+          hitEntity = testEntity;
+        }
 
-      if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-        wallNormal = v2(1, 0);
-        hitEntity = testEntity;
-      }
+        if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
+          wallNormal = v2(1, 0);
+          hitEntity = testEntity;
+        }
 
-      if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-        wallNormal = v2(0, -1);
-        hitEntity = testEntity;
-      }
+        if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
+          wallNormal = v2(0, -1);
+          hitEntity = testEntity;
+        }
 
-      if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-        wallNormal = v2(0, 1);
-        hitEntity = testEntity;
+        if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
+          wallNormal = v2(0, 1);
+          hitEntity = testEntity;
+        }
       }
     }
 
