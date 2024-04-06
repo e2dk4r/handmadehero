@@ -13,6 +13,18 @@ comptime struct move_spec SwordMoveSpec = {
     .drag = 0.0f,
 };
 
+inline u8
+EntityIsFlagSet(struct entity *entity, u8 flag)
+{
+  return entity->flags & flag;
+}
+
+inline void
+EntityAddFlag(struct entity *entity, u8 flag)
+{
+  entity->flags |= flag;
+}
+
 inline void
 EntityUpdate(struct sim_region *simRegion, struct entity *entity, f32 dt)
 {

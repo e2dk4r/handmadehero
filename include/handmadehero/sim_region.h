@@ -92,10 +92,4 @@ void
 EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const struct move_spec *moveSpec,
            struct v2 ddPosition);
 
-internal inline u8
-EntityIsFlagSet(struct entity *entity, u8 flag)
-{
-  return entity->flags & flag;
-}
-
 #endif /* HANDMADEHERO_SIM_REGION_H */

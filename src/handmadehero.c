@@ -285,7 +285,6 @@ StoredEntityAdd(struct game_state *state, u8 type, struct world_position *positi
   struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
   assert(storedEntity);
   *storedEntity = (struct stored_entity){};
-  storedEntity->sim.flags = ENTITY_FLAG_COLLIDE;
   storedEntity->sim.type = type;
 
   if (position) {
@@ -300,13 +299,13 @@ StoredEntityAdd(struct game_state *state, u8 type, struct world_position *positi
 }
 
 static inline void
-EntityHitPointsReset(struct stored_entity *storedEntity, u32 hitPointMax)
+EntityHitPointsReset(struct entity *entity, u32 hitPointMax)
 {
-  assert(hitPointMax < ARRAY_COUNT(storedEntity->sim.hitPoints));
-  storedEntity->sim.hitPointMax = hitPointMax;
+  assert(hitPointMax < ARRAY_COUNT(entity->hitPoints));
+  entity->hitPointMax = hitPointMax;
 
   for (u32 hitPointIndex = 0; hitPointIndex < hitPointMax; hitPointIndex++) {
-    struct hit_point *hitPoint = storedEntity->sim.hitPoints + hitPointIndex;
+    struct hit_point *hitPoint = entity->hitPoints + hitPointIndex;
     hitPoint->flags = 0;
     hitPoint->filledAmount = HIT_POINT_SUB_COUNT;
   }
@@ -321,26 +320,28 @@ SwordAdd(struct game_state *state)
 
   storedEntity->sim.height = state->world->tileSideInMeters;
   storedEntity->sim.width = state->world->tileSideInMeters;
-  storedEntity->sim.flags = ENTITY_FLAG_NONSPACIAL;
+  EntityAddFlag(&storedEntity->sim, ENTITY_FLAG_NONSPACIAL);
 
   return storedEntityIndex;
 }
 
 static inline u32
-PlayerAdd(struct game_state *state)
+HeroAdd(struct game_state *state)
 {
   struct world_position *entityPosition = &state->cameraPosition;
   u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_HERO, entityPosition);
-  struct stored_entity *storedEntity = StoredEntityGet(state, storedEntityIndex);
-  assert(storedEntity);
+  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
+  assert(stored);
+  struct entity *entity = &stored->sim;
 
-  storedEntity->sim.height = 0.5f;
-  storedEntity->sim.width = 1.0f;
-  EntityHitPointsReset(storedEntity, 3);
+  entity->height = 0.5f;
+  entity->width = 1.0f;
+  EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
+  EntityHitPointsReset(entity, 3);
 
   u32 swordIndex = SwordAdd(state);
-  storedEntity->sim.sword.index = swordIndex;
-  storedEntity->sim.distanceRemaining = 3.0f;
+  entity->sword.index = swordIndex;
+  entity->distanceRemaining = 3.0f;
 
   /* if followed entity, does not exits */
   if (state->followedEntityIndex == 0)
@@ -353,45 +354,49 @@ static inline u32
 MonsterAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
-  u32 entityIndex = StoredEntityAdd(state, ENTITY_TYPE_MONSTER, &entityPosition);
-  struct stored_entity *entityLow = StoredEntityGet(state, entityIndex);
-  assert(entityLow);
+  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_MONSTER, &entityPosition);
+  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
+  assert(stored);
+  struct entity *entity = &stored->sim;
 
-  entityLow->sim.height = 0.5f;
-  entityLow->sim.width = 1.0f;
+  entity->height = 0.5f;
+  entity->width = 1.0f;
+  EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
 
-  EntityHitPointsReset(entityLow, 3);
+  EntityHitPointsReset(entity, 3);
 
-  return entityIndex;
+  return storedEntityIndex;
 }
 
 static inline u32
 FamiliarAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
-  u32 entityIndex = StoredEntityAdd(state, ENTITY_TYPE_FAMILIAR, &entityPosition);
-  struct stored_entity *entityLow = StoredEntityGet(state, entityIndex);
-  assert(entityLow);
+  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_FAMILIAR, &entityPosition);
+  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
+  assert(stored);
+  struct entity *entity = &stored->sim;
 
-  entityLow->sim.height = 0.5f;
-  entityLow->sim.width = 1.0f;
-  entityLow->sim.flags = 0;
+  entity->height = 0.5f;
+  entity->width = 1.0f;
+  entity->flags = 0;
 
-  return entityIndex;
+  return storedEntityIndex;
 }
 
 static inline u32
 WallAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
-  u32 entityIndex = StoredEntityAdd(state, ENTITY_TYPE_WALL, &entityPosition);
-  struct stored_entity *entityLow = StoredEntityGet(state, entityIndex);
-  assert(entityLow);
+  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_WALL, &entityPosition);
+  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
+  assert(stored);
+  struct entity *entity = &stored->sim;
 
-  entityLow->sim.height = state->world->tileSideInMeters;
-  entityLow->sim.width = state->world->tileSideInMeters;
+  entity->height = state->world->tileSideInMeters;
+  entity->width = state->world->tileSideInMeters;
 
-  return entityIndex;
+  return storedEntityIndex;
 }
 
 internal inline void
@@ -608,7 +613,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       /* wait for start button pressed to enable */
       if (controller->start.pressed) {
         *conHero = (struct controlled_hero){};
-        conHero->entityIndex = PlayerAdd(state);
+        conHero->entityIndex = HeroAdd(state);
       }
       continue;
     }

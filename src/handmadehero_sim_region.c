@@ -1,4 +1,5 @@
 #include <handmadehero/assert.h>
+#include <handmadehero/entity.h>
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/sim_region.h>
 
