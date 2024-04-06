@@ -95,6 +95,6 @@ SwordUpdate(struct sim_region *simRegion, struct entity *sword, f32 dt)
 
   sword->distanceRemaining -= distanceTraveled;
   if (sword->distanceRemaining < 0.0f) {
-    assert(0 && "need to make entities disappear");
+    EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
   }
 }

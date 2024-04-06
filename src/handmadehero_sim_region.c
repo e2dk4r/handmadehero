@@ -4,7 +4,8 @@
 #include <handmadehero/sim_region.h>
 
 internal struct entity *
-AddEntityRaw(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct stored_entity *source);
+AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct stored_entity *source,
+          struct v2 *simPosition);
 
 internal struct sim_entity_hash *
 GetHashFromStorageIndex(struct sim_region *simRegion, u32 storageIndex)
@@ -56,7 +57,7 @@ LoadEntityReference(struct game_state *state, struct sim_region *simRegion, stru
   struct sim_entity_hash *entry = GetHashFromStorageIndex(simRegion, ref->index);
   if (entry->ptr == 0) {
     entry->index = ref->index;
-    entry->ptr = AddEntityRaw(state, simRegion, ref->index, StoredEntityGet(state, ref->index));
+    entry->ptr = AddEntity(state, simRegion, ref->index, StoredEntityGet(state, ref->index), 0);
   }
 
   ref->ptr = entry->ptr;
@@ -147,8 +148,11 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
           u32 storedEntityIndex = block->entityLowIndexes[entityIndex];
           struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
           assert(storedEntity);
+          struct entity *entity = &storedEntity->sim;
 
-          if (storedEntity->sim.type == ENTITY_TYPE_INVALID)
+          if (entity->type == ENTITY_TYPE_INVALID)
+            continue;
+          if (EntityIsFlagSet(entity, ENTITY_FLAG_NONSPACIAL))
             continue;
 
           struct v2 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
@@ -175,9 +179,15 @@ EndSimRegion(struct sim_region *simRegion, struct game_state *state)
     stored->sim = *entity;
     StoreEntityReference(&stored->sim.sword);
 
-    struct world_position newPosition = WorldPositionCalculate(state->world, &state->cameraPosition, entity->position);
+    struct world_position *newPosition = 0;
+    if (!EntityIsFlagSet(entity, ENTITY_FLAG_NONSPACIAL)) {
+      struct world_position relativePositionFromOrigin =
+          WorldPositionCalculate(state->world, &state->cameraPosition, entity->position);
+      newPosition = &relativePositionFromOrigin;
+    }
+
     EntityChangeLocation(&state->worldArena, state->world, entity->storageIndex, stored, &stored->position,
-                         &newPosition);
+                         newPosition);
 
     /* sync camera with followed entity */
     if (entity->storageIndex == state->followedEntityIndex) {
