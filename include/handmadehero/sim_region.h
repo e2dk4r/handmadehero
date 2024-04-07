@@ -37,7 +37,11 @@ struct entity_reference {
 #define ENTITY_FLAG_NONSPACIAL (1 << 2)
 
 struct entity {
+  /* NOTE: These are only for sim region */
   u32 storageIndex;
+  u8 updatable : 1;
+
+  /**/
 
   u8 type;
   u8 flags;
@@ -75,6 +79,7 @@ struct sim_region {
 
   struct world_position origin;
   struct rect bounds;
+  struct rect updatableBounds;
 
   u32 entityTotal;
   u32 entityCount;

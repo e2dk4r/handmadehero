@@ -691,6 +691,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     if (EntityIsFlagSet(entity, ENTITY_FLAG_NONSPACIAL))
       continue;
 
+    if (!entity->updatable)
+      continue;
+
     struct v2 playerScreenPosition = entity->position;
     /* screen's coordinate system uses y values inverse,
      * so that means going up in space means negative y values
@@ -725,6 +728,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
           if (!WorldPositionIsValid(&storedSword->position)) {
             EntityClearFlag(sword, ENTITY_FLAG_NONSPACIAL);
+            sword->updatable = 1;
             sword->position = entity->position;
             sword->distanceRemaining = 5.0f;
             sword->dPosition = v2_mul(dSword, 5.0f);

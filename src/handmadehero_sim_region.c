@@ -111,6 +111,7 @@ AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageInd
   assert(dest);
   if (simPosition) {
     dest->position = *simPosition;
+    dest->updatable = RectIsPointInside(simRegion->updatableBounds, dest->position);
   } else {
     dest->position = GetPositionRelativeToOrigin(simRegion, source);
   }
@@ -125,9 +126,13 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
   struct sim_region *simRegion = MemoryArenaPush(simArena, sizeof(*simRegion));
   ZeroStruct(simRegion->hashTable);
 
+  // TODO: IMPORTANT: Calculate this from maximum value of all entities radius, plus their speed!
+  f32 updateSafetyMargin = 1.0f;
+
   simRegion->world = world;
   simRegion->origin = regionCenter;
-  simRegion->bounds = regionBounds;
+  simRegion->updatableBounds = regionBounds;
+  simRegion->bounds = RectAddRadius(&simRegion->updatableBounds, updateSafetyMargin, updateSafetyMargin);
 
   simRegion->entityTotal = 4096;
   simRegion->entityCount = 0;

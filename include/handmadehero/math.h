@@ -463,4 +463,15 @@ RectCenter(struct rect *rect)
   return v2_mul(v2_add(rect->min, rect->max), 0.5f);
 }
 
+internal inline struct rect
+RectAddRadius(struct rect *rect, f32 radiusX, f32 radiusY)
+{
+  struct rect result;
+
+  result.min = v2_sub(rect->min, v2(radiusX, radiusY));
+  result.max = v2_add(rect->max, v2(radiusX, radiusY));
+
+  return result;
+}
+
 #endif /* HANDMADEHERO_MATH_H */
