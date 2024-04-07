@@ -238,7 +238,7 @@
 - [x] Handmade Hero Day 066 - Adding Support for Non-spatial Entities
       https://www.youtube.com/watch?v=vXPAE5UfcbA
 
-- [ ] Handmade Hero Day 067 - Making Updates Conditional
+- [x] Handmade Hero Day 067 - Making Updates Conditional
       https://www.youtube.com/watch?v=lnnb49-FYqU
 
 - [ ] Handmade Hero Day 068 - Exact Enforcement of Maximum Movement Distances
