@@ -704,7 +704,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
 
     if (entity->type & ENTITY_TYPE_HERO) {
-      f32 z = 0.0f;
       for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
         struct controlled_hero *conHero = state->controlledHeroes + controllerIndex;
         if (conHero->entityIndex != entity->storageIndex)
@@ -717,7 +716,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         if (conHero->dZ != 0.0f)
           entity->dZ = conHero->dZ;
         EntityUpdate(simRegion, entity, dt);
-        z = entity->z * metersToPixels;
 
         /* sword */
         struct v2 dSword = conHero->dSword;
@@ -743,7 +741,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       DrawHitPoints(backbuffer, entity, &playerGroundPoint, metersToPixels);
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, bitmap->align, cAlphaShadow);
-      playerGroundPoint.y -= z;
+      playerGroundPoint.y -= entity->z * metersToPixels;
 
       DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->align);
       DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->align);
