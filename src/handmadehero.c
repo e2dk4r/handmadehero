@@ -14,6 +14,18 @@ comptime struct move_spec HeroMoveSpec = {
     .drag = 8.0f,
 };
 
+comptime struct move_spec FamiliarMoveSpec = {
+    .unitMaxAccel = 1,
+    .speed = 30.0f,
+    .drag = 8.0f,
+};
+
+comptime struct move_spec SwordMoveSpec = {
+    .unitMaxAccel = 0,
+    .speed = 0.0f,
+    .drag = 0.0f,
+};
+
 static void
 DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min, struct v2 max, const struct v3 *color)
 {
@@ -703,6 +715,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
 
     if (entity->type & ENTITY_TYPE_HERO) {
+      /* update */
       for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
         struct controlled_hero *conHero = state->controlledHeroes + controllerIndex;
         if (conHero->entityIndex != entity->storageIndex)
@@ -732,6 +745,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         }
       }
 
+      /* render */
       struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
       f32 cAlphaShadow = 1.0f - entity->z;
       if (cAlphaShadow < 0.0f)
@@ -748,12 +762,42 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
-      FamiliarUpdate(simRegion, entity, dt);
+      /* update */
+      struct entity *familiar = entity;
+      struct entity *closestHero = 0;
+      /* 10m maximum search radius */
+      f32 closestHeroDistanceSq = square(10.0f);
+
+      for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
+        struct entity *testEntity = simRegion->entities + testEntityIndex;
+
+        if (testEntity->type == ENTITY_TYPE_INVALID || !(testEntity->type & ENTITY_TYPE_HERO))
+          continue;
+
+        struct entity *heroEntity = testEntity;
+
+        f32 testDistanceSq = v2_length_square(v2_sub(familiar->position, heroEntity->position));
+        if (testDistanceSq < closestHeroDistanceSq) {
+          closestHero = heroEntity;
+          closestHeroDistanceSq = testDistanceSq;
+        }
+      }
+
+      struct v2 ddPosition = {};
+      if (closestHero && closestHeroDistanceSq > square(3.0f)) {
+        /* there is hero nearby, follow him */
+        f32 oneOverLength = 1.0f / SquareRoot(closestHeroDistanceSq);
+        ddPosition = v2_mul(v2_sub(closestHero->position, familiar->position), oneOverLength);
+      }
+
+      EntityMove(simRegion, entity, dt, &FamiliarMoveSpec, ddPosition);
+
       entity->tBob += dt;
       if (entity->tBob > 2.0f * PI32)
         entity->tBob -= 2.0f * PI32;
-      f32 bobSin = Sin(2.0f * entity->tBob);
 
+      /* render */
+      f32 bobSin = Sin(2.0f * entity->tBob);
       struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
 
       f32 cAlphaShadow = (0.5f * 1.0f) - (0.2f * bobSin);
@@ -765,8 +809,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     else if (entity->type & ENTITY_TYPE_MONSTER) {
-      MonsterUpdate(simRegion, entity, dt);
-
+      /* render */
       struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
       f32 cAlphaShadow = 1.0f;
 
@@ -777,8 +820,18 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
-      SwordUpdate(simRegion, entity, dt);
+      /* update */
+      struct entity *sword = entity;
+      struct v2 oldPosition = sword->position;
+      EntityMove(simRegion, entity, dt, &SwordMoveSpec, v2(0, 0));
 
+      f32 distanceTraveled = v2_length(v2_sub(sword->position, oldPosition));
+      sword->distanceRemaining -= distanceTraveled;
+      if (sword->distanceRemaining < 0.0f) {
+        EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
+      }
+
+      /* render */
       f32 cAlphaShadow = 1.0f;
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, v2(72, 182), cAlphaShadow);
       DrawBitmap(&state->bitmapSword, backbuffer, playerGroundPoint, v2(29, 10));
