@@ -116,7 +116,7 @@ AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageInd
   assert(dest);
   if (simPosition) {
     dest->position = *simPosition;
-    dest->updatable = RectIsPointInside(simRegion->updatableBounds, dest->position);
+    dest->updatable = (u8)(RectIsPointInside(simRegion->updatableBounds, dest->position) & 1);
   } else {
     dest->position = GetPositionRelativeToOrigin(simRegion, source);
   }
