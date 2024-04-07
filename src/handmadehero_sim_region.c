@@ -120,7 +120,7 @@ AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageInd
 
 struct sim_region *
 BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct world *world,
-               struct world_position regionCenter, struct rectangle2 regionBounds)
+               struct world_position regionCenter, struct rect regionBounds)
 {
   struct sim_region *simRegion = MemoryArenaPush(simArena, sizeof(*simRegion));
   ZeroStruct(simRegion->hashTable);

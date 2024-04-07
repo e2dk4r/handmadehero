@@ -651,7 +651,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   comptime u32 tileSpanY = TILES_PER_HEIGHT * tileSpanMultipler;
   struct v2 tileSpan = {(f32)tileSpanX, (f32)tileSpanY};
   v2_mul_ref(&tileSpan, world->tileSideInMeters);
-  struct rectangle2 cameraBounds = RectCenterDim(v2(0.0f, 0.0f), tileSpan);
+  struct rect cameraBounds = RectCenterDim(v2(0.0f, 0.0f), tileSpan);
 
   struct memory_arena simArena;
   MemoryArenaInit(&simArena, memory->transientStorage, memory->transientStorageSize);

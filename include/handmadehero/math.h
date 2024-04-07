@@ -396,46 +396,46 @@ v4_length_square(struct v4 a)
   return value;
 }
 
-struct rectangle2 {
+struct rect {
   struct v2 min;
   struct v2 max;
 };
 
-static inline struct rectangle2
+static inline struct rect
 RectMinMax(struct v2 min, struct v2 max)
 {
-  return (struct rectangle2){
+  return (struct rect){
       .min = min,
       .max = max,
   };
 }
 
-static inline struct rectangle2
+static inline struct rect
 RectMinDim(struct v2 min, struct v2 dim)
 {
-  return (struct rectangle2){
+  return (struct rect){
       .min = min,
       .max = v2_add(min, dim),
   };
 }
 
-static inline struct rectangle2
+static inline struct rect
 RectCenterHalfDim(struct v2 center, struct v2 halfDim)
 {
-  return (struct rectangle2){
+  return (struct rect){
       .min = v2_sub(center, halfDim),
       .max = v2_add(center, halfDim),
   };
 }
 
-static inline struct rectangle2
+static inline struct rect
 RectCenterDim(struct v2 center, struct v2 dim)
 {
   return RectCenterHalfDim(center, v2_mul(dim, 0.5f));
 }
 
 static inline u8
-RectIsPointInside(struct rectangle2 rect, struct v2 testPoint)
+RectIsPointInside(struct rect rect, struct v2 testPoint)
 {
   return
       /* x boundries */
@@ -446,19 +446,19 @@ RectIsPointInside(struct rectangle2 rect, struct v2 testPoint)
 }
 
 static inline struct v2
-RectMin(struct rectangle2 *rect)
+RectMin(struct rect *rect)
 {
   return rect->min;
 }
 
 static inline struct v2
-RectMax(struct rectangle2 *rect)
+RectMax(struct rect *rect)
 {
   return rect->max;
 }
 
 static inline struct v2
-RectCenter(struct rectangle2 *rect)
+RectCenter(struct rect *rect)
 {
   return v2_mul(v2_add(rect->min, rect->max), 0.5f);
 }

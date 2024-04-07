@@ -74,7 +74,7 @@ struct sim_region {
   struct world *world;
 
   struct world_position origin;
-  struct rectangle2 bounds;
+  struct rect bounds;
 
   u32 entityTotal;
   u32 entityCount;
@@ -86,7 +86,7 @@ struct sim_region {
 
 struct sim_region *
 BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct world *world,
-               struct world_position regionCenter, struct rectangle2 regionBounds);
+               struct world_position regionCenter, struct rect regionBounds);
 void
 EndSimRegion(struct sim_region *region, struct game_state *state);
 
