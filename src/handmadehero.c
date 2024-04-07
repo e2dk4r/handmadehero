@@ -728,7 +728,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
           if (!WorldPositionIsValid(&storedSword->position)) {
             EntityClearFlag(sword, ENTITY_FLAG_NONSPACIAL);
-            sword->updatable = 1;
             sword->position = entity->position;
             sword->distanceRemaining = 5.0f;
             sword->dPosition = v2_mul(dSword, 5.0f);

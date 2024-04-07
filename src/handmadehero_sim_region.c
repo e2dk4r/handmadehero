@@ -7,6 +7,14 @@ internal struct entity *
 AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct stored_entity *source,
           struct v2 *simPosition);
 
+internal struct v2
+GetPositionRelativeToOrigin(struct sim_region *simRegion, struct stored_entity *stored)
+{
+  struct world_difference diff = WorldPositionSub(simRegion->world, &stored->position, &simRegion->origin);
+  struct v2 result = diff.dXY;
+  return result;
+}
+
 internal struct sim_entity_hash *
 GetHashFromStorageIndex(struct sim_region *simRegion, u32 storageIndex)
 {
@@ -57,7 +65,12 @@ LoadEntityReference(struct game_state *state, struct sim_region *simRegion, stru
   struct sim_entity_hash *entry = GetHashFromStorageIndex(simRegion, ref->index);
   if (entry->ptr == 0) {
     entry->index = ref->index;
-    entry->ptr = AddEntity(state, simRegion, ref->index, StoredEntityGet(state, ref->index), 0);
+
+    struct stored_entity *storedEntity = StoredEntityGet(state, entry->index);
+    assert(storedEntity);
+
+    struct v2 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
+    entry->ptr = AddEntity(state, simRegion, ref->index, storedEntity, &positionRelativeToOrigin);
   }
 
   ref->ptr = entry->ptr;
@@ -70,14 +83,6 @@ StoreEntityReference(struct entity_reference *ref)
     return;
 
   ref->index = ref->ptr->storageIndex;
-}
-
-internal struct v2
-GetPositionRelativeToOrigin(struct sim_region *simRegion, struct stored_entity *stored)
-{
-  struct world_difference diff = WorldPositionSub(simRegion->world, &stored->position, &simRegion->origin);
-  struct v2 result = diff.dXY;
-  return result;
 }
 
 internal struct entity *
