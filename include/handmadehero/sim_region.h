@@ -33,8 +33,8 @@ struct entity_reference {
   u32 index;
 };
 
-#define ENTITY_FLAG_COLLIDE (1 << 1)
-#define ENTITY_FLAG_NONSPACIAL (1 << 2)
+#define ENTITY_FLAG_COLLIDE (1 << 0)
+#define ENTITY_FLAG_NONSPACIAL (1 << 1)
 
 struct entity {
   /* NOTE: These are only for sim region */
