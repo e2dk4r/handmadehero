@@ -682,7 +682,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   f32 dt = input->dtPerFrame;
   for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
     struct entity *entity = simRegion->entities + entityIndex;
-    struct stored_entity *storedEntity = StoredEntityGet(state, entity->storageIndex);
     assert(entity);
 
     if (entity->type == ENTITY_TYPE_INVALID)
