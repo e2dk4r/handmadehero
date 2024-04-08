@@ -256,6 +256,35 @@ WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 m
   return collided;
 }
 
+internal void
+HandleCollision(struct entity *a, struct entity *b)
+{
+  if (a->type & ENTITY_TYPE_HERO && b->type & ENTITY_TYPE_SWORD) {
+    struct entity *hero = a;
+    struct entity *sword = b;
+
+    if (hero->sword.ptr != sword) {
+      EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
+      assert(hero->hitPointMax > 0);
+      hero->hitPointMax--;
+    }
+  }
+
+  else if (a->type & ENTITY_TYPE_MONSTER && b->type & ENTITY_TYPE_SWORD) {
+    struct entity *monster = a;
+    struct entity *sword = b;
+
+    EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
+    assert(monster->hitPointMax > 0);
+    monster->hitPointMax--;
+  }
+
+  else if (b->type & ENTITY_TYPE_SWORD) {
+    struct entity *sword = b;
+    EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
+  }
+}
+
 void
 EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const struct move_spec *moveSpec,
            struct v2 ddPosition)
@@ -351,55 +380,62 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
     f32 tMin = 1.0f;
     struct v2 wallNormal;
     struct v2 desiredPosition = v2_add(entity->position, deltaPosition);
+    u8 stopsOnCollision = EntityIsFlagSet(entity, ENTITY_FLAG_COLLIDE);
     struct entity *hitEntity = 0;
 
-    if (EntityIsFlagSet(entity, ENTITY_FLAG_COLLIDE)) {
-      for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
-        struct entity *testEntity = simRegion->entities + testEntityIndex;
+    for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
+      struct entity *testEntity = simRegion->entities + testEntityIndex;
 
-        if (entity == testEntity || !EntityIsFlagSet(testEntity, ENTITY_FLAG_COLLIDE))
-          continue;
+      if (entity == testEntity || !EntityIsFlagSet(testEntity, ENTITY_FLAG_COLLIDE))
+        continue;
 
-        struct v2 diameter = {
-            .x = testEntity->width + entity->width,
-            .y = testEntity->height + entity->height,
-        };
+      struct v2 diameter = {
+          .x = testEntity->width + entity->width,
+          .y = testEntity->height + entity->height,
+      };
 
-        struct v2 minCorner = v2_mul(diameter, -0.5f);
-        struct v2 maxCorner = v2_mul(diameter, 0.5f);
+      struct v2 minCorner = v2_mul(diameter, -0.5f);
+      struct v2 maxCorner = v2_mul(diameter, 0.5f);
 
-        struct v2 rel = v2_sub(entity->position, testEntity->position);
+      struct v2 rel = v2_sub(entity->position, testEntity->position);
 
-        /* test all 4 walls and take minimum t. */
-        if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-          wallNormal = v2(-1, 0);
-          hitEntity = testEntity;
-        }
+      /* test all 4 walls and take minimum t. */
+      if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
+        wallNormal = v2(-1, 0);
+        hitEntity = testEntity;
+      }
 
-        if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-          wallNormal = v2(1, 0);
-          hitEntity = testEntity;
-        }
+      if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
+        wallNormal = v2(1, 0);
+        hitEntity = testEntity;
+      }
 
-        if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-          wallNormal = v2(0, -1);
-          hitEntity = testEntity;
-        }
+      if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
+        wallNormal = v2(0, -1);
+        hitEntity = testEntity;
+      }
 
-        if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-          wallNormal = v2(0, 1);
-          hitEntity = testEntity;
-        }
+      if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
+        wallNormal = v2(0, 1);
+        hitEntity = testEntity;
       }
     }
+
+    if (!stopsOnCollision)
+      tMin = 1.0f;
 
     /* p' = tMin (1/2 a t² + v t) + p */
     v2_add_ref(&entity->position, v2_mul(deltaPosition, tMin));
 
+    if (!hitEntity)
+      break;
+
     /*****************************************************************
      * COLLUSION HANDLING
      *****************************************************************/
-    if (hitEntity) {
+    deltaPosition = v2_sub(desiredPosition, entity->position);
+
+    if (stopsOnCollision) {
       /*
        * add gliding to velocity
        */
@@ -434,7 +470,6 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
        *
        *  clip the delta position by gone amount
        */
-      deltaPosition = v2_sub(desiredPosition, entity->position);
       v2_sub_ref(&deltaPosition,
           /* pTr r */
           v2_mul(
@@ -446,12 +481,19 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
       );
 
       // clang-format on
-
-      // TODO: stairs
-      // entity->absTileZ += hitEntityLow->dAbsTileZ;
-    } else {
-      break;
     }
+
+    struct entity *a = entity;
+    struct entity *b = hitEntity;
+    if (a->type > b->type) {
+      struct entity *temp = a;
+      a = b;
+      b = temp;
+    }
+    HandleCollision(a, b);
+
+    // TODO: stairs
+    // entity->absTileZ += hitEntityLow->dAbsTileZ;
   }
 
   /*****************************************************************
