@@ -241,7 +241,7 @@
 - [x] Handmade Hero Day 067 - Making Updates Conditional
       https://www.youtube.com/watch?v=lnnb49-FYqU
 
-- [ ] Handmade Hero Day 068 - Exact Enforcement of Maximum Movement Distances
+- [x] Handmade Hero Day 068 - Exact Enforcement of Maximum Movement Distances
       https://www.youtube.com/watch?v=0ZjYHfYAjQg
 
 - [ ] Handmade Hero Day 069 - Pairwise Collision Rules
