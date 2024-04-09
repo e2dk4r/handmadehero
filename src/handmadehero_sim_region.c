@@ -257,6 +257,12 @@ WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 m
 }
 
 internal u8
+ShouldEntitiesCollide(struct entity *a, struct entity *b)
+{
+  return a != b && EntityIsFlagSet(b, ENTITY_FLAG_COLLIDE);
+}
+
+internal u8
 HandleCollision(struct entity *a, struct entity *b)
 {
   u8 handled = 0;
@@ -299,12 +305,6 @@ HandleCollision(struct entity *a, struct entity *b)
   // entity->absTileZ += hitEntityLow->dAbsTileZ;
 
   return handled;
-}
-
-internal u8
-ShouldEntitiesCollide(struct entity *a, struct entity *b)
-{
-  return a != b && EntityIsFlagSet(b, ENTITY_FLAG_COLLIDE);
 }
 
 void
