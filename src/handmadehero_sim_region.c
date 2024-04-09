@@ -295,6 +295,9 @@ HandleCollision(struct entity *a, struct entity *b)
     handled = 1;
   }
 
+  // TODO: stairs
+  // entity->absTileZ += hitEntityLow->dAbsTileZ;
+
   return handled;
 }
 
@@ -500,9 +503,6 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
 
       // clang-format on
     }
-
-    // TODO: stairs
-    // entity->absTileZ += hitEntityLow->dAbsTileZ;
   }
 
   /*****************************************************************
