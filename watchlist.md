@@ -244,7 +244,7 @@
 - [x] Handmade Hero Day 068 - Exact Enforcement of Maximum Movement Distances
       https://www.youtube.com/watch?v=0ZjYHfYAjQg
 
-- [ ] Handmade Hero Day 069 - Pairwise Collision Rules
+- [x] Handmade Hero Day 069 - Pairwise Collision Rules
       https://www.youtube.com/watch?v=YrqQLA9SOEc
 
 - [ ] Handmade Hero Day 070 - Exploration To-do List
