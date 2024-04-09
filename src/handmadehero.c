@@ -335,7 +335,6 @@ HeroAdd(struct game_state *state)
 
   u32 swordIndex = SwordAdd(state);
   entity->sword.index = swordIndex;
-  entity->distanceRemaining = 3.0f;
 
   /* if followed entity, does not exits */
   if (state->followedEntityIndex == 0)
