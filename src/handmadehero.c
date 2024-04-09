@@ -307,6 +307,81 @@ EntityHitPointsReset(struct entity *entity, u32 hitPointMax)
 }
 
 internal inline u32
+CollisionRuleHash(struct game_state *state, u32 storageIndexA)
+{
+  /* TODO: better hash function */
+  u32 hashMask = ARRAY_COUNT(state->collisionRules) - 1;
+  u32 hashValue = storageIndexA & hashMask;
+  return hashValue;
+}
+
+inline struct pairwise_collision_rule *
+CollisionRuleGet(struct game_state *state, u32 storageIndexA)
+{
+  u32 hashValue = CollisionRuleHash(state, storageIndexA);
+  struct pairwise_collision_rule *rule = state->collisionRules[hashValue];
+  return rule;
+}
+
+internal inline void
+CollisionRuleSet(struct game_state *state, u32 storageIndexA, struct pairwise_collision_rule *rule)
+{
+  u32 hashValue = CollisionRuleHash(state, storageIndexA);
+  state->collisionRules[hashValue] = rule;
+}
+
+void
+CollisionRuleAdd(struct game_state *state, u32 storageIndexA, u32 storageIndexB, u8 shouldCollide)
+{
+  if (storageIndexA > storageIndexB) {
+    u32 temp = storageIndexA;
+    storageIndexA = storageIndexB;
+    storageIndexB = temp;
+  }
+
+  struct pairwise_collision_rule *found = 0;
+  for (struct pairwise_collision_rule *rule = CollisionRuleGet(state, storageIndexA); rule; rule = rule->next) {
+    if (rule->storageIndexA == storageIndexA && rule->storageIndexB == storageIndexB) {
+      found = rule;
+      break;
+    }
+  }
+
+  if (!found) {
+    found = state->firstFreeCollisionRule;
+    if (found)
+      state->firstFreeCollisionRule = found->next;
+    else
+      found = MemoryArenaPush(&state->worldArena, sizeof(*found));
+    found->next = CollisionRuleGet(state, storageIndexA);
+    CollisionRuleSet(state, storageIndexA, found);
+  }
+
+  assert(found);
+  found->storageIndexA = storageIndexA;
+  found->storageIndexB = storageIndexB;
+  found->shouldCollide = (u8)(shouldCollide & 1);
+}
+
+internal void
+CollisionRuleRemove(struct game_state *state, u32 storageIndex)
+{
+  // TODO: Better data structure that allows removing collision rules without searching all
+  for (u32 collisionRuleIndex = 0; collisionRuleIndex < ARRAY_COUNT(state->collisionRules); collisionRuleIndex++) {
+    for (struct pairwise_collision_rule **rule = &state->collisionRules[collisionRuleIndex]; *rule;) {
+      if ((*rule)->storageIndexA == storageIndex || (*rule)->storageIndexB == storageIndex) {
+        struct pairwise_collision_rule *removedRule = *rule;
+        *rule = (*rule)->next;
+        removedRule->next = state->firstFreeCollisionRule;
+        state->firstFreeCollisionRule = removedRule;
+      } else {
+        rule = &(*rule)->next;
+      }
+    }
+  }
+}
+
+internal inline u32
 SwordAdd(struct game_state *state)
 {
   u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_SWORD, 0);
@@ -335,6 +410,7 @@ HeroAdd(struct game_state *state)
 
   u32 swordIndex = SwordAdd(state);
   entity->sword.index = swordIndex;
+  CollisionRuleAdd(state, storedEntityIndex, swordIndex, 0);
 
   /* if followed entity, does not exits */
   if (state->followedEntityIndex == 0)
@@ -721,7 +797,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           continue;
 
         /* move */
-        EntityMove(simRegion, entity, dt, &HeroMoveSpec, conHero->ddPosition);
+        EntityMove(state, simRegion, entity, dt, &HeroMoveSpec, conHero->ddPosition);
 
         /* jump */
         if (conHero->dZ != 0.0f)
@@ -789,7 +865,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         ddPosition = v2_mul(v2_sub(closestHero->position, familiar->position), oneOverLength);
       }
 
-      EntityMove(simRegion, entity, dt, &FamiliarMoveSpec, ddPosition);
+      EntityMove(state, simRegion, entity, dt, &FamiliarMoveSpec, ddPosition);
 
       entity->tBob += dt;
       if (entity->tBob > 2.0f * PI32)
@@ -822,12 +898,13 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       /* update */
       struct entity *sword = entity;
       struct v2 oldPosition = sword->position;
-      EntityMove(simRegion, entity, dt, &SwordMoveSpec, v2(0, 0));
+      EntityMove(state, simRegion, entity, dt, &SwordMoveSpec, v2(0, 0));
 
       f32 distanceTraveled = v2_length(v2_sub(sword->position, oldPosition));
       sword->distanceRemaining -= distanceTraveled;
       if (sword->distanceRemaining < 0.0f) {
         EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
+        CollisionRuleRemove(state, sword->storageIndex);
       }
 
       /* render */

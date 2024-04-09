@@ -25,6 +25,14 @@ struct stored_entity {
   struct entity sim;
 };
 
+struct pairwise_collision_rule {
+  u8 shouldCollide : 1;
+  u32 storageIndexA;
+  u32 storageIndexB;
+
+  struct pairwise_collision_rule *next;
+};
+
 struct controlled_hero {
   u32 entityIndex;
 
@@ -46,6 +54,9 @@ struct game_state {
 
   struct controlled_hero controlledHeroes[HANDMADEHERO_CONTROLLER_COUNT];
 
+  struct pairwise_collision_rule *collisionRules[256];
+  struct pairwise_collision_rule *firstFreeCollisionRule;
+
   struct bitmap bitmapBackground;
   struct bitmap bitmapShadow;
   struct bitmap bitmapTree;
@@ -65,5 +76,11 @@ typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_i
 
 struct stored_entity *
 StoredEntityGet(struct game_state *state, u32 index);
+
+struct pairwise_collision_rule *
+CollisionRuleGet(struct game_state *state, u32 storageIndexA);
+
+void
+CollisionRuleAdd(struct game_state *state, u32 storageIndexA, u32 storageIndexB, u8 shouldCollide);
 
 #endif /* HANDMADEHERO_H */

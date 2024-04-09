@@ -96,7 +96,7 @@ void
 EndSimRegion(struct sim_region *region, struct game_state *state);
 
 void
-EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const struct move_spec *moveSpec,
-           struct v2 ddPosition);
+EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity *entity, f32 dt,
+           const struct move_spec *moveSpec, struct v2 ddPosition);
 
 #endif /* HANDMADEHERO_SIM_REGION_H */

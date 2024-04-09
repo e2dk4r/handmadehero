@@ -256,16 +256,38 @@ WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 m
   return collided;
 }
 
-internal u8
-ShouldEntitiesCollide(struct entity *a, struct entity *b)
+internal inline u8
+ShouldEntitiesCollide(struct game_state *state, struct entity *a, struct entity *b)
 {
-  return a != b && EntityIsFlagSet(b, ENTITY_FLAG_COLLIDE);
+  if (a == b) {
+    return 0;
+  }
+
+  u8 shouldCollide = 1;
+  if (a->storageIndex > b->storageIndex) {
+    struct entity *temp = a;
+    a = b;
+    b = temp;
+  }
+
+  /* if there is any rule about entities, override defaults */
+  for (struct pairwise_collision_rule *rule = CollisionRuleGet(state, a->storageIndex); rule; rule = rule->next) {
+    if (rule->storageIndexA == a->storageIndex && rule->storageIndexB == b->storageIndex) {
+      shouldCollide = rule->shouldCollide;
+      break;
+    }
+  }
+
+  return shouldCollide;
 }
 
 internal u8
-HandleCollision(struct entity *a, struct entity *b)
+HandleCollision(struct game_state *state, struct entity *a, struct entity *b)
 {
-  u8 handled = 0;
+  u8 stopped = 0;
+
+  if (!(a->type & ENTITY_TYPE_SWORD))
+    stopped = 1;
 
   if (a->type > b->type) {
     struct entity *temp = a;
@@ -273,43 +295,23 @@ HandleCollision(struct entity *a, struct entity *b)
     b = temp;
   }
 
-  if (a->type & ENTITY_TYPE_HERO && b->type & ENTITY_TYPE_SWORD) {
-    struct entity *hero = a;
-    struct entity *sword = b;
-
-    if (hero->sword.ptr != sword) {
-      EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
-      assert(hero->hitPointMax > 0);
-      hero->hitPointMax--;
-      handled = 1;
-    }
-  }
-
-  else if (a->type & ENTITY_TYPE_MONSTER && b->type & ENTITY_TYPE_SWORD) {
+  if (a->type & ENTITY_TYPE_MONSTER && b->type & ENTITY_TYPE_SWORD) {
     struct entity *monster = a;
     struct entity *sword = b;
 
-    EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
-    assert(monster->hitPointMax > 0);
-    monster->hitPointMax--;
-    handled = 1;
-  }
-
-  else if (b->type & ENTITY_TYPE_SWORD) {
-    struct entity *sword = b;
-    EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
-    handled = 1;
+    if (monster->hitPointMax > 0)
+      monster->hitPointMax--;
   }
 
   // TODO: stairs
   // entity->absTileZ += hitEntityLow->dAbsTileZ;
 
-  return handled;
+  return stopped;
 }
 
 void
-EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const struct move_spec *moveSpec,
-           struct v2 ddPosition)
+EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity *entity, f32 dt,
+           const struct move_spec *moveSpec, struct v2 ddPosition)
 {
   struct world *world = simRegion->world;
 
@@ -407,7 +409,7 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
     for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
       struct entity *testEntity = simRegion->entities + testEntityIndex;
 
-      if (!ShouldEntitiesCollide(entity, testEntity))
+      if (!ShouldEntitiesCollide(state, entity, testEntity))
         continue;
 
       struct v2 diameter = {
@@ -455,7 +457,7 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
      * COLLUSION HANDLING
      *****************************************************************/
     deltaPosition = v2_sub(desiredPosition, entity->position);
-    u8 stopsOnCollision = HandleCollision(entity, hitEntity);
+    u8 stopsOnCollision = HandleCollision(state, entity, hitEntity);
     if (stopsOnCollision) {
       /*
        * add gliding to velocity
@@ -502,6 +504,9 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
       );
 
       // clang-format on
+    } else {
+      /* collision can only happen once */
+      CollisionRuleAdd(state, entity->storageIndex, hitEntity->storageIndex, 0);
     }
   }
 
