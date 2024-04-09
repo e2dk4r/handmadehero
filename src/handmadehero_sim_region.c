@@ -256,9 +256,17 @@ WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 m
   return collided;
 }
 
-internal void
+internal u8
 HandleCollision(struct entity *a, struct entity *b)
 {
+  u8 handled = 0;
+
+  if (a->type > b->type) {
+    struct entity *temp = a;
+    a = b;
+    b = temp;
+  }
+
   if (a->type & ENTITY_TYPE_HERO && b->type & ENTITY_TYPE_SWORD) {
     struct entity *hero = a;
     struct entity *sword = b;
@@ -267,6 +275,7 @@ HandleCollision(struct entity *a, struct entity *b)
       EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
       assert(hero->hitPointMax > 0);
       hero->hitPointMax--;
+      handled = 1;
     }
   }
 
@@ -277,12 +286,22 @@ HandleCollision(struct entity *a, struct entity *b)
     EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
     assert(monster->hitPointMax > 0);
     monster->hitPointMax--;
+    handled = 1;
   }
 
   else if (b->type & ENTITY_TYPE_SWORD) {
     struct entity *sword = b;
     EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
+    handled = 1;
   }
+
+  return handled;
+}
+
+internal u8
+ShouldEntitiesCollide(struct entity *a, struct entity *b)
+{
+  return a != b && EntityIsFlagSet(b, ENTITY_FLAG_COLLIDE);
 }
 
 void
@@ -380,13 +399,12 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
     f32 tMin = 1.0f;
     struct v2 wallNormal;
     struct v2 desiredPosition = v2_add(entity->position, deltaPosition);
-    u8 stopsOnCollision = EntityIsFlagSet(entity, ENTITY_FLAG_COLLIDE);
     struct entity *hitEntity = 0;
 
     for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
       struct entity *testEntity = simRegion->entities + testEntityIndex;
 
-      if (entity == testEntity || !EntityIsFlagSet(testEntity, ENTITY_FLAG_COLLIDE))
+      if (!ShouldEntitiesCollide(entity, testEntity))
         continue;
 
       struct v2 diameter = {
@@ -421,7 +439,7 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
       }
     }
 
-    if (!stopsOnCollision)
+    if (!EntityIsFlagSet(entity, ENTITY_FLAG_COLLIDE))
       tMin = 1.0f;
 
     /* p' = tMin (1/2 a t² + v t) + p */
@@ -434,7 +452,7 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
      * COLLUSION HANDLING
      *****************************************************************/
     deltaPosition = v2_sub(desiredPosition, entity->position);
-
+    u8 stopsOnCollision = HandleCollision(entity, hitEntity);
     if (stopsOnCollision) {
       /*
        * add gliding to velocity
@@ -482,15 +500,6 @@ EntityMove(struct sim_region *simRegion, struct entity *entity, f32 dt, const st
 
       // clang-format on
     }
-
-    struct entity *a = entity;
-    struct entity *b = hitEntity;
-    if (a->type > b->type) {
-      struct entity *temp = a;
-      a = b;
-      b = temp;
-    }
-    HandleCollision(a, b);
 
     // TODO: stairs
     // entity->absTileZ += hitEntityLow->dAbsTileZ;
