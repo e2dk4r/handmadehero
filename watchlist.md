@@ -247,7 +247,7 @@
 - [x] Handmade Hero Day 069 - Pairwise Collision Rules
       https://www.youtube.com/watch?v=YrqQLA9SOEc
 
-- [ ] Handmade Hero Day 070 - Exploration To-do List
+- [x] Handmade Hero Day 070 - Exploration To-do List
       https://www.youtube.com/watch?v=afWxzIHB5Ss
 
 - [ ] Handmade Hero Day 071 - Converting to Full 3D Positioning
