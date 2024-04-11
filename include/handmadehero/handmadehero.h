@@ -36,7 +36,7 @@ struct pairwise_collision_rule {
 struct controlled_hero {
   u32 entityIndex;
 
-  struct v2 ddPosition;
+  struct v3 ddPosition;
   f32 dZ;
   struct v2 dSword;
 };

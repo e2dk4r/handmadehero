@@ -46,13 +46,8 @@ struct entity {
   u8 type;
   u8 flags;
 
-  struct v2 position;
-  struct v2 dPosition;
-
-  f32 z;
-  f32 dZ;
-
-  u32 chunkZ;
+  struct v3 position;
+  struct v3 dPosition;
 
   f32 width;
   f32 height;
@@ -97,6 +92,6 @@ EndSimRegion(struct sim_region *region, struct game_state *state);
 
 void
 EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity *entity, f32 dt,
-           const struct move_spec *moveSpec, struct v2 ddPosition);
+           const struct move_spec *moveSpec, struct v3 ddPosition);
 
 #endif /* HANDMADEHERO_SIM_REGION_H */

@@ -5,14 +5,13 @@
 
 internal struct entity *
 AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct stored_entity *source,
-          struct v2 *simPosition);
+          struct v3 *simPosition);
 
-internal struct v2
+internal struct v3
 GetPositionRelativeToOrigin(struct sim_region *simRegion, struct stored_entity *stored)
 {
-  struct world_difference diff = WorldPositionSub(simRegion->world, &stored->position, &simRegion->origin);
-  struct v2 result = diff.dXY;
-  return result;
+  struct v3 diff = WorldPositionSub(simRegion->world, &stored->position, &simRegion->origin);
+  return diff;
 }
 
 internal struct sim_entity_hash *
@@ -69,7 +68,7 @@ LoadEntityReference(struct game_state *state, struct sim_region *simRegion, stru
     struct stored_entity *storedEntity = StoredEntityGet(state, entry->index);
     assert(storedEntity);
 
-    struct v2 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
+    struct v3 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
     entry->ptr = AddEntity(state, simRegion, ref->index, storedEntity, &positionRelativeToOrigin);
   }
 
@@ -110,7 +109,7 @@ AddEntityRaw(struct game_state *state, struct sim_region *simRegion, u32 storage
 
 internal struct entity *
 AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageIndex, struct stored_entity *source,
-          struct v2 *simPosition)
+          struct v3 *simPosition)
 {
   struct entity *dest = AddEntityRaw(state, simRegion, storageIndex, source);
   assert(dest);
@@ -133,11 +132,13 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
 
   // TODO: IMPORTANT: Calculate this from maximum value of all entities radius, plus their speed!
   f32 updateSafetyMargin = 1.0f;
+  f32 updateSafetyMarginZ = 1.0f;
 
   simRegion->world = world;
   simRegion->origin = regionCenter;
   simRegion->updatableBounds = regionBounds;
-  simRegion->bounds = RectAddRadius(&simRegion->updatableBounds, updateSafetyMargin, updateSafetyMargin);
+  simRegion->bounds =
+      RectAddRadius(&simRegion->updatableBounds, v3(updateSafetyMargin, updateSafetyMargin, updateSafetyMarginZ));
 
   simRegion->entityTotal = 4096;
   simRegion->entityCount = 0;
@@ -149,27 +150,29 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
       WorldPositionCalculate(world, &simRegion->origin, RectMax(&simRegion->bounds));
   for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
     for (u32 chunkY = minChunkPosition.chunkY; chunkY <= maxChunkPosition.chunkY; chunkY++) {
-      struct world_chunk *chunk = WorldChunkGet(world, chunkX, chunkY, simRegion->origin.chunkZ, 0);
-      if (!chunk)
-        continue;
+      for (u32 chunkZ = minChunkPosition.chunkZ; chunkZ <= maxChunkPosition.chunkZ; chunkZ++) {
+        struct world_chunk *chunk = WorldChunkGet(world, chunkX, chunkY, chunkZ, 0);
+        if (!chunk)
+          continue;
 
-      for (struct world_entity_block *block = &chunk->firstBlock; block; block = block->next) {
-        for (u32 entityIndex = 0; entityIndex < block->entityCount; entityIndex++) {
-          u32 storedEntityIndex = block->entityLowIndexes[entityIndex];
-          struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
-          assert(storedEntity);
-          struct entity *entity = &storedEntity->sim;
+        for (struct world_entity_block *block = &chunk->firstBlock; block; block = block->next) {
+          for (u32 entityIndex = 0; entityIndex < block->entityCount; entityIndex++) {
+            u32 storedEntityIndex = block->entityLowIndexes[entityIndex];
+            struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
+            assert(storedEntity);
+            struct entity *entity = &storedEntity->sim;
 
-          if (entity->type == ENTITY_TYPE_INVALID)
-            continue;
-          if (EntityIsFlagSet(entity, ENTITY_FLAG_NONSPACIAL))
-            continue;
+            if (entity->type == ENTITY_TYPE_INVALID)
+              continue;
+            if (EntityIsFlagSet(entity, ENTITY_FLAG_NONSPACIAL))
+              continue;
 
-          struct v2 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
-          if (!RectIsPointInside(simRegion->bounds, positionRelativeToOrigin))
-            continue;
+            struct v3 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
+            if (!RectIsPointInside(simRegion->bounds, positionRelativeToOrigin))
+              continue;
 
-          AddEntity(state, simRegion, storedEntityIndex, storedEntity, &positionRelativeToOrigin);
+            AddEntity(state, simRegion, storedEntityIndex, storedEntity, &positionRelativeToOrigin);
+          }
         }
       }
     }
@@ -311,7 +314,7 @@ HandleCollision(struct game_state *state, struct entity *a, struct entity *b)
 
 void
 EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity *entity, f32 dt,
-           const struct move_spec *moveSpec, struct v2 ddPosition)
+           const struct move_spec *moveSpec, struct v3 ddPosition)
 {
   struct world *world = simRegion->world;
 
@@ -319,23 +322,25 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
    * CORRECTING ACCELERATION
    *****************************************************************/
   if (moveSpec->unitMaxAccel) {
-    f32 ddPositionLength = v2_length_square(ddPosition);
+    f32 ddPositionLength = v3_length_square(ddPosition);
     /*
      * scale down acceleration to unit vector
      * fixes moving diagonally √2 times faster
      */
     if (ddPositionLength > 1.0f) {
-      v2_mul_ref(&ddPosition, 1 / SquareRoot(ddPositionLength));
+      v3_mul_ref(&ddPosition, 1 / SquareRoot(ddPositionLength));
     }
   }
 
   /* set entity speed in m/s² */
-  v2_mul_ref(&ddPosition, moveSpec->speed);
+  v3_mul_ref(&ddPosition, moveSpec->speed);
 
-  /*
-   * apply friction opposite force to acceleration
-   */
-  v2_add_ref(&ddPosition, v2_neg(v2_mul(entity->dPosition, moveSpec->drag)));
+  /* apply friction opposite force to acceleration */
+  v2_add_ref(&ddPosition.xy, v2_neg(v2_mul(entity->dPosition.xy, moveSpec->drag)));
+
+  /* apply gravity */
+  const f32 earthSurfaceGravity = 9.80665f; /* m/s² */
+  ddPosition.z += -earthSurfaceGravity;
 
   /*****************************************************************
    * CALCULATION OF NEW PLAYER POSITION
@@ -362,48 +367,40 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
    *        ⇐ ∆t  ⇒
    *     ∆t comes from platform layer
    */
-  // clang-format off
-  struct v2 deltaPosition =
+  struct v3 deltaPosition =
       /* 1/2 a t² + v t */
-      v2_add(
-        /* 1/2 a t² */
-        v2_mul(
-          /* 1/2 a */
-          v2_mul(ddPosition, 0.5f),
-          /* t² */
-          square(dt)
-        ), /* end: 1/2 a t² */
-        /* v t */
-        v2_mul(
-          /* v */
-          entity->dPosition,
-          /* t */
-          dt
-        ) /* end: v t */
+      v3_add(
+          /* 1/2 a t² */
+          v3_mul(
+              /* 1/2 a */
+              v3_mul(ddPosition, 0.5f),
+              /* t² */
+              square(dt)), /* end: 1/2 a t² */
+          /* v t */
+          v3_mul(
+              /* v */
+              entity->dPosition,
+              /* t */
+              dt) /* end: v t */
       );
-  // clang-format on
 
   /* new velocity */
-  // clang-format off
   /* v' = a t + v */
-  v2_add_ref(&entity->dPosition,
-    /* a t */
-    v2_mul(
-      /* a */
-      ddPosition,
-      /* t */
-      dt
-    )
-  );
-  // clang-format on
+  v3_add_ref(&entity->dPosition,
+             /* a t */
+             v3_mul(
+                 /* a */
+                 ddPosition,
+                 /* t */
+                 dt));
 
   /*****************************************************************
    * COLLUSION DETECTION
    *****************************************************************/
   for (u32 iteration = 0; iteration < 4; iteration++) {
     f32 tMin = 1.0f;
-    struct v2 wallNormal;
-    struct v2 desiredPosition = v2_add(entity->position, deltaPosition);
+    struct v3 wallNormal;
+    struct v3 desiredPosition = v3_add(entity->position, deltaPosition);
     struct entity *hitEntity = 0;
 
     for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
@@ -412,34 +409,35 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
       if (!ShouldEntitiesCollide(state, entity, testEntity))
         continue;
 
-      struct v2 diameter = {
+      struct v3 minkowskiDiameter = {
           .x = testEntity->width + entity->width,
           .y = testEntity->height + entity->height,
+          .z = world->tileDepthInMeters,
       };
 
-      struct v2 minCorner = v2_mul(diameter, -0.5f);
-      struct v2 maxCorner = v2_mul(diameter, 0.5f);
+      struct v3 minCorner = v3_mul(minkowskiDiameter, -0.5f);
+      struct v3 maxCorner = v3_mul(minkowskiDiameter, 0.5f);
 
-      struct v2 rel = v2_sub(entity->position, testEntity->position);
+      struct v3 rel = v3_sub(entity->position, testEntity->position);
 
       /* test all 4 walls and take minimum t. */
       if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-        wallNormal = v2(-1, 0);
+        wallNormal = v3(-1, 0, 0);
         hitEntity = testEntity;
       }
 
       if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-        wallNormal = v2(1, 0);
+        wallNormal = v3(1, 0, 0);
         hitEntity = testEntity;
       }
 
       if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-        wallNormal = v2(0, -1);
+        wallNormal = v3(0, -1, 0);
         hitEntity = testEntity;
       }
 
       if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-        wallNormal = v2(0, 1);
+        wallNormal = v3(0, 1, 0);
         hitEntity = testEntity;
       }
     }
@@ -448,7 +446,11 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
       tMin = 1.0f;
 
     /* p' = tMin (1/2 a t² + v t) + p */
-    v2_add_ref(&entity->position, v2_mul(deltaPosition, tMin));
+    v3_add_ref(&entity->position, v3_mul(deltaPosition, tMin));
+
+    // TODO(e2dk4r): this has to become real high handling / ground collision / etc.
+    if (entity->position.z < 0)
+      entity->position.z = 0;
 
     if (!hitEntity)
       break;
@@ -456,7 +458,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
     /*****************************************************************
      * COLLUSION HANDLING
      *****************************************************************/
-    deltaPosition = v2_sub(desiredPosition, entity->position);
+    deltaPosition = v3_sub(desiredPosition, entity->position);
     u8 stopsOnCollision = HandleCollision(state, entity, hitEntity);
     if (stopsOnCollision) {
       /*
@@ -464,13 +466,13 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
        */
       // clang-format off
       /* v' = v - vTr r */
-      v2_sub_ref(&entity->dPosition,
+      v3_sub_ref(&entity->dPosition,
           /* vTr r */
-          v2_mul(
+          v3_mul(
             /* r */
             wallNormal,
             /* vTr */
-            v2_dot(entity->dPosition, wallNormal)
+            v3_dot(entity->dPosition, wallNormal)
           )
       );
 
@@ -493,13 +495,13 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
        *
        *  clip the delta position by gone amount
        */
-      v2_sub_ref(&deltaPosition,
+      v3_sub_ref(&deltaPosition,
           /* pTr r */
-          v2_mul(
+          v3_mul(
             /* r */
             wallNormal,
             /* pTr */
-            v2_dot(deltaPosition, wallNormal)
+            v3_dot(deltaPosition, wallNormal)
           )
       );
 

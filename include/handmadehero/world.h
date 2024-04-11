@@ -31,7 +31,8 @@ struct world_chunk {
 #define WORLD_CHUNK_TOTAL 4096
 struct world {
   f32 tileSideInMeters;
-  f32 chunkSideInMeters;
+  f32 tileDepthInMeters;
+  struct v3 chunkDimInMeters;
 
   struct world_entity_block *firstFreeBlock;
 
@@ -44,12 +45,7 @@ struct world_position {
   u32 chunkZ;
 
   /* offset from chunk center */
-  struct v2 offset;
-};
-
-struct world_difference {
-  struct v2 dXY;
-  f32 dZ;
+  struct v3 offset;
 };
 
 internal inline struct world_position
@@ -74,16 +70,16 @@ WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, struct me
 static inline struct world_position
 WorldPositionCentered(u32 absTileX, u32 absTileY, u32 absTileZ)
 {
-  return (struct world_position){absTileX, absTileY, absTileZ, 0, 0};
+  return (struct world_position){absTileX, absTileY, absTileZ, 0, 0, 0};
 }
 
 struct world_position
-WorldPositionCalculate(struct world *world, struct world_position *basePosition, struct v2 offset);
+WorldPositionCalculate(struct world *world, struct world_position *basePosition, struct v3 offset);
 
 struct world_position
 ChunkPositionFromTilePosition(struct world *world, u32 absTileX, u32 absTileY, u32 absTileZ);
 
-struct world_difference
+struct v3
 WorldPositionSub(struct world *world, struct world_position *a, struct world_position *b);
 
 void

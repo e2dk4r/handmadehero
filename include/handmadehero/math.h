@@ -93,6 +93,14 @@ struct v3 {
       f32 g;
       f32 b;
     };
+    struct {
+      struct v2 xy;
+      f32 _ignored0;
+    };
+    struct {
+      f32 _ignored1;
+      struct v2 yz;
+    };
     f32 e[3];
   };
 };
@@ -114,6 +122,10 @@ struct v4 {
     f32 e[4];
   };
 };
+
+/****************************************************************
+ * v2 OPERATIONS
+ ****************************************************************/
 
 static inline struct v2
 v2(f32 x, f32 y)
@@ -211,6 +223,26 @@ v2_length(struct v2 a)
   return value;
 }
 
+static inline struct v2
+v2_hadamard(struct v2 a, struct v2 b)
+{
+  struct v2 result = {a.x * b.x, a.y * b.y};
+  return result;
+}
+
+internal inline struct v3
+v2_to_v3(struct v2 a, f32 z)
+{
+  struct v3 result;
+  result.xy = a;
+  result.z = z;
+  return result;
+}
+
+/****************************************************************
+ * v3 OPERATIONS
+ ****************************************************************/
+
 static inline struct v3
 v3(f32 x, f32 y, f32 z)
 {
@@ -300,6 +332,25 @@ v3_length_square(struct v3 a)
   value = v3_dot(a, a);
   return value;
 }
+
+internal inline f32
+v3_length(struct v3 a)
+{
+  f32 value;
+  value = SquareRoot(v3_dot(a, a));
+  return value;
+}
+
+static inline struct v3
+v3_hadamard(struct v3 a, struct v3 b)
+{
+  struct v3 result = {a.x * b.x, a.y * b.y, a.z * b.z};
+  return result;
+}
+
+/****************************************************************
+ * v4 OPERATIONS
+ ****************************************************************/
 
 static inline struct v4
 v4(f32 x, f32 y, f32 z, f32 w)
@@ -396,13 +447,17 @@ v4_length_square(struct v4 a)
   return value;
 }
 
+/****************************************************************
+ * rect OPERATIONS
+ ****************************************************************/
+
 struct rect {
-  struct v2 min;
-  struct v2 max;
+  struct v3 min;
+  struct v3 max;
 };
 
 static inline struct rect
-RectMinMax(struct v2 min, struct v2 max)
+RectMinMax(struct v3 min, struct v3 max)
 {
   return (struct rect){
       .min = min,
@@ -411,31 +466,31 @@ RectMinMax(struct v2 min, struct v2 max)
 }
 
 static inline struct rect
-RectMinDim(struct v2 min, struct v2 dim)
+RectMinDim(struct v3 min, struct v3 dim)
 {
   return (struct rect){
       .min = min,
-      .max = v2_add(min, dim),
+      .max = v3_add(min, dim),
   };
 }
 
 static inline struct rect
-RectCenterHalfDim(struct v2 center, struct v2 halfDim)
+RectCenterHalfDim(struct v3 center, struct v3 halfDim)
 {
   return (struct rect){
-      .min = v2_sub(center, halfDim),
-      .max = v2_add(center, halfDim),
+      .min = v3_sub(center, halfDim),
+      .max = v3_add(center, halfDim),
   };
 }
 
 static inline struct rect
-RectCenterDim(struct v2 center, struct v2 dim)
+RectCenterDim(struct v3 center, struct v3 dim)
 {
-  return RectCenterHalfDim(center, v2_mul(dim, 0.5f));
+  return RectCenterHalfDim(center, v3_mul(dim, 0.5f));
 }
 
 static inline u8
-RectIsPointInside(struct rect rect, struct v2 testPoint)
+RectIsPointInside(struct rect rect, struct v3 testPoint)
 {
   return
       /* x boundries */
@@ -445,31 +500,31 @@ RectIsPointInside(struct rect rect, struct v2 testPoint)
       && testPoint.y >= rect.min.y && testPoint.y < rect.max.y;
 }
 
-static inline struct v2
+static inline struct v3
 RectMin(struct rect *rect)
 {
   return rect->min;
 }
 
-static inline struct v2
+static inline struct v3
 RectMax(struct rect *rect)
 {
   return rect->max;
 }
 
-static inline struct v2
+static inline struct v3
 RectCenter(struct rect *rect)
 {
-  return v2_mul(v2_add(rect->min, rect->max), 0.5f);
+  return v3_mul(v3_add(rect->min, rect->max), 0.5f);
 }
 
 internal inline struct rect
-RectAddRadius(struct rect *rect, f32 radiusX, f32 radiusY)
+RectAddRadius(struct rect *rect, struct v3 radius)
 {
   struct rect result;
 
-  result.min = v2_sub(rect->min, v2(radiusX, radiusY));
-  result.max = v2_add(rect->max, v2(radiusX, radiusY));
+  result.min = v3_sub(rect->min, radius);
+  result.max = v3_add(rect->max, radius);
 
   return result;
 }

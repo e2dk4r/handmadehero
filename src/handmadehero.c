@@ -689,11 +689,11 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     /* acceleration */
-    conHero->ddPosition = (struct v2){};
+    conHero->ddPosition = (struct v3){};
 
     /* analog controller */
     if (controller->isAnalog) {
-      conHero->ddPosition = v2(controller->stickAverageX, controller->stickAverageY);
+      conHero->ddPosition = v3(controller->stickAverageX, controller->stickAverageY, 0);
     }
 
     /* digital controller */
@@ -736,9 +736,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   comptime u32 tileSpanMultipler = 3;
   comptime u32 tileSpanX = TILES_PER_WIDTH * tileSpanMultipler;
   comptime u32 tileSpanY = TILES_PER_HEIGHT * tileSpanMultipler;
-  struct v2 tileSpan = {(f32)tileSpanX, (f32)tileSpanY};
-  v2_mul_ref(&tileSpan, world->tileSideInMeters);
-  struct rect cameraBounds = RectCenterDim(v2(0.0f, 0.0f), tileSpan);
+  comptime u32 tileSpanZ = 1;
+  struct v3 tileSpan = {(f32)tileSpanX, (f32)tileSpanY, (f32)tileSpanZ};
+  v3_mul_ref(&tileSpan, world->tileSideInMeters);
+  struct rect cameraBounds = RectCenterDim(v3(0.0f, 0.0f, 0.0f), tileSpan);
 
   struct memory_arena simArena;
   MemoryArenaInit(&simArena, memory->transientStorage, memory->transientStorageSize);
@@ -780,7 +781,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     if (!entity->updatable)
       continue;
 
-    struct v2 playerScreenPosition = entity->position;
+    struct v2 playerScreenPosition = entity->position.xy;
     /* screen's coordinate system uses y values inverse,
      * so that means going up in space means negative y values
      */
@@ -796,13 +797,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         if (conHero->entityIndex != entity->storageIndex)
           continue;
 
-        /* move */
-        EntityMove(state, simRegion, entity, dt, &HeroMoveSpec, conHero->ddPosition);
-
         /* jump */
         if (conHero->dZ != 0.0f)
-          entity->dZ = conHero->dZ;
-        EntityUpdate(simRegion, entity, dt);
+          entity->dPosition.z = conHero->dZ;
+
+        /* move */
+        EntityMove(state, simRegion, entity, dt, &HeroMoveSpec, conHero->ddPosition);
 
         /* sword */
         struct v2 dSword = conHero->dSword;
@@ -815,21 +815,21 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
             EntityClearFlag(sword, ENTITY_FLAG_NONSPACIAL);
             sword->position = entity->position;
             sword->distanceRemaining = 5.0f;
-            sword->dPosition = v2_mul(dSword, 5.0f);
+            sword->dPosition.xy = v2_mul(dSword, 5.0f);
           }
         }
       }
 
       /* render */
       struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
-      f32 cAlphaShadow = 1.0f - entity->z;
+      f32 cAlphaShadow = 1.0f - entity->position.z;
       if (cAlphaShadow < 0.0f)
         cAlphaShadow = 0.0f;
 
       DrawHitPoints(backbuffer, entity, &playerGroundPoint, metersToPixels);
 
       DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, bitmap->align, cAlphaShadow);
-      playerGroundPoint.y -= entity->z * metersToPixels;
+      playerGroundPoint.y -= entity->position.z * metersToPixels;
 
       DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->align);
       DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->align);
@@ -851,18 +851,18 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
         struct entity *heroEntity = testEntity;
 
-        f32 testDistanceSq = v2_length_square(v2_sub(familiar->position, heroEntity->position));
+        f32 testDistanceSq = v3_length_square(v3_sub(familiar->position, heroEntity->position));
         if (testDistanceSq < closestHeroDistanceSq) {
           closestHero = heroEntity;
           closestHeroDistanceSq = testDistanceSq;
         }
       }
 
-      struct v2 ddPosition = {};
+      struct v3 ddPosition = {};
       if (closestHero && closestHeroDistanceSq > square(3.0f)) {
         /* there is hero nearby, follow him */
         f32 oneOverLength = 1.0f / SquareRoot(closestHeroDistanceSq);
-        ddPosition = v2_mul(v2_sub(closestHero->position, familiar->position), oneOverLength);
+        ddPosition = v3_mul(v3_sub(closestHero->position, familiar->position), oneOverLength);
       }
 
       EntityMove(state, simRegion, entity, dt, &FamiliarMoveSpec, ddPosition);
@@ -897,10 +897,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     else if (entity->type & ENTITY_TYPE_SWORD) {
       /* update */
       struct entity *sword = entity;
-      struct v2 oldPosition = sword->position;
-      EntityMove(state, simRegion, entity, dt, &SwordMoveSpec, v2(0, 0));
+      struct v3 oldPosition = sword->position;
+      EntityMove(state, simRegion, entity, dt, &SwordMoveSpec, v3(0, 0, 0));
 
-      f32 distanceTraveled = v2_length(v2_sub(sword->position, oldPosition));
+      f32 distanceTraveled = v3_length(v3_sub(sword->position, oldPosition));
       sword->distanceRemaining -= distanceTraveled;
       if (sword->distanceRemaining < 0.0f) {
         EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
