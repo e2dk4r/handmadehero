@@ -148,9 +148,9 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
       WorldPositionCalculate(world, &simRegion->origin, RectMin(&simRegion->bounds));
   struct world_position maxChunkPosition =
       WorldPositionCalculate(world, &simRegion->origin, RectMax(&simRegion->bounds));
-  for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
+  for (u32 chunkZ = minChunkPosition.chunkZ; chunkZ <= maxChunkPosition.chunkZ; chunkZ++) {
     for (u32 chunkY = minChunkPosition.chunkY; chunkY <= maxChunkPosition.chunkY; chunkY++) {
-      for (u32 chunkZ = minChunkPosition.chunkZ; chunkZ <= maxChunkPosition.chunkZ; chunkZ++) {
+      for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
         struct world_chunk *chunk = WorldChunkGet(world, chunkX, chunkY, chunkZ, 0);
         if (!chunk)
           continue;
