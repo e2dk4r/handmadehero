@@ -416,12 +416,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
       if (!ShouldEntitiesCollide(state, entity, testEntity))
         continue;
 
-      struct v3 minkowskiDiameter = {
-          .x = testEntity->dim.x + entity->dim.x,
-          .y = testEntity->dim.y + entity->dim.y,
-          .z = world->tileDepthInMeters,
-      };
-
+      struct v3 minkowskiDiameter = v3_add(entity->dim, testEntity->dim);
       struct v3 minCorner = v3_mul(minkowskiDiameter, -0.5f);
       struct v3 maxCorner = v3_mul(minkowskiDiameter, 0.5f);
 
