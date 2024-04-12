@@ -450,8 +450,10 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
     v3_add_ref(&entity->position, v3_mul(deltaPosition, tMin));
 
     // TODO(e2dk4r): this has to become real high handling / ground collision / etc.
-    if (entity->position.z < 0)
+    if (entity->position.z < 0) {
       entity->position.z = 0;
+      entity->dPosition.z = 0;
+    }
 
     if (!hitEntity)
       break;
