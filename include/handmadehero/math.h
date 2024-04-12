@@ -490,17 +490,17 @@ RectCenterDim(struct v3 center, struct v3 dim)
 }
 
 static inline u8
-RectIsPointInside(struct rect rect, struct v3 testPoint)
+RectIsPointInside(struct rect *rect, struct v3 *testPoint)
 {
   return
       /* x boundries */
-      testPoint.x >= rect.min.x &&
-      testPoint.x < rect.max.x
+      testPoint->x >= rect->min.x &&
+      testPoint->x < rect->max.x
       /* y boundries */
-      && testPoint.y >= rect.min.y &&
-      testPoint.y < rect.max.y
+      && testPoint->y >= rect->min.y &&
+      testPoint->y < rect->max.y
       /* z boundries */
-      && testPoint.z >= rect.min.z && testPoint.z < rect.max.z;
+      && testPoint->z >= rect->min.z && testPoint->z < rect->max.z;
 }
 
 static inline struct v3

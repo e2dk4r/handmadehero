@@ -14,6 +14,14 @@ GetPositionRelativeToOrigin(struct sim_region *simRegion, struct stored_entity *
   return diff;
 }
 
+internal u8
+IsEntityOverlapsRect(struct rect *rect, struct v3 *dim, struct v3 *position)
+{
+  struct v3 halfDim = v3_mul(*dim, 0.5f);
+  struct rect grown = RectAddRadius(rect, halfDim);
+  return RectIsPointInside(&grown, position);
+}
+
 internal struct sim_entity_hash *
 GetHashFromStorageIndex(struct sim_region *simRegion, u32 storageIndex)
 {
@@ -115,7 +123,7 @@ AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageInd
   assert(dest);
   if (simPosition) {
     dest->position = *simPosition;
-    dest->updatable = (u8)(RectIsPointInside(simRegion->updatableBounds, dest->position) & 1);
+    dest->updatable = (u8)(IsEntityOverlapsRect(&simRegion->updatableBounds, &dest->dim, &dest->position) & 1);
   } else {
     dest->position = GetPositionRelativeToOrigin(simRegion, source);
   }
@@ -169,7 +177,7 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
             continue;
 
           struct v3 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
-          if (!RectIsPointInside(simRegion->bounds, positionRelativeToOrigin))
+          if (!IsEntityOverlapsRect(&simRegion->bounds, &entity->dim, &positionRelativeToOrigin))
             continue;
 
           AddEntity(state, simRegion, storedEntityIndex, storedEntity, &positionRelativeToOrigin);
