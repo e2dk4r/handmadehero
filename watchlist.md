@@ -253,7 +253,7 @@
 - [x] Handmade Hero Day 071 - Converting to Full 3D Positioning
       https://www.youtube.com/watch?v=FVPxhovGsuE
 
-- [ ] Handmade Hero Day 072 - Proper 3D Inclusion Tests
+- [x] Handmade Hero Day 072 - Proper 3D Inclusion Tests
       https://www.youtube.com/watch?v=tcirDivLd8A
 
 - [ ] Handmade Hero Day 073 - Temporarily Overlapping Entities
