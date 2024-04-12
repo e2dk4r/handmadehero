@@ -198,6 +198,7 @@ struct linux_state {
   struct xkb_state *xkb_state;
 
   struct game_code *lib;
+  struct game_input gameInputs[2];
   struct memory_arena wayland_arena;
   struct memory_arena xkb_arena;
   struct game_memory *game_memory;
@@ -689,9 +690,8 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
   wp_presentation_feedback_destroy(wp_presentation_feedback);
   struct linux_state *state = data;
 
-  static struct game_input inputs[2] = {};
-  struct game_input *newInput = &inputs[0];
-  struct game_input *oldInput = &inputs[1];
+  struct game_input *newInput = state->gameInputs + 0;
+  struct game_input *oldInput = state->gameInputs + 1;
   /*
    *        |-----|-----|-----|-----|-----|---...---|>
    *  frame 0     1     2     3     4     5         30
@@ -1017,7 +1017,7 @@ main(int argc, char *argv[])
      *  960x540x4 ~1.10M single, ~3.98M with double buffering
      * 1280x720x4 ~3.53M single, ~7.32M with double buffering
      */
-    static struct game_backbuffer backbuffer = {
+    struct game_backbuffer backbuffer = {
         .width = 960,
         .height = 540,
         .bytes_per_pixel = 4,
