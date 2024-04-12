@@ -161,7 +161,7 @@ WorldPositionSub(struct world *world, struct world_position *a, struct world_pos
   return result;
 }
 
-static inline u8
+internal inline u8
 WorldPositionSame(struct world *world, struct world_position *left, struct world_position *right)
 {
   assert(WorldPositionIsCalculatedOffset(world, &left->offset));

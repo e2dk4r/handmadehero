@@ -1,3 +1,4 @@
+#include "handmadehero/debug.h"
 #include <handmadehero/assert.h>
 #include <handmadehero/entity.h>
 #include <handmadehero/handmadehero.h>

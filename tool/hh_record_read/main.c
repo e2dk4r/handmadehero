@@ -9,13 +9,13 @@
 #define STDERR 2
 #define NEWLINE "\n"
 
-void
+internal void
 usage(void)
 {
-  static const char msg[] =
+  comptime char msg[] =
       /* short description */
       "hh_record_read <filepath>" NEWLINE;
-  static const u64 msg_len = sizeof(msg) - 1;
+  comptime u64 msg_len = sizeof(msg) - 1;
 
   write(STDERR, msg, msg_len);
 }
@@ -25,14 +25,14 @@ struct record_state {
   char *path;
 };
 
-static u8
+internal u8
 PlaybackInputBegin(struct record_state *state)
 {
   state->fd = open(state->path, O_RDONLY);
   return state->fd < 0;
 }
 
-static u8
+internal u8
 PlaybackInputEnd(struct record_state *state)
 {
   return close(state->fd) != 0;
@@ -41,7 +41,7 @@ PlaybackInputEnd(struct record_state *state)
 #define PLAYBACK_FINISH 0
 #define PLAYBACK_ERROR 1
 #define PLAYBACK_CONTINUE 2
-static u8
+internal u8
 PlaybackInput(struct record_state *state, struct game_input *input)
 {
   ssize_t bytesRead;
@@ -106,8 +106,8 @@ main(int argc, char *argv[])
   state.path = argv[1];
 
   if (PlaybackInputBegin(&state)) {
-    static const char msg[] = "cannot open path" NEWLINE;
-    static const u64 msg_len = sizeof(msg) - 1;
+    comptime char msg[] = "cannot open path" NEWLINE;
+    comptime u64 msg_len = sizeof(msg) - 1;
     write(STDERR, msg, msg_len);
     return 1;
   }
@@ -117,8 +117,8 @@ main(int argc, char *argv[])
   off_t game_state_size = 256 * MEGABYTES + 1 * GIGABYTES;
   off_t seekBytes = lseek(state.fd, game_state_size, SEEK_SET);
   if (seekBytes < 0) {
-    static const char msg[] = "cannot seek to input" NEWLINE;
-    static const u64 msg_len = sizeof(msg) - 1;
+    comptime char msg[] = "cannot seek to input" NEWLINE;
+    comptime u64 msg_len = sizeof(msg) - 1;
     write(STDERR, msg, msg_len);
     return 1;
   }
@@ -129,8 +129,8 @@ playback:
   if (status == PLAYBACK_FINISH)
     goto finish;
   else if (status == PLAYBACK_ERROR) {
-    static const char msg[] = "playback error occured" NEWLINE;
-    static const u64 msg_len = sizeof(msg) - 1;
+    comptime char msg[] = "playback error occured" NEWLINE;
+    comptime u64 msg_len = sizeof(msg) - 1;
     write(STDERR, msg, msg_len);
     goto finish;
   }
@@ -143,46 +143,46 @@ playback:
     if (!AnyKeyEvent(prev_controller, controller))
       continue;
 
-    static const char msg_source[] = "source: ";
-    static const u64 msg_source_len = sizeof(msg_source) - 1;
+    comptime char msg_source[] = "source: ";
+    comptime u64 msg_source_len = sizeof(msg_source) - 1;
     write(STDOUT, msg_source, msg_source_len);
 
     if (controller_index == 0) {
-      static const char msg_keyboard[] = "keyboard";
-      static const u64 msg_keyboard_len = sizeof(msg_keyboard) - 1;
+      comptime char msg_keyboard[] = "keyboard";
+      comptime u64 msg_keyboard_len = sizeof(msg_keyboard) - 1;
       write(STDOUT, msg_keyboard, msg_keyboard_len);
     } else {
-      static const char msg_controller[] = "controller";
-      static const u64 msg_controller_len = sizeof(msg_controller) - 1;
+      comptime char msg_controller[] = "controller";
+      comptime u64 msg_controller_len = sizeof(msg_controller) - 1;
       write(STDOUT, msg_controller, msg_controller_len);
     }
 
-    static const char msg_type[] = " type: ";
-    static const u64 msg_type_len = sizeof(msg_type) - 1;
+    comptime char msg_type[] = " type: ";
+    comptime u64 msg_type_len = sizeof(msg_type) - 1;
     write(STDOUT, msg_type, msg_type_len);
     if (controller->isAnalog) {
-      static const char msg_analog[] = "analog";
-      static const u64 msg_analog_len = sizeof(msg_analog) - 1;
+      comptime char msg_analog[] = "analog";
+      comptime u64 msg_analog_len = sizeof(msg_analog) - 1;
       write(STDOUT, msg_analog, msg_analog_len);
 
     } else {
-      static const char msg_digital[] = "digital";
-      static const u64 msg_digital_len = sizeof(msg_digital) - 1;
+      comptime char msg_digital[] = "digital";
+      comptime u64 msg_digital_len = sizeof(msg_digital) - 1;
       write(STDOUT, msg_digital, msg_digital_len);
     }
 
     u8 anyMovementX = prev_controller->stickAverageX != controller->stickAverageX;
     if (anyMovementX) {
-      static const char msg_stickX[] = " stickX: ";
-      static const u64 msg_stickX_len = sizeof(msg_stickX) - 1;
+      comptime char msg_stickX[] = " stickX: ";
+      comptime u64 msg_stickX_len = sizeof(msg_stickX) - 1;
       write(STDOUT, msg_stickX, msg_stickX_len);
       printf("%.2f", controller->stickAverageX);
       fflush(stdout);
     }
     u8 anyMovementY = prev_controller->stickAverageY != controller->stickAverageY;
     if (anyMovementY) {
-      static const char msg_stickY[] = " stickY: ";
-      static const u64 msg_stickY_len = sizeof(msg_stickY) - 1;
+      comptime char msg_stickY[] = " stickY: ";
+      comptime u64 msg_stickY_len = sizeof(msg_stickY) - 1;
       write(STDOUT, msg_stickY, msg_stickY_len);
       printf("%.2f", controller->stickAverageY);
       fflush(stdout);
@@ -201,12 +201,12 @@ playback:
       write(STDOUT, ": ", 2);
 
       if (controller->buttons[buttonIndex].pressed) {
-        static const char msg_pressed[] = "pressed";
-        static const u64 msg_pressed_len = sizeof(msg_pressed) - 1;
+        comptime char msg_pressed[] = "pressed";
+        comptime u64 msg_pressed_len = sizeof(msg_pressed) - 1;
         write(STDOUT, msg_pressed, msg_pressed_len);
       } else {
-        static const char msg_released[] = "released";
-        static const u64 msg_released_len = sizeof(msg_released) - 1;
+        comptime char msg_released[] = "released";
+        comptime u64 msg_released_len = sizeof(msg_released) - 1;
         write(STDOUT, msg_released, msg_released_len);
       }
     }
@@ -220,8 +220,8 @@ playback:
 
 finish:
   if (PlaybackInputEnd(&state)) {
-    static const char msg[] = "cannot close path" NEWLINE;
-    static const u64 msg_len = sizeof(msg) - 1;
+    comptime char msg[] = "cannot close path" NEWLINE;
+    comptime u64 msg_len = sizeof(msg) - 1;
     write(STDERR, msg, msg_len);
     return 1;
   }

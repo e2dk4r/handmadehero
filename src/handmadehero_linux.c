@@ -99,7 +99,7 @@ const u64 KILOBYTES = 1024;
 const u64 MEGABYTES = 1024 * KILOBYTES;
 const u64 GIGABYTES = 1024 * MEGABYTES;
 
-static u8
+internal u8
 game_memory_allocation(struct game_memory *memory, u64 permanentStorageSize, u64 transientStorageSize)
 {
   memory->permanentStorageSize = permanentStorageSize;
@@ -229,13 +229,13 @@ struct linux_state {
 
 comptime char recordPath[] = "input.rec";
 
-static inline u8
+internal inline u8
 RecordInputStarted(struct linux_state *state)
 {
   return state->recordInputIndex;
 }
 
-static void
+internal void
 RecordInputBegin(struct linux_state *state, u8 index)
 {
   debug("[RecordInput] begin\n");
@@ -248,7 +248,7 @@ RecordInputBegin(struct linux_state *state, u8 index)
   assert(bytesWritten > 0);
 }
 
-static void
+internal void
 RecordInputEnd(struct linux_state *state)
 {
   debug("[RecordInput] end\n");
@@ -258,19 +258,19 @@ RecordInputEnd(struct linux_state *state)
   state->recordInputFd = -1;
 }
 
-static void
+internal void
 RecordInput(struct linux_state *state, struct game_input *input)
 {
   write(state->recordInputFd, input, sizeof(*input));
 }
 
-static inline u8
+internal inline u8
 PlaybackInputStarted(struct linux_state *state)
 {
   return state->playbackInputIndex;
 }
 
-static void
+internal void
 PlaybackInputBegin(struct linux_state *state, u8 index)
 {
   debug("[PlaybackInput] begin\n");
@@ -283,7 +283,7 @@ PlaybackInputBegin(struct linux_state *state, u8 index)
   assert(bytesRead > 0);
 }
 
-static void
+internal void
 PlaybackInputEnd(struct linux_state *state)
 {
   debug("[PlaybackInput] end\n");
@@ -293,7 +293,7 @@ PlaybackInputEnd(struct linux_state *state)
   state->playbackInputFd = -1;
 }
 
-static void
+internal void
 PlaybackInput(struct linux_state *state, struct game_input *input)
 {
   ssize_t bytesRead;
@@ -320,7 +320,7 @@ begin:
  * input handling
  *****************************************************************/
 
-static void
+internal void
 joystick_key(struct linux_state *state, u16 type, u16 code, i32 value)
 {
   struct game_controller_input *controller = GetController(state->input, 1);
@@ -395,7 +395,7 @@ joystick_key(struct linux_state *state, u16 type, u16 code, i32 value)
   }
 }
 
-static void
+internal void
 wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 format, i32 fd, u32 size)
 {
   struct linux_state *state = data;
@@ -417,7 +417,7 @@ wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 format, i32 
   state->xkb_state = xkb_state;
 }
 
-static void
+internal void
 wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 time, u32 key,
                 enum wl_keyboard_key_state keystate)
 {
@@ -522,7 +522,7 @@ wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 tim
   }
 }
 
-static void
+internal void
 wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 mods_depressed, u32 mods_latched,
                       u32 mods_locked, u32 group)
 {
@@ -534,14 +534,14 @@ wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u
   xkb_state_update_mask(state->xkb_state, mods_depressed, mods_latched, mods_locked, 0, 0, group);
 }
 
-static void
+internal void
 wl_keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard, i32 rate, i32 delay)
 {
   // struct my_state *state = data;
   debugf("[wl_keyboard::repeat_info] rate: %d delay: %d\n", rate, delay);
 }
 
-static void
+internal void
 wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface,
                   struct wl_array *keys)
 {
@@ -550,7 +550,7 @@ wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struc
   state->resumed = 1;
 }
 
-static void
+internal void
 wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struct wl_surface *surface)
 {
   debugf("[wl_keyboard::leave] serial: %d\n", serial);
@@ -568,7 +568,7 @@ comptime struct wl_keyboard_listener wl_keyboard_listener = {
     .repeat_info = wl_keyboard_repeat_info,
 };
 
-static void
+internal void
 wl_pointer_enter(void *data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface,
                  wl_fixed_t surface_x, wl_fixed_t surface_y)
 {
@@ -576,28 +576,28 @@ wl_pointer_enter(void *data, struct wl_pointer *wl_pointer, uint32_t serial, str
   wl_pointer_set_cursor(wl_pointer, serial, 0, 0, 0);
 }
 
-static void
+internal void
 wl_pointer_leave(void *data, struct wl_pointer *wl_pointer, uint32_t serial, struct wl_surface *surface)
 {
 }
 
-static void
+internal void
 wl_pointer_motion(void *data, struct wl_pointer *wl_pointer, uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y)
 {
 }
 
-static void
+internal void
 wl_pointer_button(void *data, struct wl_pointer *wl_pointer, uint32_t serial, uint32_t time, uint32_t button,
                   uint32_t state)
 {
 }
 
-static void
+internal void
 wl_pointer_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time, uint32_t axis, wl_fixed_t value)
 {
 }
 
-static void
+internal void
 wl_pointer_frame(void *data, struct wl_pointer *wl_pointer)
 {
 }
@@ -611,7 +611,7 @@ comptime struct wl_pointer_listener wl_pointer_listener = {
     .frame = wl_pointer_frame,
 };
 
-static void
+internal void
 wl_seat_capabilities(void *data, struct wl_seat *wl_seat, u32 capabilities)
 {
   struct linux_state *state = data;
@@ -636,7 +636,7 @@ wl_seat_capabilities(void *data, struct wl_seat *wl_seat, u32 capabilities)
   }
 }
 
-static void
+internal void
 wl_seat_name(void *data, struct wl_seat *wl_seat, const char *name)
 {
   debugf("[wl_seat::name] name: %s\n", name);
@@ -650,7 +650,7 @@ comptime struct wl_seat_listener wl_seat_listener = {
 /*****************************************************************
  * shared memory
  *****************************************************************/
-static i32
+internal i32
 create_shared_memory(off_t size)
 {
   int fd;
@@ -675,13 +675,13 @@ create_shared_memory(off_t size)
  * frame_callback events
  *****************************************************************/
 
-static void
+internal void
 wp_presentation_feedback_sync_output(void *data, struct wp_presentation_feedback *wp_presentation_feedback,
                                      struct wl_output *output)
 {
 }
 
-static void
+internal void
 wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *wp_presentation_feedback,
                                    uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec, uint32_t refresh,
                                    uint32_t seq_hi, uint32_t seq_lo, uint32_t flags)
@@ -761,7 +761,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
   }
 }
 
-static void
+internal void
 wp_presentation_feedback_discarded(void *data, struct wp_presentation_feedback *wp_presentation_feedback)
 {
   wp_presentation_feedback_destroy(wp_presentation_feedback);
@@ -774,7 +774,7 @@ comptime struct wp_presentation_feedback_listener wp_presentation_feedback_liste
 
 comptime struct wl_callback_listener wl_surface_frame_listener;
 
-static void
+internal void
 wl_surface_frame_done(void *data, struct wl_callback *wl_callback, u32 time)
 {
   wl_callback_destroy(wl_callback);
@@ -796,7 +796,7 @@ comptime struct wl_callback_listener wl_surface_frame_listener = {
 /*****************************************************************
  * xdg_wm_base events
  *****************************************************************/
-static void
+internal void
 xdg_wm_base_ping(void *data, struct xdg_wm_base *xdg_wm_base, u32 serial)
 {
   xdg_wm_base_pong(xdg_wm_base, serial);
@@ -811,7 +811,7 @@ comptime struct xdg_wm_base_listener xdg_wm_base_listener = {
  * xdg_toplevel events
  *****************************************************************/
 
-static void
+internal void
 xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, i32 screen_width, i32 screen_height,
                        struct wl_array *states)
 {
@@ -845,7 +845,7 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, i32 screen
   wl_surface_commit(state->wl_surface);
 }
 
-static void
+internal void
 xdg_toplevel_close(void *data, struct xdg_toplevel *xdg_toplevel)
 {
   struct linux_state *state = data;
@@ -860,7 +860,7 @@ comptime struct xdg_toplevel_listener xdg_toplevel_listener = {
 /*****************************************************************
  * xdg_surface events
  *****************************************************************/
-static void
+internal void
 xdg_surface_configure(void *data, struct xdg_surface *xdg_surface, u32 serial)
 {
   struct linux_state *state = data;
@@ -888,7 +888,7 @@ comptime struct xdg_surface_listener xdg_surface_listener = {
 #define WP_PRESENTATION_MINIMUM_REQUIRED_VERSION 1
 #define EXT_IDLE_NOTIFIER_V1_MINIMUM_REQUIRED_VERSION 1
 
-static void
+internal void
 wl_registry_global(void *data, struct wl_registry *wl_registry, u32 name, const char *interface, u32 version)
 {
   struct linux_state *state = data;
@@ -961,7 +961,7 @@ struct op_joystick_read {
 #define ACTION_ADD (1 << 0)
 #define ACTION_REMOVE (1 << 1)
 
-static inline u8
+internal inline u8
 libevdev_is_joystick(struct libevdev *evdev)
 {
   return libevdev_has_event_type(evdev, EV_ABS) && libevdev_has_event_code(evdev, EV_ABS, ABS_RX);
@@ -982,8 +982,8 @@ main(int argc, char *argv[])
 #if HANDMADEHERO_DEBUG
   {
     /* assumes libhandmadehero.so in same directory as executable */
-    static const char libpath[] = "libhandmadehero.so";
-    static const u64 libpath_length = sizeof(libpath) - 1;
+    comptime char libpath[] = "libhandmadehero.so";
+    comptime u64 libpath_length = sizeof(libpath) - 1;
     char *exepath = argv[0];
     char *output = state.lib->path;
     u64 index = 0;

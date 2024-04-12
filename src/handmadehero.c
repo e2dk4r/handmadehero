@@ -26,7 +26,7 @@ comptime struct move_spec SwordMoveSpec = {
     .drag = 0.0f,
 };
 
-static void
+internal void
 DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min, struct v2 max, const struct v3 *color)
 {
   assert(min.x < max.x);
@@ -203,7 +203,7 @@ struct __attribute__((packed)) bitmap_header_compressed {
   u32 blueMask;
 };
 
-static struct bitmap
+internal struct bitmap
 LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
 {
   struct bitmap result = {0};
@@ -275,7 +275,7 @@ StoredEntityGet(struct game_state *state, u32 index)
   return result;
 }
 
-static inline u32
+internal inline u32
 StoredEntityAdd(struct game_state *state, u8 type, struct world_position *position)
 {
   u32 storedEntityIndex = state->storedEntityCount;
@@ -293,7 +293,7 @@ StoredEntityAdd(struct game_state *state, u8 type, struct world_position *positi
   return storedEntityIndex;
 }
 
-static inline void
+internal inline void
 EntityHitPointsReset(struct entity *entity, u32 hitPointMax)
 {
   assert(hitPointMax < ARRAY_COUNT(entity->hitPoints));
@@ -660,6 +660,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     u32 initialCameraY = screenBaseY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2;
     u32 initialCameraZ = screenBaseZ;
     MonsterAdd(state, initialCameraX + 2, initialCameraY + 2, initialCameraZ);
+    MonsterAdd(state, initialCameraX + 4, initialCameraY + 2, initialCameraZ);
     FamiliarAdd(state, initialCameraX - 2, initialCameraY + 2, initialCameraZ);
 
     struct world_position initialCameraPosition =

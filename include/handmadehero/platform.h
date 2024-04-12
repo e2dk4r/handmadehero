@@ -83,7 +83,7 @@ struct game_input {
   struct game_controller_input controllers[HANDMADEHERO_CONTROLLER_COUNT];
 };
 
-static inline struct game_controller_input *
+internal inline struct game_controller_input *
 GetController(struct game_input *input, u8 index)
 {
   assert(index < HANDMADEHERO_CONTROLLER_COUNT);
