@@ -49,8 +49,7 @@ struct entity {
   struct v3 position;
   struct v3 dPosition;
 
-  f32 width;
-  f32 height;
+  struct v3 dim;
 
   u32 hitPointMax;
   struct hit_point hitPoints[16];
