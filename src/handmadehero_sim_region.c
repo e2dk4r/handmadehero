@@ -442,9 +442,6 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
       }
     }
 
-    if (!EntityIsFlagSet(entity, ENTITY_FLAG_COLLIDE))
-      tMin = 1.0f;
-
     /* p' = tMin (1/2 a t² + v t) + p */
     v3_add_ref(&entity->position, v3_mul(deltaPosition, tMin));
 
