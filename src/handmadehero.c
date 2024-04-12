@@ -784,14 +784,14 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     if (!entity->updatable)
       continue;
 
-    struct v2 playerScreenPosition = entity->position.xy;
+    struct v2 entityScreenPosition = entity->position.xy;
     /* screen's coordinate system uses y values inverse,
      * so that means going up in space means negative y values
      */
-    playerScreenPosition.y *= -1;
-    v2_mul_ref(&playerScreenPosition, metersToPixels);
+    entityScreenPosition.y *= -1;
+    v2_mul_ref(&entityScreenPosition, metersToPixels);
 
-    struct v2 playerGroundPoint = v2_add(screenCenter, playerScreenPosition);
+    struct v2 entityGroundPoint = v2_add(screenCenter, entityScreenPosition);
 
     if (entity->type & ENTITY_TYPE_HERO) {
       /* update */
@@ -829,14 +829,14 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       if (cAlphaShadow < 0.0f)
         cAlphaShadow = 0.0f;
 
-      DrawHitPoints(backbuffer, entity, &playerGroundPoint, metersToPixels);
+      DrawHitPoints(backbuffer, entity, &entityGroundPoint, metersToPixels);
 
-      DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, bitmap->align, cAlphaShadow);
-      playerGroundPoint.y -= entity->position.z * metersToPixels;
+      DrawBitmap2(&state->bitmapShadow, backbuffer, entityGroundPoint, bitmap->align, cAlphaShadow);
+      entityGroundPoint.y -= entity->position.z * metersToPixels;
 
-      DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->align);
-      DrawBitmap(&bitmap->cape, backbuffer, playerGroundPoint, bitmap->align);
-      DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->align);
+      DrawBitmap(&bitmap->torso, backbuffer, entityGroundPoint, bitmap->align);
+      DrawBitmap(&bitmap->cape, backbuffer, entityGroundPoint, bitmap->align);
+      DrawBitmap(&bitmap->head, backbuffer, entityGroundPoint, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
@@ -880,10 +880,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       f32 cAlphaShadow = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, bitmap->align, cAlphaShadow);
-      playerGroundPoint.y -= 15 * bobSin;
+      DrawBitmap2(&state->bitmapShadow, backbuffer, entityGroundPoint, bitmap->align, cAlphaShadow);
+      entityGroundPoint.y -= 15 * bobSin;
 
-      DrawBitmap(&bitmap->head, backbuffer, playerGroundPoint, bitmap->align);
+      DrawBitmap(&bitmap->head, backbuffer, entityGroundPoint, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_MONSTER) {
@@ -891,10 +891,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
       f32 cAlphaShadow = 1.0f;
 
-      DrawHitPoints(backbuffer, entity, &playerGroundPoint, metersToPixels);
-      DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, bitmap->align, cAlphaShadow);
+      DrawHitPoints(backbuffer, entity, &entityGroundPoint, metersToPixels);
+      DrawBitmap2(&state->bitmapShadow, backbuffer, entityGroundPoint, bitmap->align, cAlphaShadow);
 
-      DrawBitmap(&bitmap->torso, backbuffer, playerGroundPoint, bitmap->align);
+      DrawBitmap(&bitmap->torso, backbuffer, entityGroundPoint, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
@@ -912,22 +912,22 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       /* render */
       f32 cAlphaShadow = 1.0f;
-      DrawBitmap2(&state->bitmapShadow, backbuffer, playerGroundPoint, v2(72, 182), cAlphaShadow);
-      DrawBitmap(&state->bitmapSword, backbuffer, playerGroundPoint, v2(29, 10));
+      DrawBitmap2(&state->bitmapShadow, backbuffer, entityGroundPoint, v2(72, 182), cAlphaShadow);
+      DrawBitmap(&state->bitmapSword, backbuffer, entityGroundPoint, v2(29, 10));
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      DrawBitmap(&state->bitmapTree, backbuffer, playerGroundPoint, v2(40, 80));
+      DrawBitmap(&state->bitmapTree, backbuffer, entityGroundPoint, v2(40, 80));
 #else
       comptime struct v3 color = {1.0f, 1.0f, 0.0f};
 
-      struct v2 playerWidthHeight = v2(entity->width, entity->height);
-      v2_mul_ref(&playerWidthHeight, metersToPixels);
+      struct v2 entityWidthHeight = entity->dim.xy;
+      v2_mul_ref(&entityWidthHeight, metersToPixels);
 
-      struct v2 playerLeftTop = v2_sub(playerGroundPoint, v2_mul(playerWidthHeight, 0.5f));
-      struct v2 playerRightBottom = v2_add(playerLeftTop, playerWidthHeight);
-      DrawRectangle(backbuffer, playerLeftTop, playerRightBottom, &color);
+      struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
+      struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
+      DrawRectangle(backbuffer, entityLeftTop, entityRightBottom, &color);
 #endif
     }
 
