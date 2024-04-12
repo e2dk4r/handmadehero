@@ -7,12 +7,19 @@
 
 struct game_state;
 
-#define ENTITY_TYPE_INVALID 0
-#define ENTITY_TYPE_HERO 1 << 0
-#define ENTITY_TYPE_WALL 1 << 1
-#define ENTITY_TYPE_FAMILIAR 1 << 2
-#define ENTITY_TYPE_MONSTER 1 << 3
-#define ENTITY_TYPE_SWORD 1 << 4
+enum entity_type {
+  ENTITY_TYPE_INVALID = 0,
+  ENTITY_TYPE_HERO = (1 << 0),
+  ENTITY_TYPE_WALL = (1 << 1),
+  ENTITY_TYPE_FAMILIAR = (1 << 2),
+  ENTITY_TYPE_MONSTER = (1 << 3),
+  ENTITY_TYPE_SWORD = (1 << 4),
+};
+
+enum entity_flag {
+  ENTITY_FLAG_COLLIDE = (1 << 0),
+  ENTITY_FLAG_NONSPACIAL = (1 << 1),
+};
 
 struct move_spec {
   u8 unitMaxAccel : 1;
@@ -33,9 +40,6 @@ struct entity_reference {
   u32 index;
 };
 
-#define ENTITY_FLAG_COLLIDE (1 << 0)
-#define ENTITY_FLAG_NONSPACIAL (1 << 1)
-
 struct entity {
   /* NOTE: These are only for sim region */
   u32 storageIndex;
@@ -43,8 +47,8 @@ struct entity {
 
   /**/
 
-  u8 type;
-  u8 flags;
+  enum entity_type type : 5;
+  enum entity_flag flags : 4;
 
   struct v3 position;
   struct v3 dPosition;

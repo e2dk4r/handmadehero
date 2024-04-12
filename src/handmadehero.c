@@ -276,7 +276,7 @@ StoredEntityGet(struct game_state *state, u32 index)
 }
 
 internal inline u32
-StoredEntityAdd(struct game_state *state, u8 type, struct world_position *position)
+StoredEntityAdd(struct game_state *state, enum entity_type type, struct world_position *position)
 {
   u32 storedEntityIndex = state->storedEntityCount;
   assert(storedEntityIndex < HANDMADEHERO_STORED_ENTITY_TOTAL);
