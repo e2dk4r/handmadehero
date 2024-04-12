@@ -973,6 +973,8 @@ main(int argc, char *argv[])
   int error_code = 0;
   struct linux_state state = {
       .running = 1,
+      .paused = 1,
+      .resumed = 1,
   };
 
   /* game: hot reload game code on debug version */
