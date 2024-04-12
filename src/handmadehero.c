@@ -946,18 +946,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     else if (entity->type & ENTITY_TYPE_STAIRWELL) {
-#if 1
       DrawBitmap(&state->bitmapStairwell, backbuffer, entityGroundPoint, v2(37, 37));
-#else
-      comptime struct v3 color = {1.0f, 1.0f, 0.0f};
-
-      struct v2 entityWidthHeight = entity->dim.xy;
-      v2_mul_ref(&entityWidthHeight, metersToPixels);
-
-      struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
-      struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
-      DrawRectangle(backbuffer, entityLeftTop, entityRightBottom, &color);
-#endif
     }
 
     else {
