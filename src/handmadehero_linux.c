@@ -1084,7 +1084,7 @@ main(int argc, char *argv[])
   wl_seat_add_listener(state.wl_seat, &wl_seat_listener, &state);
 
   /* game: mem allocation */
-  static struct game_memory game_memory;
+  struct game_memory game_memory;
   if (game_memory_allocation(&game_memory, 256 * MEGABYTES, 1 * GIGABYTES)) {
     fprintf(stderr, "error: cannot allocate memory!\n");
     error_code = HANDMADEHERO_ERROR_ALLOCATION;
