@@ -507,6 +507,7 @@ void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer)
 {
   struct game_state *state = memory->permanentStorage;
+  f32 dt = input->dtPerFrame;
 
   /****************************************************************
    * INITIALIZATION
@@ -743,7 +744,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   struct memory_arena simArena;
   MemoryArenaInit(&simArena, memory->transientStorage, memory->transientStorageSize);
-  struct sim_region *simRegion = BeginSimRegion(&simArena, state, state->world, state->cameraPosition, cameraBounds);
+  struct sim_region *simRegion =
+      BeginSimRegion(&simArena, state, state->world, state->cameraPosition, cameraBounds, dt);
 
   /****************************************************************
    * RENDERING
@@ -767,7 +769,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   };
 
   /* render entities */
-  f32 dt = input->dtPerFrame;
   for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
     struct entity *entity = simRegion->entities + entityIndex;
     assert(entity);

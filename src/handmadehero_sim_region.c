@@ -125,18 +125,20 @@ AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageInd
 
 struct sim_region *
 BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct world *world,
-               struct world_position regionCenter, struct rect regionBounds)
+               struct world_position regionCenter, struct rect regionBounds, f32 dt)
 {
   struct sim_region *simRegion = MemoryArenaPush(simArena, sizeof(*simRegion));
   ZeroStruct(simRegion->hashTable);
 
-  // TODO: IMPORTANT: Calculate this from maximum value of all entities radius, plus their speed!
-  f32 updateSafetyMargin = 1.0f;
+  simRegion->maxEntityRadius = 5.0f;
+  simRegion->maxEntityVelocity = 30.0f;
+  f32 updateSafetyMargin = simRegion->maxEntityRadius + simRegion->maxEntityVelocity * dt;
   f32 updateSafetyMarginZ = 1.0f;
 
   simRegion->world = world;
   simRegion->origin = regionCenter;
-  simRegion->updatableBounds = regionBounds;
+  simRegion->updatableBounds = RectAddRadius(
+      &regionBounds, v3(simRegion->maxEntityRadius, simRegion->maxEntityRadius, simRegion->maxEntityRadius));
   simRegion->bounds =
       RectAddRadius(&simRegion->updatableBounds, v3(updateSafetyMargin, updateSafetyMargin, updateSafetyMarginZ));
 
@@ -148,31 +150,29 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
       WorldPositionCalculate(world, &simRegion->origin, RectMin(&simRegion->bounds));
   struct world_position maxChunkPosition =
       WorldPositionCalculate(world, &simRegion->origin, RectMax(&simRegion->bounds));
-  for (u32 chunkZ = minChunkPosition.chunkZ; chunkZ <= maxChunkPosition.chunkZ; chunkZ++) {
-    for (u32 chunkY = minChunkPosition.chunkY; chunkY <= maxChunkPosition.chunkY; chunkY++) {
-      for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
-        struct world_chunk *chunk = WorldChunkGet(world, chunkX, chunkY, chunkZ, 0);
-        if (!chunk)
-          continue;
+  for (u32 chunkY = minChunkPosition.chunkY; chunkY <= maxChunkPosition.chunkY; chunkY++) {
+    for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
+      struct world_chunk *chunk = WorldChunkGet(world, chunkX, chunkY, simRegion->origin.chunkZ, 0);
+      if (!chunk)
+        continue;
 
-        for (struct world_entity_block *block = &chunk->firstBlock; block; block = block->next) {
-          for (u32 entityIndex = 0; entityIndex < block->entityCount; entityIndex++) {
-            u32 storedEntityIndex = block->entityLowIndexes[entityIndex];
-            struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
-            assert(storedEntity);
-            struct entity *entity = &storedEntity->sim;
+      for (struct world_entity_block *block = &chunk->firstBlock; block; block = block->next) {
+        for (u32 entityIndex = 0; entityIndex < block->entityCount; entityIndex++) {
+          u32 storedEntityIndex = block->entityLowIndexes[entityIndex];
+          struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
+          assert(storedEntity);
+          struct entity *entity = &storedEntity->sim;
 
-            if (entity->type == ENTITY_TYPE_INVALID)
-              continue;
-            if (EntityIsFlagSet(entity, ENTITY_FLAG_NONSPACIAL))
-              continue;
+          if (entity->type == ENTITY_TYPE_INVALID)
+            continue;
+          if (EntityIsFlagSet(entity, ENTITY_FLAG_NONSPACIAL))
+            continue;
 
-            struct v3 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
-            if (!RectIsPointInside(simRegion->bounds, positionRelativeToOrigin))
-              continue;
+          struct v3 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
+          if (!RectIsPointInside(simRegion->bounds, positionRelativeToOrigin))
+            continue;
 
-            AddEntity(state, simRegion, storedEntityIndex, storedEntity, &positionRelativeToOrigin);
-          }
+          AddEntity(state, simRegion, storedEntityIndex, storedEntity, &positionRelativeToOrigin);
         }
       }
     }
@@ -397,6 +397,9 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
                  ddPosition,
                  /* t */
                  dt));
+
+  // TODO(e2dk4r): upgrade physical motion routines to handle capping the maximum velocity
+  assert(v3_length_square(entity->dPosition) <= square(simRegion->maxEntityVelocity));
 
   /*****************************************************************
    * COLLUSION DETECTION

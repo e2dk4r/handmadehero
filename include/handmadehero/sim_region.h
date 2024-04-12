@@ -71,6 +71,8 @@ struct sim_entity_hash {
 
 struct sim_region {
   struct world *world;
+  f32 maxEntityRadius;
+  f32 maxEntityVelocity;
 
   struct world_position origin;
   struct rect bounds;
@@ -86,7 +88,8 @@ struct sim_region {
 
 struct sim_region *
 BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct world *world,
-               struct world_position regionCenter, struct rect regionBounds);
+               struct world_position regionCenter, struct rect regionBounds, f32 dt);
+
 void
 EndSimRegion(struct sim_region *region, struct game_state *state);
 
