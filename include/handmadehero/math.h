@@ -497,7 +497,10 @@ RectIsPointInside(struct rect rect, struct v3 testPoint)
       testPoint.x >= rect.min.x &&
       testPoint.x < rect.max.x
       /* y boundries */
-      && testPoint.y >= rect.min.y && testPoint.y < rect.max.y;
+      && testPoint.y >= rect.min.y &&
+      testPoint.y < rect.max.y
+      /* z boundries */
+      && testPoint.z >= rect.min.z && testPoint.z < rect.max.z;
 }
 
 static inline struct v3
