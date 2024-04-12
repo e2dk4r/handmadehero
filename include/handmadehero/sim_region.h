@@ -14,6 +14,7 @@ enum entity_type {
   ENTITY_TYPE_FAMILIAR = (1 << 2),
   ENTITY_TYPE_MONSTER = (1 << 3),
   ENTITY_TYPE_SWORD = (1 << 4),
+  ENTITY_TYPE_STAIRWELL = (1 << 5),
 };
 
 enum entity_flag {
@@ -47,7 +48,7 @@ struct entity {
 
   /**/
 
-  enum entity_type type : 5;
+  enum entity_type type : 6;
   enum entity_flag flags : 4;
 
   struct v3 position;

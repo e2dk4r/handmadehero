@@ -470,6 +470,22 @@ WallAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
   return storedEntityIndex;
 }
 
+internal inline u32
+StairAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
+{
+  struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
+  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_STAIRWELL, &entityPosition);
+  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
+  assert(stored);
+  struct entity *entity = &stored->sim;
+
+  entity->dim.x = state->world->tileSideInMeters;
+  entity->dim.y = state->world->tileSideInMeters;
+  entity->dim.z = state->world->tileDepthInMeters;
+
+  return storedEntityIndex;
+}
+
 internal inline void
 DrawHitPoints(struct game_backbuffer *backbuffer, struct entity *entity, struct v2 *entityGroundPoint,
               f32 metersToPixels)
@@ -523,6 +539,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     state->bitmapTree = LoadBmp(memory->PlatformReadEntireFile, "test2/tree00.bmp");
 
     state->bitmapSword = LoadBmp(memory->PlatformReadEntireFile, "test2/rock03.bmp");
+
+    state->bitmapStairwell = LoadBmp(memory->PlatformReadEntireFile, "test2/rock02.bmp");
 
     /* load hero bitmaps */
     struct bitmap_hero *bitmapHero = &state->bitmapHero[BITMAP_HERO_FRONT];
@@ -579,7 +597,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     for (u32 screenIndex = 0; screenIndex < 2000; screenIndex++) {
       u32 randomValue;
 
-      if (1) // (isDoorUp || isDoorDown)
+      if (isDoorUp || isDoorDown)
         randomValue = RandomNumber() % 2;
       else
         randomValue = RandomNumber() % 3;
@@ -602,30 +620,26 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           u32 absTileX = screenX * TILES_PER_WIDTH + tileX;
           u32 absTileY = screenY * TILES_PER_HEIGHT + tileY;
 
-          u32 value = TILE_WALKABLE;
+          u8 shouldBlock = 0;
 
           if (tileX == 0 && (!isDoorLeft || tileY != TILES_PER_HEIGHT / 2))
-            value = TILE_BLOCKED;
+            shouldBlock = 1;
 
           if (tileX == TILES_PER_WIDTH - 1 && (!isDoorRight || tileY != TILES_PER_HEIGHT / 2))
-            value = TILE_BLOCKED;
+            shouldBlock = 1;
 
           if (tileY == 0 && (!isDoorBottom || tileX != TILES_PER_WIDTH / 2))
-            value = TILE_BLOCKED;
+            shouldBlock = 1;
 
           if (tileY == TILES_PER_HEIGHT - 1 && (!isDoorTop || tileX != TILES_PER_WIDTH / 2))
-            value = TILE_BLOCKED;
+            shouldBlock = 1;
 
-          if (tileX == 10 && tileY == 6) {
-            if (isDoorUp)
-              value = TILE_LADDER_UP;
-
-            if (isDoorDown)
-              value = TILE_LADDER_DOWN;
-          }
-
-          if (value & TILE_BLOCKED) {
+          if (shouldBlock) {
             WallAdd(state, absTileX, absTileY, absTileZ);
+          } else if (isDoorZ) {
+            if (tileX == 10 && tileY == 6) {
+              StairAdd(state, absTileX, absTileY, isDoorDown ? absTileZ - 1 : absTileZ);
+            }
           }
         }
       }
@@ -659,8 +673,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     u32 initialCameraX = screenBaseX * TILES_PER_WIDTH + TILES_PER_WIDTH / 2;
     u32 initialCameraY = screenBaseY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2;
     u32 initialCameraZ = screenBaseZ;
-    MonsterAdd(state, initialCameraX + 2, initialCameraY + 2, initialCameraZ);
-    MonsterAdd(state, initialCameraX + 4, initialCameraY + 2, initialCameraZ);
+    MonsterAdd(state, initialCameraX - 4, initialCameraY + 2, initialCameraZ);
+    MonsterAdd(state, initialCameraX - 2, initialCameraY + 2, initialCameraZ);
     FamiliarAdd(state, initialCameraX - 2, initialCameraY + 2, initialCameraZ);
 
     struct world_position initialCameraPosition =
@@ -919,6 +933,21 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
       DrawBitmap(&state->bitmapTree, backbuffer, entityGroundPoint, v2(40, 80));
+#else
+      comptime struct v3 color = {1.0f, 1.0f, 0.0f};
+
+      struct v2 entityWidthHeight = entity->dim.xy;
+      v2_mul_ref(&entityWidthHeight, metersToPixels);
+
+      struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
+      struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
+      DrawRectangle(backbuffer, entityLeftTop, entityRightBottom, &color);
+#endif
+    }
+
+    else if (entity->type & ENTITY_TYPE_STAIRWELL) {
+#if 1
+      DrawBitmap(&state->bitmapStairwell, backbuffer, entityGroundPoint, v2(37, 37));
 #else
       comptime struct v3 color = {1.0f, 1.0f, 0.0f};
 
