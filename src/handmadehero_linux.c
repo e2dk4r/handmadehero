@@ -1173,7 +1173,6 @@ main(int argc, char *argv[])
     goto io_uring_exit;
   }
 
-  struct memory_chunk *MemoryForEvents = MemoryArenaPushChunk(&event_arena, sizeof(struct op), 10);
   struct memory_chunk *MemoryForDeviceOpenEvents = MemoryArenaPushChunk(&event_arena, sizeof(struct op_device_open), 5);
   struct memory_chunk *MemoryForJoystickReadEvents =
       MemoryArenaPushChunk(&event_arena, sizeof(struct op_joystick_read), 10);
