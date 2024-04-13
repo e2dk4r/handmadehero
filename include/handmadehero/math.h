@@ -532,4 +532,18 @@ RectAddRadius(struct rect *rect, struct v3 radius)
   return result;
 }
 
+internal inline u8
+IsRectIntersect(struct rect *a, struct rect *b)
+{
+  return !(
+      /* x axis */
+      b->max.x < a->min.x ||
+      b->min.x > a->max.x
+      /* y axis */
+      || b->max.y < a->min.y ||
+      b->min.y > a->max.y
+      /* z axis */
+      || b->max.z < a->min.z || b->min.z > a->max.z);
+}
+
 #endif /* HANDMADEHERO_MATH_H */

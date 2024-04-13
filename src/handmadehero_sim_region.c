@@ -298,12 +298,15 @@ ShouldEntitiesCollide(struct game_state *state, struct entity *a, struct entity 
 }
 
 internal u8
-HandleCollision(struct game_state *state, struct entity *a, struct entity *b)
+HandleCollision(struct game_state *state, struct entity *a, struct entity *b, u8 wasOverlapping)
 {
   u8 stopped = 0;
 
   if (!(a->type & ENTITY_TYPE_SWORD))
     stopped = 1;
+  else
+    /* collision can only happen once with sword */
+    CollisionRuleAdd(state, a->storageIndex, b->storageIndex, 0);
 
   if (a->type > b->type) {
     struct entity *temp = a;
@@ -317,6 +320,10 @@ HandleCollision(struct game_state *state, struct entity *a, struct entity *b)
 
     if (monster->hitPointMax > 0)
       monster->hitPointMax--;
+  }
+
+  else if (a->type & ENTITY_TYPE_HERO && b->type & ENTITY_TYPE_STAIRWELL) {
+    stopped = 1;
   }
 
   // TODO: stairs
@@ -413,6 +420,27 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
   /*****************************************************************
    * COLLUSION DETECTION
    *****************************************************************/
+
+  // NOTE: check for initial inclusion, e.g. entity stuck in other entity
+  u32 overlappingEntityCount = 0;
+  struct entity *overlappingEntities[8];
+  struct rect entityRect = RectCenterDim(entity->position, entity->dim);
+  for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
+    struct entity *testEntity = simRegion->entities + testEntityIndex;
+
+    if (!ShouldEntitiesCollide(state, entity, testEntity))
+      continue;
+
+    struct rect testEntityRect = RectCenterDim(testEntity->position, testEntity->dim);
+    if (IsRectIntersect(&entityRect, &testEntityRect)) {
+      if (overlappingEntityCount == ARRAY_COUNT(overlappingEntities))
+        assert(0 && "cannot store one more overlapping entity");
+
+      overlappingEntities[overlappingEntityCount] = testEntity;
+      overlappingEntityCount++;
+    }
+  }
+
   for (u32 iteration = 0; iteration < 4; iteration++) {
     f32 tMin = 1.0f;
     struct v3 wallNormal;
@@ -469,7 +497,18 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
      * COLLUSION HANDLING
      *****************************************************************/
     deltaPosition = v3_sub(desiredPosition, entity->position);
-    u8 stopsOnCollision = HandleCollision(state, entity, hitEntity);
+
+    u32 overlappingEntityIndex = overlappingEntityCount;
+    for (u32 testOverlappingEntityIndex = 0; testOverlappingEntityIndex < overlappingEntityCount;
+         testOverlappingEntityIndex++) {
+      struct entity *testOverlappingEntity = overlappingEntities[testOverlappingEntityIndex];
+      if (hitEntity == testOverlappingEntity) {
+        overlappingEntityIndex = testOverlappingEntityIndex;
+      }
+    }
+
+    u8 wasOverlapping = overlappingEntityIndex != overlappingEntityCount;
+    u8 stopsOnCollision = HandleCollision(state, entity, hitEntity, wasOverlapping);
     if (stopsOnCollision) {
       /*
        * add gliding to velocity
@@ -517,8 +556,14 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
 
       // clang-format on
     } else {
-      /* collision can only happen once */
-      CollisionRuleAdd(state, entity->storageIndex, hitEntity->storageIndex, 0);
+      if (wasOverlapping) {
+        overlappingEntityCount--;
+        overlappingEntities[overlappingEntityIndex] = overlappingEntities[overlappingEntityCount];
+      } else if (overlappingEntityCount < ARRAY_COUNT(overlappingEntities)) {
+        overlappingEntities[overlappingEntityCount] = hitEntity;
+        overlappingEntityCount++;
+      } else
+        assert(0 && "cannot store one more overlapping entity");
     }
   }
 
