@@ -259,7 +259,7 @@
 - [x] Handmade Hero Day 073 - Temporarily Overlapping Entities
       https://www.youtube.com/watch?v=e0yjNipizK0
 
-- [ ] Handmade Hero Day 074 - Moving Entities Up and Down Stairwells
+- [x] Handmade Hero Day 074 - Moving Entities Up and Down Stairwells
       https://www.youtube.com/watch?v=Hm_CTQwV13U
 
 - [ ] Handmade Hero Day 075 - Conditional Movement Based on Step Heights
