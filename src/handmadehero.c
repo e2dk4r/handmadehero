@@ -27,7 +27,7 @@ comptime struct move_spec SwordMoveSpec = {
 };
 
 internal void
-DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min, struct v2 max, const struct v3 *color)
+DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min, struct v2 max, const struct v4 *color)
 {
   assert(min.x < max.x);
   assert(min.y < max.y);
@@ -509,9 +509,9 @@ DrawHitPoints(struct game_backbuffer *backbuffer, struct entity *entity, struct 
     struct v2 min = v2_add(*entityGroundPoint, hitPosition);
     struct v2 max = v2_add(min, healthDim);
 
-    struct v3 color = v3(1.0f, 0.0f, 0.0f);
+    struct v4 color = v4(1.0f, 0.0f, 0.0f, 1.0f);
     if (hitPoint->filledAmount == 0) {
-      color = v3(0.2f, 0.2f, 0.2f);
+      color = v4(0.2f, 0.2f, 0.2f, 1.0f);
     }
 
     DrawRectangle(backbuffer, min, max, &color);
@@ -775,7 +775,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #if 0
   DrawBitmap(&state->bitmapBackground, backbuffer, v2(0.0f, 0.0f), v2(0, 0));
 #else
-  struct v3 backgroundColor = v3(0.5f, 0.5f, 0.5f);
+  struct v4 backgroundColor = v4(0.5f, 0.5f, 0.5f, 1.0f);
   DrawRectangle(backbuffer, v2(0.0f, 0.0f), v2((f32)backbuffer->width, (f32)backbuffer->height), &backgroundColor);
 #endif
 
