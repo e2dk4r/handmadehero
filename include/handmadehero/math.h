@@ -1,6 +1,7 @@
 #ifndef HANDMADEHERO_MATH_H
 #define HANDMADEHERO_MATH_H
 
+#include "assert.h"
 #include "types.h"
 
 #define minimum(a, b) (a < b) ? a : b
@@ -70,6 +71,32 @@ Sin(f32 value)
 {
   return __builtin_sinf(value);
 };
+
+internal inline f32
+Lerp(f32 a, f32 b, f32 t)
+{
+  f32 result = (1.0f - t) * a + t * b;
+  return result;
+}
+
+internal inline f32
+Clamp(f32 min, f32 max, f32 value)
+{
+  f32 result = value;
+
+  if (result < min)
+    result = min;
+  else if (result > max)
+    result = max;
+
+  return result;
+}
+
+internal inline f32
+Clamp01(f32 value)
+{
+  return Clamp(0.0f, 1.0f, value);
+}
 
 struct v2 {
   union {
@@ -348,6 +375,18 @@ v3_hadamard(struct v3 a, struct v3 b)
   return result;
 }
 
+internal inline struct v3
+v3_clamp01(struct v3 a)
+{
+  struct v3 result;
+
+  result.x = Clamp01(a.x);
+  result.y = Clamp01(a.y);
+  result.z = Clamp01(a.z);
+
+  return result;
+}
+
 /****************************************************************
  * v4 OPERATIONS
  ****************************************************************/
@@ -544,6 +583,22 @@ IsRectIntersect(struct rect *a, struct rect *b)
       b->min.y > a->max.y
       /* z axis */
       || b->max.z < a->min.z || b->min.z > a->max.z);
+}
+
+internal inline struct v3
+GetBarycentric(struct rect a, struct v3 p)
+{
+  struct v3 result;
+
+  assert(a.min.x != a.max.x);
+  assert(a.min.y != a.max.y);
+  assert(a.min.z != a.max.z);
+
+  result.x = (p.x - a.min.x) / (a.max.x - a.min.x);
+  result.y = (p.y - a.min.y) / (a.max.y - a.min.y);
+  result.z = (p.z - a.min.z) / (a.max.z - a.min.z);
+
+  return result;
 }
 
 #endif /* HANDMADEHERO_MATH_H */

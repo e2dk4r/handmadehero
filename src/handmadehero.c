@@ -474,6 +474,7 @@ internal inline u32
 StairAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
+  entityPosition.offset.z += 0.5f * state->world->tileDepthInMeters;
   u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_STAIRWELL, &entityPosition);
   struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
   assert(stored);
@@ -481,7 +482,7 @@ StairAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 
   entity->dim.x = state->world->tileSideInMeters;
   entity->dim.y = state->world->tileSideInMeters;
-  entity->dim.z = state->world->tileDepthInMeters;
+  entity->dim.z = 1.2f * state->world->tileDepthInMeters;
 
   return storedEntityIndex;
 }
@@ -946,7 +947,14 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     else if (entity->type & ENTITY_TYPE_STAIRWELL) {
-      DrawBitmap(&state->bitmapStairwell, backbuffer, entityGroundPoint, v2(37, 37));
+      comptime struct v4 color = {1.0f, 1.0f, 0.0f, 1.0f};
+
+      struct v2 entityWidthHeight = entity->dim.xy;
+      v2_mul_ref(&entityWidthHeight, metersToPixels);
+
+      struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
+      struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
+      DrawRectangle(backbuffer, entityLeftTop, entityRightBottom, &color);
     }
 
     else {
