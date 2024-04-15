@@ -389,7 +389,8 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
 
   /* apply gravity */
   const f32 earthSurfaceGravity = 9.80665f; /* m/s² */
-  ddPosition.z += -earthSurfaceGravity;
+  if (!EntityIsFlagSet(entity, ENTITY_FLAG_ZSUPPORTED))
+    ddPosition.z += -earthSurfaceGravity;
 
   /*****************************************************************
    * CALCULATION OF NEW PLAYER POSITION
@@ -569,9 +570,12 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
   }
 
   // TODO(e2dk4r): this has to become real high handling / ground collision / etc.
-  if (entity->position.z < ground) {
+  if (entity->position.z <= ground) {
     entity->position.z = ground;
     entity->dPosition.z = 0;
+    EntityAddFlag(entity, ENTITY_FLAG_ZSUPPORTED);
+  } else {
+    EntityClearFlag(entity, ENTITY_FLAG_ZSUPPORTED);
   }
 
   /*****************************************************************

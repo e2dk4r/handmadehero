@@ -20,6 +20,7 @@ enum entity_type {
 enum entity_flag {
   ENTITY_FLAG_COLLIDE = (1 << 0),
   ENTITY_FLAG_NONSPACIAL = (1 << 1),
+  ENTITY_FLAG_ZSUPPORTED = (1 << 2),
 };
 
 struct move_spec {
