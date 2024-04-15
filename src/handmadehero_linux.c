@@ -161,11 +161,8 @@ ReloadGameCode(struct game_code *lib)
   }
 
   // get function pointer
-  void *fn = dlsym(lib->module, "GameUpdateAndRender");
-  assert(fn != 0 && "wrong module format");
-
-  // set function pointer
-  lib->GameUpdateAndRender = fn;
+  lib->GameUpdateAndRender = dlsym(lib->module, "GameUpdateAndRender");
+  assert(lib->GameUpdateAndRender != 0 && "wrong module format");
 
   // update module time
   lib->time = sb.st_mtime;
@@ -197,13 +194,13 @@ struct linux_state {
   struct xkb_keymap *xkb_keymap;
   struct xkb_state *xkb_state;
 
-  struct game_code *lib;
+  struct game_code lib;
   struct game_input gameInputs[2];
+  struct game_input *input;
+  struct game_backbuffer backbuffer;
+  struct game_memory game_memory;
   struct memory_arena wayland_arena;
   struct memory_arena xkb_arena;
-  struct game_memory *game_memory;
-  struct game_backbuffer *backbuffer;
-  struct game_input *input;
 
   u8 recordInputIndex;
   int recordInputFd;
@@ -239,13 +236,15 @@ RecordInputStarted(struct linux_state *state)
 internal void
 RecordInputBegin(struct linux_state *state, u8 index)
 {
+  struct game_memory *game_memory = &state->game_memory;
+
   debug("[RecordInput] begin\n");
   state->recordInputIndex = index;
   state->recordInputFd = open(recordPath, O_CREAT | O_WRONLY | O_TRUNC, 0644);
   assert(state->recordInputFd >= 0);
 
-  ssize_t bytesWritten = write(state->recordInputFd, state->game_memory->permanentStorage,
-                               state->game_memory->permanentStorageSize + state->game_memory->transientStorageSize);
+  ssize_t bytesWritten = write(state->recordInputFd, game_memory->permanentStorage,
+                               game_memory->permanentStorageSize + game_memory->transientStorageSize);
   assert(bytesWritten > 0);
 }
 
@@ -274,13 +273,16 @@ PlaybackInputStarted(struct linux_state *state)
 internal void
 PlaybackInputBegin(struct linux_state *state, u8 index)
 {
+  struct game_memory *game_memory = &state->game_memory;
+
   debug("[PlaybackInput] begin\n");
+
   state->playbackInputIndex = index;
   state->playbackInputFd = open(recordPath, O_RDONLY);
   assert(state->playbackInputFd >= 0);
 
-  ssize_t bytesRead = read(state->playbackInputFd, state->game_memory->permanentStorage,
-                           state->game_memory->permanentStorageSize + state->game_memory->transientStorageSize);
+  ssize_t bytesRead = read(state->playbackInputFd, game_memory->permanentStorage,
+                           game_memory->permanentStorageSize + game_memory->transientStorageSize);
   assert(bytesRead > 0);
 }
 
@@ -297,6 +299,7 @@ PlaybackInputEnd(struct linux_state *state)
 internal void
 PlaybackInput(struct linux_state *state, struct game_input *input)
 {
+  struct game_memory *game_memory = &state->game_memory;
   ssize_t bytesRead;
 
 begin:
@@ -308,8 +311,8 @@ begin:
   if (bytesRead == 0) {
     off_t result = lseek(state->playbackInputFd, 0, SEEK_SET);
     assert(result >= 0);
-    ssize_t bytesRead = read(state->playbackInputFd, state->game_memory->permanentStorage,
-                             state->game_memory->permanentStorageSize + state->game_memory->transientStorageSize);
+    ssize_t bytesRead = read(state->playbackInputFd, game_memory->permanentStorage,
+                             game_memory->permanentStorageSize + game_memory->transientStorageSize);
     assert(bytesRead > 0);
     goto begin;
   }
@@ -443,7 +446,10 @@ wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 tim
 
     /* if key is pressed, toggle between record and playback */
     if (!RecordInputStarted(state)) {
-      memset(state->input->controllers, 0, HANDMADEHERO_CONTROLLER_COUNT * sizeof(state->input->controllers));
+      for (u32 controllerIndex = 0; controllerIndex < ARRAY_COUNT(state->input->controllers); controllerIndex++) {
+        struct game_controller_input *controller = state->input->controllers + controllerIndex;
+        *controller = (struct game_controller_input){};
+      }
       PlaybackInputEnd(state);
       RecordInputBegin(state, 1);
     } else {
@@ -742,9 +748,10 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
     }
 #endif
 
-    state->lib->GameUpdateAndRender(state->game_memory, newInput, state->backbuffer);
+    struct game_backbuffer *backbuffer = &state->backbuffer;
+    state->lib.GameUpdateAndRender(&state->game_memory, newInput, backbuffer);
     wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
-    wl_surface_damage_buffer(state->wl_surface, 0, 0, (i32)state->backbuffer->width, (i32)state->backbuffer->height);
+    wl_surface_damage_buffer(state->wl_surface, 0, 0, (i32)backbuffer->width, (i32)backbuffer->height);
 
     state->frame++;
     state->last_ust = ust;
@@ -756,7 +763,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
 
     // load
 #if HANDMADEHERO_DEBUG
-    ReloadGameCode(state->lib);
+    ReloadGameCode(&state->lib);
 #endif
   }
 }
@@ -976,16 +983,16 @@ main(int argc, char *argv[])
       .paused = 1,
       .resumed = 1,
   };
+  state.input = state.gameInputs;
 
   /* game: hot reload game code on debug version */
-  state.lib = &(struct game_code){};
 #if HANDMADEHERO_DEBUG
   {
     /* assumes libhandmadehero.so in same directory as executable */
     comptime char libpath[] = "libhandmadehero.so";
     comptime u64 libpath_length = sizeof(libpath) - 1;
     char *exepath = argv[0];
-    char *output = state.lib->path;
+    char *output = state.lib.path;
     u64 index = 0;
     for (char *c = exepath; *c; c++) {
       if (*c == '/')
@@ -999,9 +1006,9 @@ main(int argc, char *argv[])
     assert(length < 255);
   }
 
-  ReloadGameCode(state.lib);
+  ReloadGameCode(&state.lib);
 #else
-  state.lib->GameUpdateAndRender = GameUpdateAndRender;
+  state.lib.GameUpdateAndRender = GameUpdateAndRender;
 #endif
 
   /* xkb */
@@ -1012,18 +1019,55 @@ main(int argc, char *argv[])
   }
 
   /* game: backbuffer */
+  /*
+   *  960x540x4 ~1.10M single, ~3.98M with double buffering
+   * 1280x720x4 ~3.53M single, ~7.32M with double buffering
+   */
+
+  state.backbuffer = (struct game_backbuffer){
+      .width = 960,
+      .height = 540,
+      .bytes_per_pixel = 4,
+  };
+  state.backbuffer.stride = state.backbuffer.width * state.backbuffer.bytes_per_pixel;
+
+  /* game: mem allocation */
+  struct game_memory *game_memory = &state.game_memory;
+  if (game_memory_allocation(game_memory, 256 * MEGABYTES, 1 * GIGABYTES)) {
+    fprintf(stderr, "error: cannot allocate memory!\n");
+    error_code = HANDMADEHERO_ERROR_ALLOCATION;
+    goto exit;
+  }
+#if HANDMADEHERO_INTERNAL
+  game_memory->PlatformReadEntireFile = PlatformReadEntireFile;
+  game_memory->PlatformWriteEntireFile = PlatformWriteEntireFile;
+  game_memory->PlatformFreeMemory = PlatformFreeMemory;
+#endif
+
+  /* setup arenas */
+  struct memory_arena event_arena;
   {
-    /*
-     *  960x540x4 ~1.10M single, ~3.98M with double buffering
-     * 1280x720x4 ~3.53M single, ~7.32M with double buffering
-     */
-    struct game_backbuffer backbuffer = {
-        .width = 960,
-        .height = 540,
-        .bytes_per_pixel = 4,
-    };
-    backbuffer.stride = backbuffer.width * backbuffer.bytes_per_pixel;
-    state.backbuffer = &backbuffer;
+    u64 used = 0;
+    u64 size;
+
+    // for wayland allocations
+    size = 2 * MEGABYTES;
+    MemoryArenaInit(&state.wayland_arena, game_memory->permanentStorage + used, size);
+    used += size;
+
+    // for xkb keyboard allocations
+    size = 1 * MEGABYTES;
+    MemoryArenaInit(&state.xkb_arena, game_memory->permanentStorage + used, size);
+    used += size;
+
+    // for event allocations
+    size = 256 * KILOBYTES;
+    MemoryArenaInit(&event_arena, game_memory->permanentStorage + used, size);
+    used += size;
+
+    // decrease permanent storage
+    game_memory->permanentStorage += used;
+    game_memory->permanentStorageSize -= used;
   }
 
   /* wayland */
@@ -1083,49 +1127,9 @@ main(int argc, char *argv[])
   /* wayland: listen for inputs */
   wl_seat_add_listener(state.wl_seat, &wl_seat_listener, &state);
 
-  /* game: mem allocation */
-  struct game_memory game_memory;
-  if (game_memory_allocation(&game_memory, 256 * MEGABYTES, 1 * GIGABYTES)) {
-    fprintf(stderr, "error: cannot allocate memory!\n");
-    error_code = HANDMADEHERO_ERROR_ALLOCATION;
-    goto wl_exit;
-  }
-#if HANDMADEHERO_INTERNAL
-  game_memory.PlatformReadEntireFile = PlatformReadEntireFile;
-  game_memory.PlatformWriteEntireFile = PlatformWriteEntireFile;
-  game_memory.PlatformFreeMemory = PlatformFreeMemory;
-#endif
-  state.game_memory = &game_memory;
-
   /* wayland: create buffer */
   u32 backbuffer_multiplier = 1;
-  u32 backbuffer_size = state.backbuffer->height * state.backbuffer->stride * backbuffer_multiplier;
-  /* setup arenas */
-  struct memory_arena event_arena;
-  {
-    u64 used = 0;
-    u64 size;
-
-    // for wayland allocations
-    size = 2 * MEGABYTES;
-    MemoryArenaInit(&state.wayland_arena, game_memory.permanentStorage + used, size);
-    used += size;
-
-    // for xkb keyboard allocations
-    size = 1 * MEGABYTES;
-    MemoryArenaInit(&state.xkb_arena, game_memory.permanentStorage + used, size);
-    used += size;
-
-    // for event allocations
-    size = 256 * KILOBYTES;
-    MemoryArenaInit(&event_arena, game_memory.permanentStorage + used, size);
-    used += size;
-
-    // decrease permanent storage
-    game_memory.permanentStorage += used;
-    game_memory.permanentStorageSize -= used;
-  }
-
+  u32 backbuffer_size = state.backbuffer.height * state.backbuffer.stride * backbuffer_multiplier;
   i32 shm_fd = create_shared_memory(backbuffer_size);
   if (shm_fd == 0) {
     fprintf(stderr, "error: cannot create shared memory!\n");
@@ -1133,10 +1137,10 @@ main(int argc, char *argv[])
     goto wl_exit;
   }
 
-  state.backbuffer->memory = MemoryArenaPush(&state.wayland_arena, (size_t)backbuffer_size);
-  state.backbuffer->memory =
-      mmap(state.backbuffer->memory, (size_t)backbuffer_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-  if (state.backbuffer->memory == MAP_FAILED) {
+  state.backbuffer.memory = MemoryArenaPush(&state.wayland_arena, (size_t)backbuffer_size);
+  state.backbuffer.memory =
+      mmap(state.backbuffer.memory, (size_t)backbuffer_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  if (state.backbuffer.memory == MAP_FAILED) {
     fprintf(stderr, "error: cannot create shared memory!\n");
     error_code = HANDMADEHERO_ERROR_ALLOCATION;
     goto shm_exit;
@@ -1148,8 +1152,8 @@ main(int argc, char *argv[])
     error_code = HANDMADEHERO_ERROR_WAYLAND_SHM_POOL;
     goto shm_exit;
   }
-  state.wl_buffer = wl_shm_pool_create_buffer(pool, 0, (i32)state.backbuffer->width, (i32)state.backbuffer->height,
-                                              (i32)state.backbuffer->stride, WL_SHM_FORMAT_XRGB8888);
+  state.wl_buffer = wl_shm_pool_create_buffer(pool, 0, (i32)state.backbuffer.width, (i32)state.backbuffer.height,
+                                              (i32)state.backbuffer.stride, WL_SHM_FORMAT_XRGB8888);
   if (!state.wl_buffer) {
     wl_shm_pool_destroy(pool);
     error_code = HANDMADEHERO_ERROR_WAYLAND_SHM_POOL;
