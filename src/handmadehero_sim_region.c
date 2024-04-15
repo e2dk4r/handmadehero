@@ -484,34 +484,34 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
 
       f32 tMinTest = tMin;
       struct v3 testWallNormal = {};
-      struct entity *testHitEntity = 0;
+      u8 hitThis = 0;
 
       /* test all 4 walls and take minimum t. */
       if (WallTest(&tMinTest, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
         testWallNormal = v3(-1, 0, 0);
-        testHitEntity = testEntity;
+        hitThis = 1;
       }
 
       if (WallTest(&tMinTest, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
         testWallNormal = v3(1, 0, 0);
-        testHitEntity = testEntity;
+        hitThis = 1;
       }
 
       if (WallTest(&tMinTest, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
         testWallNormal = v3(0, -1, 0);
-        testHitEntity = testEntity;
+        hitThis = 1;
       }
 
       if (WallTest(&tMinTest, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
         testWallNormal = v3(0, 1, 0);
-        testHitEntity = testEntity;
+        hitThis = 1;
       }
 
-      if (testHitEntity) {
-        if (ShouldMoveOverBlocked(entity, testHitEntity)) {
+      if (hitThis) {
+        if (ShouldMoveOverBlocked(entity, testEntity)) {
           tMin = tMinTest;
           wallNormal = testWallNormal;
-          hitEntity = testHitEntity;
+          hitEntity = testEntity;
         }
       }
     }
