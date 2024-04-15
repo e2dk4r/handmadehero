@@ -483,6 +483,7 @@ StairAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
   entity->dim.x = state->world->tileSideInMeters;
   entity->dim.y = 2.0f * state->world->tileSideInMeters;
   entity->dim.z = state->world->tileDepthInMeters;
+  EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
 
   return storedEntityIndex;
 }
@@ -638,7 +639,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           if (shouldBlock) {
             WallAdd(state, absTileX, absTileY, absTileZ);
           } else if (isDoorZ) {
-            if (tileX == 10 && tileY == 6) {
+            if (tileX == 10 && tileY == 5) {
               StairAdd(state, absTileX, absTileY, isDoorDown ? absTileZ - 1 : absTileZ);
             }
           }

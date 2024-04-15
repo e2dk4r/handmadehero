@@ -272,6 +272,24 @@ WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 m
 }
 
 internal inline u8
+ShouldMoveAllowed(struct entity *moving, struct entity *against)
+{
+  u8 moveAllowed = 1;
+
+  if (against->type & ENTITY_TYPE_STAIRWELL) {
+    struct entity *stairwell = against;
+    struct rect stairwellRect = RectCenterDim(stairwell->position, stairwell->dim);
+    struct v3 barycentric = v3_clamp01(GetBarycentric(stairwellRect, moving->position));
+
+    f32 ground = Lerp(stairwellRect.min.z, stairwellRect.max.z, barycentric.y);
+    f32 stepHeight = 0.1f;
+    moveAllowed = absolute(moving->position.z - ground) > stepHeight;
+  }
+
+  return moveAllowed;
+}
+
+internal inline u8
 ShouldEntitiesOverlap(struct game_state *state, struct entity *moving, struct entity *against)
 {
   if (moving == against)
@@ -309,10 +327,6 @@ ShouldEntitiesCollide(struct game_state *state, struct entity *a, struct entity 
     struct entity *temp = a;
     a = b;
     b = temp;
-  }
-
-  if (a->type & ENTITY_TYPE_STAIRWELL || b->type & ENTITY_TYPE_STAIRWELL) {
-    shouldCollide = 0;
   }
 
   /* if there is any rule about entities, override defaults */
@@ -462,34 +476,43 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
       if (!ShouldEntitiesCollide(state, entity, testEntity))
         continue;
 
-      if (entity->position.z != testEntity->position.z)
-        continue;
-
       struct v3 minkowskiDiameter = v3_add(entity->dim, testEntity->dim);
       struct v3 minCorner = v3_mul(minkowskiDiameter, -0.5f);
       struct v3 maxCorner = v3_mul(minkowskiDiameter, 0.5f);
 
       struct v3 rel = v3_sub(entity->position, testEntity->position);
 
+      f32 tMinTest = tMin;
+      struct v3 testWallNormal = {};
+      struct entity *testHitEntity = 0;
+
       /* test all 4 walls and take minimum t. */
-      if (WallTest(&tMin, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-        wallNormal = v3(-1, 0, 0);
-        hitEntity = testEntity;
+      if (WallTest(&tMinTest, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
+        testWallNormal = v3(-1, 0, 0);
+        testHitEntity = testEntity;
       }
 
-      if (WallTest(&tMin, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-        wallNormal = v3(1, 0, 0);
-        hitEntity = testEntity;
+      if (WallTest(&tMinTest, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
+        testWallNormal = v3(1, 0, 0);
+        testHitEntity = testEntity;
       }
 
-      if (WallTest(&tMin, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-        wallNormal = v3(0, -1, 0);
-        hitEntity = testEntity;
+      if (WallTest(&tMinTest, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
+        testWallNormal = v3(0, -1, 0);
+        testHitEntity = testEntity;
       }
 
-      if (WallTest(&tMin, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-        wallNormal = v3(0, 1, 0);
-        hitEntity = testEntity;
+      if (WallTest(&tMinTest, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
+        testWallNormal = v3(0, 1, 0);
+        testHitEntity = testEntity;
+      }
+
+      if (testHitEntity) {
+        if (ShouldMoveAllowed(entity, testHitEntity)) {
+          tMin = tMinTest;
+          wallNormal = testWallNormal;
+          hitEntity = testHitEntity;
+        }
       }
     }
 
