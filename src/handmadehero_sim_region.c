@@ -283,7 +283,8 @@ ShouldMoveOverBlocked(struct entity *moving, struct entity *against)
 
     f32 ground = Lerp(stairwellRect.min.z, stairwellRect.max.z, barycentric.y);
     f32 stepHeight = 0.1f;
-    moveOverBlocked = absolute(moving->position.z - ground) > stepHeight;
+    moveOverBlocked =
+        absolute(moving->position.z - ground) > stepHeight || (barycentric.y > 0.1f && barycentric.y < 0.9f);
   }
 
   return moveOverBlocked;
