@@ -1,5 +1,7 @@
-/* system */
 #define _GNU_SOURCE
+#define _XOPEN_SOURCE 700
+
+/* system */
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -18,10 +20,6 @@
 #include <xkbcommon/xkbcommon.h>
 
 #define POLLIN 0x001 /* There is data to read.  */
-
-#ifndef DT_CHR
-#define DT_CHR 2
-#endif
 
 /* generated */
 #include "presentation-time-client-protocol.h"
