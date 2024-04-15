@@ -481,8 +481,8 @@ StairAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
   struct entity *entity = &stored->sim;
 
   entity->dim.x = state->world->tileSideInMeters;
-  entity->dim.y = state->world->tileSideInMeters;
-  entity->dim.z = 1.2f * state->world->tileDepthInMeters;
+  entity->dim.y = 2.0f * state->world->tileSideInMeters;
+  entity->dim.z = state->world->tileDepthInMeters;
 
   return storedEntityIndex;
 }
