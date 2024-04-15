@@ -365,6 +365,10 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
 {
   struct world *world = simRegion->world;
 
+  if (entity->type & ENTITY_TYPE_HERO) {
+    u32 breakHere = 1;
+  }
+
   /*****************************************************************
    * CORRECTING ACCELERATION
    *****************************************************************/
