@@ -290,7 +290,7 @@ HandleOverlap(struct game_state *state, struct entity *moving, struct entity *ag
 {
   if (against->type & ENTITY_TYPE_STAIRWELL) {
     struct entity *stairwell = against;
-    struct rect stairwellRect = RectCenterDim(stairwell->position, against->dim);
+    struct rect stairwellRect = RectCenterDim(stairwell->position, stairwell->dim);
     struct v3 barycentric = v3_clamp01(GetBarycentric(stairwellRect, moving->position));
 
     *ground = Lerp(stairwellRect.min.z, stairwellRect.max.z, barycentric.y);
