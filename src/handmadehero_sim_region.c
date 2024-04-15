@@ -569,7 +569,6 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
     }
   }
 
-  // TODO(e2dk4r): this has to become real high handling / ground collision / etc.
   if (entity->position.z <= ground) {
     entity->position.z = ground;
     entity->dPosition.z = 0;
