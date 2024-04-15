@@ -448,7 +448,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
   assert(v3_length_square(entity->dPosition) <= square(simRegion->maxEntityVelocity));
 
   /*****************************************************************
-   * COLLUSION DETECTION
+   * COLLISION DETECTION
    *****************************************************************/
   for (u32 iteration = 0; iteration < 4; iteration++) {
     f32 tMin = 1.0f;
@@ -500,7 +500,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
       break;
 
     /*****************************************************************
-     * COLLUSION HANDLING
+     * COLLISION HANDLING
      *****************************************************************/
     deltaPosition = v3_sub(desiredPosition, entity->position);
 
