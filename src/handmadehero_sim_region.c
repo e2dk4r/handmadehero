@@ -371,13 +371,13 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
    * CORRECTING ACCELERATION
    *****************************************************************/
   if (moveSpec->unitMaxAccel) {
-    f32 ddPositionLength = v3_length_square(ddPosition);
+    f32 ddPositionLengthSq = v3_length_square(ddPosition);
     /*
      * scale down acceleration to unit vector
      * fixes moving diagonally √2 times faster
      */
-    if (ddPositionLength > 1.0f) {
-      v3_mul_ref(&ddPosition, 1 / SquareRoot(ddPositionLength));
+    if (ddPositionLengthSq > 1.0f) {
+      v3_mul_ref(&ddPosition, 1 / SquareRoot(ddPositionLengthSq));
     }
   }
 
