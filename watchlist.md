@@ -262,7 +262,7 @@
 - [x] Handmade Hero Day 074 - Moving Entities Up and Down Stairwells
       https://www.youtube.com/watch?v=Hm_CTQwV13U
 
-- [ ] Handmade Hero Day 075 - Conditional Movement Based on Step Heights
+- [x] Handmade Hero Day 075 - Conditional Movement Based on Step Heights
       https://www.youtube.com/watch?v=bZxa4fdtI2Y
 
 - [ ] Handmade Hero Day 076 - Entity Heights and Collision Detection
