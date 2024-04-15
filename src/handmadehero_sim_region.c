@@ -272,9 +272,9 @@ WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 m
 }
 
 internal inline u8
-ShouldMoveAllowed(struct entity *moving, struct entity *against)
+ShouldMoveOverBlocked(struct entity *moving, struct entity *against)
 {
-  u8 moveAllowed = 1;
+  u8 moveOverBlocked = 1;
 
   if (against->type & ENTITY_TYPE_STAIRWELL) {
     struct entity *stairwell = against;
@@ -283,10 +283,10 @@ ShouldMoveAllowed(struct entity *moving, struct entity *against)
 
     f32 ground = Lerp(stairwellRect.min.z, stairwellRect.max.z, barycentric.y);
     f32 stepHeight = 0.1f;
-    moveAllowed = absolute(moving->position.z - ground) > stepHeight;
+    moveOverBlocked = absolute(moving->position.z - ground) > stepHeight;
   }
 
-  return moveAllowed;
+  return moveOverBlocked;
 }
 
 internal inline u8
@@ -508,7 +508,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
       }
 
       if (testHitEntity) {
-        if (ShouldMoveAllowed(entity, testHitEntity)) {
+        if (ShouldMoveOverBlocked(entity, testHitEntity)) {
           tMin = tMinTest;
           wallNormal = testWallNormal;
           hitEntity = testHitEntity;
