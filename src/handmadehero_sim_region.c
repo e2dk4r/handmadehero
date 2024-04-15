@@ -331,11 +331,11 @@ HandleCollision(struct game_state *state, struct entity *a, struct entity *b)
 {
   u8 stopped = 0;
 
-  if (!(a->type & ENTITY_TYPE_SWORD))
-    stopped = 1;
-  else
-    /* collision can only happen once with sword */
+  /* sword can collide with same entity only one time */
+  if (a->type & ENTITY_TYPE_SWORD || b->type & ENTITY_TYPE_SWORD)
     CollisionRuleAdd(state, a->storageIndex, b->storageIndex, 0);
+  else
+    stopped = 1;
 
   if (a->type > b->type) {
     struct entity *temp = a;
