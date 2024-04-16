@@ -576,13 +576,13 @@ IsRectIntersect(struct rect *a, struct rect *b)
 {
   return !(
       /* x axis */
-      b->max.x < a->min.x ||
-      b->min.x > a->max.x
+      b->max.x <= a->min.x ||
+      b->min.x >= a->max.x
       /* y axis */
-      || b->max.y < a->min.y ||
-      b->min.y > a->max.y
+      || b->max.y <= a->min.y ||
+      b->min.y >= a->max.y
       /* z axis */
-      || b->max.z < a->min.z || b->min.z > a->max.z);
+      || b->max.z <= a->min.z || b->min.z >= a->max.z);
 }
 
 internal inline struct v3
