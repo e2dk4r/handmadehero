@@ -483,6 +483,9 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
 
       struct v3 rel = v3_sub(entity->position, testEntity->position);
 
+      if (rel.z < minCorner.z || rel.z >= maxCorner.z)
+        continue;
+
       f32 tMinTest = tMin;
       struct v3 testWallNormal = {};
       u8 hitThis = 0;

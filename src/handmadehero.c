@@ -406,6 +406,7 @@ HeroAdd(struct game_state *state)
 
   entity->dim.x = 0.5f;
   entity->dim.y = 1.0f;
+  entity->dim.z = 0.5f;
   EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
   EntityHitPointsReset(entity, 3);
 
@@ -431,6 +432,7 @@ MonsterAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 
   entity->dim.x = 0.5f;
   entity->dim.y = 1.0f;
+  entity->dim.z = 0.5f;
   EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
 
   EntityHitPointsReset(entity, 3);
@@ -449,6 +451,7 @@ FamiliarAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 
   entity->dim.x = 0.5f;
   entity->dim.y = 1.0f;
+  entity->dim.z = 0.5f;
   entity->flags = 0;
 
   return storedEntityIndex;
@@ -465,6 +468,7 @@ WallAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 
   entity->dim.x = state->world->tileSideInMeters;
   entity->dim.y = state->world->tileSideInMeters;
+  entity->dim.z = 0.5f * state->world->tileDepthInMeters;
   EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
 
   return storedEntityIndex;
