@@ -422,7 +422,7 @@ SwordAdd(struct game_state *state)
 internal inline u32
 HeroAdd(struct game_state *state)
 {
-  struct v3 dim = v3(0.5f, 1.0f, 0.63f);
+  struct v3 dim = v3(0.5f, 1.0f, 1.2f);
   struct world_position *entityPosition = &state->cameraPosition;
   struct stored_entity_add_result addResult = StoredEntityAddGrounded(state, ENTITY_TYPE_HERO, entityPosition, &dim);
 
