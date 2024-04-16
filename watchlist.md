@@ -265,7 +265,7 @@
 - [x] Handmade Hero Day 075 - Conditional Movement Based on Step Heights
       https://www.youtube.com/watch?v=bZxa4fdtI2Y
 
-- [ ] Handmade Hero Day 076 - Entity Heights and Collision Detection
+- [x] Handmade Hero Day 076 - Entity Heights and Collision Detection
       https://www.youtube.com/watch?v=0mGWYcE6yG8
 
 - [ ] Handmade Hero Day 077 - Entity Ground Points
