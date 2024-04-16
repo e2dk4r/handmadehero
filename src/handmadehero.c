@@ -275,7 +275,12 @@ StoredEntityGet(struct game_state *state, u32 index)
   return result;
 }
 
-internal inline u32
+struct stored_entity_add_result {
+  u32 index;
+  struct stored_entity *stored;
+};
+
+internal inline struct stored_entity_add_result
 StoredEntityAdd(struct game_state *state, enum entity_type type, struct world_position *position)
 {
   u32 storedEntityIndex = state->storedEntityCount;
@@ -290,7 +295,26 @@ StoredEntityAdd(struct game_state *state, enum entity_type type, struct world_po
 
   state->storedEntityCount++;
 
-  return storedEntityIndex;
+  return (struct stored_entity_add_result){
+      .index = storedEntityIndex,
+      .stored = storedEntity,
+  };
+}
+
+internal inline struct stored_entity_add_result
+StoredEntityAddGrounded(struct game_state *state, enum entity_type type, struct world_position *position,
+                        struct v3 *dim)
+{
+  struct v3 groundOffset = v3(0, 0, 0.5f * dim->z);
+  struct world_position groundedPosition = WorldPositionCalculate(state->world, position, groundOffset);
+
+  struct stored_entity_add_result addResult = StoredEntityAdd(state, type, &groundedPosition);
+
+  struct stored_entity *stored = addResult.stored;
+  struct entity *entity = &stored->sim;
+  entity->dim = *dim;
+
+  return addResult;
 }
 
 internal inline void
@@ -384,113 +408,102 @@ CollisionRuleRemove(struct game_state *state, u32 storageIndex)
 internal inline u32
 SwordAdd(struct game_state *state)
 {
-  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_SWORD, 0);
-  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
-  assert(stored);
+  struct stored_entity_add_result addResult = StoredEntityAdd(state, ENTITY_TYPE_SWORD, 0);
+  struct stored_entity *stored = addResult.stored;
   struct entity *entity = &stored->sim;
 
   entity->dim.x = state->world->tileSideInMeters;
   entity->dim.y = state->world->tileSideInMeters;
   entity->dim.z = 0.1f;
 
-  return storedEntityIndex;
+  return addResult.index;
 }
 
 internal inline u32
 HeroAdd(struct game_state *state)
 {
+  struct v3 dim = v3(0.5f, 1.0f, 0.5f);
   struct world_position *entityPosition = &state->cameraPosition;
-  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_HERO, entityPosition);
-  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
-  assert(stored);
+  struct stored_entity_add_result addResult = StoredEntityAddGrounded(state, ENTITY_TYPE_HERO, entityPosition, &dim);
+
+  struct stored_entity *stored = addResult.stored;
   struct entity *entity = &stored->sim;
 
-  entity->dim.x = 0.5f;
-  entity->dim.y = 1.0f;
-  entity->dim.z = 0.5f;
   EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
   EntityHitPointsReset(entity, 3);
 
   u32 swordIndex = SwordAdd(state);
   entity->sword.index = swordIndex;
-  CollisionRuleAdd(state, storedEntityIndex, swordIndex, 0);
+  CollisionRuleAdd(state, addResult.index, swordIndex, 0);
 
   /* if followed entity, does not exits */
   if (state->followedEntityIndex == 0)
-    state->followedEntityIndex = storedEntityIndex;
+    state->followedEntityIndex = addResult.index;
 
-  return storedEntityIndex;
+  return addResult.index;
 }
 
 internal inline u32
 MonsterAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
+  struct v3 dim = v3(0.5f, 1.0f, 0.5f);
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
-  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_MONSTER, &entityPosition);
-  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
-  assert(stored);
+  struct stored_entity_add_result addResult =
+      StoredEntityAddGrounded(state, ENTITY_TYPE_MONSTER, &entityPosition, &dim);
+  struct stored_entity *stored = addResult.stored;
   struct entity *entity = &stored->sim;
 
-  entity->dim.x = 0.5f;
-  entity->dim.y = 1.0f;
-  entity->dim.z = 0.5f;
   EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
 
   EntityHitPointsReset(entity, 3);
 
-  return storedEntityIndex;
+  return addResult.index;
 }
 
 internal inline u32
 FamiliarAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
+  struct v3 dim = v3(0.5f, 1.0f, 0.5f);
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
-  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_FAMILIAR, &entityPosition);
-  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
-  assert(stored);
+  struct stored_entity_add_result addResult =
+      StoredEntityAddGrounded(state, ENTITY_TYPE_FAMILIAR, &entityPosition, &dim);
+  struct stored_entity *stored = addResult.stored;
   struct entity *entity = &stored->sim;
 
-  entity->dim.x = 0.5f;
-  entity->dim.y = 1.0f;
-  entity->dim.z = 0.5f;
   entity->flags = 0;
 
-  return storedEntityIndex;
+  return addResult.index;
 }
 
 internal inline u32
 WallAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
+  struct v3 dim =
+      v3(state->world->tileSideInMeters, state->world->tileSideInMeters, 0.5f * state->world->tileDepthInMeters);
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
-  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_WALL, &entityPosition);
-  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
-  assert(stored);
+  struct stored_entity_add_result addResult = StoredEntityAddGrounded(state, ENTITY_TYPE_WALL, &entityPosition, &dim);
+  struct stored_entity *stored = addResult.stored;
   struct entity *entity = &stored->sim;
 
-  entity->dim.x = state->world->tileSideInMeters;
-  entity->dim.y = state->world->tileSideInMeters;
-  entity->dim.z = 0.5f * state->world->tileDepthInMeters;
   EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
 
-  return storedEntityIndex;
+  return addResult.index;
 }
 
 internal inline u32
 StairAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 {
+  struct v3 dim =
+      v3(state->world->tileSideInMeters, 2.0f * state->world->tileSideInMeters, state->world->tileDepthInMeters);
   struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
-  entityPosition.offset.z += 0.5f * state->world->tileDepthInMeters;
-  u32 storedEntityIndex = StoredEntityAdd(state, ENTITY_TYPE_STAIRWELL, &entityPosition);
-  struct stored_entity *stored = StoredEntityGet(state, storedEntityIndex);
-  assert(stored);
+  struct stored_entity_add_result addResult =
+      StoredEntityAddGrounded(state, ENTITY_TYPE_STAIRWELL, &entityPosition, &dim);
+  struct stored_entity *stored = addResult.stored;
   struct entity *entity = &stored->sim;
 
-  entity->dim.x = state->world->tileSideInMeters;
-  entity->dim.y = 2.0f * state->world->tileSideInMeters;
-  entity->dim.z = state->world->tileDepthInMeters;
   EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
 
-  return storedEntityIndex;
+  return addResult.index;
 }
 
 internal inline void
