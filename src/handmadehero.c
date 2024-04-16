@@ -391,6 +391,7 @@ SwordAdd(struct game_state *state)
 
   entity->dim.x = state->world->tileSideInMeters;
   entity->dim.y = state->world->tileSideInMeters;
+  entity->dim.z = 0.1f;
 
   return storedEntityIndex;
 }
