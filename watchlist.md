@@ -268,7 +268,7 @@
 - [x] Handmade Hero Day 076 - Entity Heights and Collision Detection
       https://www.youtube.com/watch?v=0mGWYcE6yG8
 
-- [ ] Handmade Hero Day 077 - Entity Ground Points
+- [x] Handmade Hero Day 077 - Entity Ground Points
       https://www.youtube.com/watch?v=9IGZGfVvc0s
 
 - [ ] Handmade Hero Day 078 - Multiple Collision Volumes Per Entity
