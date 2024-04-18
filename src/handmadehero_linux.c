@@ -1030,7 +1030,9 @@ main(int argc, char *argv[])
   /* game: mem allocation */
   struct game_memory *game_memory = &state.game_memory;
   if (game_memory_allocation(game_memory, 256 * MEGABYTES, 1 * GIGABYTES)) {
-    fprintf(stderr, "error: cannot allocate memory!\n");
+    comptime char msg[] = "error: cannot allocate memory!\n";
+    comptime u64 msgLength = sizeof(msg) - 1;
+    write(STDERR_FILENO, msg, msgLength);
     error_code = HANDMADEHERO_ERROR_ALLOCATION;
     goto exit;
   }
@@ -1069,14 +1071,18 @@ main(int argc, char *argv[])
   /* wayland */
   struct wl_display *wl_display = wl_display_connect(0);
   if (!wl_display) {
-    fprintf(stderr, "error: cannot connect wayland display!\n");
+    comptime char msg[] = "error: cannot connect wayland display!\n";
+    comptime u64 msgLength = sizeof(msg) - 1;
+    write(STDERR_FILENO, msg, msgLength);
     error_code = HANDMADEHERO_ERROR_WAYLAND_CONNECT;
     goto xkb_context_exit;
   }
 
   struct wl_registry *registry = wl_display_get_registry(wl_display);
   if (!registry) {
-    fprintf(stderr, "error: cannot get registry!\n");
+    comptime char msg[] = "error: cannot get registry!\n";
+    comptime u64 msgLength = sizeof(msg) - 1;
+    write(STDERR_FILENO, msg, msgLength);
     error_code = HANDMADEHERO_ERROR_WAYLAND_REGISTRY;
     goto wl_exit;
   }
@@ -1085,18 +1091,11 @@ main(int argc, char *argv[])
   wl_registry_add_listener(registry, &registry_listener, &state);
   wl_display_roundtrip(wl_display);
 
-  debugf("backbuffer: @%p\n", state.backbuffer);
-  debugf("wl_display: @%p\n", wl_display);
-  debugf("wl_registry: @%p\n", registry);
-  debugf("wl_compositor: @%p\n", state.wl_compositor);
-  debugf("wl_shm: @%p\n", state.wl_shm);
-  debugf("wl_seat: @%p\n", state.wl_seat);
-  debugf("xdg_wm_base: @%p\n", state.xdg_wm_base);
-  debugf("wp_presentation: @%p\n", state.wp_presentation);
-
   if (!state.wl_compositor || !state.wl_shm || !state.wl_seat || !state.xdg_wm_base || !state.wp_viewporter ||
       !state.wp_presentation) {
-    fprintf(stderr, "error: cannot get wayland globals!\n");
+    comptime char msg[] = "error: cannot get wayland globals!\n";
+    comptime u64 msgLength = sizeof(msg) - 1;
+    write(STDERR_FILENO, msg, msgLength);
     error_code = HANDMADEHERO_ERROR_WAYLAND_EXTENSIONS;
     goto wl_exit;
   }
@@ -1128,7 +1127,9 @@ main(int argc, char *argv[])
   u32 backbuffer_size = state.backbuffer.height * state.backbuffer.stride * backbuffer_multiplier;
   i32 shm_fd = create_shared_memory(backbuffer_size);
   if (shm_fd == 0) {
-    fprintf(stderr, "error: cannot create shared memory!\n");
+    comptime char msg[] = "error: cannot create shared memory!\n";
+    comptime u64 msgLength = sizeof(msg) - 1;
+    write(STDERR_FILENO, msg, msgLength);
     error_code = HANDMADEHERO_ERROR_SHARED_MEMORY;
     goto wl_exit;
   }
@@ -1137,7 +1138,9 @@ main(int argc, char *argv[])
   state.backbuffer.memory =
       mmap(state.backbuffer.memory, (size_t)backbuffer_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   if (state.backbuffer.memory == MAP_FAILED) {
-    fprintf(stderr, "error: cannot create shared memory!\n");
+    comptime char msg[] = "error: cannot create shared memory!\n";
+    comptime u64 msgLength = sizeof(msg) - 1;
+    write(STDERR_FILENO, msg, msgLength);
     error_code = HANDMADEHERO_ERROR_ALLOCATION;
     goto shm_exit;
   }
