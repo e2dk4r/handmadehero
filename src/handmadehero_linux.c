@@ -444,10 +444,8 @@ wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 tim
 
     /* if key is pressed, toggle between record and playback */
     if (!RecordInputStarted(state)) {
-      for (u32 controllerIndex = 0; controllerIndex < ARRAY_COUNT(state->input->controllers); controllerIndex++) {
-        struct game_controller_input *controller = state->input->controllers + controllerIndex;
-        *controller = (struct game_controller_input){};
-      }
+      ZeroMemory(state->input->controllers,
+                 ARRAY_COUNT(state->input->controllers) * sizeof(*state->input->controllers));
       PlaybackInputEnd(state);
       RecordInputBegin(state, 1);
     } else {
