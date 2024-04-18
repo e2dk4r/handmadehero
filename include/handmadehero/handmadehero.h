@@ -48,9 +48,8 @@ struct game_state {
   u32 followedEntityIndex;
   struct world_position cameraPosition;
 
-#define HANDMADEHERO_STORED_ENTITY_TOTAL 100000
   u32 storedEntityCount;
-  struct stored_entity storedEntities[HANDMADEHERO_STORED_ENTITY_TOTAL];
+  struct stored_entity storedEntities[100000];
 
   struct controlled_hero controlledHeroes[HANDMADEHERO_CONTROLLER_COUNT];
 

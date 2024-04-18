@@ -284,7 +284,7 @@ internal inline struct stored_entity_add_result
 StoredEntityAdd(struct game_state *state, enum entity_type type, struct world_position *position)
 {
   u32 storedEntityIndex = state->storedEntityCount;
-  assert(storedEntityIndex < HANDMADEHERO_STORED_ENTITY_TOTAL);
+  assert(storedEntityIndex < ARRAY_COUNT(state->storedEntities));
 
   struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
   assert(storedEntity);
