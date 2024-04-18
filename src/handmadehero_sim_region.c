@@ -471,6 +471,10 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
    * COLLISION DETECTION
    *****************************************************************/
   for (u32 iteration = 0; iteration < 4; iteration++) {
+    f32 deltaLengthSq = v3_length_square(deltaPosition);
+    if (deltaLengthSq == 0.0f)
+      break;
+
     f32 tMin = 1.0f;
     struct v3 wallNormal;
     struct v3 desiredPosition = v3_add(entity->position, deltaPosition);
