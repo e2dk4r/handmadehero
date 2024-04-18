@@ -56,6 +56,13 @@ struct game_state {
   struct pairwise_collision_rule *collisionRules[256];
   struct pairwise_collision_rule *firstFreeCollisionRule;
 
+  struct entity_collision_volume_group *heroCollision;
+  struct entity_collision_volume_group *wallCollision;
+  struct entity_collision_volume_group *familiarCollision;
+  struct entity_collision_volume_group *monsterCollision;
+  struct entity_collision_volume_group *swordCollision;
+  struct entity_collision_volume_group *stairwellCollision;
+
   struct bitmap bitmapBackground;
   struct bitmap bitmapShadow;
   struct bitmap bitmapTree;

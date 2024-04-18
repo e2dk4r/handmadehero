@@ -42,6 +42,17 @@ struct entity_reference {
   u32 index;
 };
 
+struct entity_collision_volume {
+  struct v3 offset;
+  struct v3 dim;
+};
+
+struct entity_collision_volume_group {
+  u32 volumeCount;
+  struct entity_collision_volume *volumes;
+  struct entity_collision_volume totalVolume;
+};
+
 struct entity {
   /* NOTE: These are only for sim region */
   u32 storageIndex;
@@ -55,7 +66,7 @@ struct entity {
   struct v3 position;
   struct v3 dPosition;
 
-  struct v3 dim;
+  struct entity_collision_volume_group *collision;
 
   u32 hitPointMax;
   struct hit_point hitPoints[16];
@@ -65,6 +76,9 @@ struct entity {
 
   u8 facingDirection;
   f32 tBob;
+
+  f32 walkableHeight;
+  struct v3 walkableDim;
 };
 
 struct sim_entity_hash {

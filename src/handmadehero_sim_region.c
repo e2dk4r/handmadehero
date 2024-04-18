@@ -14,12 +14,12 @@ GetPositionRelativeToOrigin(struct sim_region *simRegion, struct stored_entity *
   return diff;
 }
 
-internal u8
-IsEntityOverlapsRect(struct rect *rect, struct v3 *dim, struct v3 *position)
+internal inline u8
+IsEntityOverlapsRect(struct rect *rect, struct entity_collision_volume *volume, struct v3 *position)
 {
-  struct v3 halfDim = v3_mul(*dim, 0.5f);
+  struct v3 halfDim = v3_mul(volume->dim, 0.5f);
   struct rect grown = RectAddRadius(rect, halfDim);
-  return RectIsPointInside(&grown, position);
+  return RectIsPointInside(grown, v3_add(*position, volume->offset));
 }
 
 internal struct sim_entity_hash *
@@ -123,7 +123,8 @@ AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageInd
   assert(dest);
   if (simPosition) {
     dest->position = *simPosition;
-    dest->updatable = (u8)(IsEntityOverlapsRect(&simRegion->updatableBounds, &dest->dim, &dest->position) & 1);
+    dest->updatable =
+        (u8)(IsEntityOverlapsRect(&simRegion->updatableBounds, &dest->collision->totalVolume, &dest->position) & 1);
   } else {
     dest->position = GetPositionRelativeToOrigin(simRegion, source);
   }
@@ -178,7 +179,7 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
               continue;
 
             struct v3 positionRelativeToOrigin = GetPositionRelativeToOrigin(simRegion, storedEntity);
-            if (!IsEntityOverlapsRect(&simRegion->bounds, &entity->dim, &positionRelativeToOrigin))
+            if (!IsEntityOverlapsRect(&simRegion->bounds, &entity->collision->totalVolume, &positionRelativeToOrigin))
               continue;
 
             AddEntity(state, simRegion, storedEntityIndex, storedEntity, &positionRelativeToOrigin);
@@ -271,6 +272,17 @@ WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 m
   return collided;
 }
 
+internal inline f32
+GetStairwellGround(struct entity *entity, struct v3 groundPoint)
+{
+  assert(entity->type & ENTITY_TYPE_STAIRWELL);
+
+  struct rect stairwellRect = RectCenterDim(entity->position, entity->walkableDim);
+  struct v3 barycentric = v3_clamp01(GetBarycentric(stairwellRect, groundPoint));
+  f32 ground = entity->position.z + barycentric.y * entity->walkableHeight;
+  return ground;
+}
+
 internal inline u8
 ShouldMoveOverBlocked(struct entity *moving, struct entity *against)
 {
@@ -278,13 +290,9 @@ ShouldMoveOverBlocked(struct entity *moving, struct entity *against)
 
   if (against->type & ENTITY_TYPE_STAIRWELL) {
     struct entity *stairwell = against;
-    struct rect stairwellRect = RectCenterDim(stairwell->position, stairwell->dim);
-    struct v3 barycentric = v3_clamp01(GetBarycentric(stairwellRect, moving->position));
-
-    f32 ground = Lerp(stairwellRect.min.z, stairwellRect.max.z, barycentric.y);
+    f32 ground = GetStairwellGround(stairwell, moving->position);
     f32 stepHeight = 0.1f;
-    moveOverBlocked =
-        absolute(moving->position.z - ground) > stepHeight || (barycentric.y > 0.1f && barycentric.y < 0.9f);
+    moveOverBlocked = absolute(moving->position.z - ground) > stepHeight;
   }
 
   return moveOverBlocked;
@@ -309,10 +317,7 @@ HandleOverlap(struct game_state *state, struct entity *moving, struct entity *ag
 {
   if (against->type & ENTITY_TYPE_STAIRWELL) {
     struct entity *stairwell = against;
-    struct rect stairwellRect = RectCenterDim(stairwell->position, stairwell->dim);
-    struct v3 barycentric = v3_clamp01(GetBarycentric(stairwellRect, moving->position));
-
-    *ground = Lerp(stairwellRect.min.z, stairwellRect.max.z, barycentric.y);
+    *ground = GetStairwellGround(stairwell, moving->position);
   }
 }
 
@@ -474,48 +479,65 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
     for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
       struct entity *testEntity = simRegion->entities + testEntityIndex;
 
+      if (entity->type & ENTITY_TYPE_HERO && testEntity->type & ENTITY_TYPE_STAIRWELL) {
+        u32 breakHere = 1;
+      }
+
       if (!ShouldEntitiesCollide(state, entity, testEntity))
         continue;
 
-      struct v3 minkowskiDiameter = v3_add(entity->dim, testEntity->dim);
-      struct v3 minCorner = v3_mul(minkowskiDiameter, -0.5f);
-      struct v3 maxCorner = v3_mul(minkowskiDiameter, 0.5f);
+      for (u32 entityVolumeIndex = 0; entityVolumeIndex < entity->collision->volumeCount; entityVolumeIndex++) {
+        struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
+        for (u32 testEntityVolumeIndex = 0; testEntityVolumeIndex < testEntity->collision->volumeCount;
+             testEntityVolumeIndex++) {
+          struct entity_collision_volume *testEntityVolume = testEntity->collision->volumes + testEntityVolumeIndex;
 
-      struct v3 rel = v3_sub(entity->position, testEntity->position);
+          struct v3 minkowskiDiameter = v3_add(entityVolume->dim, testEntityVolume->dim);
+          struct v3 minCorner = v3_mul(minkowskiDiameter, -0.5f);
+          struct v3 maxCorner = v3_mul(minkowskiDiameter, 0.5f);
 
-      if (rel.z < minCorner.z || rel.z >= maxCorner.z)
-        continue;
+          struct v3 rel = v3_sub(v3_add(entity->position, entityVolume->offset),
+                                 v3_add(testEntity->position, testEntityVolume->offset));
 
-      f32 tMinTest = tMin;
-      struct v3 testWallNormal = {};
-      u8 hitThis = 0;
+          if (!(rel.z >= minCorner.z && rel.z < maxCorner.z))
+            continue;
 
-      /* test all 4 walls and take minimum t. */
-      if (WallTest(&tMinTest, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-        testWallNormal = v3(-1, 0, 0);
-        hitThis = 1;
-      }
+          f32 tMinTest = tMin;
+          struct v3 testWallNormal = {};
+          u8 hitThis = 0;
 
-      if (WallTest(&tMinTest, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y)) {
-        testWallNormal = v3(1, 0, 0);
-        hitThis = 1;
-      }
+          /* test all 4 walls and take minimum t. */
+          if (WallTest(&tMinTest, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y,
+                       maxCorner.y)) {
+            testWallNormal = v3(-1, 0, 0);
+            hitThis = 1;
+          }
 
-      if (WallTest(&tMinTest, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-        testWallNormal = v3(0, -1, 0);
-        hitThis = 1;
-      }
+          if (WallTest(&tMinTest, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y,
+                       maxCorner.y)) {
+            testWallNormal = v3(1, 0, 0);
+            hitThis = 1;
+          }
 
-      if (WallTest(&tMinTest, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x)) {
-        testWallNormal = v3(0, 1, 0);
-        hitThis = 1;
-      }
+          if (WallTest(&tMinTest, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x,
+                       maxCorner.x)) {
+            testWallNormal = v3(0, -1, 0);
+            hitThis = 1;
+          }
 
-      if (hitThis) {
-        if (ShouldMoveOverBlocked(entity, testEntity)) {
-          tMin = tMinTest;
-          wallNormal = testWallNormal;
-          hitEntity = testEntity;
+          if (WallTest(&tMinTest, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x,
+                       maxCorner.x)) {
+            testWallNormal = v3(0, 1, 0);
+            hitThis = 1;
+          }
+
+          if (hitThis) {
+            if (ShouldMoveOverBlocked(entity, testEntity)) {
+              tMin = tMinTest;
+              wallNormal = testWallNormal;
+              hitEntity = testEntity;
+            }
+          }
         }
       }
     }
@@ -536,17 +558,14 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
       /*
        * add gliding to velocity
        */
-      // clang-format off
       /* v' = v - vTr r */
       v3_sub_ref(&entity->dPosition,
-          /* vTr r */
-          v3_mul(
-            /* r */
-            wallNormal,
-            /* vTr */
-            v3_dot(entity->dPosition, wallNormal)
-          )
-      );
+                 /* vTr r */
+                 v3_mul(
+                     /* r */
+                     wallNormal,
+                     /* vTr */
+                     v3_dot(entity->dPosition, wallNormal)));
 
       /*
        *    wall
@@ -568,29 +587,27 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
        *  clip the delta position by gone amount
        */
       v3_sub_ref(&deltaPosition,
-          /* pTr r */
-          v3_mul(
-            /* r */
-            wallNormal,
-            /* pTr */
-            v3_dot(deltaPosition, wallNormal)
-          )
-      );
-
-      // clang-format on
+                 /* pTr r */
+                 v3_mul(
+                     /* r */
+                     wallNormal,
+                     /* pTr */
+                     v3_dot(deltaPosition, wallNormal)));
     }
   }
 
   // NOTE: Handle events based on area overlapping
   f32 ground = 0.0f;
-  struct rect entityRect = RectCenterDim(entity->position, entity->dim);
+  struct rect entityRect = RectCenterDim(v3_add(entity->position, entity->collision->totalVolume.offset),
+                                         entity->collision->totalVolume.dim);
   for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
     struct entity *testEntity = simRegion->entities + testEntityIndex;
 
     if (!ShouldEntitiesOverlap(state, entity, testEntity))
       continue;
 
-    struct rect testEntityRect = RectCenterDim(testEntity->position, testEntity->dim);
+    struct rect testEntityRect = RectCenterDim(v3_add(testEntity->position, testEntity->collision->totalVolume.offset),
+                                               testEntity->collision->totalVolume.dim);
     if (IsRectIntersect(&entityRect, &testEntityRect)) {
       HandleOverlap(state, entity, testEntity, &ground);
     }
