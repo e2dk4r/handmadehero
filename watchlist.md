@@ -271,7 +271,7 @@
 - [x] Handmade Hero Day 077 - Entity Ground Points
       https://www.youtube.com/watch?v=9IGZGfVvc0s
 
-- [ ] Handmade Hero Day 078 - Multiple Collision Volumes Per Entity
+- [x] Handmade Hero Day 078 - Multiple Collision Volumes Per Entity
       https://www.youtube.com/watch?v=o1DO5sjUhi0
 
 - [ ] Handmade Hero Day 079 - Defining the Ground
