@@ -522,6 +522,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
 
     /* p' = tMin (1/2 a t² + v t) + p */
     v3_add_ref(&entity->position, v3_mul(deltaPosition, tMin));
+    deltaPosition = v3_sub(desiredPosition, entity->position);
 
     if (!hitEntity)
       break;
@@ -529,8 +530,6 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
     /*****************************************************************
      * COLLISION HANDLING
      *****************************************************************/
-    deltaPosition = v3_sub(desiredPosition, entity->position);
-
     u8 stopsOnCollision = HandleCollision(state, entity, hitEntity);
     if (stopsOnCollision) {
       /*
