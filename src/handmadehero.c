@@ -711,7 +711,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * CONTROLLER INPUT HANDLING
    ****************************************************************/
 
-  for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
+  for (u8 controllerIndex = 0; controllerIndex < ARRAY_COUNT(input->controllers); controllerIndex++) {
     struct game_controller_input *controller = GetController(input, controllerIndex);
     struct controlled_hero *conHero = state->controlledHeroes + controllerIndex;
 
@@ -829,7 +829,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     if (entity->type & ENTITY_TYPE_HERO) {
       /* update */
-      for (u8 controllerIndex = 0; controllerIndex < HANDMADEHERO_CONTROLLER_COUNT; controllerIndex++) {
+      for (u8 controllerIndex = 0; controllerIndex < ARRAY_COUNT(state->controlledHeroes); controllerIndex++) {
         struct controlled_hero *conHero = state->controlledHeroes + controllerIndex;
         if (conHero->entityIndex != entity->storageIndex)
           continue;

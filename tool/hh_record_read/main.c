@@ -136,7 +136,7 @@ playback:
   }
 
   // printing
-  for (u8 controller_index = 0; controller_index < HANDMADEHERO_CONTROLLER_COUNT; controller_index++) {
+  for (u8 controller_index = 0; controller_index < ARRAY_COUNT(next.controllers); controller_index++) {
     struct game_controller_input *prev_controller = GetController(&prev, controller_index);
     struct game_controller_input *controller = GetController(&next, controller_index);
 

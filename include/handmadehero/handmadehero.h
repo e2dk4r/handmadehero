@@ -51,7 +51,7 @@ struct game_state {
   u32 storedEntityCount;
   struct stored_entity storedEntities[100000];
 
-  struct controlled_hero controlledHeroes[HANDMADEHERO_CONTROLLER_COUNT];
+  struct controlled_hero controlledHeroes[ARRAY_COUNT(((struct game_input *)0)->controllers)];
 
   struct pairwise_collision_rule *collisionRules[256];
   struct pairwise_collision_rule *firstFreeCollisionRule;

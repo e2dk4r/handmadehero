@@ -71,7 +71,6 @@ struct game_controller_input {
   };
 };
 
-#define HANDMADEHERO_CONTROLLER_COUNT 5
 struct game_input {
   /*
    *        |-----|-----|-----|-----|-----|--->
@@ -80,13 +79,13 @@ struct game_input {
    *  in seconds
    */
   f32 dtPerFrame;
-  struct game_controller_input controllers[HANDMADEHERO_CONTROLLER_COUNT];
+  struct game_controller_input controllers[5];
 };
 
 internal inline struct game_controller_input *
 GetController(struct game_input *input, u8 index)
 {
-  assert(index < HANDMADEHERO_CONTROLLER_COUNT);
+  assert(index < ARRAY_COUNT(input->controllers));
   return &input->controllers[index];
 }
 
