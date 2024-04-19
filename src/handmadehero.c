@@ -580,8 +580,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         &state->worldArena, v3(state->world->tileSideInMeters, 2.0f * state->world->tileSideInMeters,
                                1.1f * state->world->tileDepthInMeters));
     state->roomCollision =
-        MakeSimpleGroundedCollision(&state->worldArena, v3(state->world->tileSideInMeters * TILES_PER_WIDTH,
-                                                           state->world->tileSideInMeters * TILES_PER_HEIGHT,
+        MakeSimpleGroundedCollision(&state->worldArena, v3(state->world->tileSideInMeters * (f32)TILES_PER_WIDTH,
+                                                           state->world->tileSideInMeters * (f32)TILES_PER_HEIGHT,
                                                            0.9f * state->world->tileDepthInMeters));
 
     /* load background */
