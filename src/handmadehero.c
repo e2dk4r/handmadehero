@@ -504,6 +504,17 @@ StairAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 }
 
 internal inline void
+SpaceAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
+{
+  struct world_position entityPosition = ChunkPositionFromTilePosition(state->world, absTileX, absTileY, absTileZ);
+  struct stored_entity_add_result addResult =
+      StoredEntityAdd(state, ENTITY_TYPE_SPACE, &entityPosition, state->roomCollision);
+  struct stored_entity *stored = addResult.stored;
+  struct entity *entity = &stored->sim;
+  EntityAddFlag(entity, ENTITY_FLAG_TRAVERSABLE);
+}
+
+internal inline void
 DrawHitPoints(struct game_backbuffer *backbuffer, struct entity *entity, struct v2 *entityGroundPoint,
               f32 metersToPixels)
 {
@@ -568,6 +579,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     state->stairwellCollision = MakeSimpleGroundedCollision(
         &state->worldArena, v3(state->world->tileSideInMeters, 2.0f * state->world->tileSideInMeters,
                                1.1f * state->world->tileDepthInMeters));
+    state->roomCollision =
+        MakeSimpleGroundedCollision(&state->worldArena, v3(state->world->tileSideInMeters * TILES_PER_WIDTH,
+                                                           state->world->tileSideInMeters * TILES_PER_HEIGHT,
+                                                           0.9f * state->world->tileDepthInMeters));
 
     /* load background */
     state->bitmapBackground = LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
@@ -643,6 +658,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         isDoorRight = 1;
       else
         isDoorTop = 1;
+
+      SpaceAdd(state, (screenX * TILES_PER_WIDTH + TILES_PER_WIDTH / 2),
+               (screenY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2), absTileZ);
 
       for (u32 tileY = 0; tileY < TILES_PER_HEIGHT; tileY++) {
         for (u32 tileX = 0; tileX < TILES_PER_WIDTH; tileX++) {
@@ -984,6 +1002,41 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
       struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
       DrawRectangle(backbuffer, entityLeftTop, entityRightBottom, &color);
+    }
+
+    else if (entity->type & ENTITY_TYPE_SPACE) {
+      for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
+           entityVolumeIndex++) {
+        struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
+
+        f32 width = entityVolume->dim.x * metersToPixels;
+        f32 height = entityVolume->dim.y * metersToPixels;
+        f32 left = entityGroundPoint.x + entityVolume->offset.x * metersToPixels - width * 0.5f;
+        f32 top = entityGroundPoint.y + entityVolume->offset.y * metersToPixels - height * 0.5f;
+        f32 bottom = top + height;
+        f32 right = left + width;
+
+        /* draw outline */
+        struct v4 color = {0.0f, 0.5f, 1.0f, 1.0f};
+        f32 thickness = 0.1f;
+        thickness *= metersToPixels;
+
+        struct v2 min = v2(left, top - thickness);
+        struct v2 max = v2_add(min, v2(width, thickness));
+        DrawRectangle(backbuffer, min, max, &color);
+
+        min = v2(left, bottom);
+        max = v2_add(min, v2(width, thickness));
+        DrawRectangle(backbuffer, min, max, &color);
+
+        min = v2(left - thickness, top - thickness);
+        max = v2_add(min, v2(thickness, height + 2.0f * thickness));
+        DrawRectangle(backbuffer, min, max, &color);
+
+        min = v2(right, top - thickness);
+        max = v2_add(min, v2(thickness, height + 2.0f * thickness));
+        DrawRectangle(backbuffer, min, max, &color);
+      }
     }
 
     else {

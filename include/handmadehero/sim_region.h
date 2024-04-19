@@ -15,12 +15,14 @@ enum entity_type {
   ENTITY_TYPE_MONSTER = (1 << 3),
   ENTITY_TYPE_SWORD = (1 << 4),
   ENTITY_TYPE_STAIRWELL = (1 << 5),
+  ENTITY_TYPE_SPACE = (1 << 6),
 };
 
 enum entity_flag {
   ENTITY_FLAG_COLLIDE = (1 << 0),
   ENTITY_FLAG_NONSPACIAL = (1 << 1),
   ENTITY_FLAG_ZSUPPORTED = (1 << 2),
+  ENTITY_FLAG_TRAVERSABLE = (1 << 3)
 };
 
 struct move_spec {
@@ -60,7 +62,7 @@ struct entity {
 
   /**/
 
-  enum entity_type type : 6;
+  enum entity_type type : 8;
   enum entity_flag flags : 4;
 
   struct v3 position;
