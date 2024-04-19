@@ -414,6 +414,7 @@ SwordAdd(struct game_state *state)
   struct stored_entity_add_result addResult = StoredEntityAdd(state, ENTITY_TYPE_SWORD, 0, state->swordCollision);
   struct stored_entity *stored = addResult.stored;
   struct entity *entity = &stored->sim;
+  EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
 
   return addResult.index;
 }

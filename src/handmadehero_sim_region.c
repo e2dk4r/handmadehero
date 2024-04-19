@@ -324,9 +324,11 @@ HandleOverlap(struct game_state *state, struct entity *moving, struct entity *ag
 internal inline u8
 ShouldEntitiesCollide(struct game_state *state, struct entity *a, struct entity *b)
 {
-  if (a == b) {
+  if (a == b)
     return 0;
-  }
+
+  if (!EntityIsFlagSet(a, ENTITY_FLAG_COLLIDE) || !EntityIsFlagSet(b, ENTITY_FLAG_COLLIDE))
+    return 0;
 
   u8 shouldCollide = 1;
   if (a->storageIndex > b->storageIndex) {
