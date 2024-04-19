@@ -274,7 +274,7 @@
 - [x] Handmade Hero Day 078 - Multiple Collision Volumes Per Entity
       https://www.youtube.com/watch?v=o1DO5sjUhi0
 
-- [ ] Handmade Hero Day 079 - Defining the Ground
+- [x] Handmade Hero Day 079 - Defining the Ground
       https://www.youtube.com/watch?v=HMW1fsXzW-o
 
 - [ ] Handmade Hero Day 080 - Handling Traversables in the Collision Loop
