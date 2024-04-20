@@ -17,4 +17,14 @@
 
 #endif
 
+/*
+ * Generates duplicate case on failure.
+ * Only happens at compile time.
+ */
+#define static_assert(predicate)                                                                                       \
+  switch (0) {                                                                                                         \
+  case 0:                                                                                                              \
+  case predicate:;                                                                                                     \
+  }
+
 #endif /* HANDMADEHERO_ASSERT_H */

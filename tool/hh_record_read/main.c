@@ -76,10 +76,10 @@ AnyKeyEvent(struct game_controller_input *prev, struct game_controller_input *ne
   return 0;
 }
 
-struct ButtonDescription {
+comptime struct ButtonDescription {
   u64 len;
   char *name;
-} buttonDescriptionTable[ARRAY_COUNT(((struct game_controller_input *)0)->buttons)] = {
+} ButtonDescriptionTable[] = {
 #define BUTTON_DESCRIPTION(x)                                                                                          \
   {                                                                                                                    \
     .len = sizeof(x) - 1, .name = x                                                                                    \
@@ -94,6 +94,8 @@ struct ButtonDescription {
 int
 main(int argc, char *argv[])
 {
+  static_assert(ARRAY_COUNT(ButtonDescriptionTable) == ARRAY_COUNT(((struct game_controller_input *)0)->buttons));
+
   if (argc - 1 == 0) {
     usage();
     return 1;
@@ -194,7 +196,7 @@ playback:
       if (!anyButtonPress)
         continue;
 
-      const struct ButtonDescription *description = &buttonDescriptionTable[buttonIndex];
+      const struct ButtonDescription *description = &ButtonDescriptionTable[buttonIndex];
 
       write(STDOUT, " ", 1);
       write(STDOUT, description->name, description->len);
