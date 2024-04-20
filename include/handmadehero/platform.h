@@ -49,8 +49,7 @@ struct game_controller_input {
   f32 stickAverageY;
 
   union {
-#define GAME_CONTROLLER_BUTTON_COUNT 12
-    struct game_button_state buttons[GAME_CONTROLLER_BUTTON_COUNT];
+    struct game_button_state buttons[12];
     struct {
       struct game_button_state moveDown;
       struct game_button_state moveUp;

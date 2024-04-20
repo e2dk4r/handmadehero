@@ -68,7 +68,7 @@ AnyKeyEvent(struct game_controller_input *prev, struct game_controller_input *ne
   if (prev->stickAverageY != next->stickAverageY)
     return 1;
 
-  for (u8 buttonIndex = 0; buttonIndex < GAME_CONTROLLER_BUTTON_COUNT; buttonIndex++) {
+  for (u8 buttonIndex = 0; buttonIndex < ARRAY_COUNT(prev->buttons); buttonIndex++) {
     if (prev->buttons[buttonIndex].pressed != next->buttons[buttonIndex].pressed)
       return 1;
   }
@@ -79,7 +79,7 @@ AnyKeyEvent(struct game_controller_input *prev, struct game_controller_input *ne
 struct ButtonDescription {
   u64 len;
   char *name;
-} buttonDescriptionTable[GAME_CONTROLLER_BUTTON_COUNT] = {
+} buttonDescriptionTable[ARRAY_COUNT(((struct game_controller_input *)0)->buttons)] = {
 #define BUTTON_DESCRIPTION(x)                                                                                          \
   {                                                                                                                    \
     .len = sizeof(x) - 1, .name = x                                                                                    \
@@ -188,7 +188,7 @@ playback:
       fflush(stdout);
     }
 
-    for (u8 buttonIndex = 0; buttonIndex < GAME_CONTROLLER_BUTTON_COUNT; buttonIndex++) {
+    for (u8 buttonIndex = 0; buttonIndex < ARRAY_COUNT(prev_controller->buttons); buttonIndex++) {
       /* only print changed button */
       u8 anyButtonPress = prev_controller->buttons[buttonIndex].pressed != controller->buttons[buttonIndex].pressed;
       if (!anyButtonPress)
