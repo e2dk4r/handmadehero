@@ -117,17 +117,15 @@ game_memory_allocation(struct game_memory *memory, u64 permanentStorageSize, u64
  * hot game code reloading
  ***************************************************************/
 
+#if HANDMADEHERO_DEBUG
 struct game_code {
-#ifdef HANDMADEHERO_DEBUG
   char path[255];
   time_t time;
   void *module;
-#endif
 
   pfnGameUpdateAndRender GameUpdateAndRender;
 };
 
-#ifdef HANDMADEHERO_DEBUG
 #include <dlfcn.h>
 
 void
@@ -192,7 +190,6 @@ struct linux_state {
   struct xkb_keymap *xkb_keymap;
   struct xkb_state *xkb_state;
 
-  struct game_code lib;
   struct game_input gameInputs[2];
   struct game_input *input;
   struct game_backbuffer backbuffer;
@@ -200,10 +197,13 @@ struct linux_state {
   struct memory_arena wayland_arena;
   struct memory_arena xkb_arena;
 
+#if HANDMADEHERO_DEBUG
+  struct game_code lib;
   u8 recordInputIndex;
   int recordInputFd;
   u8 playbackInputIndex;
   int playbackInputFd;
+#endif
 
   /* The Unadjusted System Time (or UST)
    * is a 64-bit monotonically increasing counter that is available
@@ -734,7 +734,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
     newInput->dtPerFrame = (f32)elapsed / nanosecondsPerSecond;
     // debugf("∆t = %.3f\n", newInput->dtPerFrame);
 
-#ifdef HANDMADEHERO_DEBUG
+#if HANDMADEHERO_DEBUG
     if (RecordInputStarted(state)) {
       RecordInput(state, state->input);
     }
@@ -742,10 +742,12 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
     if (PlaybackInputStarted(state)) {
       PlaybackInput(state, state->input);
     }
+
+    pfnGameUpdateAndRender GameUpdateAndRender = state->lib.GameUpdateAndRender;
 #endif
 
     struct game_backbuffer *backbuffer = &state->backbuffer;
-    state->lib.GameUpdateAndRender(&state->game_memory, newInput, backbuffer);
+    GameUpdateAndRender(&state->game_memory, newInput, backbuffer);
     wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
     wl_surface_damage_buffer(state->wl_surface, 0, 0, (i32)backbuffer->width, (i32)backbuffer->height);
 
@@ -1003,8 +1005,6 @@ main(int argc, char *argv[])
   }
 
   ReloadGameCode(&state.lib);
-#else
-  state.lib.GameUpdateAndRender = GameUpdateAndRender;
 #endif
 
   /* xkb */
