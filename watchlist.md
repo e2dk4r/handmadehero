@@ -277,7 +277,7 @@
 - [x] Handmade Hero Day 079 - Defining the Ground
       https://www.youtube.com/watch?v=HMW1fsXzW-o
 
-- [ ] Handmade Hero Day 080 - Handling Traversables in the Collision Loop
+- [x] Handmade Hero Day 080 - Handling Traversables in the Collision Loop
       https://www.youtube.com/watch?v=QxxVwnE8V1c
 
 - [ ] Handmade Hero Day 081 - Creating Ground with Overlapping Bitmaps
