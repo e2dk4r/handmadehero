@@ -129,7 +129,7 @@ struct game_code {
   pfnGameUpdateAndRender GameUpdateAndRender;
 };
 
-void
+internal void
 ReloadGameCode(struct game_code *lib)
 {
   struct stat sb;
