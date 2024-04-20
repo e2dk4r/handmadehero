@@ -529,7 +529,7 @@ RectCenterDim(struct v3 center, struct v3 dim)
 }
 
 internal inline u8
-RectIsPointInside(struct rect rect, struct v3 testPoint)
+IsPointInsideRect(struct rect rect, struct v3 testPoint)
 {
   return
       /* x boundries */

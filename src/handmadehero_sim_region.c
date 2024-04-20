@@ -19,7 +19,7 @@ IsEntityOverlapsRect(struct rect *rect, struct entity_collision_volume *volume, 
 {
   struct v3 halfDim = v3_mul(volume->dim, 0.5f);
   struct rect grown = RectAddRadius(rect, halfDim);
-  return RectIsPointInside(grown, v3_add(*position, volume->offset));
+  return IsPointInsideRect(grown, v3_add(*position, volume->offset));
 }
 
 internal struct sim_entity_hash *
