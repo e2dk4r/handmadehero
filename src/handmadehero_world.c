@@ -23,8 +23,8 @@ WorldInit(struct world *world, f32 tileSideInMeters)
   }
 }
 
-inline struct world_chunk *
-WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, struct memory_arena *arena)
+internal inline struct world_chunk *
+WorldChunkGetOrInsert(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, struct memory_arena *arena)
 {
   assert(chunkX > WORLD_CHUNK_SAFE_MARGIN);
   assert(chunkY > WORLD_CHUNK_SAFE_MARGIN);
@@ -66,6 +66,12 @@ WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, struct me
   }
 
   return chunk;
+}
+
+inline struct world_chunk *
+WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ)
+{
+  return WorldChunkGetOrInsert(world, chunkX, chunkY, chunkZ, 0);
 }
 
 internal inline u8
@@ -187,7 +193,7 @@ EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 ent
 
   if (oldPosition) {
     // pull entity out of its old entity block
-    struct world_chunk *chunk = WorldChunkGet(world, oldPosition->chunkX, oldPosition->chunkY, oldPosition->chunkZ, 0);
+    struct world_chunk *chunk = WorldChunkGet(world, oldPosition->chunkX, oldPosition->chunkY, oldPosition->chunkZ);
     assert(chunk);
     struct world_entity_block *firstBlock = &chunk->firstBlock;
     u8 found = 0;
@@ -221,7 +227,7 @@ EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 ent
 
   // insert into its new entity block
   struct world_chunk *chunk =
-      WorldChunkGet(world, newPosition->chunkX, newPosition->chunkY, newPosition->chunkZ, arena);
+      WorldChunkGetOrInsert(world, newPosition->chunkX, newPosition->chunkY, newPosition->chunkZ, arena);
   struct world_entity_block *block = &chunk->firstBlock;
   if (block->entityCount == ARRAY_COUNT(block->entityLowIndexes)) {
     // we're out of room, get a new block

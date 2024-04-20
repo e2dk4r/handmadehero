@@ -162,7 +162,7 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
   for (u32 chunkZ = minChunkPosition.chunkZ; chunkZ <= maxChunkPosition.chunkZ; chunkZ++) {
     for (u32 chunkY = minChunkPosition.chunkY; chunkY <= maxChunkPosition.chunkY; chunkY++) {
       for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
-        struct world_chunk *chunk = WorldChunkGet(world, chunkX, chunkY, chunkZ, 0);
+        struct world_chunk *chunk = WorldChunkGet(world, chunkX, chunkY, chunkZ);
         if (!chunk)
           continue;
 

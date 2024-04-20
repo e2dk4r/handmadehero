@@ -65,7 +65,7 @@ void
 WorldInit(struct world *world, f32 tileSideInMeters);
 
 struct world_chunk *
-WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, struct memory_arena *arena);
+WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ);
 
 internal inline struct world_position
 WorldPositionCentered(u32 absTileX, u32 absTileY, u32 absTileZ)
