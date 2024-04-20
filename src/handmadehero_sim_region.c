@@ -243,6 +243,17 @@ EndSimRegion(struct sim_region *simRegion, struct game_state *state)
   }
 }
 
+struct wall {
+  f32 wallX;
+  f32 relX;
+  f32 relY;
+  f32 deltaX;
+  f32 deltaY;
+  f32 minY;
+  f32 maxY;
+  struct v3 normal;
+};
+
 internal u8
 WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 minY, f32 maxY)
 {
@@ -513,28 +524,20 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
           u8 hitThis = 0;
 
           /* test all 4 walls and take minimum t. */
-          if (WallTest(&tMinTest, minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y,
-                       maxCorner.y)) {
-            testWallNormal = v3(-1, 0, 0);
-            hitThis = 1;
-          }
 
-          if (WallTest(&tMinTest, maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y,
-                       maxCorner.y)) {
-            testWallNormal = v3(1, 0, 0);
-            hitThis = 1;
-          }
-
-          if (WallTest(&tMinTest, minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x,
-                       maxCorner.x)) {
-            testWallNormal = v3(0, -1, 0);
-            hitThis = 1;
-          }
-
-          if (WallTest(&tMinTest, maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x,
-                       maxCorner.x)) {
-            testWallNormal = v3(0, 1, 0);
-            hitThis = 1;
+          struct wall walls[] = {
+              {minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y, v3(-1, 0, 0)},
+              {maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y, v3(1, 0, 0)},
+              {minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x, v3(0, -1, 0)},
+              {maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x, v3(0, 1, 0)},
+          };
+          for (u32 wallIndex = 0; wallIndex < ARRAY_COUNT(walls); wallIndex++) {
+            struct wall *wall = walls + wallIndex;
+            if (WallTest(&tMinTest, wall->wallX, wall->relX, wall->relY, wall->deltaX, wall->deltaY, wall->minY,
+                         wall->maxY)) {
+              testWallNormal = wall->normal;
+              hitThis = 1;
+            }
           }
 
           if (hitThis) {
