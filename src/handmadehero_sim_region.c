@@ -254,35 +254,6 @@ struct wall {
   struct v3 normal;
 };
 
-internal u8
-WallTest(f32 *tMin, f32 wallX, f32 relX, f32 relY, f32 deltaX, f32 deltaY, f32 minY, f32 maxY)
-{
-  const f32 tEpsilon = 0.001f;
-  u8 collided = 0;
-
-  /* no movement, no sweet */
-  if (deltaX == 0)
-    return collided;
-
-  f32 tResult = (wallX - relX) / deltaX;
-  if (tResult < 0)
-    return collided;
-  /* do not care, if entity needs to go back to hit */
-  if (tResult >= *tMin)
-    return collided;
-
-  f32 y = relY + tResult * deltaY;
-  if (y < minY)
-    return collided;
-  if (y > maxY)
-    return collided;
-
-  *tMin = maximum(0.0f, tResult - tEpsilon);
-  collided = 1;
-
-  return collided;
-}
-
 internal inline f32
 GetStairwellGround(struct entity *entity, struct v3 groundPoint)
 {
@@ -512,18 +483,27 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
       break;
 
     f32 tMin = 1.0f;
-    struct v3 wallNormal;
+    struct entity *hitEntityMin = 0;
+    struct v3 wallNormalMin = {};
+    f32 tMax = 0.0f;
+    struct entity *hitEntityMax = 0;
+    struct v3 wallNormalMax = {};
+
     struct v3 desiredPosition = v3_add(entity->position, deltaPosition);
-    struct entity *hitEntity = 0;
 
     for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
       struct entity *testEntity = simRegion->entities + testEntityIndex;
 
-      if (entity->type & ENTITY_TYPE_HERO && testEntity->type & ENTITY_TYPE_STAIRWELL) {
+      if (entity->type & ENTITY_TYPE_HERO && testEntity->type & ENTITY_TYPE_WALL) {
         u32 breakHere = 1;
       }
 
-      if (!ShouldEntitiesCollide(state, entity, testEntity))
+      // NOTE(e2dk4r):
+      //   if entities should not collide
+      //   and entity is not in room
+      //     do not check for collision
+      if (!ShouldEntitiesCollide(state, entity, testEntity) &&
+          !(EntityIsFlagSet(testEntity, ENTITY_FLAG_TRAVERSABLE) && AreEntitiesOverlapping(entity, testEntity)))
         continue;
 
       for (u32 entityVolumeIndex = 0; entityVolumeIndex < entity->collision->volumeCount; entityVolumeIndex++) {
@@ -542,40 +522,101 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
           if (!(rel.z >= minCorner.z && rel.z < maxCorner.z))
             continue;
 
-          f32 tMinTest = tMin;
-          struct v3 testWallNormal = {};
-          u8 hitThis = 0;
-
           /* test all 4 walls and take minimum t. */
-
           struct wall walls[] = {
               {minCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y, v3(-1, 0, 0)},
               {maxCorner.x, rel.x, rel.y, deltaPosition.x, deltaPosition.y, minCorner.y, maxCorner.y, v3(1, 0, 0)},
               {minCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x, v3(0, -1, 0)},
               {maxCorner.y, rel.y, rel.x, deltaPosition.y, deltaPosition.x, minCorner.x, maxCorner.x, v3(0, 1, 0)},
           };
-          for (u32 wallIndex = 0; wallIndex < ARRAY_COUNT(walls); wallIndex++) {
-            struct wall *wall = walls + wallIndex;
-            if (WallTest(&tMinTest, wall->wallX, wall->relX, wall->relY, wall->deltaX, wall->deltaY, wall->minY,
-                         wall->maxY)) {
+
+          // NOTE(e2dk4r): in box hit test. e.g. colliding with room
+          if (EntityIsFlagSet(testEntity, ENTITY_FLAG_TRAVERSABLE)) {
+            u8 hitThis = 0;
+            f32 tMaxTest = tMax;
+            struct v3 testWallNormal = {};
+
+            for (u32 wallIndex = 0; wallIndex < ARRAY_COUNT(walls); wallIndex++) {
+              struct wall *wall = walls + wallIndex;
+
+              /* no movement, no sweet */
+              if (wall->deltaX == 0)
+                continue;
+
+              f32 tResult = (wall->wallX - wall->relX) / wall->deltaX;
+              if (tResult < 0.0f || tResult < tMaxTest)
+                continue;
+
+              f32 y = wall->relY + tResult * wall->deltaY;
+              if (y < wall->minY || y > wall->maxY)
+                continue;
+
+              const f32 tEpsilon = 0.001f;
+              tMaxTest = tResult - tEpsilon;
               testWallNormal = wall->normal;
               hitThis = 1;
             }
+
+            if (hitThis) {
+              tMax = tMaxTest;
+              wallNormalMax = testWallNormal;
+              hitEntityMax = testEntity;
+            }
           }
 
-          if (hitThis) {
-            if (ShouldMoveOverBlocked(entity, testEntity)) {
+          // NOTE(e2dk4r): out box hit test. e.g. colliding with other entities
+          else {
+            u8 hitThis = 0;
+            f32 tMinTest = 1.0f;
+            struct v3 testWallNormal = {};
+
+            for (u32 wallIndex = 0; wallIndex < ARRAY_COUNT(walls); wallIndex++) {
+              struct wall *wall = walls + wallIndex;
+
+              /* no movement, no sweet */
+              if (wall->deltaX == 0)
+                continue;
+
+              f32 tResult = (wall->wallX - wall->relX) / wall->deltaX;
+              /* do not care, if entity needs to go back to hit */
+              if (tResult < 0.0f || tResult > tMinTest)
+                continue;
+
+              f32 y = wall->relY + tResult * wall->deltaY;
+              if (y < wall->minY || y > wall->maxY)
+                continue;
+
+              const f32 tEpsilon = 0.001f;
+              tMinTest = maximum(0.0f, tResult - tEpsilon);
+              testWallNormal = wall->normal;
+              hitThis = 1;
+            }
+
+            if (hitThis && ShouldMoveOverBlocked(entity, testEntity)) {
               tMin = tMinTest;
-              wallNormal = testWallNormal;
-              hitEntity = testEntity;
+              wallNormalMin = testWallNormal;
+              hitEntityMin = testEntity;
             }
           }
         }
       }
     }
 
+    struct entity *hitEntity = 0;
+    f32 tStop;
+    struct v3 wallNormal;
+    if (tMin < tMax) {
+      tStop = tMin;
+      hitEntity = hitEntityMin;
+      wallNormal = wallNormalMin;
+    } else {
+      tStop = tMax;
+      hitEntity = hitEntityMax;
+      wallNormal = wallNormalMax;
+    }
+
     /* p' = tMin (1/2 a t² + v t) + p */
-    v3_add_ref(&entity->position, v3_mul(deltaPosition, tMin));
+    v3_add_ref(&entity->position, v3_mul(deltaPosition, tStop));
 
     if (!hitEntity)
       break;
