@@ -13,8 +13,8 @@ WorldInit(struct world *world, f32 tileSideInMeters)
 {
   world->tileSideInMeters = tileSideInMeters;
   world->tileDepthInMeters = tileSideInMeters;
-  world->chunkDimInMeters =
-      v3((f32)TILES_PER_CHUNK * tileSideInMeters, (f32)TILES_PER_CHUNK * tileSideInMeters, tileSideInMeters);
+  world->chunkDimInMeters = v3((f32)TILES_PER_CHUNK * world->tileSideInMeters,
+                               (f32)TILES_PER_CHUNK * world->tileSideInMeters, world->tileDepthInMeters);
   world->firstFreeBlock = 0;
 
   for (u32 chunkIndex = 0; chunkIndex < WORLD_CHUNK_TOTAL; chunkIndex++) {
