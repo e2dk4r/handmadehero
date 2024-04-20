@@ -19,6 +19,10 @@
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 
+#if HANDMADEHERO_DEBUG
+#include <dlfcn.h>
+#endif
+
 #define POLLIN 0x001 /* There is data to read.  */
 
 /* generated */
@@ -124,8 +128,6 @@ struct game_code {
 
   pfnGameUpdateAndRender GameUpdateAndRender;
 };
-
-#include <dlfcn.h>
 
 void
 ReloadGameCode(struct game_code *lib)
