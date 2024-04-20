@@ -310,7 +310,7 @@ ShouldMoveOverBlocked(struct entity *moving, struct entity *against)
 }
 
 internal inline u8
-ShouldEntitiesOverlap(struct game_state *state, struct entity *moving, struct entity *against)
+ShouldEntitiesOverlap(struct entity *moving, struct entity *against)
 {
   if (moving == against)
     return 0;
@@ -321,6 +321,29 @@ ShouldEntitiesOverlap(struct game_state *state, struct entity *moving, struct en
     shouldOverlap = 1;
 
   return shouldOverlap;
+}
+
+internal inline u8
+AreEntitiesOverlapping(struct entity *entity, struct entity *testEntity)
+{
+  u8 overlapping = 0;
+
+  for (u32 entityVolumeIndex = 0; !overlapping && entityVolumeIndex < entity->collision->volumeCount;
+       entityVolumeIndex++) {
+    struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
+    struct rect entityRect = RectCenterDim(v3_add(entity->position, entityVolume->offset), entityVolume->dim);
+
+    for (u32 testEntityVolumeIndex = 0; !overlapping && testEntityVolumeIndex < testEntity->collision->volumeCount;
+         testEntityVolumeIndex++) {
+      struct entity_collision_volume *testEntityVolume = testEntity->collision->volumes + testEntityVolumeIndex;
+      struct rect testEntityRect =
+          RectCenterDim(v3_add(testEntity->position, testEntityVolume->offset), testEntityVolume->dim);
+
+      overlapping = IsRectIntersect(&entityRect, &testEntityRect);
+    }
+  }
+
+  return overlapping;
 }
 
 internal void
@@ -607,19 +630,14 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
 
   // NOTE: Handle events based on area overlapping
   f32 ground = 0.0f;
-  struct rect entityRect = RectCenterDim(v3_add(entity->position, entity->collision->totalVolume.offset),
-                                         entity->collision->totalVolume.dim);
   for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
     struct entity *testEntity = simRegion->entities + testEntityIndex;
 
-    if (!ShouldEntitiesOverlap(state, entity, testEntity))
+    if (!ShouldEntitiesOverlap(entity, testEntity))
       continue;
 
-    struct rect testEntityRect = RectCenterDim(v3_add(testEntity->position, testEntity->collision->totalVolume.offset),
-                                               testEntity->collision->totalVolume.dim);
-    if (IsRectIntersect(&entityRect, &testEntityRect)) {
+    if (AreEntitiesOverlapping(entity, testEntity))
       HandleOverlap(state, entity, testEntity, &ground);
-    }
   }
 
   if (entity->position.z <= ground) {
