@@ -221,7 +221,7 @@ struct linux_state {
 /***************************************************************
  * recording & playback inputs
  ***************************************************************/
-#ifdef HANDMADEHERO_DEBUG
+#if HANDMADEHERO_DEBUG
 
 comptime char recordPath[] = "input.rec";
 
@@ -435,7 +435,7 @@ wl_keyboard_key(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u32 tim
     state->running = 0;
   } break;
 
-#ifdef HANDMADEHERO_DEBUG
+#if HANDMADEHERO_DEBUG
   case 'L':
   case 'l': {
     /* if key is not pressed, exit */
