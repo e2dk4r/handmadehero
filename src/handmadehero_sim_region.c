@@ -169,7 +169,7 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
         for (struct world_entity_block *block = &chunk->firstBlock; block; block = block->next) {
           for (u32 entityIndex = 0; entityIndex < block->entityCount; entityIndex++) {
             u32 storedEntityIndex = block->entityLowIndexes[entityIndex];
-            struct stored_entity *storedEntity = state->storedEntities + storedEntityIndex;
+            struct stored_entity *storedEntity = StoredEntityGet(state, storedEntityIndex);
             assert(storedEntity);
             struct entity *entity = &storedEntity->sim;
 
