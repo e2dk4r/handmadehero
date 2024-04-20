@@ -42,28 +42,27 @@
 struct read_file_result
 PlatformReadEntireFile(char *path)
 {
+  struct read_file_result result = {};
   int fd = open(path, O_RDONLY);
   if (fd < 0)
-    return (struct read_file_result){};
+    return result;
 
   struct stat stat;
   if (fstat(fd, &stat))
-    return (struct read_file_result){};
-  ;
+    return result;
+
+  result.size = (u64)stat.st_size;
 
   assert(S_ISREG(stat.st_mode));
-  void *data = malloc((size_t)stat.st_size);
-  assert(data != 0);
+  result.data = malloc((size_t)stat.st_size);
+  assert(result.data != 0);
 
-  ssize_t bytesRead = read(fd, data, (size_t)stat.st_size);
+  ssize_t bytesRead = read(fd, result.data, (size_t)stat.st_size);
   assert(bytesRead > 0);
 
   close(fd);
 
-  return (struct read_file_result){
-      .size = (u64)stat.st_size,
-      .data = data,
-  };
+  return result;
 }
 
 u8
