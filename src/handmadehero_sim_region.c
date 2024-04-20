@@ -134,7 +134,7 @@ AddEntity(struct game_state *state, struct sim_region *simRegion, u32 storageInd
 
 struct sim_region *
 BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct world *world,
-               struct world_position regionCenter, struct rect regionBounds, f32 dt)
+               struct world_position origin, struct rect bounds, f32 dt)
 {
   struct sim_region *simRegion = MemoryArenaPush(simArena, sizeof(*simRegion));
   ZeroStruct(simRegion->hashTable);
@@ -145,9 +145,9 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
   f32 updateSafetyMarginZ = 1.0f;
 
   simRegion->world = world;
-  simRegion->origin = regionCenter;
-  simRegion->updatableBounds = RectAddRadius(
-      &regionBounds, v3(simRegion->maxEntityRadius, simRegion->maxEntityRadius, simRegion->maxEntityRadius));
+  simRegion->origin = origin;
+  simRegion->updatableBounds =
+      RectAddRadius(&bounds, v3(simRegion->maxEntityRadius, simRegion->maxEntityRadius, simRegion->maxEntityRadius));
   simRegion->bounds =
       RectAddRadius(&simRegion->updatableBounds, v3(updateSafetyMargin, updateSafetyMargin, updateSafetyMarginZ));
 

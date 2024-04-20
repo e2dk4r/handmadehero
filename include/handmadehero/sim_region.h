@@ -109,7 +109,7 @@ struct sim_region {
 
 struct sim_region *
 BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct world *world,
-               struct world_position regionCenter, struct rect regionBounds, f32 dt);
+               struct world_position origin, struct rect bounds, f32 dt);
 
 void
 EndSimRegion(struct sim_region *region, struct game_state *state);
