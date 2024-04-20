@@ -5,19 +5,17 @@
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/types.h>
 
-#define STDOUT 1
-#define STDERR 2
 #define NEWLINE "\n"
+
+#define infon(str, len) write(STDOUT_FILENO, str, len)
+#define info(str) infon(str, sizeof(str) - 1)
+
+#define fatal(str) write(STDERR_FILENO, str, sizeof(str) - 1)
 
 internal void
 usage(void)
 {
-  comptime char msg[] =
-      /* short description */
-      "hh_record_read <filepath>" NEWLINE;
-  comptime u64 msg_len = sizeof(msg) - 1;
-
-  write(STDERR, msg, msg_len);
+  fatal("hh_record_read <filepath>" NEWLINE);
 }
 
 struct record_state {
@@ -108,123 +106,97 @@ main(int argc, char *argv[])
   state.path = argv[1];
 
   if (PlaybackInputBegin(&state)) {
-    comptime char msg[] = "cannot open path" NEWLINE;
-    comptime u64 msg_len = sizeof(msg) - 1;
-    write(STDERR, msg, msg_len);
+    fatal("cannot open path" NEWLINE);
     return 1;
   }
 
-  const off_t MEGABYTES = 1 << 20;
-  const off_t GIGABYTES = 1 << 30;
-  off_t game_state_size = 256 * MEGABYTES + 1 * GIGABYTES;
-  off_t seekBytes = lseek(state.fd, game_state_size, SEEK_SET);
+  comptime off_t KILOBYTES = 1 << 10;
+  comptime off_t MEGABYTES = 1 << 20;
+  comptime off_t GIGABYTES = 1 << 30;
+  off_t game_memory_total = 256 * MEGABYTES + 1 * GIGABYTES;
+  game_memory_total -=
+      // for wayland allocations
+      2 * MEGABYTES
+      // for xkb keyboard allocations
+      + 1 * MEGABYTES
+      // for event allocations
+      + 256 * KILOBYTES;
+  off_t seekBytes = lseek(state.fd, game_memory_total, SEEK_SET);
   if (seekBytes < 0) {
-    comptime char msg[] = "cannot seek to input" NEWLINE;
-    comptime u64 msg_len = sizeof(msg) - 1;
-    write(STDERR, msg, msg_len);
+    fatal("cannot seek to input" NEWLINE);
     return 1;
   }
 
-  u8 status;
-playback:
-  status = PlaybackInput(&state, &next);
-  if (status == PLAYBACK_FINISH)
-    goto finish;
-  else if (status == PLAYBACK_ERROR) {
-    comptime char msg[] = "playback error occured" NEWLINE;
-    comptime u64 msg_len = sizeof(msg) - 1;
-    write(STDERR, msg, msg_len);
-    goto finish;
-  }
-
-  // printing
-  for (u8 controller_index = 0; controller_index < ARRAY_COUNT(next.controllers); controller_index++) {
-    struct game_controller_input *prev_controller = GetController(&prev, controller_index);
-    struct game_controller_input *controller = GetController(&next, controller_index);
-
-    if (!AnyKeyEvent(prev_controller, controller))
-      continue;
-
-    comptime char msg_source[] = "source: ";
-    comptime u64 msg_source_len = sizeof(msg_source) - 1;
-    write(STDOUT, msg_source, msg_source_len);
-
-    if (controller_index == 0) {
-      comptime char msg_keyboard[] = "keyboard";
-      comptime u64 msg_keyboard_len = sizeof(msg_keyboard) - 1;
-      write(STDOUT, msg_keyboard, msg_keyboard_len);
-    } else {
-      comptime char msg_controller[] = "controller";
-      comptime u64 msg_controller_len = sizeof(msg_controller) - 1;
-      write(STDOUT, msg_controller, msg_controller_len);
+  u8 status = PLAYBACK_CONTINUE;
+  while (status == PLAYBACK_CONTINUE) {
+    status = PlaybackInput(&state, &next);
+    if (status == PLAYBACK_FINISH)
+      goto finish;
+    else if (status == PLAYBACK_ERROR) {
+      fatal("playback error occured" NEWLINE);
+      goto finish;
     }
 
-    comptime char msg_type[] = " type: ";
-    comptime u64 msg_type_len = sizeof(msg_type) - 1;
-    write(STDOUT, msg_type, msg_type_len);
-    if (controller->isAnalog) {
-      comptime char msg_analog[] = "analog";
-      comptime u64 msg_analog_len = sizeof(msg_analog) - 1;
-      write(STDOUT, msg_analog, msg_analog_len);
+    // printing
+    for (u8 controller_index = 0; controller_index < ARRAY_COUNT(next.controllers); controller_index++) {
+      struct game_controller_input *prev_controller = GetController(&prev, controller_index);
+      struct game_controller_input *controller = GetController(&next, controller_index);
 
-    } else {
-      comptime char msg_digital[] = "digital";
-      comptime u64 msg_digital_len = sizeof(msg_digital) - 1;
-      write(STDOUT, msg_digital, msg_digital_len);
-    }
-
-    u8 anyMovementX = prev_controller->stickAverageX != controller->stickAverageX;
-    if (anyMovementX) {
-      comptime char msg_stickX[] = " stickX: ";
-      comptime u64 msg_stickX_len = sizeof(msg_stickX) - 1;
-      write(STDOUT, msg_stickX, msg_stickX_len);
-      printf("%.2f", controller->stickAverageX);
-      fflush(stdout);
-    }
-    u8 anyMovementY = prev_controller->stickAverageY != controller->stickAverageY;
-    if (anyMovementY) {
-      comptime char msg_stickY[] = " stickY: ";
-      comptime u64 msg_stickY_len = sizeof(msg_stickY) - 1;
-      write(STDOUT, msg_stickY, msg_stickY_len);
-      printf("%.2f", controller->stickAverageY);
-      fflush(stdout);
-    }
-
-    for (u8 buttonIndex = 0; buttonIndex < ARRAY_COUNT(prev_controller->buttons); buttonIndex++) {
-      /* only print changed button */
-      u8 anyButtonPress = prev_controller->buttons[buttonIndex].pressed != controller->buttons[buttonIndex].pressed;
-      if (!anyButtonPress)
+      if (!AnyKeyEvent(prev_controller, controller))
         continue;
 
-      const struct ButtonDescription *description = &ButtonDescriptionTable[buttonIndex];
+      info("source: ");
+      if (controller_index == 0)
+        info("keyboard");
+      else
+        info("controller");
 
-      write(STDOUT, " ", 1);
-      write(STDOUT, description->name, description->len);
-      write(STDOUT, ": ", 2);
+      info(" type: ");
+      if (controller->isAnalog)
+        info("analog");
+      else
+        info("digital");
 
-      if (controller->buttons[buttonIndex].pressed) {
-        comptime char msg_pressed[] = "pressed";
-        comptime u64 msg_pressed_len = sizeof(msg_pressed) - 1;
-        write(STDOUT, msg_pressed, msg_pressed_len);
-      } else {
-        comptime char msg_released[] = "released";
-        comptime u64 msg_released_len = sizeof(msg_released) - 1;
-        write(STDOUT, msg_released, msg_released_len);
+      u8 anyMovementX = prev_controller->stickAverageX != controller->stickAverageX;
+      if (anyMovementX) {
+        info(" stickX: ");
+        printf("%.2f", controller->stickAverageX);
+        fflush(stdout);
       }
+      u8 anyMovementY = prev_controller->stickAverageY != controller->stickAverageY;
+      if (anyMovementY) {
+        info(" stickY: ");
+        printf("%.2f", controller->stickAverageY);
+        fflush(stdout);
+      }
+
+      for (u8 buttonIndex = 0; buttonIndex < ARRAY_COUNT(prev_controller->buttons); buttonIndex++) {
+        /* only print changed button */
+        u8 anyButtonPress = prev_controller->buttons[buttonIndex].pressed != controller->buttons[buttonIndex].pressed;
+        if (!anyButtonPress)
+          continue;
+
+        const struct ButtonDescription *description = &ButtonDescriptionTable[buttonIndex];
+
+        info(" ");
+        infon(description->name, description->len);
+        info(": ");
+
+        if (controller->buttons[buttonIndex].pressed)
+          info("pressed");
+        else
+          info("released");
+      }
+
+      info(NEWLINE);
     }
 
-    write(STDOUT, NEWLINE, 1);
+    prev = next;
   }
-
-  prev = next;
-
-  goto playback;
 
 finish:
   if (PlaybackInputEnd(&state)) {
-    comptime char msg[] = "cannot close path" NEWLINE;
-    comptime u64 msg_len = sizeof(msg) - 1;
-    write(STDERR, msg, msg_len);
+    fatal("cannot close path" NEWLINE);
     return 1;
   }
 
