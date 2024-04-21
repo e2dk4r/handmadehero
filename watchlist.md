@@ -280,7 +280,7 @@
 - [x] Handmade Hero Day 080 - Handling Traversables in the Collision Loop
       https://www.youtube.com/watch?v=QxxVwnE8V1c
 
-- [ ] Handmade Hero Day 081 - Creating Ground with Overlapping Bitmaps
+- [x] Handmade Hero Day 081 - Creating Ground with Overlapping Bitmaps
       https://www.youtube.com/watch?v=EGOrMZwQVEk
 
 - [ ] Handmade Hero Day 082 - Caching Composited Bitmaps
