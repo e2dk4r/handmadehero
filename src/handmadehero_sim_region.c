@@ -567,7 +567,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
           // NOTE(e2dk4r): out box hit test. e.g. colliding with other entities
           else {
             u8 hitThis = 0;
-            f32 tMinTest = 1.0f;
+            f32 tMinTest = tMin;
             struct v3 testWallNormal = {};
 
             for (u32 wallIndex = 0; wallIndex < ARRAY_COUNT(walls); wallIndex++) {
