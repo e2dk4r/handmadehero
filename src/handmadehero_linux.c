@@ -37,6 +37,8 @@
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/platform.h>
 
+#define PAUSE_WHEN_SURFACE_OUT_OF_FOCUS 0
+
 /*****************************************************************
  * platform layer implementation
  *****************************************************************/
@@ -214,8 +216,10 @@ struct linux_state {
   u64 frame;
 
   u8 running : 1;
+#if PAUSE_WHEN_SURFACE_OUT_OF_FOCUS
   u8 paused : 1;
   u8 resumed : 1;
+#endif
   u8 fullscreen : 1;
 };
 
@@ -551,7 +555,10 @@ wl_keyboard_enter(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struc
 {
   debugf("[wl_keyboard::enter] serial: %d\n", serial);
   struct linux_state *state = data;
+
+#if PAUSE_WHEN_SURFACE_OUT_OF_FOCUS
   state->resumed = 1;
+#endif
 }
 
 internal void
@@ -559,8 +566,11 @@ wl_keyboard_leave(void *data, struct wl_keyboard *wl_keyboard, u32 serial, struc
 {
   debugf("[wl_keyboard::leave] serial: %d\n", serial);
   struct linux_state *state = data;
+
+#if PAUSE_WHEN_SURFACE_OUT_OF_FOCUS
   state->paused = 1;
   state->resumed = 0;
+#endif
 }
 
 comptime struct wl_keyboard_listener wl_keyboard_listener = {
@@ -713,6 +723,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
 
   u64 ust = (((u64)tv_sec_hi << 32) + tv_sec_lo) * 1000000000 + tv_nsec;
 
+#if PAUSE_WHEN_SURFACE_OUT_OF_FOCUS
   if (state->paused && state->resumed) {
     state->last_ust = ust - (u64)nanosecondsPerFrame;
     state->paused = 0;
@@ -720,8 +731,16 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
   } else if (state->paused) {
     return;
   }
+#endif
 
   u64 elapsed = ust - state->last_ust;
+#if !PAUSE_WHEN_SURFACE_OUT_OF_FOCUS
+  if (elapsed > (u64)nanosecondsPerSecond) {
+    state->last_ust = ust - (u64)nanosecondsPerFrame;
+    elapsed = ust - state->last_ust;
+  }
+#endif
+
   if ((f32)elapsed >= nanosecondsPerFrame) {
     state->input = newInput;
 
@@ -978,9 +997,11 @@ main(int argc, char *argv[])
 {
   int error_code = 0;
   struct linux_state state = {
-      .running = 1,
-      .paused = 1,
-      .resumed = 1,
+    .running = 1,
+#if PAUSE_WHEN_SURFACE_OUT_OF_FOCUS
+    .paused = 1,
+    .resumed = 1,
+#endif
   };
   state.input = state.gameInputs;
 
