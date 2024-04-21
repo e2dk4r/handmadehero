@@ -165,6 +165,19 @@ v2(f32 x, f32 y)
   return result;
 }
 
+internal inline struct v2
+v2i(i32 x, i32 y)
+{
+  return v2((f32)x, (f32)y);
+}
+
+internal inline struct v2
+v2u(u32 x, u32 y)
+{
+  assert(x <= I32_MAX && y <= I32_MAX);
+  return v2((f32)x, (f32)y);
+}
+
 internal inline void
 v2_add_ref(struct v2 *a, struct v2 b)
 {

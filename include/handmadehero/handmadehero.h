@@ -64,6 +64,10 @@ struct game_state {
   struct entity_collision_volume_group *stairwellCollision;
   struct entity_collision_volume_group *roomCollision;
 
+  struct bitmap bitmapGrass[2];
+  struct bitmap bitmapGround[4];
+  struct bitmap bitmapTuft[3];
+
   struct bitmap bitmapBackground;
   struct bitmap bitmapShadow;
   struct bitmap bitmapTree;

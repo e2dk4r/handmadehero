@@ -548,6 +548,49 @@ DrawHitPoints(struct game_backbuffer *backbuffer, struct entity *entity, struct 
   }
 }
 
+internal void
+DrawGroundTEST(struct game_state *state, struct game_backbuffer *backbuffer, f32 metersToPixels)
+{
+  RandomNumberSeed(0);
+
+  struct v2 center = v2_mul(v2u(backbuffer->width, backbuffer->height), 0.5f);
+
+  for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
+    // random numbers in range of [0.0, 1.0]
+    struct v2 offset =
+        v2(((f32)RandomNumber() / (f32)RandomNumberMax()), ((f32)RandomNumber() / (f32)RandomNumberMax()));
+
+    // random numbers in range of [-1.0, 1.0]
+    // f(x) = 2x - 1
+    v2_mul_ref(&offset, 2.0f);
+    v2_sub_ref(&offset, v2(1.0f, 1.0f));
+
+    // random numbers in range of [-radius, radius]
+    f32 radius = 5.0f;
+    v2_mul_ref(&offset, radius);
+
+    // turn into pixels coordinates
+    v2_mul_ref(&offset, metersToPixels);
+    struct v2 position = v2_add(center, offset);
+
+    struct bitmap *stamp = 0;
+
+    if (RandomNumber() % 2)
+      stamp = state->bitmapGrass + RandomNumber() % ARRAY_COUNT(state->bitmapGrass);
+    else
+      stamp = state->bitmapGround + RandomNumber() % ARRAY_COUNT(state->bitmapGround);
+
+    struct v2 stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
+
+    DrawBitmap(stamp, backbuffer, position, stampCenter);
+
+    stamp = state->bitmapTuft + RandomNumber() % ARRAY_COUNT(state->bitmapTuft);
+    stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
+
+    DrawBitmap(stamp, backbuffer, position, stampCenter);
+  }
+}
+
 void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer)
 {
@@ -583,6 +626,19 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         MakeSimpleGroundedCollision(&state->worldArena, v3(state->world->tileSideInMeters * (f32)TILES_PER_WIDTH,
                                                            state->world->tileSideInMeters * (f32)TILES_PER_HEIGHT,
                                                            0.9f * state->world->tileDepthInMeters));
+
+    /* load grass */
+    state->bitmapGrass[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/grass00.bmp");
+    state->bitmapGrass[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/grass01.bmp");
+
+    state->bitmapTuft[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft00.bmp");
+    state->bitmapTuft[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft01.bmp");
+    state->bitmapTuft[2] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft02.bmp");
+
+    state->bitmapGround[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground00.bmp");
+    state->bitmapGround[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground01.bmp");
+    state->bitmapGround[2] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground02.bmp");
+    state->bitmapGround[3] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground03.bmp");
 
     /* load background */
     state->bitmapBackground = LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
@@ -826,6 +882,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct v4 backgroundColor = v4(0.5f, 0.5f, 0.5f, 1.0f);
   DrawRectangle(backbuffer, v2(0.0f, 0.0f), v2((f32)backbuffer->width, (f32)backbuffer->height), &backgroundColor);
 #endif
+
+  DrawGroundTEST(state, backbuffer, metersToPixels);
 
   struct v2 screenCenter = {
       .x = 0.5f * (f32)backbuffer->width,
