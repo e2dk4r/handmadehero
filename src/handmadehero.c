@@ -564,10 +564,10 @@ DrawGroundTEST(struct game_state *state, struct game_backbuffer *backbuffer, f32
 
     // turn into pixels coordinates
     v2_mul_ref(&offset, metersToPixels);
+
     struct v2 position = v2_add(center, offset);
 
     struct bitmap *stamp = 0;
-
     if (RandomChoice(&series, 2))
       stamp = state->bitmapGrass + RandomChoice(&series, ARRAY_COUNT(state->bitmapGrass));
     else
@@ -576,11 +576,24 @@ DrawGroundTEST(struct game_state *state, struct game_backbuffer *backbuffer, f32
     struct v2 stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
 
     DrawBitmap(stamp, backbuffer, position, stampCenter);
+  }
 
-    stamp = state->bitmapTuft + RandomChoice(&series, ARRAY_COUNT(state->bitmapTuft));
-    stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
+  for (u32 turfIndex = 0; turfIndex < 100; turfIndex++) {
+    struct v2 offset = v2(RandomUnit(&series), RandomUnit(&series));
 
-    DrawBitmap(stamp, backbuffer, position, stampCenter);
+    // [-radius, radius]
+    f32 radius = 5.0f;
+    v2_mul_ref(&offset, radius);
+
+    // turn into pixels coordinates
+    v2_mul_ref(&offset, metersToPixels);
+
+    struct v2 position = v2_add(center, offset);
+
+    struct bitmap *tuft = state->bitmapTuft + RandomChoice(&series, ARRAY_COUNT(state->bitmapTuft));
+    struct v2 tuftCenter = v2_mul(v2u(tuft->width, tuft->height), 0.5f);
+
+    DrawBitmap(tuft, backbuffer, position, tuftCenter);
   }
 }
 
