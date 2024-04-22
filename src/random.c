@@ -1,4 +1,5 @@
 #include <handmadehero/assert.h>
+#include <handmadehero/math.h>
 #include <handmadehero/random.h>
 
 comptime u32 RandomNumberTable[] = {
@@ -478,8 +479,7 @@ RandomUnit(struct random_series *series)
 f32
 RandomBetween(struct random_series *series, f32 min, f32 max)
 {
-  f32 range = max - min;
-  f32 value = RandomUnit(series) * range - min;
+  f32 value = Lerp(min, max, RandomNormal(series));
   assert(value >= min && value <= max);
   return value;
 }
