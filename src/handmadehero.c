@@ -128,21 +128,25 @@ DrawBitmap2(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct 
       f32 sB = (f32)((*src >> 0) & 0xff);
 
       // destination channels
+      f32 dA = (f32)((*dst >> 24) & 0xff);
       f32 dR = (f32)((*dst >> 16) & 0xff);
       f32 dG = (f32)((*dst >> 8) & 0xff);
       f32 dB = (f32)((*dst >> 0) & 0xff);
 
+      f32 a = maximum(dA, sA * 255.0f);
       f32 r = Lerp(dR, sR, sA);
       f32 g = Lerp(dG, sG, sA);
       f32 b = Lerp(dB, sB, sA);
 
-      *dst = 0xff000000
-             /* red */
-             | (u32)(r + 0.5f) << 16
-             /* green */
-             | (u32)(g + 0.5f) << 8
-             /* blue */
-             | (u32)(b + 0.5f) << 0;
+      *dst =
+          /* alpha */
+          (u32)(a + 0.5f) << 24
+          /* red */
+          | (u32)(r + 0.5f) << 16
+          /* green */
+          | (u32)(g + 0.5f) << 8
+          /* blue */
+          | (u32)(b + 0.5f) << 0;
 
       dst++;
       src++;
