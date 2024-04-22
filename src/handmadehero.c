@@ -792,8 +792,15 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     u32 initialCameraX = screenBaseX * TILES_PER_WIDTH + TILES_PER_WIDTH / 2;
     u32 initialCameraY = screenBaseY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2;
     u32 initialCameraZ = screenBaseZ;
-    MonsterAdd(state, initialCameraX - 4, initialCameraY + 2, initialCameraZ);
-    MonsterAdd(state, initialCameraX - 2, initialCameraY + 2, initialCameraZ);
+
+    for (u32 monsterIndex = 0; monsterIndex < 3; monsterIndex++) {
+      i32 monsterOffsetX = RandomBetweenI32(&series, -7, 7);
+      i32 monsterOffsetY = RandomBetweenI32(&series, 1, 4);
+
+      u32 monsterX = initialCameraX + (u32)monsterOffsetX;
+      u32 monsterY = initialCameraY + (u32)monsterOffsetY;
+      MonsterAdd(state, monsterX, monsterY, initialCameraZ);
+    }
 
     for (u32 familiarIndex = 0; familiarIndex < 1; familiarIndex++) {
       i32 familiarOffsetX = RandomBetweenI32(&series, -7, 7);
