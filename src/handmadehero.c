@@ -27,7 +27,7 @@ comptime struct move_spec SwordMoveSpec = {
 };
 
 internal void
-DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min, struct v2 max, const struct v4 *color)
+DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 *color)
 {
   assert(min.x < max.x);
   assert(min.y < max.y);
@@ -43,20 +43,23 @@ DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min, struct v2 max, 
   if (minY < 0)
     minY = 0;
 
-  if (maxX > (i32)backbuffer->width)
-    maxX = (i32)backbuffer->width;
+  if (maxX > (i32)buffer->width)
+    maxX = (i32)buffer->width;
 
-  if (maxY > (i32)backbuffer->height)
-    maxY = (i32)backbuffer->height;
+  if (maxY > (i32)buffer->height)
+    maxY = (i32)buffer->height;
 
-  u8 *row = backbuffer->memory
+  u8 *row = buffer->memory
             /* x offset */
-            + ((u32)minX * backbuffer->bytes_per_pixel)
+            + (minX * BITMAP_BYTES_PER_PIXEL)
             /* y offset */
-            + ((u32)minY * backbuffer->stride);
+            + (minY * buffer->stride);
 
-  u32 colorRGB = /* red */
-      roundf32tou32(color->r * 255.0f) << 16
+  u32 colorRGBA =
+      /* alpha */
+      roundf32tou32(color->a * 255.0f) << 24
+      /* red */
+      | roundf32tou32(color->r * 255.0f) << 16
       /* green */
       | roundf32tou32(color->g * 255.0f) << 8
       /* blue */
@@ -65,15 +68,15 @@ DrawRectangle(struct game_backbuffer *backbuffer, struct v2 min, struct v2 max, 
   for (i32 y = minY; y < maxY; y++) {
     u32 *pixel = (u32 *)row;
     for (i32 x = minX; x < maxX; x++) {
-      *pixel = colorRGB;
+      *pixel = colorRGBA;
       pixel++;
     }
-    row += backbuffer->stride;
+    row += buffer->stride;
   }
 }
 
 internal inline void
-DrawBitmap2(struct bitmap *bitmap, struct game_backbuffer *backbuffer, struct v2 pos, struct v2 align, f32 cAlpha)
+DrawBitmap2(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v2 align, f32 cAlpha)
 {
   v2_sub_ref(&pos, align);
 
@@ -82,44 +85,43 @@ DrawBitmap2(struct bitmap *bitmap, struct game_backbuffer *backbuffer, struct v2
   i32 maxX = roundf32toi32(pos.x + (f32)bitmap->width);
   i32 maxY = roundf32toi32(pos.y + (f32)bitmap->height);
 
-  u32 srcOffsetX = 0;
+  i32 srcOffsetX = 0;
   if (minX < 0) {
-    srcOffsetX = (u32)-minX;
+    srcOffsetX = -minX;
     minX = 0;
   }
 
-  u32 srcOffsetY = 0;
+  i32 srcOffsetY = 0;
   if (minY < 0) {
-    srcOffsetY = (u32)-minY;
+    srcOffsetY = -minY;
     minY = 0;
   }
 
-  if (maxX > (i32)backbuffer->width)
-    maxX = (i32)backbuffer->width;
+  if (maxX > (i32)buffer->width)
+    maxX = (i32)buffer->width;
 
-  if (maxY > (i32)backbuffer->height)
-    maxY = (i32)backbuffer->height;
+  if (maxY > (i32)buffer->height)
+    maxY = (i32)buffer->height;
 
   /* bitmap file pixels goes bottom to up */
-  u32 *srcRow = bitmap->pixels
-                /* clipped offset */
-                - srcOffsetY * bitmap->width +
-                srcOffsetX
-                /* last row offset */
-                + (bitmap->height - 1) * bitmap->width;
-  u8 *dstRow = backbuffer->memory
+  u8 *srcRow = (u8 *)bitmap->memory
+               /* last row offset */
+               + srcOffsetY * bitmap->stride
+               /* clipped offset */
+               + srcOffsetX * BITMAP_BYTES_PER_PIXEL;
+  u8 *dstRow = (u8 *)buffer->memory
                /* x offset */
-               + ((u32)minX * backbuffer->bytes_per_pixel)
+               + minX * BITMAP_BYTES_PER_PIXEL
                /* y offset */
-               + ((u32)minY * backbuffer->stride);
+               + minY * buffer->stride;
   for (i32 y = minY; y < maxY; y++) {
     u32 *src = (u32 *)srcRow;
     u32 *dst = (u32 *)dstRow;
 
     for (i32 x = minX; x < maxX; x++) {
       // source channels
-      f32 a = (f32)((*src >> 24) & 0xff) / 255.0f;
-      a *= cAlpha;
+      f32 sA = (f32)((*src >> 24) & 0xff) / 255.0f;
+      sA *= cAlpha;
 
       f32 sR = (f32)((*src >> 16) & 0xff);
       f32 sG = (f32)((*src >> 8) & 0xff);
@@ -130,49 +132,31 @@ DrawBitmap2(struct bitmap *bitmap, struct game_backbuffer *backbuffer, struct v2
       f32 dG = (f32)((*dst >> 8) & 0xff);
       f32 dB = (f32)((*dst >> 0) & 0xff);
 
-      /* linear blend
-       *    .       .
-       *    A       B
-       *
-       * from A to B delta is
-       *    t = B - A
-       *
-       * for going from A to B is
-       *    C = A + (B - A)
-       *
-       * this can be formulated where t is [0, 1]
-       *    C(t) = A + t (B - A)
-       *    C(t) = A + t B - t A
-       *    C(t) = A (1 - t) + t B
-       */
+      f32 r = Lerp(dR, sR, sA);
+      f32 g = Lerp(dG, sG, sA);
+      f32 b = Lerp(dB, sB, sA);
 
-      // t is alpha and B is source because we are trying to get to it
-      f32 r = dR * (1.0f - a) + a * sR;
-      f32 g = dG * (1.0f - a) + a * sG;
-      f32 b = dB * (1.0f - a) + a * sB;
-
-      *dst =
-          /* red */
-          (u32)(r + 0.5f) << 16
-          /* green */
-          | (u32)(g + 0.5f) << 8
-          /* blue */
-          | (u32)(b + 0.5f) << 0;
+      *dst = 0xff000000
+             /* red */
+             | (u32)(r + 0.5f) << 16
+             /* green */
+             | (u32)(g + 0.5f) << 8
+             /* blue */
+             | (u32)(b + 0.5f) << 0;
 
       dst++;
       src++;
     }
 
-    dstRow += backbuffer->stride;
-    /* bitmap file pixels goes bottom to up */
-    srcRow -= bitmap->width;
+    dstRow += buffer->stride;
+    srcRow += bitmap->stride;
   }
 }
 
 internal inline void
-DrawBitmap(struct bitmap *bitmap, struct game_backbuffer *backbuffer, struct v2 pos, struct v2 align)
+DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v2 align)
 {
-  DrawBitmap2(bitmap, backbuffer, pos, align, 1.0f);
+  DrawBitmap2(buffer, bitmap, pos, align, 1.0f);
 }
 
 #define BITMAP_COMPRESSION_RGB 0
@@ -214,7 +198,7 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
   }
 
   struct bitmap_header *header = readResult.data;
-  u32 *pixels = readResult.data + header->bitmapOffset;
+  u8 *pixels = readResult.data + header->bitmapOffset;
 
   if (header->compression == BITMAP_COMPRESSION_BITFIELDS) {
     struct bitmap_header_compressed *cHeader = (struct bitmap_header_compressed *)header;
@@ -227,7 +211,7 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
     u32 alphaMask = ~(cHeader->redMask | cHeader->greenMask | cHeader->blueMask);
     i32 alphaShift = FindLeastSignificantBitSet((i32)alphaMask);
 
-    u32 *srcDest = pixels;
+    u32 *srcDest = (u32 *)pixels;
     for (i32 y = 0; y < header->height; y++) {
       for (i32 x = 0; x < header->width; x++) {
 
@@ -247,8 +231,6 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
     }
   }
 
-  result.pixels = pixels;
-
   result.width = (u32)header->width;
   if (header->width < 0)
     result.width = (u32)-header->width;
@@ -256,6 +238,9 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
   result.height = (u32)header->height;
   if (header->height < 0)
     result.height = (u32)-header->height;
+
+  result.stride = -(i32)result.width * BITMAP_BYTES_PER_PIXEL;
+  result.memory = pixels - (i32)(result.height - 1) * result.stride;
 
   return result;
 }
@@ -515,8 +500,7 @@ SpaceAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 }
 
 internal inline void
-DrawHitPoints(struct game_backbuffer *backbuffer, struct entity *entity, struct v2 *entityGroundPoint,
-              f32 metersToPixels)
+DrawHitPoints(struct bitmap *buffer, struct entity *entity, struct v2 *entityGroundPoint, f32 metersToPixels)
 {
   if (entity->hitPointMax == 0)
     return;
@@ -542,18 +526,33 @@ DrawHitPoints(struct game_backbuffer *backbuffer, struct entity *entity, struct 
       color = v4(0.2f, 0.2f, 0.2f, 1.0f);
     }
 
-    DrawRectangle(backbuffer, min, max, &color);
+    DrawRectangle(buffer, min, max, &color);
 
     v2_add_ref(&hitPosition, dHitPosition);
   }
 }
 
+struct bitmap
+MakeEmptyBitmap(struct memory_arena *arena, u32 width, u32 height)
+{
+  u32 totalBitmapSize = width * height * BITMAP_BYTES_PER_PIXEL;
+  struct bitmap bitmap = {
+      .width = width,
+      .height = height,
+      .stride = (i32)width * BITMAP_BYTES_PER_PIXEL,
+      .memory = MemoryArenaPush(arena, totalBitmapSize),
+  };
+
+  ZeroMemory(bitmap.memory, totalBitmapSize);
+  return bitmap;
+}
+
 internal void
-DrawGroundTEST(struct game_state *state, struct game_backbuffer *backbuffer, f32 metersToPixels)
+DrawGroundTEST(struct game_state *state, struct bitmap *buffer)
 {
   struct random_series series = Seed(0);
 
-  struct v2 center = v2_mul(v2u(backbuffer->width, backbuffer->height), 0.5f);
+  struct v2 center = v2_mul(v2u(buffer->width, buffer->height), 0.5f);
 
   for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
     struct v2 offset = v2(RandomUnit(&series), RandomUnit(&series));
@@ -563,19 +562,19 @@ DrawGroundTEST(struct game_state *state, struct game_backbuffer *backbuffer, f32
     v2_mul_ref(&offset, radius);
 
     // turn into pixels coordinates
-    v2_mul_ref(&offset, metersToPixels);
+    v2_mul_ref(&offset, state->metersToPixels);
 
     struct v2 position = v2_add(center, offset);
 
     struct bitmap *stamp = 0;
     if (RandomChoice(&series, 2))
-      stamp = state->bitmapGrass + RandomChoice(&series, ARRAY_COUNT(state->bitmapGrass));
+      stamp = state->textureGrass + RandomChoice(&series, ARRAY_COUNT(state->textureGrass));
     else
-      stamp = state->bitmapGround + RandomChoice(&series, ARRAY_COUNT(state->bitmapGround));
+      stamp = state->textureGround + RandomChoice(&series, ARRAY_COUNT(state->textureGround));
 
     struct v2 stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
 
-    DrawBitmap(stamp, backbuffer, position, stampCenter);
+    DrawBitmap(buffer, stamp, position, stampCenter);
   }
 
   for (u32 turfIndex = 0; turfIndex < 100; turfIndex++) {
@@ -586,14 +585,14 @@ DrawGroundTEST(struct game_state *state, struct game_backbuffer *backbuffer, f32
     v2_mul_ref(&offset, radius);
 
     // turn into pixels coordinates
-    v2_mul_ref(&offset, metersToPixels);
+    v2_mul_ref(&offset, state->metersToPixels);
 
     struct v2 position = v2_add(center, offset);
 
-    struct bitmap *tuft = state->bitmapTuft + RandomChoice(&series, ARRAY_COUNT(state->bitmapTuft));
+    struct bitmap *tuft = state->textureTuft + RandomChoice(&series, ARRAY_COUNT(state->textureTuft));
     struct v2 tuftCenter = v2_mul(v2u(tuft->width, tuft->height), 0.5f);
 
-    DrawBitmap(tuft, backbuffer, position, tuftCenter);
+    DrawBitmap(buffer, tuft, position, tuftCenter);
   }
 }
 
@@ -616,6 +615,11 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     state->world = world;
     WorldInit(world, 1.4f);
 
+    /* unit: pixels */
+    const u32 tileSideInPixels = 60;
+    /* unit: pixels/meters */
+    state->metersToPixels = (f32)tileSideInPixels / world->tileSideInMeters;
+
     /* collision groups */
     state->heroCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(0.5f, 1.0f, 1.2f));
     state->familiarCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(0.5f, 1.0f, 0.5f));
@@ -634,50 +638,50 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
                                                            0.9f * state->world->tileDepthInMeters));
 
     /* load grass */
-    state->bitmapGrass[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/grass00.bmp");
-    state->bitmapGrass[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/grass01.bmp");
+    state->textureGrass[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/grass00.bmp");
+    state->textureGrass[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/grass01.bmp");
 
-    state->bitmapTuft[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft00.bmp");
-    state->bitmapTuft[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft01.bmp");
-    state->bitmapTuft[2] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft02.bmp");
+    state->textureTuft[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft00.bmp");
+    state->textureTuft[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft01.bmp");
+    state->textureTuft[2] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft02.bmp");
 
-    state->bitmapGround[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground00.bmp");
-    state->bitmapGround[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground01.bmp");
-    state->bitmapGround[2] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground02.bmp");
-    state->bitmapGround[3] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground03.bmp");
+    state->textureGround[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground00.bmp");
+    state->textureGround[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground01.bmp");
+    state->textureGround[2] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground02.bmp");
+    state->textureGround[3] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground03.bmp");
 
     /* load background */
-    state->bitmapBackground = LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
+    state->textureBackground = LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp");
 
     /* load shadow */
-    state->bitmapShadow = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_shadow.bmp");
+    state->textureShadow = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_shadow.bmp");
 
-    state->bitmapTree = LoadBmp(memory->PlatformReadEntireFile, "test2/tree00.bmp");
+    state->textureTree = LoadBmp(memory->PlatformReadEntireFile, "test2/tree00.bmp");
 
-    state->bitmapSword = LoadBmp(memory->PlatformReadEntireFile, "test2/rock03.bmp");
+    state->textureSword = LoadBmp(memory->PlatformReadEntireFile, "test2/rock03.bmp");
 
-    state->bitmapStairwell = LoadBmp(memory->PlatformReadEntireFile, "test2/rock02.bmp");
+    state->textureStairwell = LoadBmp(memory->PlatformReadEntireFile, "test2/rock02.bmp");
 
     /* load hero bitmaps */
-    struct bitmap_hero *bitmapHero = &state->bitmapHero[BITMAP_HERO_FRONT];
+    struct bitmap_hero *bitmapHero = &state->textureHero[BITMAP_HERO_FRONT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_head.bmp");
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_torso.bmp");
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_cape.bmp");
     bitmapHero->align = v2(72, 182);
 
-    bitmapHero = &state->bitmapHero[BITMAP_HERO_BACK];
+    bitmapHero = &state->textureHero[BITMAP_HERO_BACK];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_head.bmp");
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_torso.bmp");
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_cape.bmp");
     bitmapHero->align = v2(72, 182);
 
-    bitmapHero = &state->bitmapHero[BITMAP_HERO_LEFT];
+    bitmapHero = &state->textureHero[BITMAP_HERO_LEFT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_head.bmp");
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_torso.bmp");
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_cape.bmp");
     bitmapHero->align = v2(72, 182);
 
-    bitmapHero = &state->bitmapHero[BITMAP_HERO_RIGHT];
+    bitmapHero = &state->textureHero[BITMAP_HERO_RIGHT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_head.bmp");
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_torso.bmp");
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_cape.bmp");
@@ -800,6 +804,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         ChunkPositionFromTilePosition(state->world, initialCameraX, initialCameraY, initialCameraZ);
     state->cameraPosition = initialCameraPosition;
 
+    /* cache composited ground drawing */
+    state->bufferGround = MakeEmptyBitmap(&state->worldArena, 512, 512);
+    DrawGroundTEST(state, &state->bufferGround);
+
     memory->initialized = 1;
   }
 
@@ -885,20 +893,19 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   /****************************************************************
    * RENDERING
    ****************************************************************/
-  /* unit: pixels */
-  const u32 tileSideInPixels = 60;
-  /* unit: pixels/meters */
-  const f32 metersToPixels = (f32)tileSideInPixels / world->tileSideInMeters;
+  f32 metersToPixels = state->metersToPixels;
+  struct bitmap *drawBuffer = (struct bitmap *)backbuffer;
 
 /* drawing background */
 #if 0
-  DrawBitmap(&state->bitmapBackground, backbuffer, v2(0.0f, 0.0f), v2(0, 0));
+  DrawBitmap(drawBuffer, &state->bitmapBackground, v2(0.0f, 0.0f), v2(0, 0));
 #else
   struct v4 backgroundColor = v4(0.5f, 0.5f, 0.5f, 1.0f);
-  DrawRectangle(backbuffer, v2(0.0f, 0.0f), v2((f32)backbuffer->width, (f32)backbuffer->height), &backgroundColor);
+  DrawRectangle(drawBuffer, v2(0.0f, 0.0f), v2((f32)drawBuffer->width, (f32)drawBuffer->height), &backgroundColor);
 #endif
 
-  DrawGroundTEST(state, backbuffer, metersToPixels);
+  /* draw ground */
+  DrawBitmap(drawBuffer, &state->bufferGround, v2(0.0f, 0.0f), v2(0.0f, 0.0f));
 
   struct v2 screenCenter = {
       .x = 0.5f * (f32)backbuffer->width,
@@ -959,19 +966,19 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       }
 
       /* render */
-      struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
+      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
       f32 cAlphaShadow = 1.0f - entity->position.z;
       if (cAlphaShadow < 0.0f)
         cAlphaShadow = 0.0f;
 
-      DrawHitPoints(backbuffer, entity, &entityGroundPoint, metersToPixels);
+      DrawHitPoints(drawBuffer, entity, &entityGroundPoint, metersToPixels);
 
-      DrawBitmap2(&state->bitmapShadow, backbuffer, entityGroundPoint, bitmap->align, cAlphaShadow);
+      DrawBitmap2(drawBuffer, &state->textureShadow, entityGroundPoint, bitmap->align, cAlphaShadow);
       entityGroundPoint.y -= entity->position.z * metersToPixels;
 
-      DrawBitmap(&bitmap->torso, backbuffer, entityGroundPoint, bitmap->align);
-      DrawBitmap(&bitmap->cape, backbuffer, entityGroundPoint, bitmap->align);
-      DrawBitmap(&bitmap->head, backbuffer, entityGroundPoint, bitmap->align);
+      DrawBitmap(drawBuffer, &bitmap->torso, entityGroundPoint, bitmap->align);
+      DrawBitmap(drawBuffer, &bitmap->cape, entityGroundPoint, bitmap->align);
+      DrawBitmap(drawBuffer, &bitmap->head, entityGroundPoint, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
@@ -1011,25 +1018,25 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       /* render */
       f32 bobSin = Sin(2.0f * entity->tBob);
-      struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
+      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
 
       f32 cAlphaShadow = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      DrawBitmap2(&state->bitmapShadow, backbuffer, entityGroundPoint, bitmap->align, cAlphaShadow);
+      DrawBitmap2(drawBuffer, &state->textureShadow, entityGroundPoint, bitmap->align, cAlphaShadow);
       entityGroundPoint.y -= 15 * bobSin;
 
-      DrawBitmap(&bitmap->head, backbuffer, entityGroundPoint, bitmap->align);
+      DrawBitmap(drawBuffer, &bitmap->head, entityGroundPoint, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_MONSTER) {
       /* render */
-      struct bitmap_hero *bitmap = &state->bitmapHero[entity->facingDirection];
+      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
       f32 cAlphaShadow = 1.0f;
 
-      DrawHitPoints(backbuffer, entity, &entityGroundPoint, metersToPixels);
-      DrawBitmap2(&state->bitmapShadow, backbuffer, entityGroundPoint, bitmap->align, cAlphaShadow);
+      DrawHitPoints(drawBuffer, entity, &entityGroundPoint, metersToPixels);
+      DrawBitmap2(drawBuffer, &state->textureShadow, entityGroundPoint, bitmap->align, cAlphaShadow);
 
-      DrawBitmap(&bitmap->torso, backbuffer, entityGroundPoint, bitmap->align);
+      DrawBitmap(drawBuffer, &bitmap->torso, entityGroundPoint, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
@@ -1047,13 +1054,13 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       /* render */
       f32 cAlphaShadow = 1.0f;
-      DrawBitmap2(&state->bitmapShadow, backbuffer, entityGroundPoint, v2(72, 182), cAlphaShadow);
-      DrawBitmap(&state->bitmapSword, backbuffer, entityGroundPoint, v2(29, 10));
+      DrawBitmap2(drawBuffer, &state->textureShadow, entityGroundPoint, v2(72, 182), cAlphaShadow);
+      DrawBitmap(drawBuffer, &state->textureSword, entityGroundPoint, v2(29, 10));
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      DrawBitmap(&state->bitmapTree, backbuffer, entityGroundPoint, v2(40, 80));
+      DrawBitmap(drawBuffer, &state->textureTree, entityGroundPoint, v2(40, 80));
 #else
       comptime struct v3 color = {1.0f, 1.0f, 0.0f};
 
@@ -1062,7 +1069,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
       struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
-      DrawRectangle(backbuffer, entityLeftTop, entityRightBottom, &color);
+      DrawRectangle(drawBuffer, entityLeftTop, entityRightBottom, &color);
 #endif
     }
 
@@ -1074,10 +1081,11 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
       struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
-      DrawRectangle(backbuffer, entityLeftTop, entityRightBottom, &color);
+      DrawRectangle(drawBuffer, entityLeftTop, entityRightBottom, &color);
     }
 
     else if (entity->type & ENTITY_TYPE_SPACE) {
+#if 0
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {
         struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
@@ -1096,20 +1104,21 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
         struct v2 min = v2(left, top - thickness);
         struct v2 max = v2_add(min, v2(width, thickness));
-        DrawRectangle(backbuffer, min, max, &color);
+        DrawRectangle(drawBuffer, min, max, &color);
 
         min = v2(left, bottom);
         max = v2_add(min, v2(width, thickness));
-        DrawRectangle(backbuffer, min, max, &color);
+        DrawRectangle(drawBuffer, min, max, &color);
 
         min = v2(left - thickness, top - thickness);
         max = v2_add(min, v2(thickness, height + 2.0f * thickness));
-        DrawRectangle(backbuffer, min, max, &color);
+        DrawRectangle(drawBuffer, min, max, &color);
 
         min = v2(right, top - thickness);
         max = v2_add(min, v2(thickness, height + 2.0f * thickness));
-        DrawRectangle(backbuffer, min, max, &color);
+        DrawRectangle(drawBuffer, min, max, &color);
       }
+#endif
     }
 
     else {

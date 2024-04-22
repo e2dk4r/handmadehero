@@ -6,10 +6,12 @@
 #include "sim_region.h"
 #include "world.h"
 
+#define BITMAP_BYTES_PER_PIXEL 4
 struct bitmap {
   u32 width;
   u32 height;
-  u32 *pixels;
+  i32 stride;
+  void *memory;
 };
 
 struct bitmap_hero {
@@ -64,21 +66,24 @@ struct game_state {
   struct entity_collision_volume_group *stairwellCollision;
   struct entity_collision_volume_group *roomCollision;
 
-  struct bitmap bitmapGrass[2];
-  struct bitmap bitmapGround[4];
-  struct bitmap bitmapTuft[3];
+  f32 metersToPixels;
+  struct bitmap bufferGround;
 
-  struct bitmap bitmapBackground;
-  struct bitmap bitmapShadow;
-  struct bitmap bitmapTree;
-  struct bitmap bitmapSword;
-  struct bitmap bitmapStairwell;
+  struct bitmap textureGrass[2];
+  struct bitmap textureGround[4];
+  struct bitmap textureTuft[3];
+
+  struct bitmap textureBackground;
+  struct bitmap textureShadow;
+  struct bitmap textureTree;
+  struct bitmap textureSword;
+  struct bitmap textureStairwell;
 
 #define BITMAP_HERO_FRONT 3
 #define BITMAP_HERO_BACK 1
 #define BITMAP_HERO_LEFT 2
 #define BITMAP_HERO_RIGHT 0
-  struct bitmap_hero bitmapHero[4];
+  struct bitmap_hero textureHero[4];
 };
 
 void

@@ -72,6 +72,21 @@ Sin(f32 value)
   return __builtin_sinf(value);
 };
 
+/* linear blend
+ *    .       .
+ *    A       B
+ *
+ * from A to B delta is
+ *    t = B - A
+ *
+ * for going from A to B is
+ *    C = A + (B - A)
+ *
+ * this can be formulated where t is [0, 1]
+ *    C(t) = A + t (B - A)
+ *    C(t) = A + t B - t A
+ *    C(t) = A (1 - t) + t B
+ */
 internal inline f32
 Lerp(f32 a, f32 b, f32 t)
 {

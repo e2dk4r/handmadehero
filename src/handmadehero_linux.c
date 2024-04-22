@@ -1045,9 +1045,8 @@ main(int argc, char *argv[])
   state.backbuffer = (struct game_backbuffer){
       .width = 960,
       .height = 540,
-      .bytes_per_pixel = 4,
   };
-  state.backbuffer.stride = state.backbuffer.width * state.backbuffer.bytes_per_pixel;
+  state.backbuffer.stride = state.backbuffer.width * BITMAP_BYTES_PER_PIXEL;
 
   /* game: mem allocation */
   struct game_memory *game_memory = &state.game_memory;
