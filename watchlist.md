@@ -283,7 +283,7 @@
 - [x] Handmade Hero Day 081 - Creating Ground with Overlapping Bitmaps
       https://www.youtube.com/watch?v=EGOrMZwQVEk
 
-- [ ] Handmade Hero Day 082 - Caching Composited Bitmaps
+- [x] Handmade Hero Day 082 - Caching Composited Bitmaps
       https://www.youtube.com/watch?v=09bUpNbRzzc
 
 - [ ] Handmade Hero Day 083 - Premultiplied Alpha
