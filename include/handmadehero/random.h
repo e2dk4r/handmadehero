@@ -3,16 +3,31 @@
 
 #include "types.h"
 
-u32
-RandomNumber(void);
+struct random_series {
+  u32 randomNumberIndex;
+};
 
-void
-RandomNumberSeed(u32 value);
+struct random_series
+Seed(u32 value);
 
+// [0, U32_MAX]
 u32
-RandomNumberMin(void);
+RandomNumber(struct random_series *series);
 
+// [0, choiceCount)
 u32
-RandomNumberMax(void);
+RandomChoice(struct random_series *series, u32 choiceCount);
+
+// [0, 1]
+f32
+RandomNormal(struct random_series *series);
+
+// [-1, 1]
+f32
+RandomUnit(struct random_series *series);
+
+// [min, max]
+f32
+RandomBetween(struct random_series *series, f32 min, f32 max);
 
 #endif /* HANDMADEHERO_RANDOM_H */

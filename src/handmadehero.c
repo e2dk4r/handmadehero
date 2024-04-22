@@ -551,21 +551,14 @@ DrawHitPoints(struct game_backbuffer *backbuffer, struct entity *entity, struct 
 internal void
 DrawGroundTEST(struct game_state *state, struct game_backbuffer *backbuffer, f32 metersToPixels)
 {
-  RandomNumberSeed(0);
+  struct random_series series = Seed(0);
 
   struct v2 center = v2_mul(v2u(backbuffer->width, backbuffer->height), 0.5f);
 
   for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
-    // random numbers in range of [0.0, 1.0]
-    struct v2 offset =
-        v2(((f32)RandomNumber() / (f32)RandomNumberMax()), ((f32)RandomNumber() / (f32)RandomNumberMax()));
+    struct v2 offset = v2(RandomUnit(&series), RandomUnit(&series));
 
-    // random numbers in range of [-1.0, 1.0]
-    // f(x) = 2x - 1
-    v2_mul_ref(&offset, 2.0f);
-    v2_sub_ref(&offset, v2(1.0f, 1.0f));
-
-    // random numbers in range of [-radius, radius]
+    // [-radius, radius]
     f32 radius = 5.0f;
     v2_mul_ref(&offset, radius);
 
@@ -575,16 +568,16 @@ DrawGroundTEST(struct game_state *state, struct game_backbuffer *backbuffer, f32
 
     struct bitmap *stamp = 0;
 
-    if (RandomNumber() % 2)
-      stamp = state->bitmapGrass + RandomNumber() % ARRAY_COUNT(state->bitmapGrass);
+    if (RandomChoice(&series, 2))
+      stamp = state->bitmapGrass + RandomChoice(&series, ARRAY_COUNT(state->bitmapGrass));
     else
-      stamp = state->bitmapGround + RandomNumber() % ARRAY_COUNT(state->bitmapGround);
+      stamp = state->bitmapGround + RandomChoice(&series, ARRAY_COUNT(state->bitmapGround));
 
     struct v2 stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
 
     DrawBitmap(stamp, backbuffer, position, stampCenter);
 
-    stamp = state->bitmapTuft + RandomNumber() % ARRAY_COUNT(state->bitmapTuft);
+    stamp = state->bitmapTuft + RandomChoice(&series, ARRAY_COUNT(state->bitmapTuft));
     stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
 
     DrawBitmap(stamp, backbuffer, position, stampCenter);
@@ -695,22 +688,23 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     u8 isDoorUp = 0;
     u8 isDoorDown = 0;
 
+    struct random_series series = Seed(0);
     for (u32 screenIndex = 0; screenIndex < 2000; screenIndex++) {
-      u32 randomValue;
+      u32 choice;
 
       if (isDoorUp || isDoorDown)
-        randomValue = RandomNumber() % 2;
+        choice = RandomChoice(&series, 2);
       else
-        randomValue = RandomNumber() % 3;
+        choice = RandomChoice(&series, 3);
 
       u8 isDoorZ = 0;
-      if (randomValue == 2) {
+      if (choice == 2) {
         isDoorZ = 1;
         if (absTileZ == screenBaseZ)
           isDoorUp = 1;
         else
           isDoorDown = 1;
-      } else if (randomValue == 1)
+      } else if (choice == 1)
         isDoorRight = 1;
       else
         isDoorTop = 1;
@@ -762,12 +756,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         isDoorDown = 0;
       }
 
-      if (randomValue == 2)
+      if (choice == 2)
         if (absTileZ == screenBaseZ)
           absTileZ = screenBaseZ + 1;
         else
           absTileZ = screenBaseZ;
-      else if (randomValue == 1)
+      else if (choice == 1)
         screenX += 1;
       else
         screenY += 1;
