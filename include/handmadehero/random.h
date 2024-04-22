@@ -30,4 +30,8 @@ RandomUnit(struct random_series *series);
 f32
 RandomBetween(struct random_series *series, f32 min, f32 max);
 
+// [min, max]
+i32
+RandomBetweenI32(struct random_series *series, i32 min, i32 max);
+
 #endif /* HANDMADEHERO_RANDOM_H */

@@ -479,7 +479,19 @@ RandomUnit(struct random_series *series)
 f32
 RandomBetween(struct random_series *series, f32 min, f32 max)
 {
+  assert(min < max);
   f32 value = Lerp(min, max, RandomNormal(series));
+  assert(value >= min && value <= max);
+  return value;
+}
+
+// [min, max]
+i32
+RandomBetweenI32(struct random_series *series, i32 min, i32 max)
+{
+  assert(min < max);
+  u32 range = (u32)(max + 1 - min);
+  i32 value = min + (i32)(RandomNumber(series) % range);
   assert(value >= min && value <= max);
   return value;
 }

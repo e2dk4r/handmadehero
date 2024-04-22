@@ -786,7 +786,15 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     u32 initialCameraZ = screenBaseZ;
     MonsterAdd(state, initialCameraX - 4, initialCameraY + 2, initialCameraZ);
     MonsterAdd(state, initialCameraX - 2, initialCameraY + 2, initialCameraZ);
-    FamiliarAdd(state, initialCameraX - 2, initialCameraY + 2, initialCameraZ);
+
+    for (u32 familiarIndex = 0; familiarIndex < 1; familiarIndex++) {
+      i32 familiarOffsetX = RandomBetweenI32(&series, -7, 7);
+      i32 familiarOffsetY = RandomBetweenI32(&series, -3, -1);
+
+      u32 familiarX = initialCameraX + (u32)familiarOffsetX;
+      u32 familiarY = initialCameraY + (u32)familiarOffsetY;
+      FamiliarAdd(state, familiarX, familiarY, initialCameraZ);
+    }
 
     struct world_position initialCameraPosition =
         ChunkPositionFromTilePosition(state->world, initialCameraX, initialCameraY, initialCameraZ);
