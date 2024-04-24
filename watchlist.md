@@ -286,7 +286,7 @@
 - [x] Handmade Hero Day 082 - Caching Composited Bitmaps
       https://www.youtube.com/watch?v=09bUpNbRzzc
 
-- [ ] Handmade Hero Day 083 - Premultiplied Alpha
+- [x] Handmade Hero Day 083 - Premultiplied Alpha
       https://www.youtube.com/watch?v=bidrZj1YosA
 
 - [ ] Handmade Hero Day 084 - Scrolling Ground Buffer
