@@ -120,12 +120,14 @@ DrawBitmap2(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct 
 
     for (i32 x = minX; x < maxX; x++) {
       // source channels
-      f32 sA = (f32)((*src >> 24) & 0xff) / 255.0f;
-      sA *= cAlpha;
-
+      f32 sA = (f32)((*src >> 24) & 0xff);
       f32 sR = (f32)((*src >> 16) & 0xff);
       f32 sG = (f32)((*src >> 8) & 0xff);
       f32 sB = (f32)((*src >> 0) & 0xff);
+
+      // normalized sA
+      // TODO(e2dk4r): put cAlpha back in
+      f32 nsA = (sA / 255.0f); // * cAlpha;
 
       // destination channels
       f32 dA = (f32)((*dst >> 24) & 0xff);
@@ -133,10 +135,21 @@ DrawBitmap2(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct 
       f32 dG = (f32)((*dst >> 8) & 0xff);
       f32 dB = (f32)((*dst >> 0) & 0xff);
 
-      f32 a = maximum(dA, sA * 255.0f);
-      f32 r = Lerp(dR, sR, sA);
-      f32 g = Lerp(dG, sG, sA);
-      f32 b = Lerp(dB, sB, sA);
+      // normalized dA
+      f32 ndA = (dA / 255.0f);
+
+      // percentage of normalized sA to be applied
+      f32 psA = (1.0f - nsA);
+
+      /*
+       * Math of calculating blended alpha
+       * videoId:   bidrZj1YosA
+       * timestamp: 01:06:19
+       */
+      f32 a = 255.0f * (nsA + ndA - nsA * ndA);
+      f32 r = psA * dR + sR;
+      f32 g = psA * dG + sG;
+      f32 b = psA * dB + sB;
 
       *dst =
           /* alpha */
@@ -220,15 +233,30 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
       for (i32 x = 0; x < header->width; x++) {
 
         u32 value = *srcDest;
+
+        // extract pixel from file
+        f32 a = (value >> alphaShift) & 0xff;
+        f32 r = (value >> redShift) & 0xff;
+        f32 g = (value >> greenShift) & 0xff;
+        f32 b = (value >> blueShift) & 0xff;
+
+        /*
+         * Store channels values pre-multiplied with alpha.
+         */
+        f32 nA = a / 255.0f;
+        r *= nA;
+        g *= nA;
+        b *= nA;
+
         *srcDest =
-            /* blue */
-            ((value >> blueShift) & 0xff) << 0
-            /* green */
-            | ((value >> greenShift) & 0xff) << 8
-            /* red */
-            | ((value >> redShift) & 0xff) << 16
             /* alpha */
-            | ((value >> alphaShift) & 0xff) << 24;
+            (u32)(a + 0.5f) << 24
+            /* red */
+            | (u32)(r + 0.5f) << 16
+            /* green */
+            | (u32)(g + 0.5f) << 8
+            /* blue */
+            | (u32)(b + 0.5f) << 0;
 
         srcDest++;
       }
