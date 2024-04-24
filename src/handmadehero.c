@@ -1103,14 +1103,19 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #if 1
       DrawBitmap(drawBuffer, &state->textureTree, entityGroundPoint, v2(40, 80));
 #else
-      comptime struct v3 color = {1.0f, 1.0f, 0.0f};
+      for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
+           entityVolumeIndex++) {
+        struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
 
-      struct v2 entityWidthHeight = entity->dim.xy;
-      v2_mul_ref(&entityWidthHeight, metersToPixels);
+        comptime struct v4 color = {1.0f, 1.0f, 0.0f, 1.0f};
 
-      struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
-      struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
-      DrawRectangle(drawBuffer, entityLeftTop, entityRightBottom, &color);
+        struct v2 entityWidthHeight = entityVolume->dim.xy;
+        v2_mul_ref(&entityWidthHeight, metersToPixels);
+
+        struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
+        struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
+        DrawRectangle(drawBuffer, entityLeftTop, entityRightBottom, &color);
+      }
 #endif
     }
 
