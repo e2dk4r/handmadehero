@@ -234,10 +234,10 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
         u32 value = *srcDest;
 
         // extract pixel from file
-        f32 a = (value >> alphaShift) & 0xff;
-        f32 r = (value >> redShift) & 0xff;
-        f32 g = (value >> greenShift) & 0xff;
-        f32 b = (value >> blueShift) & 0xff;
+        f32 a = (f32)((value >> alphaShift) & 0xff);
+        f32 r = (f32)((value >> redShift) & 0xff);
+        f32 g = (f32)((value >> greenShift) & 0xff);
+        f32 b = (f32)((value >> blueShift) & 0xff);
 
         /*
          * Store channels values pre-multiplied with alpha.
