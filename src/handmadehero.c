@@ -121,13 +121,12 @@ DrawBitmap2(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct 
     for (i32 x = minX; x < maxX; x++) {
       // source channels
       f32 sA = (f32)((*src >> 24) & 0xff);
-      f32 sR = (f32)((*src >> 16) & 0xff);
-      f32 sG = (f32)((*src >> 8) & 0xff);
-      f32 sB = (f32)((*src >> 0) & 0xff);
+      f32 sR = cAlpha * (f32)((*src >> 16) & 0xff);
+      f32 sG = cAlpha * (f32)((*src >> 8) & 0xff);
+      f32 sB = cAlpha * (f32)((*src >> 0) & 0xff);
 
       // normalized sA
-      // TODO(e2dk4r): put cAlpha back in
-      f32 nsA = (sA / 255.0f); // * cAlpha;
+      f32 nsA = (sA / 255.0f) * cAlpha;
 
       // destination channels
       f32 dA = (f32)((*dst >> 24) & 0xff);
