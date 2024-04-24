@@ -582,6 +582,9 @@ MakeEmptyBitmap(struct memory_arena *arena, u32 width, u32 height)
 internal void
 DrawGroundTEST(struct game_state *state, struct bitmap *buffer)
 {
+  struct v4 zero = {};
+  DrawRectangle(buffer, v2(0.0f, 0.0f), v2((f32)buffer->width, (f32)buffer->height), &zero);
+
   struct random_series series = Seed(0);
 
   struct v2 center = v2_mul(v2u(buffer->width, buffer->height), 0.5f);
