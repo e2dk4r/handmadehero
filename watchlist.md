@@ -292,7 +292,7 @@
 - [x] Handmade Hero Day 084 - Scrolling Ground Buffer
       https://www.youtube.com/watch?v=U5AAAaiMlYQ
 
-- [ ] Handmade Hero Day 085 - Transient Ground Buffers
+- [x] Handmade Hero Day 085 - Transient Ground Buffers
       https://www.youtube.com/watch?v=QhjuxnQyBwk
 
 - [ ] Handmade Hero Day 086 - Aligning Ground Buffers to World Chunks
