@@ -563,7 +563,7 @@ DrawHitPoints(struct bitmap *buffer, struct entity *entity, struct v2 *entityGro
   }
 }
 
-struct bitmap
+internal struct bitmap
 MakeEmptyBitmap(struct memory_arena *arena, u32 width, u32 height)
 {
   u32 totalBitmapSize = width * height * BITMAP_BYTES_PER_PIXEL;
