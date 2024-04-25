@@ -8,7 +8,7 @@ struct random_series {
 };
 
 struct random_series
-Seed(u32 value);
+RandomSeed(u32 value);
 
 // [0, U32_MAX]
 u32

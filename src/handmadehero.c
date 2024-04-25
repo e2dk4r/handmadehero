@@ -584,7 +584,7 @@ DrawGroundTEST(struct game_state *state, struct bitmap *buffer)
   struct v4 zero = {};
   DrawRectangle(buffer, v2(0.0f, 0.0f), v2((f32)buffer->width, (f32)buffer->height), &zero);
 
-  struct random_series series = Seed(0);
+  struct random_series series = RandomSeed(0);
 
   struct v2 center = v2_mul(v2u(buffer->width, buffer->height), 0.5f);
 
@@ -739,7 +739,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     u8 isDoorUp = 0;
     u8 isDoorDown = 0;
 
-    struct random_series series = Seed(0);
+    struct random_series series = RandomSeed(0);
     for (u32 screenIndex = 0; screenIndex < 2000; screenIndex++) {
       u32 choice = RandomChoice(&series, (isDoorUp || isDoorDown) ? 2 : 3);
 

@@ -416,7 +416,7 @@ comptime u32 RandomNumberTable[] = {
 };
 
 struct random_series
-Seed(u32 value)
+RandomSeed(u32 value)
 {
   struct random_series series;
 
