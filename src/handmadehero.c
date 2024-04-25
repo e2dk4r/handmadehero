@@ -741,12 +741,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     struct random_series series = Seed(0);
     for (u32 screenIndex = 0; screenIndex < 2000; screenIndex++) {
-      u32 choice;
-
-      if (isDoorUp || isDoorDown)
-        choice = RandomChoice(&series, 2);
-      else
-        choice = RandomChoice(&series, 3);
+      u32 choice = RandomChoice(&series, (isDoorUp || isDoorDown) ? 2 : 3);
 
       u8 isDoorZ = 0;
       if (choice == 2) {
