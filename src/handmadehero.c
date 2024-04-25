@@ -579,27 +579,19 @@ MakeEmptyBitmap(struct memory_arena *arena, u32 width, u32 height)
 }
 
 internal void
-DrawGroundTEST(struct game_state *state, struct bitmap *buffer)
+DrawGroundChunk(struct game_state *state, struct bitmap *buffer, struct world_position *chunkPosition)
 {
   struct v4 zero = {};
-  DrawRectangle(buffer, v2(0.0f, 0.0f), v2((f32)buffer->width, (f32)buffer->height), &zero);
+  DrawRectangle(buffer, v2(0.0f, 0.0f), v2u(buffer->width, buffer->height), &zero);
 
-  struct random_series series = RandomSeed(0);
+  u32 seed = 139 * chunkPosition->chunkX + 593 * chunkPosition->chunkY + 329 * chunkPosition->chunkZ;
+  struct random_series series = RandomSeed(seed);
 
-  struct v2 center = v2_mul(v2u(buffer->width, buffer->height), 0.5f);
+  f32 width = (f32)buffer->width;
+  f32 height = (f32)buffer->width;
+  struct v2 center = v2_mul(v2(width, height), 0.5f);
 
-  for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
-    struct v2 offset = v2(RandomUnit(&series), RandomUnit(&series));
-
-    // [-radius, radius]
-    f32 radius = 5.0f;
-    v2_mul_ref(&offset, radius);
-
-    // turn into pixels coordinates
-    v2_mul_ref(&offset, state->metersToPixels);
-
-    struct v2 position = v2_add(center, offset);
-
+  for (u32 grassIndex = 0; grassIndex < 1000; grassIndex++) {
     struct bitmap *stamp = 0;
     if (RandomChoice(&series, 2))
       stamp = state->textureGrass + RandomChoice(&series, ARRAY_COUNT(state->textureGrass));
@@ -608,23 +600,18 @@ DrawGroundTEST(struct game_state *state, struct bitmap *buffer)
 
     struct v2 stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
 
+    struct v2 offset = v2(width * RandomNormal(&series), height * RandomNormal(&series));
+    struct v2 position = v2_sub(offset, stampCenter);
+
     DrawBitmap(buffer, stamp, position, stampCenter);
   }
 
-  for (u32 turfIndex = 0; turfIndex < 100; turfIndex++) {
-    struct v2 offset = v2(RandomUnit(&series), RandomUnit(&series));
-
-    // [-radius, radius]
-    f32 radius = 5.0f;
-    v2_mul_ref(&offset, radius);
-
-    // turn into pixels coordinates
-    v2_mul_ref(&offset, state->metersToPixels);
-
-    struct v2 position = v2_add(center, offset);
-
+  for (u32 turfIndex = 0; turfIndex < 1000; turfIndex++) {
     struct bitmap *tuft = state->textureTuft + RandomChoice(&series, ARRAY_COUNT(state->textureTuft));
     struct v2 tuftCenter = v2_mul(v2u(tuft->width, tuft->height), 0.5f);
+
+    struct v2 offset = v2(width * RandomNormal(&series), height * RandomNormal(&series));
+    struct v2 position = v2_sub(offset, tuftCenter);
 
     DrawBitmap(buffer, tuft, position, tuftCenter);
   }
@@ -739,9 +726,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     u8 isDoorUp = 0;
     u8 isDoorDown = 0;
 
-    struct random_series series = RandomSeed(0);
+    struct random_series series = RandomSeed(1234);
     for (u32 screenIndex = 0; screenIndex < 2000; screenIndex++) {
-      u32 choice = RandomChoice(&series, (isDoorUp || isDoorDown) ? 2 : 3);
+      // u32 choice = RandomChoice(&series, (isDoorUp || isDoorDown) ? 2 : 3);
+      u32 choice = RandomChoice(&series, 2);
 
       u8 isDoorZ = 0;
       if (choice == 2) {
@@ -841,8 +829,15 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     state->cameraPosition = initialCameraPosition;
 
     /* cache composited ground drawing */
-    state->bufferGround = MakeEmptyBitmap(&state->worldArena, 512, 512);
-    DrawGroundTEST(state, &state->bufferGround);
+    f32 screenWidth = (f32)backbuffer->width;
+    f32 screenHeight = (f32)backbuffer->height;
+    f32 maximumZScale = 0.5f;
+    f32 groundOverscan = 1.5f;
+    u32 groundBufferWidth = roundf32tou32(screenWidth * groundOverscan);
+    u32 groundBufferHeight = roundf32tou32(screenHeight * groundOverscan);
+    state->groundBuffer = MakeEmptyBitmap(&state->worldArena, groundBufferWidth, groundBufferHeight);
+    state->groundBufferPosition = state->cameraPosition;
+    DrawGroundChunk(state, &state->groundBuffer, &state->groundBufferPosition);
 
     memory->initialized = 1;
   }
@@ -940,13 +935,21 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   DrawRectangle(drawBuffer, v2(0.0f, 0.0f), v2((f32)drawBuffer->width, (f32)drawBuffer->height), &backgroundColor);
 #endif
 
-  /* draw ground */
-  DrawBitmap(drawBuffer, &state->bufferGround, v2(0.0f, 0.0f), v2(0.0f, 0.0f));
-
   struct v2 screenCenter = {
       .x = 0.5f * (f32)backbuffer->width,
       .y = 0.5f * (f32)backbuffer->height,
   };
+
+  /* draw ground */
+  {
+    struct v2 position = v2_sub(screenCenter, v2_mul(v2u(state->groundBuffer.width, state->groundBuffer.height), 0.5f));
+    struct v3 delta = WorldPositionSub(state->world, &state->groundBufferPosition, &state->cameraPosition);
+    delta.y = -delta.y;
+    v3_mul_ref(&delta, metersToPixels);
+    v2_add_ref(&position, delta.xy);
+
+    DrawBitmap(drawBuffer, &state->groundBuffer, position, v2(0.0f, 0.0f));
+  }
 
   /* render entities */
   for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
