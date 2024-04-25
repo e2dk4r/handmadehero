@@ -5,15 +5,15 @@
 
 typedef u64 memory_arena_size_t;
 struct memory_arena {
-  u64 used;
+  memory_arena_size_t used;
   memory_arena_size_t size;
   void *data;
 };
 
 struct memory_chunk {
   void *block;
-  u64 size;
-  u64 max;
+  memory_arena_size_t size;
+  memory_arena_size_t max;
 };
 
 void
@@ -26,7 +26,7 @@ MemoryChunkPush(struct memory_chunk *chunk);
 void
 MemoryChunkPop(struct memory_chunk *chunk, void *block);
 struct memory_chunk *
-MemoryArenaPushChunk(struct memory_arena *mem, u64 size, u64 max);
+MemoryArenaPushChunk(struct memory_arena *mem, memory_arena_size_t size, memory_arena_size_t max);
 
 void
 ZeroMemory(void *ptr, memory_arena_size_t size);

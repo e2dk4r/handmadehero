@@ -48,7 +48,7 @@ MemoryChunkPop(struct memory_chunk *chunk, void *ptr)
 }
 
 inline struct memory_chunk *
-MemoryArenaPushChunk(struct memory_arena *mem, u64 size, u64 max)
+MemoryArenaPushChunk(struct memory_arena *mem, memory_arena_size_t size, memory_arena_size_t max)
 {
   assert(size > 0);
   assert(max > 0);
@@ -56,7 +56,7 @@ MemoryArenaPushChunk(struct memory_arena *mem, u64 size, u64 max)
   chunk->block = chunk + sizeof(*chunk);
   chunk->size = size;
   chunk->max = max;
-  for (u64 index = 0; index < chunk->max; index++) {
+  for (memory_arena_size_t index = 0; index < chunk->max; index++) {
     u8 *flag = chunk->block + sizeof(u8) * index;
     *flag = 0;
   }
