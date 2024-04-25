@@ -289,7 +289,7 @@
 - [x] Handmade Hero Day 083 - Premultiplied Alpha
       https://www.youtube.com/watch?v=bidrZj1YosA
 
-- [ ] Handmade Hero Day 084 - Scrolling Ground Buffer
+- [x] Handmade Hero Day 084 - Scrolling Ground Buffer
       https://www.youtube.com/watch?v=U5AAAaiMlYQ
 
 - [ ] Handmade Hero Day 085 - Transient Ground Buffers
