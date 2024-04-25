@@ -43,6 +43,13 @@ struct controlled_hero {
   struct v2 dSword;
 };
 
+struct ground_buffer {
+  // NOTE(e2dk4r): invalid position tells us that this ground buffer has not been filled
+  // NOTE(e2dk4r): this is center of the bitmap
+  struct world_position position;
+  void *memory;
+};
+
 struct game_state {
   struct memory_arena worldArena;
   struct world *world;
@@ -68,9 +75,6 @@ struct game_state {
 
   f32 metersToPixels;
 
-  struct world_position groundBufferPosition;
-  struct bitmap groundBuffer;
-
   struct bitmap textureGrass[2];
   struct bitmap textureGround[4];
   struct bitmap textureTuft[3];
@@ -86,6 +90,16 @@ struct game_state {
 #define BITMAP_HERO_LEFT 2
 #define BITMAP_HERO_RIGHT 0
   struct bitmap_hero textureHero[4];
+};
+
+struct transient_state {
+  u8 initialized : 1;
+
+  struct memory_arena transientArena;
+
+  u32 groundBufferCount;
+  struct ground_buffer *groundBuffers;
+  struct bitmap groundBitmapTemplate;
 };
 
 void

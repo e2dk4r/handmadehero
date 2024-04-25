@@ -68,3 +68,38 @@ ZeroMemory(void *ptr, memory_arena_size_t size)
 {
   __builtin_bzero(ptr, size);
 }
+
+inline struct memory_temp
+BeginTemporaryMemory(struct memory_arena *arena)
+{
+  struct memory_temp temp;
+
+  temp.arena = arena;
+  temp.used = arena->used;
+
+#if HANDMADEHERO_DEBUG
+  arena->tempCount++;
+#endif
+
+  return temp;
+}
+
+inline void
+EndTemporaryMemory(struct memory_temp *temp)
+{
+  struct memory_arena *arena = temp->arena;
+
+  assert(arena->used >= temp->used);
+  arena->used = temp->used;
+
+#if HANDMADEHERO_DEBUG
+  assert(arena->tempCount > 0);
+  arena->tempCount--;
+#endif
+}
+
+inline void
+MemoryArenaCheck(struct memory_arena *arena)
+{
+  assert(arena->tempCount == 0);
+}

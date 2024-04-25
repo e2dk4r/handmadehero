@@ -574,15 +574,26 @@ MakeEmptyBitmap(struct memory_arena *arena, u32 width, u32 height)
       .memory = MemoryArenaPush(arena, totalBitmapSize),
   };
 
-  ZeroMemory(bitmap.memory, totalBitmapSize);
   return bitmap;
 }
 
 internal void
-DrawGroundChunk(struct game_state *state, struct bitmap *buffer, struct world_position *chunkPosition)
+ClearBitmap(struct bitmap *bitmap)
 {
-  struct v4 zero = {};
-  DrawRectangle(buffer, v2(0.0f, 0.0f), v2u(buffer->width, buffer->height), &zero);
+  if (bitmap->memory) {
+    u32 totalBitmapSize = bitmap->width * bitmap->height * BITMAP_BYTES_PER_PIXEL;
+    ZeroMemory(bitmap->memory, totalBitmapSize);
+  }
+}
+
+internal void
+FillGroundChunk(struct transient_state *transientState, struct game_state *state, struct ground_buffer *groundBuffer,
+                struct world_position *chunkPosition)
+{
+  struct bitmap *buffer = &transientState->groundBitmapTemplate;
+  buffer->memory = groundBuffer->memory;
+
+  groundBuffer->position = *chunkPosition;
 
   u32 seed = 139 * chunkPosition->chunkX + 593 * chunkPosition->chunkY + 329 * chunkPosition->chunkZ;
   struct random_series series = RandomSeed(seed);
@@ -591,7 +602,7 @@ DrawGroundChunk(struct game_state *state, struct bitmap *buffer, struct world_po
   f32 height = (f32)buffer->width;
   struct v2 center = v2_mul(v2(width, height), 0.5f);
 
-  for (u32 grassIndex = 0; grassIndex < 1000; grassIndex++) {
+  for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
     struct bitmap *stamp = 0;
     if (RandomChoice(&series, 2))
       stamp = state->textureGrass + RandomChoice(&series, ARRAY_COUNT(state->textureGrass));
@@ -601,25 +612,24 @@ DrawGroundChunk(struct game_state *state, struct bitmap *buffer, struct world_po
     struct v2 stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
 
     struct v2 offset = v2(width * RandomNormal(&series), height * RandomNormal(&series));
-    struct v2 position = v2_sub(offset, stampCenter);
 
-    DrawBitmap(buffer, stamp, position, stampCenter);
+    DrawBitmap(buffer, stamp, offset, stampCenter);
   }
 
-  for (u32 turfIndex = 0; turfIndex < 1000; turfIndex++) {
+  for (u32 turfIndex = 0; turfIndex < 100; turfIndex++) {
     struct bitmap *tuft = state->textureTuft + RandomChoice(&series, ARRAY_COUNT(state->textureTuft));
     struct v2 tuftCenter = v2_mul(v2u(tuft->width, tuft->height), 0.5f);
 
     struct v2 offset = v2(width * RandomNormal(&series), height * RandomNormal(&series));
-    struct v2 position = v2_sub(offset, tuftCenter);
 
-    DrawBitmap(buffer, tuft, position, tuftCenter);
+    DrawBitmap(buffer, tuft, offset, tuftCenter);
   }
 }
 
 void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer)
 {
+  assert(sizeof(struct game_state) <= memory->permanentStorageSize);
   struct game_state *state = memory->permanentStorage;
   f32 dt = input->dtPerFrame;
 
@@ -828,22 +838,42 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         ChunkPositionFromTilePosition(state->world, initialCameraX, initialCameraY, initialCameraZ);
     state->cameraPosition = initialCameraPosition;
 
-    /* cache composited ground drawing */
-    f32 screenWidth = (f32)backbuffer->width;
-    f32 screenHeight = (f32)backbuffer->height;
-    f32 maximumZScale = 0.5f;
-    f32 groundOverscan = 1.5f;
-    u32 groundBufferWidth = roundf32tou32(screenWidth * groundOverscan);
-    u32 groundBufferHeight = roundf32tou32(screenHeight * groundOverscan);
-    state->groundBuffer = MakeEmptyBitmap(&state->worldArena, groundBufferWidth, groundBufferHeight);
-    state->groundBufferPosition = state->cameraPosition;
-    DrawGroundChunk(state, &state->groundBuffer, &state->groundBufferPosition);
-
     memory->initialized = 1;
   }
 
   struct world *world = state->world;
   assert(world);
+
+  /****************************************************************
+   * TRANSIENT STATE INITIALIZATION
+   ****************************************************************/
+  assert(sizeof(struct transient_state) <= memory->transientStorageSize);
+  struct transient_state *transientState = memory->transientStorage;
+  if (!transientState->initialized) {
+    void *data = memory->transientStorage + sizeof(*transientState);
+    memory_arena_size_t size = memory->transientStorageSize - sizeof(*transientState);
+    MemoryArenaInit(&transientState->transientArena, data, size);
+
+    /* cache composited ground drawing */
+    u32 groundBufferWidth = 256;
+    u32 groundBufferHeight = 256;
+    transientState->groundBufferCount = 128;
+    transientState->groundBuffers = MemoryArenaPush(
+        &transientState->transientArena, sizeof(*transientState->groundBuffers) * transientState->groundBufferCount);
+    for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
+      struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
+
+      transientState->groundBitmapTemplate =
+          MakeEmptyBitmap(&transientState->transientArena, groundBufferWidth, groundBufferHeight);
+      groundBuffer->memory = transientState->groundBitmapTemplate.memory;
+      groundBuffer->position = WorldPositionInvalid();
+    }
+
+    // TODO(e2dk4r): this is just a test fill
+    FillGroundChunk(transientState, state, transientState->groundBuffers, &state->cameraPosition);
+
+    transientState->initialized = 1;
+  }
 
   /****************************************************************
    * CONTROLLER INPUT HANDLING
@@ -916,10 +946,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   v3_mul_ref(&tileSpan, world->tileSideInMeters);
   struct rect cameraBounds = RectCenterDim(v3(0.0f, 0.0f, 0.0f), tileSpan);
 
-  struct memory_arena simArena;
-  MemoryArenaInit(&simArena, memory->transientStorage, memory->transientStorageSize);
+  struct memory_temp simRegionMemory = BeginTemporaryMemory(&transientState->transientArena);
   struct sim_region *simRegion =
-      BeginSimRegion(&simArena, state, state->world, state->cameraPosition, cameraBounds, dt);
+      BeginSimRegion(&transientState->transientArena, state, state->world, state->cameraPosition, cameraBounds, dt);
 
   /****************************************************************
    * RENDERING
@@ -941,14 +970,23 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   };
 
   /* draw ground */
-  {
-    struct v2 position = v2_sub(screenCenter, v2_mul(v2u(state->groundBuffer.width, state->groundBuffer.height), 0.5f));
-    struct v3 delta = WorldPositionSub(state->world, &state->groundBufferPosition, &state->cameraPosition);
+  for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
+    struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
+
+    if (!WorldPositionIsValid(&groundBuffer->position))
+      continue;
+
+    struct bitmap *bitmap = &transientState->groundBitmapTemplate;
+    bitmap->memory = groundBuffer->memory;
+
+    struct v3 delta = WorldPositionSub(state->world, &groundBuffer->position, &state->cameraPosition);
     delta.y = -delta.y;
     v3_mul_ref(&delta, metersToPixels);
+
+    struct v2 position = v2_sub(screenCenter, v2_mul(v2u(bitmap->width, bitmap->height), 0.5f));
     v2_add_ref(&position, delta.xy);
 
-    DrawBitmap(drawBuffer, &state->groundBuffer, position, v2(0.0f, 0.0f));
+    DrawBitmap(drawBuffer, bitmap, position, v2(0.0f, 0.0f));
   }
 
   /* render entities */
@@ -1171,4 +1209,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 
   EndSimRegion(simRegion, state);
+  EndTemporaryMemory(&simRegionMemory);
+
+  MemoryArenaCheck(&state->worldArena);
+  MemoryArenaCheck(&transientState->transientArena);
 }
