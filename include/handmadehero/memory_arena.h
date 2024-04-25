@@ -30,6 +30,5 @@ MemoryArenaPushChunk(struct memory_arena *mem, u64 size, u64 max);
 
 void
 ZeroMemory(void *ptr, memory_arena_size_t size);
-#define ZeroStruct(ptr) ZeroMemory(ptr, sizeof(ptr))
 
 #endif /* HANDMADEHERO_MEMORY_ARENA_H */

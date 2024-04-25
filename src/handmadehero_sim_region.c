@@ -137,7 +137,7 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
                struct world_position origin, struct rect bounds, f32 dt)
 {
   struct sim_region *simRegion = MemoryArenaPush(simArena, sizeof(*simRegion));
-  ZeroStruct(simRegion->hashTable);
+  ZeroMemory(simRegion->hashTable, sizeof(simRegion->hashTable));
 
   simRegion->maxEntityRadius = 5.0f;
   simRegion->maxEntityVelocity = 30.0f;
