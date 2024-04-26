@@ -6,7 +6,7 @@
 
 #define WORLD_CHUNK_SAFE_MARGIN 16
 #define WORLD_CHUNK_UNINITIALIZED 0
-#define TILES_PER_CHUNK 16
+#define TILES_PER_CHUNK 8
 
 void
 WorldInit(struct world *world, f32 tileSideInMeters)

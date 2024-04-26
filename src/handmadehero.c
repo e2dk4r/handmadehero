@@ -966,6 +966,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * RENDERING
    ****************************************************************/
   f32 metersToPixels = state->metersToPixels;
+  f32 pixelsToMeters = 1.0f / metersToPixels;
   struct bitmap *drawBuffer = (struct bitmap *)backbuffer;
 
 /* drawing background */
@@ -976,10 +977,44 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   DrawRectangle(drawBuffer, v2(0.0f, 0.0f), v2((f32)drawBuffer->width, (f32)drawBuffer->height), &backgroundColor);
 #endif
 
-  struct v2 screenCenter = {
-      .x = 0.5f * (f32)backbuffer->width,
-      .y = 0.5f * (f32)backbuffer->height,
+  struct v2 screenDim = {
+      .x = (f32)backbuffer->width,
+      .y = (f32)backbuffer->height,
   };
+  struct v2 screenCenter = v2_mul(screenDim, 0.5f);
+
+  /* draw chunks */
+  {
+    struct v2 screenDimInMeters = v2_mul(screenDim, pixelsToMeters);
+    struct rect cameraBounds = RectCenterDim(v3(0.0f, 0.0f, 0.0f), v2_to_v3(screenDimInMeters, 0.0f));
+    struct world_position minChunkPosition =
+        WorldPositionCalculate(world, &state->cameraPosition, RectMin(&cameraBounds));
+    struct world_position maxChunkPosition =
+        WorldPositionCalculate(world, &state->cameraPosition, RectMax(&cameraBounds));
+    for (u32 chunkZ = minChunkPosition.chunkZ; chunkZ <= maxChunkPosition.chunkZ; chunkZ++) {
+      for (u32 chunkY = minChunkPosition.chunkY; chunkY <= maxChunkPosition.chunkY; chunkY++) {
+        for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
+          struct world_chunk *chunk = WorldChunkGet(world, chunkX, chunkY, chunkZ);
+          if (!chunk)
+            continue;
+
+          struct world_position chunkCenterPosition =
+              WorldPositionCentered(chunk->chunkX, chunk->chunkY, chunk->chunkZ);
+          struct v3 relativePosition = WorldPositionSub(world, &chunkCenterPosition, &state->cameraPosition);
+          struct v2 chunkScreenPosition = {
+              .x = screenCenter.x + relativePosition.x * metersToPixels,
+              .y = screenCenter.y - relativePosition.y * metersToPixels,
+          };
+          struct v2 chunkScreenDim = v2_mul(world->chunkDimInMeters.xy, metersToPixels);
+          struct v2 min = v2_sub(chunkScreenPosition, v2_mul(chunkScreenDim, 0.5f));
+          struct v2 max = v2_add(min, chunkScreenDim);
+          struct v4 color = v4(1.0f, 1.0f, 0.0f, 1.0f);
+          f32 thickness = 1.0f;
+          DrawRectangleOutline(drawBuffer, min, max, &color, thickness);
+        }
+      }
+    }
+  }
 
   /* draw ground */
   for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
