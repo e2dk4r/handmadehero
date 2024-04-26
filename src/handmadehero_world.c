@@ -137,8 +137,8 @@ WorldPositionSub(struct world *world, struct world_position *a, struct world_pos
   return result;
 }
 
-internal inline u8
-WorldPositionSame(struct world *world, struct world_position *left, struct world_position *right)
+inline u8
+IsWorldPositionSame(struct world *world, struct world_position *left, struct world_position *right)
 {
   assert(IsWorldPositionOffsetCalculated(world, &left->offset));
   assert(IsWorldPositionOffsetCalculated(world, &right->offset));
@@ -157,7 +157,7 @@ EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 ent
 {
   assert(!oldPosition || WorldPositionIsValid(oldPosition));
   assert(!newPosition || WorldPositionIsValid(newPosition));
-  if (oldPosition && newPosition && WorldPositionSame(world, oldPosition, newPosition))
+  if (oldPosition && newPosition && IsWorldPositionSame(world, oldPosition, newPosition))
     // leave entity where it is
     return;
 

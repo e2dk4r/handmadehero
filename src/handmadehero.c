@@ -904,9 +904,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       groundBuffer->position = WorldPositionInvalid();
     }
 
-    // TODO(e2dk4r): this is just a test fill
-    FillGroundChunk(transientState, state, transientState->groundBuffers, &state->cameraPosition);
-
     transientState->initialized = 1;
   }
 
@@ -1005,12 +1002,25 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     for (u32 chunkZ = minChunkPosition.chunkZ; chunkZ <= maxChunkPosition.chunkZ; chunkZ++) {
       for (u32 chunkY = minChunkPosition.chunkY; chunkY <= maxChunkPosition.chunkY; chunkY++) {
         for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
-          struct world_chunk *chunk = WorldChunkGet(world, chunkX, chunkY, chunkZ);
-          if (!chunk)
-            continue;
+          struct world_position chunkCenterPosition = WorldPositionCentered(chunkX, chunkY, chunkZ);
 
-          struct world_position chunkCenterPosition =
-              WorldPositionCentered(chunk->chunkX, chunk->chunkY, chunk->chunkZ);
+          struct ground_buffer *emptyGroundBuffer = 0;
+          u8 found = 0;
+          for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
+            struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
+
+            if (IsWorldPositionSame(world, &groundBuffer->position, &chunkCenterPosition)) {
+              found = 1;
+              break;
+            } else if (!WorldPositionIsValid(&groundBuffer->position)) {
+              emptyGroundBuffer = groundBuffer;
+            }
+          }
+
+          if (!found && emptyGroundBuffer) {
+            FillGroundChunk(transientState, state, emptyGroundBuffer, &chunkCenterPosition);
+          }
+
           struct v3 relativePosition = WorldPositionSub(world, &chunkCenterPosition, &state->cameraPosition);
           struct v2 chunkScreenPosition = {
               .x = screenCenter.x + relativePosition.x * metersToPixels,

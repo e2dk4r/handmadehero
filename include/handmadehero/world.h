@@ -82,4 +82,7 @@ EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entity
 u8
 IsWorldPositionOffsetCalculated(struct world *world, struct v3 *offset);
 
+u8
+IsWorldPositionSame(struct world *world, struct world_position *left, struct world_position *right);
+
 #endif /* HANDMADEHERO_WORLD_H */
