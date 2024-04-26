@@ -692,9 +692,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     f32 tileSideInMeters = 1.4f;
     f32 tileDepthInMeters = state->floorHeight;
 
-    state->heroCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(0.5f, 1.0f, 1.2f));
-    state->familiarCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(0.5f, 1.0f, 0.5f));
-    state->monsterCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(0.5f, 1.0f, 0.5f));
+    state->heroCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(1.0f, 0.5f, 1.2f));
+    state->familiarCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(1.0f, 0.5f, 0.5f));
+    state->monsterCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(1.0f, 0.5f, 0.5f));
     state->wallCollision =
         MakeSimpleGroundedCollision(&state->worldArena, v3(tileSideInMeters, tileSideInMeters, tileDepthInMeters));
     state->swordCollision =
