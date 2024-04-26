@@ -295,7 +295,7 @@
 - [x] Handmade Hero Day 085 - Transient Ground Buffers
       https://www.youtube.com/watch?v=QhjuxnQyBwk
 
-- [ ] Handmade Hero Day 086 - Aligning Ground Buffers to World Chunks
+- [x] Handmade Hero Day 086 - Aligning Ground Buffers to World Chunks
       https://www.youtube.com/watch?v=TxowSnU2_cQ
 
 - [ ] Handmade Hero Day 087 - Seamless Ground Textures
