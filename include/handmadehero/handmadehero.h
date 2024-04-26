@@ -74,6 +74,8 @@ struct game_state {
   struct entity_collision_volume_group *roomCollision;
 
   f32 metersToPixels;
+  f32 pixelsToMeters;
+  f32 floorHeight;
 
   struct bitmap textureGrass[2];
   struct bitmap textureGround[4];

@@ -28,15 +28,11 @@ struct world_chunk {
   struct world_chunk *next;
 };
 
-#define WORLD_CHUNK_TOTAL 4096
 struct world {
-  f32 tileSideInMeters;
-  f32 tileDepthInMeters;
   struct v3 chunkDimInMeters;
 
   struct world_entity_block *firstFreeBlock;
-
-  struct world_chunk chunkHash[WORLD_CHUNK_TOTAL];
+  struct world_chunk chunkHash[4096];
 };
 
 struct world_position {
@@ -62,7 +58,7 @@ WorldPositionIsValid(struct world_position *position)
 }
 
 void
-WorldInit(struct world *world, f32 tileSideInMeters);
+WorldInit(struct world *world, struct v3 chunkDimInMeters);
 
 struct world_chunk *
 WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ);
@@ -76,14 +72,14 @@ WorldPositionCentered(u32 absTileX, u32 absTileY, u32 absTileZ)
 struct world_position
 WorldPositionCalculate(struct world *world, struct world_position *basePosition, struct v3 offset);
 
-struct world_position
-ChunkPositionFromTilePosition(struct world *world, u32 absTileX, u32 absTileY, u32 absTileZ);
-
 struct v3
 WorldPositionSub(struct world *world, struct world_position *a, struct world_position *b);
 
 void
 EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct stored_entity *stored,
                      struct world_position *oldPosition, struct world_position *newPosition);
+
+u8
+IsWorldPositionOffsetCalculated(struct world *world, struct v3 *offset);
 
 #endif /* HANDMADEHERO_WORLD_H */

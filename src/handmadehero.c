@@ -436,6 +436,21 @@ MakeSimpleGroundedCollision(struct memory_arena *arena, struct v3 dim)
   return result;
 }
 
+internal inline struct world_position
+ChunkPositionFromTilePosition(struct world *world, u32 absTileX, u32 absTileY, u32 absTileZ)
+{
+  f32 tileSideInMeters = 1.4f;
+  f32 tileDepthInMeters = 3.0f;
+
+  struct world_position basePosition = {};
+  struct v3 tileDim = {tileSideInMeters, tileSideInMeters, tileDepthInMeters};
+  struct world_position result = WorldPositionCalculate(
+      world, &basePosition, v3_hadamard(tileDim, v3((f32)absTileX, (f32)absTileY, (f32)absTileZ)));
+
+  assert(IsWorldPositionOffsetCalculated(world, &result.offset));
+  return result;
+}
+
 internal inline u32
 SwordAdd(struct game_state *state)
 {
@@ -525,7 +540,7 @@ StairAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
   struct entity *entity = &stored->sim;
 
   entity->walkableDim = state->stairwellCollision->totalVolume.dim;
-  entity->walkableHeight = state->world->tileDepthInMeters;
+  entity->walkableHeight = state->floorHeight;
   EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
 
   return addResult.index;
@@ -645,6 +660,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct game_state *state = memory->permanentStorage;
   f32 dt = input->dtPerFrame;
 
+  u32 groundBufferWidth = 256;
+  u32 groundBufferHeight = 256;
   /****************************************************************
    * INITIALIZATION
    ****************************************************************/
@@ -656,29 +673,37 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     /* world creation */
     struct world *world = MemoryArenaPush(&state->worldArena, sizeof(*world));
     state->world = world;
-    WorldInit(world, 1.4f);
 
-    /* unit: pixels */
-    const u32 tileSideInPixels = 60;
+    state->floorHeight = 3.0f;
+
     /* unit: pixels/meters */
-    state->metersToPixels = (f32)tileSideInPixels / world->tileSideInMeters;
+    state->metersToPixels = 42.0f;
+    /* unit: meters/pixels */
+    state->pixelsToMeters = 1.0f / state->metersToPixels;
+
+    struct v3 chunkDimInMeters = {
+        state->pixelsToMeters * (f32)groundBufferWidth,
+        state->pixelsToMeters * (f32)groundBufferHeight,
+        state->floorHeight,
+    };
+    WorldInit(world, chunkDimInMeters);
 
     /* collision groups */
+    f32 tileSideInMeters = 1.4f;
+    f32 tileDepthInMeters = state->floorHeight;
+
     state->heroCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(0.5f, 1.0f, 1.2f));
     state->familiarCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(0.5f, 1.0f, 0.5f));
     state->monsterCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(0.5f, 1.0f, 0.5f));
-    state->wallCollision = MakeSimpleGroundedCollision(
-        &state->worldArena,
-        v3(state->world->tileSideInMeters, state->world->tileSideInMeters, state->world->tileDepthInMeters));
+    state->wallCollision =
+        MakeSimpleGroundedCollision(&state->worldArena, v3(tileSideInMeters, tileSideInMeters, tileDepthInMeters));
     state->swordCollision =
-        MakeSimpleGroundedCollision(&state->worldArena, v3(world->tileSideInMeters, world->tileSideInMeters, 0.1f));
+        MakeSimpleGroundedCollision(&state->worldArena, v3(tileSideInMeters, tileSideInMeters, 0.1f));
     state->stairwellCollision = MakeSimpleGroundedCollision(
-        &state->worldArena, v3(state->world->tileSideInMeters, 2.0f * state->world->tileSideInMeters,
-                               1.1f * state->world->tileDepthInMeters));
-    state->roomCollision =
-        MakeSimpleGroundedCollision(&state->worldArena, v3(state->world->tileSideInMeters * (f32)TILES_PER_WIDTH,
-                                                           state->world->tileSideInMeters * (f32)TILES_PER_HEIGHT,
-                                                           0.9f * state->world->tileDepthInMeters));
+        &state->worldArena, v3(tileSideInMeters, 2.0f * tileSideInMeters, 1.1f * tileDepthInMeters));
+    state->roomCollision = MakeSimpleGroundedCollision(&state->worldArena, v3(tileSideInMeters * (f32)TILES_PER_WIDTH,
+                                                                              tileSideInMeters * (f32)TILES_PER_HEIGHT,
+                                                                              0.9f * tileDepthInMeters));
 
     /* load grass */
     state->textureGrass[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/grass00.bmp");
@@ -734,9 +759,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     StoredEntityAdd(state, ENTITY_TYPE_INVALID, 0, 0);
 
     /* generate procedural tile map */
-    u32 screenBaseX = (U32_MAX / TILES_PER_WIDTH) / 2;
-    u32 screenBaseY = (U32_MAX / TILES_PER_HEIGHT) / 2;
-    u32 screenBaseZ = U32_MAX / 2;
+    u32 screenBaseX = (U16_MAX / TILES_PER_WIDTH) / 2;
+    u32 screenBaseY = (U16_MAX / TILES_PER_HEIGHT) / 2;
+    u32 screenBaseZ = U16_MAX / 2;
     u32 screenX = screenBaseX;
     u32 screenY = screenBaseY;
     u32 absTileZ = screenBaseZ;
@@ -867,8 +892,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     MemoryArenaInit(&transientState->transientArena, data, size);
 
     /* cache composited ground drawing */
-    u32 groundBufferWidth = 256;
-    u32 groundBufferHeight = 256;
     transientState->groundBufferCount = 128;
     transientState->groundBuffers = MemoryArenaPush(
         &transientState->transientArena, sizeof(*transientState->groundBuffers) * transientState->groundBufferCount);
@@ -950,18 +973,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
   }
 
-  comptime u32 tileSpanMultipler = 3;
-  comptime u32 tileSpanX = TILES_PER_WIDTH * tileSpanMultipler;
-  comptime u32 tileSpanY = TILES_PER_HEIGHT * tileSpanMultipler;
-  comptime u32 tileSpanZ = 1;
-  struct v3 tileSpan = {(f32)tileSpanX, (f32)tileSpanY, (f32)tileSpanZ};
-  v3_mul_ref(&tileSpan, world->tileSideInMeters);
-  struct rect cameraBounds = RectCenterDim(v3(0.0f, 0.0f, 0.0f), tileSpan);
-
-  struct memory_temp simRegionMemory = BeginTemporaryMemory(&transientState->transientArena);
-  struct sim_region *simRegion =
-      BeginSimRegion(&transientState->transientArena, state, state->world, state->cameraPosition, cameraBounds, dt);
-
   /****************************************************************
    * RENDERING
    ****************************************************************/
@@ -983,14 +994,14 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   };
   struct v2 screenCenter = v2_mul(screenDim, 0.5f);
 
+  struct v2 screenDimInMeters = v2_mul(screenDim, pixelsToMeters);
+  struct rect cameraBoundsInMeters = RectCenterDim(v3(0.0f, 0.0f, 0.0f), v2_to_v3(screenDimInMeters, 0.0f));
   /* draw chunks */
   {
-    struct v2 screenDimInMeters = v2_mul(screenDim, pixelsToMeters);
-    struct rect cameraBounds = RectCenterDim(v3(0.0f, 0.0f, 0.0f), v2_to_v3(screenDimInMeters, 0.0f));
     struct world_position minChunkPosition =
-        WorldPositionCalculate(world, &state->cameraPosition, RectMin(&cameraBounds));
+        WorldPositionCalculate(world, &state->cameraPosition, RectMin(&cameraBoundsInMeters));
     struct world_position maxChunkPosition =
-        WorldPositionCalculate(world, &state->cameraPosition, RectMax(&cameraBounds));
+        WorldPositionCalculate(world, &state->cameraPosition, RectMax(&cameraBoundsInMeters));
     for (u32 chunkZ = minChunkPosition.chunkZ; chunkZ <= maxChunkPosition.chunkZ; chunkZ++) {
       for (u32 chunkY = minChunkPosition.chunkY; chunkY <= maxChunkPosition.chunkY; chunkY++) {
         for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
@@ -1015,6 +1026,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       }
     }
   }
+
+  struct memory_temp simRegionMemory = BeginTemporaryMemory(&transientState->transientArena);
+  struct v3 simBoundExpansion = v3(15.0f, 15.0f, 15.0f);
+  struct rect simBounds = RectAddRadius(&cameraBoundsInMeters, simBoundExpansion);
+  struct sim_region *simRegion =
+      BeginSimRegion(&transientState->transientArena, state, state->world, state->cameraPosition, simBounds, dt);
 
   /* draw ground */
   for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {

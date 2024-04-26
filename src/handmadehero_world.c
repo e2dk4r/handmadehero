@@ -6,20 +6,17 @@
 
 #define WORLD_CHUNK_SAFE_MARGIN 16
 #define WORLD_CHUNK_UNINITIALIZED 0
-#define TILES_PER_CHUNK 8
 
 void
-WorldInit(struct world *world, f32 tileSideInMeters)
+WorldInit(struct world *world, struct v3 chunkDimInMeters)
 {
-  world->tileSideInMeters = tileSideInMeters;
-  world->tileDepthInMeters = tileSideInMeters;
-  world->chunkDimInMeters = v3((f32)TILES_PER_CHUNK * world->tileSideInMeters,
-                               (f32)TILES_PER_CHUNK * world->tileSideInMeters, world->tileDepthInMeters);
+  world->chunkDimInMeters = chunkDimInMeters;
   world->firstFreeBlock = 0;
 
-  for (u32 chunkIndex = 0; chunkIndex < WORLD_CHUNK_TOTAL; chunkIndex++) {
-    world->chunkHash[chunkIndex].chunkX = WORLD_CHUNK_UNINITIALIZED;
-    world->chunkHash[chunkIndex].firstBlock.entityCount = 0;
+  for (u32 chunkIndex = 0; chunkIndex < ARRAY_COUNT(world->chunkHash); chunkIndex++) {
+    struct world_chunk *chunk = world->chunkHash + chunkIndex;
+    chunk->chunkX = WORLD_CHUNK_UNINITIALIZED;
+    chunk->firstBlock.entityCount = 0;
   }
 }
 
@@ -34,10 +31,10 @@ WorldChunkGetOrInsert(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, s
   assert(chunkZ < U32_MAX - WORLD_CHUNK_SAFE_MARGIN);
 
   u32 hashValue = 19 * chunkX + 7 * chunkY + 3 * chunkZ;
-  u32 hashSlot = hashValue & (WORLD_CHUNK_TOTAL - 1);
-  assert(hashSlot < WORLD_CHUNK_TOTAL);
+  u32 hashSlot = hashValue & (ARRAY_COUNT(world->chunkHash) - 1);
+  assert(hashSlot < ARRAY_COUNT(world->chunkHash));
 
-  struct world_chunk *chunk = &world->chunkHash[hashSlot];
+  struct world_chunk *chunk = world->chunkHash + hashSlot;
   while (chunk) {
     /* match found */
     if (chunkX == chunk->chunkX && chunkY == chunk->chunkY && chunkZ == chunk->chunkZ)
@@ -75,21 +72,20 @@ WorldChunkGet(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ)
 }
 
 internal inline u8
-WorldPositionIsCalculated(f32 chunkDim, f32 chunkRel)
+IsWorldPositionCalculated(f32 chunkDim, f32 chunkRel)
 {
-  const f32 epsilon = 0.0001f;
+  const f32 epsilon = 0.005f;
   f32 max = 0.5f * chunkDim + epsilon;
   f32 min = -max;
   return (chunkRel >= min) && (chunkRel <= max);
 }
 
-internal inline u8
-WorldPositionIsCalculatedOffset(struct world *world, struct v3 *offset)
+inline u8
+IsWorldPositionOffsetCalculated(struct world *world, struct v3 *offset)
 {
-
-  return WorldPositionIsCalculated(world->chunkDimInMeters.x, offset->x) &&
-         WorldPositionIsCalculated(world->chunkDimInMeters.y, offset->y) &&
-         WorldPositionIsCalculated(world->chunkDimInMeters.z, offset->z);
+  return IsWorldPositionCalculated(world->chunkDimInMeters.x, offset->x) &&
+         IsWorldPositionCalculated(world->chunkDimInMeters.y, offset->y) &&
+         IsWorldPositionCalculated(world->chunkDimInMeters.z, offset->z);
 }
 
 internal inline void
@@ -103,7 +99,7 @@ WorldPositionCalculateAxis(f32 chunkDim, u32 *chunk, f32 *chunkRel)
   *chunk += (u32)offset;
   *chunkRel -= (f32)offset * chunkDim;
 
-  assert(WorldPositionIsCalculated(chunkDim, *chunkRel));
+  assert(IsWorldPositionCalculated(chunkDim, *chunkRel));
 }
 
 struct world_position
@@ -116,32 +112,6 @@ WorldPositionCalculate(struct world *world, struct world_position *basePosition,
   WorldPositionCalculateAxis(world->chunkDimInMeters.y, &result.chunkY, &result.offset.y);
   WorldPositionCalculateAxis(world->chunkDimInMeters.z, &result.chunkZ, &result.offset.z);
 
-  return result;
-}
-
-inline struct world_position
-ChunkPositionFromTilePosition(struct world *world, u32 absTileX, u32 absTileY, u32 absTileZ)
-{
-  struct world_position result = {};
-
-  /* calculating using hadamard product considered, but it happens to cause float overflow
-   * with U32_MAX
-   *
-   *   basePosition = 0
-   *   WorldPositionCalculate(basePosition, hadamard(chunkDimInMeters, v3(x, y, z))
-   *
-   */
-  result.chunkX = absTileX / TILES_PER_CHUNK;
-  result.chunkY = absTileY / TILES_PER_CHUNK;
-  result.chunkZ = absTileZ;
-
-  result.offset.x =
-      (f32)(absTileX - (result.chunkX * TILES_PER_CHUNK)) * world->tileSideInMeters - world->chunkDimInMeters.x / 2;
-  result.offset.y =
-      (f32)(absTileY - (result.chunkY * TILES_PER_CHUNK)) * world->tileSideInMeters - world->chunkDimInMeters.y / 2;
-  result.offset.z = 0;
-
-  assert(WorldPositionIsCalculatedOffset(world, &result.offset));
   return result;
 }
 
@@ -170,8 +140,8 @@ WorldPositionSub(struct world *world, struct world_position *a, struct world_pos
 internal inline u8
 WorldPositionSame(struct world *world, struct world_position *left, struct world_position *right)
 {
-  assert(WorldPositionIsCalculatedOffset(world, &left->offset));
-  assert(WorldPositionIsCalculatedOffset(world, &right->offset));
+  assert(IsWorldPositionOffsetCalculated(world, &left->offset));
+  assert(IsWorldPositionOffsetCalculated(world, &right->offset));
   return
       /* x */
       left->chunkX == right->chunkX
