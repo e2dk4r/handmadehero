@@ -76,6 +76,18 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
 }
 
 internal inline void
+DrawRectangleOutline(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 *color, f32 thickness)
+{
+  // NOTE(e2dk4r): top and bottom
+  DrawRectangle(buffer, v2(min.x - thickness, min.y - thickness), v2(max.x + thickness, min.y + thickness), color);
+  DrawRectangle(buffer, v2(min.x - thickness, max.y - thickness), v2(max.x + thickness, max.y + thickness), color);
+
+  // NOTE(e2dk4r): left right
+  DrawRectangle(buffer, v2(min.x - thickness, min.y - thickness), v2(min.x + thickness, max.y + thickness), color);
+  DrawRectangle(buffer, v2(max.x - thickness, min.y - thickness), v2(max.x + thickness, max.y + thickness), color);
+}
+
+internal inline void
 DrawBitmap2(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v2 align, f32 cAlpha)
 {
   v2_sub_ref(&pos, align);
@@ -1172,33 +1184,15 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
            entityVolumeIndex++) {
         struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
 
-        f32 width = entityVolume->dim.x * metersToPixels;
-        f32 height = entityVolume->dim.y * metersToPixels;
-        f32 left = entityGroundPoint.x + entityVolume->offset.x * metersToPixels - width * 0.5f;
-        f32 top = entityGroundPoint.y + entityVolume->offset.y * metersToPixels - height * 0.5f;
-        f32 bottom = top + height;
-        f32 right = left + width;
+        struct v2 entityWidthHeight = entityVolume->dim.xy;
+        v2_mul_ref(&entityWidthHeight, metersToPixels);
 
-        /* draw outline */
+        struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
+        struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
+
         struct v4 color = {0.0f, 0.5f, 1.0f, 1.0f};
-        f32 thickness = 0.1f;
-        thickness *= metersToPixels;
-
-        struct v2 min = v2(left, top - thickness);
-        struct v2 max = v2_add(min, v2(width, thickness));
-        DrawRectangle(drawBuffer, min, max, &color);
-
-        min = v2(left, bottom);
-        max = v2_add(min, v2(width, thickness));
-        DrawRectangle(drawBuffer, min, max, &color);
-
-        min = v2(left - thickness, top - thickness);
-        max = v2_add(min, v2(thickness, height + 2.0f * thickness));
-        DrawRectangle(drawBuffer, min, max, &color);
-
-        min = v2(right, top - thickness);
-        max = v2_add(min, v2(thickness, height + 2.0f * thickness));
-        DrawRectangle(drawBuffer, min, max, &color);
+        f32 thickness = 0.1f * metersToPixels;
+        DrawRectangleOutline(drawBuffer, entityLeftTop, entityRightBottom, &color, thickness);
       }
 #endif
     }
