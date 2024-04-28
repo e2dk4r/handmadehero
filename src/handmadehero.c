@@ -1071,6 +1071,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
             FillGroundChunk(transientState, state, furthestBuffer, &chunkCenterPosition);
           }
 
+#if 0
           struct v3 relativePosition = WorldPositionSub(world, &chunkCenterPosition, &state->cameraPosition);
           struct v2 chunkScreenPosition = {
               .x = screenCenter.x + relativePosition.x * metersToPixels,
@@ -1082,6 +1083,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           struct v4 color = v4(1.0f, 1.0f, 0.0f, 1.0f);
           f32 thickness = 1.0f;
           DrawRectangleOutline(drawBuffer, min, max, &color, thickness);
+#endif
         }
       }
     }
