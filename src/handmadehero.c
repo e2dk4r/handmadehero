@@ -613,6 +613,12 @@ ClearBitmap(struct bitmap *bitmap)
   }
 }
 
+internal inline u8
+IsGroundBufferEmpty(struct ground_buffer *groundBuffer)
+{
+  return !WorldPositionIsValid(&groundBuffer->position);
+}
+
 internal void
 FillGroundChunk(struct transient_state *transientState, struct game_state *state, struct ground_buffer *groundBuffer,
                 struct world_position *chunkPosition)
@@ -902,7 +908,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     MemoryArenaInit(&transientState->transientArena, data, size);
 
     /* cache composited ground drawing */
-    transientState->groundBufferCount = 128;
+    // TODO(e2dk4r): pick a real value here
+    transientState->groundBufferCount = 32; // 128;
     transientState->groundBuffers = MemoryArenaPush(
         &transientState->transientArena, sizeof(*transientState->groundBuffers) * transientState->groundBufferCount);
     for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
@@ -1014,21 +1021,31 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         for (u32 chunkX = minChunkPosition.chunkX; chunkX <= maxChunkPosition.chunkX; chunkX++) {
           struct world_position chunkCenterPosition = WorldPositionCentered(chunkX, chunkY, chunkZ);
 
-          struct ground_buffer *emptyGroundBuffer = 0;
-          u8 found = 0;
+          // TODO(e2dk4r): this is super inefficient, fix it!
+          f32 furthestBufferLengthSq = 0.0f;
+          struct ground_buffer *furthestBuffer = 0;
           for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
             struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
 
             if (IsWorldPositionSame(world, &groundBuffer->position, &chunkCenterPosition)) {
-              found = 1;
+              furthestBuffer = 0;
               break;
-            } else if (!WorldPositionIsValid(&groundBuffer->position)) {
-              emptyGroundBuffer = groundBuffer;
+            } else if (IsGroundBufferEmpty(groundBuffer)) {
+              furthestBufferLengthSq = F32_MAX;
+              furthestBuffer = groundBuffer;
+            } else {
+              struct v3 rel = WorldPositionSub(world, &groundBuffer->position, &state->cameraPosition);
+              f32 farSq = v2_length_square(rel.xy);
+              if (furthestBufferLengthSq >= farSq)
+                continue;
+
+              furthestBufferLengthSq = farSq;
+              furthestBuffer = groundBuffer;
             }
           }
 
-          if (!found && emptyGroundBuffer) {
-            FillGroundChunk(transientState, state, emptyGroundBuffer, &chunkCenterPosition);
+          if (furthestBuffer) {
+            FillGroundChunk(transientState, state, furthestBuffer, &chunkCenterPosition);
           }
 
           struct v3 relativePosition = WorldPositionSub(world, &chunkCenterPosition, &state->cameraPosition);
@@ -1057,7 +1074,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
     struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
 
-    if (!WorldPositionIsValid(&groundBuffer->position))
+    if (IsGroundBufferEmpty(groundBuffer))
       continue;
 
     struct bitmap *bitmap = &transientState->groundBitmapTemplate;

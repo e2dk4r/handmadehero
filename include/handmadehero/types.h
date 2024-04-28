@@ -31,6 +31,9 @@ typedef double f64;
 #define U32_MAX (4294967295U)
 #define U64_MAX (18446744073709551615UL)
 
+#define F32_MIN __FLT_MIN__;
+#define F32_MAX __FLT_MAX__;
+
 #define comptime static const
 #define internal static
 
