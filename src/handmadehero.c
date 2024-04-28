@@ -622,34 +622,44 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
   groundBuffer->position = *chunkPosition;
 
-  u32 seed = 139 * chunkPosition->chunkX + 593 * chunkPosition->chunkY + 329 * chunkPosition->chunkZ;
-  struct random_series series = RandomSeed(seed);
-
   f32 width = (f32)buffer->width;
   f32 height = (f32)buffer->width;
-  struct v2 center = v2_mul(v2(width, height), 0.5f);
 
-  for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
-    struct bitmap *stamp = 0;
-    if (RandomChoice(&series, 2))
-      stamp = state->textureGrass + RandomChoice(&series, ARRAY_COUNT(state->textureGrass));
-    else
-      stamp = state->textureGround + RandomChoice(&series, ARRAY_COUNT(state->textureGround));
+  for (i32 chunkOffsetY = -1; chunkOffsetY <= 1; chunkOffsetY++) {
+    for (i32 chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
+      u32 chunkX = chunkPosition->chunkX + (u32)chunkOffsetX;
+      u32 chunkY = chunkPosition->chunkY + (u32)chunkOffsetY;
+      u32 chunkZ = chunkPosition->chunkZ;
 
-    struct v2 stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
+      u32 seed = 139 * chunkX + 593 * chunkY + 329 * chunkZ;
+      struct random_series series = RandomSeed(seed);
 
-    struct v2 offset = v2(width * RandomNormal(&series), height * RandomNormal(&series));
+      struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * width);
+      center.y = -center.y; /* y flipped for draw */
 
-    DrawBitmap(buffer, stamp, offset, stampCenter);
-  }
+      for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
+        struct bitmap *stamp = 0;
+        if (RandomChoice(&series, 2))
+          stamp = state->textureGrass + RandomChoice(&series, ARRAY_COUNT(state->textureGrass));
+        else
+          stamp = state->textureGround + RandomChoice(&series, ARRAY_COUNT(state->textureGround));
 
-  for (u32 turfIndex = 0; turfIndex < 100; turfIndex++) {
-    struct bitmap *tuft = state->textureTuft + RandomChoice(&series, ARRAY_COUNT(state->textureTuft));
-    struct v2 tuftCenter = v2_mul(v2u(tuft->width, tuft->height), 0.5f);
+        struct v2 stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
 
-    struct v2 offset = v2(width * RandomNormal(&series), height * RandomNormal(&series));
+        struct v2 offset = v2_add(center, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
 
-    DrawBitmap(buffer, tuft, offset, tuftCenter);
+        DrawBitmap(buffer, stamp, offset, stampCenter);
+      }
+
+      for (u32 turfIndex = 0; turfIndex < 100; turfIndex++) {
+        struct bitmap *tuft = state->textureTuft + RandomChoice(&series, ARRAY_COUNT(state->textureTuft));
+        struct v2 tuftCenter = v2_mul(v2u(tuft->width, tuft->height), 0.5f);
+
+        struct v2 offset = v2_add(center, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
+
+        DrawBitmap(buffer, tuft, offset, tuftCenter);
+      }
+    }
   }
 }
 
