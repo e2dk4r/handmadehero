@@ -656,6 +656,20 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
         DrawBitmap(buffer, stamp, offset, stampCenter);
       }
+    }
+  }
+
+  for (i32 chunkOffsetY = -1; chunkOffsetY <= 1; chunkOffsetY++) {
+    for (i32 chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
+      u32 chunkX = chunkPosition->chunkX + (u32)chunkOffsetX;
+      u32 chunkY = chunkPosition->chunkY + (u32)chunkOffsetY;
+      u32 chunkZ = chunkPosition->chunkZ;
+
+      u32 seed = 139 * chunkX + 593 * chunkY + 329 * chunkZ;
+      struct random_series series = RandomSeed(seed);
+
+      struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * width);
+      center.y = -center.y; /* y flipped for draw */
 
       for (u32 turfIndex = 0; turfIndex < 100; turfIndex++) {
         struct bitmap *tuft = state->textureTuft + RandomChoice(&series, ARRAY_COUNT(state->textureTuft));
