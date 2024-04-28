@@ -938,6 +938,15 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     transientState->initialized = 1;
   }
 
+#if HANDMADEHERO_DEBUG
+  if (input->gameCodeReloaded) {
+    for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
+      struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
+      groundBuffer->position = WorldPositionInvalid();
+    }
+  }
+#endif
+
   /****************************************************************
    * CONTROLLER INPUT HANDLING
    ****************************************************************/

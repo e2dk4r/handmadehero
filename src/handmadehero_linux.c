@@ -131,7 +131,7 @@ struct game_code {
   pfnGameUpdateAndRender GameUpdateAndRender;
 };
 
-internal void
+internal u8
 ReloadGameCode(struct game_code *lib)
 {
   struct stat sb;
@@ -139,11 +139,11 @@ ReloadGameCode(struct game_code *lib)
   int fail = stat(lib->path, &sb);
   if (fail) {
     debugf("[ReloadGameCode] failed to stat\n");
-    return;
+    return 0;
   }
 
   if (sb.st_mtime == lib->time) {
-    return;
+    return 0;
   }
 
   // unload shared lib
@@ -156,7 +156,7 @@ ReloadGameCode(struct game_code *lib)
   lib->module = dlopen(lib->path, RTLD_NOW | RTLD_LOCAL);
   if (!lib->module) {
     debugf("[ReloadGameCode] failed to open\n");
-    return;
+    return 0;
   }
 
   // get function pointer
@@ -166,6 +166,7 @@ ReloadGameCode(struct game_code *lib)
   // update module time
   lib->time = sb.st_mtime;
   debugf("[ReloadGameCode] reloaded @%d\n", lib->time);
+  return 1;
 }
 
 #endif
@@ -755,6 +756,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
     // debugf("∆t = %.3f\n", newInput->dtPerFrame);
 
 #if HANDMADEHERO_DEBUG
+    // record & playback
     if (RecordInputStarted(state)) {
       RecordInput(state, state->input);
     }
@@ -763,6 +765,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
       PlaybackInput(state, state->input);
     }
 
+    // game layer
     pfnGameUpdateAndRender GameUpdateAndRender = state->lib.GameUpdateAndRender;
 #endif
 
@@ -779,9 +782,10 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
     newInput = oldInput;
     oldInput = tempInput;
 
-    // load
 #if HANDMADEHERO_DEBUG
-    ReloadGameCode(&state->lib);
+    // hot reloading
+    struct game_input *newInputToBe = oldInput;
+    newInputToBe->gameCodeReloaded = ReloadGameCode(&state->lib);
 #endif
   }
 }

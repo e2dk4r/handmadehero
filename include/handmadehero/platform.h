@@ -76,6 +76,10 @@ struct game_input {
    */
   f32 dtPerFrame;
   struct game_controller_input controllers[5];
+
+#if HANDMADEHERO_DEBUG
+  u8 gameCodeReloaded : 1;
+#endif
 };
 
 internal inline struct game_controller_input *
