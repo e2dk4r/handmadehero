@@ -298,7 +298,7 @@
 - [x] Handmade Hero Day 086 - Aligning Ground Buffers to World Chunks
       https://www.youtube.com/watch?v=TxowSnU2_cQ
 
-- [ ] Handmade Hero Day 087 - Seamless Ground Textures
+- [x] Handmade Hero Day 087 - Seamless Ground Textures
       https://www.youtube.com/watch?v=YAaqiKuSmsk
 
 - [ ] Handmade Hero Day 088 - Push Buffer Rendering
