@@ -735,7 +735,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
 
   u64 elapsed = ust - state->last_ust;
 #if !PAUSE_WHEN_SURFACE_OUT_OF_FOCUS
-  if (elapsed > (u64)nanosecondsPerSecond) {
+  if (elapsed > (u64)(nanosecondsPerFrame * 1.9f)) {
     state->last_ust = ust - (u64)nanosecondsPerFrame;
     elapsed = ust - state->last_ust;
   }
