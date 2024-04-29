@@ -301,7 +301,7 @@
 - [x] Handmade Hero Day 087 - Seamless Ground Textures
       https://www.youtube.com/watch?v=YAaqiKuSmsk
 
-- [ ] Handmade Hero Day 088 - Push Buffer Rendering
+- [x] Handmade Hero Day 088 - Push Buffer Rendering
       https://www.youtube.com/watch?v=zbufcZ_JBbU
 
 - [ ] Handmade Hero Day 089 - Renderer Push Buffer Entry Types
