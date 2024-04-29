@@ -110,14 +110,14 @@ main(int argc, char *argv[])
     return 1;
   }
 
-  off_t game_memory_total = 256 * MEGABYTES + 1 * GIGABYTES;
-  game_memory_total -=
+  off_t game_memory_total = (off_t)(256 * MEGABYTES + 1 * GIGABYTES);
+  game_memory_total -= (off_t)(
       // for wayland allocations
       2 * MEGABYTES
       // for xkb keyboard allocations
       + 1 * MEGABYTES
       // for event allocations
-      + 256 * KILOBYTES;
+      + 256 * KILOBYTES);
   off_t seekBytes = lseek(state.fd, game_memory_total, SEEK_SET);
   if (seekBytes < 0) {
     fatal("cannot seek to input" NEWLINE);
