@@ -785,7 +785,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
 #if HANDMADEHERO_DEBUG
     // hot reloading
     struct game_input *newInputToBe = oldInput;
-    newInputToBe->gameCodeReloaded = ReloadGameCode(&state->lib);
+    newInputToBe->gameCodeReloaded = (u8)(ReloadGameCode(&state->lib) & 0x1);
 #endif
   }
 }
