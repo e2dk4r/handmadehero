@@ -54,13 +54,13 @@ subdir('protocol')
 common_src = [
   'src/handmadehero_memory_arena.c'
 ]
+if is_build_debug
+  common_src += 'src/debug.c'
+endif
 
 platform_src = [
   'src/handmadehero_linux.c',
 ]
-if is_build_debug
-  platform_src += 'src/debug.c'
-endif
 
 # debug builds have handmadehero as dynamic library
 # and does not need to link with because of hot reload logic
@@ -75,9 +75,7 @@ handmadehero_sources = [
 if is_build_debug
   handmadeheroLib = library(
     'handmadehero',
-    sources: common_src + handmadehero_sources + [
-      'src/debug.c',
-    ],
+    sources: common_src + handmadehero_sources,
     include_directories: 'include',
     dependencies: [
       libm,
