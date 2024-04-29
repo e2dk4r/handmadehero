@@ -98,9 +98,6 @@ PlatformFreeMemory(void *address)
 /*****************************************************************
  * memory bank
  *****************************************************************/
-comptime u64 KILOBYTES = 1 << 10;
-comptime u64 MEGABYTES = 1 << 20;
-comptime u64 GIGABYTES = 1 << 30;
 
 internal u8
 game_memory_allocation(struct game_memory *memory, u64 permanentStorageSize, u64 transientStorageSize)

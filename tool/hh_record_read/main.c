@@ -110,9 +110,6 @@ main(int argc, char *argv[])
     return 1;
   }
 
-  comptime off_t KILOBYTES = 1 << 10;
-  comptime off_t MEGABYTES = 1 << 20;
-  comptime off_t GIGABYTES = 1 << 30;
   off_t game_memory_total = 256 * MEGABYTES + 1 * GIGABYTES;
   game_memory_total -=
       // for wayland allocations
