@@ -47,7 +47,7 @@ struct ground_buffer {
   // NOTE(e2dk4r): invalid position tells us that this ground buffer has not been filled
   // NOTE(e2dk4r): this is center of the bitmap
   struct world_position position;
-  void *memory;
+  struct bitmap bitmap;
 };
 
 struct game_state {
@@ -101,7 +101,6 @@ struct transient_state {
 
   u32 groundBufferCount;
   struct ground_buffer *groundBuffers;
-  struct bitmap groundBitmapTemplate;
 };
 
 void

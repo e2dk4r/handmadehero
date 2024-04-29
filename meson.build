@@ -67,6 +67,7 @@ platform_src = [
 handmadehero_sources = [
   'src/random.c',
   'src/handmadehero_entity.c',
+  'src/handmadehero_render_group.c',
   'src/handmadehero_sim_region.c',
   'src/handmadehero_world.c',
   'src/handmadehero.c',

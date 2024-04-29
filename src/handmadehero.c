@@ -3,6 +3,7 @@
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/math.h>
 #include <handmadehero/random.h>
+#include <handmadehero/render_group.h>
 #include <handmadehero/world.h>
 
 comptime u32 TILES_PER_WIDTH = 17;
@@ -558,33 +559,25 @@ SpaceAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 }
 
 internal inline void
-DrawHitPoints(struct bitmap *buffer, struct entity *entity, struct v2 *entityGroundPoint, f32 metersToPixels)
+PushHitPoints(struct render_group *group, struct entity *entity)
 {
   if (entity->hitPointMax == 0)
     return;
 
   struct v2 healthDim = v2(0.2f, 0.2f);
   f32 spacingX = 1.5f * healthDim.x;
-  struct v2 hitPosition = v2(-0.5f * (f32)(entity->hitPointMax - 1) * spacingX, 0.25f);
-  v2_sub_ref(&hitPosition, v2(healthDim.x * 0.5f, 0));
+  struct v2 hitPosition = v2(-0.5f * (f32)(entity->hitPointMax - 1) * spacingX, -0.25f);
   struct v2 dHitPosition = v2(spacingX, 0);
-
-  v2_mul_ref(&healthDim, metersToPixels);
-  v2_mul_ref(&hitPosition, metersToPixels);
-  v2_mul_ref(&dHitPosition, metersToPixels);
 
   for (u32 healthIndex = 0; healthIndex < entity->hitPointMax; healthIndex++) {
     struct hit_point *hitPoint = entity->hitPoints + healthIndex;
-
-    struct v2 min = v2_add(*entityGroundPoint, hitPosition);
-    struct v2 max = v2_add(min, healthDim);
 
     struct v4 color = v4(1.0f, 0.0f, 0.0f, 1.0f);
     if (hitPoint->filledAmount == 0) {
       color = v4(0.2f, 0.2f, 0.2f, 1.0f);
     }
 
-    DrawRectangle(buffer, min, max, &color);
+    PushRect(group, hitPosition, 0.0f, healthDim, color);
 
     v2_add_ref(&hitPosition, dHitPosition);
   }
@@ -623,8 +616,7 @@ internal void
 FillGroundChunk(struct transient_state *transientState, struct game_state *state, struct ground_buffer *groundBuffer,
                 struct world_position *chunkPosition)
 {
-  struct bitmap *buffer = &transientState->groundBitmapTemplate;
-  buffer->memory = groundBuffer->memory;
+  struct bitmap *buffer = &groundBuffer->bitmap;
 
   groundBuffer->position = *chunkPosition;
 
@@ -923,15 +915,13 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     /* cache composited ground drawing */
     // TODO(e2dk4r): pick a real value here
-    transientState->groundBufferCount = 32; // 128;
+    transientState->groundBufferCount = 64; // 128;
     transientState->groundBuffers = MemoryArenaPush(
         &transientState->transientArena, sizeof(*transientState->groundBuffers) * transientState->groundBufferCount);
     for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
       struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
 
-      transientState->groundBitmapTemplate =
-          MakeEmptyBitmap(&transientState->transientArena, groundBufferWidth, groundBufferHeight);
-      groundBuffer->memory = transientState->groundBitmapTemplate.memory;
+      groundBuffer->bitmap = MakeEmptyBitmap(&transientState->transientArena, groundBufferWidth, groundBufferHeight);
       groundBuffer->position = WorldPositionInvalid();
     }
 
@@ -1014,8 +1004,11 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * RENDERING
    ****************************************************************/
   f32 metersToPixels = state->metersToPixels;
-  f32 pixelsToMeters = 1.0f / metersToPixels;
+  f32 pixelsToMeters = state->pixelsToMeters;
   struct bitmap *drawBuffer = (struct bitmap *)backbuffer;
+
+  struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
+  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 4 * MEGABYTES, state->metersToPixels);
 
 /* drawing background */
 #if 0
@@ -1033,7 +1026,23 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   struct v2 screenDimInMeters = v2_mul(screenDim, pixelsToMeters);
   struct rect cameraBoundsInMeters = RectCenterDim(v3(0.0f, 0.0f, 0.0f), v2_to_v3(screenDimInMeters, 0.0f));
-  /* draw chunks */
+
+  /* draw ground buffer chunks */
+  for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
+    struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
+
+    if (IsGroundBufferEmpty(groundBuffer))
+      continue;
+
+    struct bitmap *bitmap = &groundBuffer->bitmap;
+    struct v3 positionRelativeToCamera = WorldPositionSub(world, &groundBuffer->position, &state->cameraPosition);
+    struct v4 color = v4(1.0f, 1.0f, 0.0f, 1.0f);
+    f32 thickness = 1.0f;
+    PushBitmap(renderGroup, bitmap, positionRelativeToCamera.xy, positionRelativeToCamera.z,
+               v2_mul(v2u(bitmap->width, bitmap->height), 0.5f));
+  }
+
+  /* fill ground buffer chunks */
   {
     struct world_position minChunkPosition =
         WorldPositionCalculate(world, &state->cameraPosition, RectMin(&cameraBoundsInMeters));
@@ -1070,20 +1079,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           if (furthestBuffer) {
             FillGroundChunk(transientState, state, furthestBuffer, &chunkCenterPosition);
           }
-
-#if 0
-          struct v3 relativePosition = WorldPositionSub(world, &chunkCenterPosition, &state->cameraPosition);
-          struct v2 chunkScreenPosition = {
-              .x = screenCenter.x + relativePosition.x * metersToPixels,
-              .y = screenCenter.y - relativePosition.y * metersToPixels,
-          };
-          struct v2 chunkScreenDim = v2_mul(world->chunkDimInMeters.xy, metersToPixels);
-          struct v2 min = v2_sub(chunkScreenPosition, v2_mul(chunkScreenDim, 0.5f));
-          struct v2 max = v2_add(min, chunkScreenDim);
-          struct v4 color = v4(1.0f, 1.0f, 0.0f, 1.0f);
-          f32 thickness = 1.0f;
-          DrawRectangleOutline(drawBuffer, min, max, &color, thickness);
-#endif
         }
       }
     }
@@ -1102,8 +1097,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     if (IsGroundBufferEmpty(groundBuffer))
       continue;
 
-    struct bitmap *bitmap = &transientState->groundBitmapTemplate;
-    bitmap->memory = groundBuffer->memory;
+    struct bitmap *bitmap = &groundBuffer->bitmap;
 
     struct v3 delta = WorldPositionSub(state->world, &groundBuffer->position, &state->cameraPosition);
     delta.y = -delta.y;
@@ -1128,6 +1122,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     if (!entity->updatable)
       continue;
+
+    struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
+    basis->position = entity->position;
+    renderGroup->defaultBasis = basis;
 
     struct v2 entityScreenPosition = entity->position.xy;
     /* screen's coordinate system uses y values inverse,
@@ -1170,18 +1168,19 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       /* render */
       struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
-      f32 cAlphaShadow = 1.0f - entity->position.z;
-      if (cAlphaShadow < 0.0f)
-        cAlphaShadow = 0.0f;
 
-      DrawHitPoints(drawBuffer, entity, &entityGroundPoint, metersToPixels);
+      // TODO(e2dk4r): this is incorrect, should be computed after update!
+      f32 shadowAlpha = 1.0f - entity->position.z;
+      if (shadowAlpha < 0.0f)
+        shadowAlpha = 0.0f;
 
-      DrawBitmap2(drawBuffer, &state->textureShadow, entityGroundPoint, bitmap->align, cAlphaShadow);
-      entityGroundPoint.y -= entity->position.z * metersToPixels;
+      PushHitPoints(renderGroup, entity);
 
-      DrawBitmap(drawBuffer, &bitmap->torso, entityGroundPoint, bitmap->align);
-      DrawBitmap(drawBuffer, &bitmap->cape, entityGroundPoint, bitmap->align);
-      DrawBitmap(drawBuffer, &bitmap->head, entityGroundPoint, bitmap->align);
+      PushBitmapWithAlphaAndZ(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, bitmap->align, shadowAlpha,
+                              0.0f);
+      PushBitmap(renderGroup, &bitmap->torso, v2(0.0f, 0.0f), 0.0f, bitmap->align);
+      PushBitmap(renderGroup, &bitmap->cape, v2(0.0f, 0.0f), 0.0f, bitmap->align);
+      PushBitmap(renderGroup, &bitmap->head, v2(0.0f, 0.0f), 0.0f, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
@@ -1220,26 +1219,23 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         entity->tBob -= 2.0f * PI32;
 
       /* render */
-      f32 bobSin = Sin(2.0f * entity->tBob);
       struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
 
-      f32 cAlphaShadow = (0.5f * 1.0f) - (0.2f * bobSin);
+      f32 bobSin = Sin(2.0f * entity->tBob);
+      f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      DrawBitmap2(drawBuffer, &state->textureShadow, entityGroundPoint, bitmap->align, cAlphaShadow);
-      entityGroundPoint.y -= 15 * bobSin;
-
-      DrawBitmap(drawBuffer, &bitmap->head, entityGroundPoint, bitmap->align);
+      PushBitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, bitmap->align, shadowAlpha);
+      PushBitmap(renderGroup, &bitmap->head, v2(0.0f, 0.0f), 0.25f * bobSin, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_MONSTER) {
       /* render */
       struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
-      f32 cAlphaShadow = 1.0f;
+      f32 alpha = 1.0f;
 
-      DrawHitPoints(drawBuffer, entity, &entityGroundPoint, metersToPixels);
-      DrawBitmap2(drawBuffer, &state->textureShadow, entityGroundPoint, bitmap->align, cAlphaShadow);
-
-      DrawBitmap(drawBuffer, &bitmap->torso, entityGroundPoint, bitmap->align);
+      PushHitPoints(renderGroup, entity);
+      PushBitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, bitmap->align, alpha);
+      PushBitmap(renderGroup, &bitmap->torso, v2(0.0f, 0.0f), 0.0f, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
@@ -1256,40 +1252,26 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       }
 
       /* render */
-      f32 cAlphaShadow = 1.0f;
-      DrawBitmap2(drawBuffer, &state->textureShadow, entityGroundPoint, v2(72, 182), cAlphaShadow);
-      DrawBitmap(drawBuffer, &state->textureSword, entityGroundPoint, v2(29, 10));
+      PushBitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, v2(72.0f, 182.0f), 1.0f);
+      PushBitmap(renderGroup, &state->textureSword, v2(0.0f, 0.0f), 0.0f, v2(29.0f, 10.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      DrawBitmap(drawBuffer, &state->textureTree, entityGroundPoint, v2(40, 80));
+      PushBitmap(renderGroup, &state->textureTree, v2(0.0f, 0.0f), 0.0f, v2(40.0f, 80.0f));
 #else
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {
         struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
 
-        comptime struct v4 color = {1.0f, 1.0f, 0.0f, 1.0f};
-
-        struct v2 entityWidthHeight = entityVolume->dim.xy;
-        v2_mul_ref(&entityWidthHeight, metersToPixels);
-
-        struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
-        struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
-        DrawRectangle(drawBuffer, entityLeftTop, entityRightBottom, &color);
+        PushRect(renderGroup, v2(0.0f, 0.0f), 0.0f, entityVolume->dim.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
       }
 #endif
     }
 
     else if (entity->type & ENTITY_TYPE_STAIRWELL) {
-      comptime struct v4 color = {1.0f, 1.0f, 0.0f, 1.0f};
-
-      struct v2 entityWidthHeight = entity->walkableDim.xy;
-      v2_mul_ref(&entityWidthHeight, metersToPixels);
-
-      struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
-      struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
-      DrawRectangle(drawBuffer, entityLeftTop, entityRightBottom, &color);
+      PushRect(renderGroup, v2(0.0f, 0.0f), 0.0f, entity->walkableDim.xy, v4(1.0f, 0.5f, 0.0f, 1.0f));
+      PushRect(renderGroup, v2(0.0f, 0.0f), entity->walkableHeight, entity->walkableDim.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_SPACE) {
@@ -1297,27 +1279,46 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {
         struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
-
-        struct v2 entityWidthHeight = entityVolume->dim.xy;
-        v2_mul_ref(&entityWidthHeight, metersToPixels);
-
-        struct v2 entityLeftTop = v2_sub(entityGroundPoint, v2_mul(entityWidthHeight, 0.5f));
-        struct v2 entityRightBottom = v2_add(entityLeftTop, entityWidthHeight);
-
-        struct v4 color = {0.0f, 0.5f, 1.0f, 1.0f};
-        f32 thickness = 0.1f * metersToPixels;
-        DrawRectangleOutline(drawBuffer, entityLeftTop, entityRightBottom, &color, thickness);
+        PushRectOutline(renderGroup, entityVolume->offset.xy, 0.0f, entityVolume->dim.xy, v4(0.0f, 0.5f, 1.0f, 1.0f));
       }
 #endif
     }
 
     else {
-      InvalidCodePath;
+      assert(0 && "unknown entity type");
+    }
+  }
+
+  for (u32 pushBufferIndex = 0; pushBufferIndex < renderGroup->pushBufferSize;) {
+    struct render_entity *renderEntity = renderGroup->pushBufferBase + pushBufferIndex;
+    pushBufferIndex += sizeof(*renderEntity);
+
+    struct v3 entityBasePosition = renderEntity->basis->position;
+
+    entityBasePosition.y += renderEntity->offsetZ;
+    /* screen's coordinate system uses y values inverse,
+     * so that means going up in space means negative y values
+     */
+    entityBasePosition.y *= -1;
+    v2_mul_ref(&entityBasePosition.xy, metersToPixels);
+
+    f32 entityZ = -entityBasePosition.z * metersToPixels;
+
+    struct v2 entityGroundPoint = v2_add(screenCenter, entityBasePosition.xy);
+    struct v2 center = v2_add(entityGroundPoint, renderEntity->offset);
+    center.y += renderEntity->cZ * entityZ;
+
+    if (renderEntity->bitmap) {
+      DrawBitmap2(drawBuffer, renderEntity->bitmap, center, renderEntity->align, renderEntity->color.a);
+    } else {
+      struct v2 halfDim = v2_mul(v2_mul(renderEntity->dim, 0.5f), metersToPixels);
+      DrawRectangle(drawBuffer, v2_sub(center, halfDim), v2_add(center, halfDim), &renderEntity->color);
     }
   }
 
   EndSimRegion(simRegion, state);
   EndTemporaryMemory(&simRegionMemory);
+  EndTemporaryMemory(&renderMemory);
 
   MemoryArenaCheck(&state->worldArena);
   MemoryArenaCheck(&transientState->transientArena);
