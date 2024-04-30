@@ -39,8 +39,4 @@ typedef double f64;
 
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof(array[0]))
 
-comptime u64 KILOBYTES = 1 << 10;
-comptime u64 MEGABYTES = 1 << 20;
-comptime u64 GIGABYTES = 1 << 30;
-
 #endif /* HANDMADEHERO_TYPES_H */

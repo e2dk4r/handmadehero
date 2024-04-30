@@ -3,6 +3,10 @@
 
 #include "types.h"
 
+comptime u64 KILOBYTES = 1 << 10;
+comptime u64 MEGABYTES = 1 << 20;
+comptime u64 GIGABYTES = 1 << 30;
+
 typedef u64 memory_arena_size_t;
 struct memory_arena {
   memory_arena_size_t used;
