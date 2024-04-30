@@ -12,6 +12,13 @@ struct render_basis {
   struct v3 position;
 };
 
+struct render_entity_basis {
+  struct render_basis *basis;
+  struct v2 offset;
+  f32 offsetZ;
+  f32 cZ;
+};
+
 enum render_group_entry_type {
   RENDER_GROUP_ENTRY_TYPE_CLEAR = 0,
   RENDER_GROUP_ENTRY_TYPE_RECTANGLE = (1 << 0),
@@ -31,22 +38,16 @@ struct render_group_entry_clear {
 struct render_group_entry_bitmap {
   struct render_group_entry header;
 
-  struct render_basis *basis;
   struct bitmap *bitmap;
-  struct v2 offset;
   struct v2 align;
-  f32 offsetZ;
-  f32 cZ;
+  struct render_entity_basis basis;
   f32 alpha;
 };
 
 struct render_group_entry_rectangle {
   struct render_group_entry header;
 
-  struct render_basis *basis;
-  struct v2 offset;
-  f32 offsetZ;
-
+  struct render_entity_basis basis;
   struct v4 color;
   struct v2 dim;
 };

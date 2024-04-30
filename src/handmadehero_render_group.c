@@ -40,17 +40,29 @@ PushClearEntry(struct render_group *group, struct v4 color)
   entry->color = color;
 }
 
+internal inline struct v2
+v2_screen_coordinates(struct v2 a)
+{
+  return v2(a.x, -a.y);
+}
+
+internal inline struct v3
+v3_screen_coordinates(struct v3 a)
+{
+  return v3(a.x, -a.y, a.z);
+}
+
 internal inline void
 PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
                 f32 alpha, f32 z)
 {
   struct render_group_entry_bitmap *entry = PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_BITMAP);
-  entry->basis = group->defaultBasis;
   entry->bitmap = bitmap;
-  entry->offset = v2_mul(v2_hadamard(offset, v2(1.0f, -1.0f)), group->metersToPixels);
-  entry->offsetZ = offsetZ;
   entry->align = align;
-  entry->cZ = z;
+  entry->basis.basis = group->defaultBasis;
+  entry->basis.offset = v2_mul(v2_screen_coordinates(offset), group->metersToPixels);
+  entry->basis.offsetZ = offsetZ;
+  entry->basis.cZ = z;
   entry->alpha = alpha;
 }
 
@@ -59,9 +71,10 @@ PushRectangleEntry(struct render_group *group, struct v2 offset, f32 offsetZ, st
 {
   struct render_group_entry_rectangle *entry =
       PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
-  entry->basis = group->defaultBasis;
-  entry->offset = v2_mul(v2_hadamard(offset, v2(1.0f, -1.0f)), group->metersToPixels);
-  entry->offsetZ = offsetZ;
+  entry->basis.basis = group->defaultBasis;
+  entry->basis.offset = v2_mul(v2_screen_coordinates(offset), group->metersToPixels);
+  entry->basis.offsetZ = offsetZ;
+  entry->basis.cZ = 1.0f;
   entry->dim = dim;
   entry->color = color;
 }
@@ -273,6 +286,28 @@ DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v
   DrawBitmapWithAlpha(buffer, bitmap, pos, align, 1.0f);
 }
 
+internal struct v2
+GetEntityCenter(struct render_group *renderGroup, struct render_entity_basis *entityBasis, struct v2 screenCenter)
+{
+  f32 metersToPixels = renderGroup->metersToPixels;
+  struct v3 entityBasePosition = entityBasis->basis->position;
+
+  entityBasePosition.y += entityBasis->offsetZ;
+  /* screen's coordinate system uses y values inverse,
+   * so that means going up in space means negative y values
+   */
+  entityBasePosition.y *= -1;
+  v2_mul_ref(&entityBasePosition.xy, metersToPixels);
+
+  f32 entityZ = -entityBasePosition.z * metersToPixels;
+
+  struct v2 entityGroundPoint = v2_add(screenCenter, entityBasePosition.xy);
+  struct v2 center = v2_add(entityGroundPoint, entityBasis->offset);
+  center.y += entityBasis->cZ * entityZ;
+
+  return center;
+}
+
 inline void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 {
@@ -294,22 +329,8 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct render_group_entry_bitmap *entry = (struct render_group_entry_bitmap *)typelessEntry;
       pushBufferIndex += sizeof(*entry);
 
-      struct v3 entityBasePosition = entry->basis->position;
-
-      entityBasePosition.y += entry->offsetZ;
-      /* screen's coordinate system uses y values inverse,
-       * so that means going up in space means negative y values
-       */
-      entityBasePosition.y *= -1;
-      v2_mul_ref(&entityBasePosition.xy, metersToPixels);
-
-      f32 entityZ = -entityBasePosition.z * metersToPixels;
-
-      struct v2 entityGroundPoint = v2_add(screenCenter, entityBasePosition.xy);
-      struct v2 center = v2_add(entityGroundPoint, entry->offset);
-      center.y += entry->cZ * entityZ;
-
       assert(entry->bitmap);
+      struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
       DrawBitmapWithAlpha(outputTarget, entry->bitmap, center, entry->align, entry->alpha);
     }
 
@@ -317,21 +338,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct render_group_entry_rectangle *entry = (struct render_group_entry_rectangle *)typelessEntry;
       pushBufferIndex += sizeof(*entry);
 
-      struct v3 entityBasePosition = entry->basis->position;
-
-      entityBasePosition.y += entry->offsetZ;
-      /* screen's coordinate system uses y values inverse,
-       * so that means going up in space means negative y values
-       */
-      entityBasePosition.y *= -1;
-      v2_mul_ref(&entityBasePosition.xy, metersToPixels);
-
-      f32 entityZ = -entityBasePosition.z * metersToPixels;
-
-      struct v2 entityGroundPoint = v2_add(screenCenter, entityBasePosition.xy);
-      struct v2 center = v2_add(entityGroundPoint, entry->offset);
-      center.y += entityZ;
-
+      struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
       struct v2 halfDim = v2_mul(v2_mul(entry->dim, 0.5f), metersToPixels);
       DrawRectangle(outputTarget, v2_sub(center, halfDim), v2_add(center, halfDim), entry->color);
     }
