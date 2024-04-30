@@ -34,6 +34,13 @@ PushRenderEntry(struct render_group *group, u32 size, enum render_group_entry_ty
 }
 
 internal inline void
+PushClearEntry(struct render_group *group, struct v4 color)
+{
+  struct render_group_entry_clear *entry = PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_CLEAR);
+  entry->color = color;
+}
+
+internal inline void
 PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
                 f32 alpha, f32 z)
 {
@@ -57,6 +64,12 @@ PushRectangleEntry(struct render_group *group, struct v2 offset, f32 offsetZ, st
   entry->offsetZ = offsetZ;
   entry->dim = dim;
   entry->color = color;
+}
+
+void
+PushClear(struct render_group *group, struct v4 color)
+{
+  PushClearEntry(group, color);
 }
 
 inline void
@@ -264,7 +277,8 @@ inline void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 {
   f32 metersToPixels = renderGroup->metersToPixels;
-  struct v2 screenCenter = v2_mul(v2u(outputTarget->width, outputTarget->height), 0.5f);
+  struct v2 screenWidthHeight = v2u(outputTarget->width, outputTarget->height);
+  struct v2 screenCenter = v2_mul(screenWidthHeight, 0.5f);
 
   for (u32 pushBufferIndex = 0; pushBufferIndex < renderGroup->pushBufferSize;) {
     struct render_group_entry *typelessEntry = renderGroup->pushBufferBase + pushBufferIndex;
@@ -272,6 +286,8 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
     if (typelessEntry->type == RENDER_GROUP_ENTRY_TYPE_CLEAR) {
       struct render_group_entry_clear *entry = (struct render_group_entry_clear *)typelessEntry;
       pushBufferIndex += sizeof(*entry);
+
+      DrawRectangle(outputTarget, v2(0.0f, 0.0f), screenWidthHeight, entry->color);
     }
 
     else if (typelessEntry->type & RENDER_GROUP_ENTRY_TYPE_BITMAP) {

@@ -851,10 +851,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
 /* drawing background */
 #if 0
-  DrawBitmap(drawBuffer, &state->textureBackground, v2(0.0f, 0.0f), v2(0, 0));
+  PushBitmap(renderGroup, &state->textureBackground, v2(0.0f, 0.0f), 0.0f, v2(0, 0));
 #else
   struct v4 backgroundColor = v4(0.5f, 0.5f, 0.5f, 1.0f);
-  DrawRectangle(drawBuffer, v2(0.0f, 0.0f), v2u(drawBuffer->width, drawBuffer->height), backgroundColor);
+  PushClear(renderGroup, backgroundColor);
 #endif
 
   struct v2 screenDim = {

@@ -25,8 +25,6 @@ struct render_group_entry {
 
 struct render_group_entry_clear {
   struct render_group_entry header;
-
-  struct bitmap *bitmap;
   struct v4 color;
 };
 
@@ -64,6 +62,9 @@ struct render_group {
 
 struct render_group *
 RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, f32 metersToPixels);
+
+void
+PushClear(struct render_group *group, struct v4 color);
 
 void
 PushBitmap(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align);
