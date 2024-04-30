@@ -875,8 +875,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     struct bitmap *bitmap = &groundBuffer->bitmap;
     struct v3 positionRelativeToCamera = WorldPositionSub(world, &groundBuffer->position, &state->cameraPosition);
-    struct v4 color = v4(1.0f, 1.0f, 0.0f, 1.0f);
-    f32 thickness = 1.0f;
     PushBitmap(renderGroup, bitmap, positionRelativeToCamera.xy, positionRelativeToCamera.z,
                v2_mul(v2u(bitmap->width, bitmap->height), 0.5f));
   }
@@ -928,20 +926,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct rect simBounds = RectAddRadius(&cameraBoundsInMeters, simBoundExpansion);
   struct sim_region *simRegion =
       BeginSimRegion(&transientState->transientArena, state, state->world, state->cameraPosition, simBounds, dt);
-
-  /* draw ground */
-  for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
-    struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
-
-    if (IsGroundBufferEmpty(groundBuffer))
-      continue;
-
-    struct bitmap *bitmap = &groundBuffer->bitmap;
-
-    struct v3 delta = WorldPositionSub(state->world, &groundBuffer->position, &state->cameraPosition);
-
-    PushBitmap(renderGroup, bitmap, delta.xy, delta.z, v2_mul(v2u(bitmap->width, bitmap->height), 0.5f));
-  }
 
   /* render entities */
   for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
