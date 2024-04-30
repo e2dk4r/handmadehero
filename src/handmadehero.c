@@ -939,13 +939,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct bitmap *bitmap = &groundBuffer->bitmap;
 
     struct v3 delta = WorldPositionSub(state->world, &groundBuffer->position, &state->cameraPosition);
-    delta.y = -delta.y;
-    v3_mul_ref(&delta, metersToPixels);
 
-    struct v2 position = v2_sub(screenCenter, v2_mul(v2u(bitmap->width, bitmap->height), 0.5f));
-    v2_add_ref(&position, delta.xy);
-
-    DrawBitmap(drawBuffer, bitmap, position, v2(0.0f, 0.0f));
+    PushBitmap(renderGroup, bitmap, delta.xy, delta.z, v2_mul(v2u(bitmap->width, bitmap->height), 0.5f));
   }
 
   /* render entities */
