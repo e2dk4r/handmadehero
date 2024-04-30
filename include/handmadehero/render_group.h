@@ -12,7 +12,7 @@ struct render_basis {
   struct v3 position;
 };
 
-struct render_entity {
+struct render_group_entry {
   struct render_basis *basis;
   struct bitmap *bitmap;
   struct v2 offset;

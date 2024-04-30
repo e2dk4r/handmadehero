@@ -34,7 +34,7 @@ internal inline void
 PushEntityWithZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
                 struct v2 dim, struct v4 color, f32 z)
 {
-  struct render_entity *entity = PushRenderEntity(group, sizeof(*entity));
+  struct render_group_entry *entity = PushRenderEntity(group, sizeof(*entity));
   entity->basis = group->defaultBasis;
   entity->bitmap = bitmap;
   entity->offset = v2_mul(v2_hadamard(offset, v2(1.0f, -1.0f)), group->metersToPixels);

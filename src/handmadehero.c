@@ -1290,12 +1290,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 
   for (u32 pushBufferIndex = 0; pushBufferIndex < renderGroup->pushBufferSize;) {
-    struct render_entity *renderEntity = renderGroup->pushBufferBase + pushBufferIndex;
-    pushBufferIndex += sizeof(*renderEntity);
+    struct render_group_entry *renderGroupEntry = renderGroup->pushBufferBase + pushBufferIndex;
+    pushBufferIndex += sizeof(*renderGroupEntry);
 
-    struct v3 entityBasePosition = renderEntity->basis->position;
+    struct v3 entityBasePosition = renderGroupEntry->basis->position;
 
-    entityBasePosition.y += renderEntity->offsetZ;
+    entityBasePosition.y += renderGroupEntry->offsetZ;
     /* screen's coordinate system uses y values inverse,
      * so that means going up in space means negative y values
      */
@@ -1305,14 +1305,14 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     f32 entityZ = -entityBasePosition.z * metersToPixels;
 
     struct v2 entityGroundPoint = v2_add(screenCenter, entityBasePosition.xy);
-    struct v2 center = v2_add(entityGroundPoint, renderEntity->offset);
-    center.y += renderEntity->cZ * entityZ;
+    struct v2 center = v2_add(entityGroundPoint, renderGroupEntry->offset);
+    center.y += renderGroupEntry->cZ * entityZ;
 
-    if (renderEntity->bitmap) {
-      DrawBitmap2(drawBuffer, renderEntity->bitmap, center, renderEntity->align, renderEntity->color.a);
+    if (renderGroupEntry->bitmap) {
+      DrawBitmap2(drawBuffer, renderGroupEntry->bitmap, center, renderGroupEntry->align, renderGroupEntry->color.a);
     } else {
-      struct v2 halfDim = v2_mul(v2_mul(renderEntity->dim, 0.5f), metersToPixels);
-      DrawRectangle(drawBuffer, v2_sub(center, halfDim), v2_add(center, halfDim), &renderEntity->color);
+      struct v2 halfDim = v2_mul(v2_mul(renderGroupEntry->dim, 0.5f), metersToPixels);
+      DrawRectangle(drawBuffer, v2_sub(center, halfDim), v2_add(center, halfDim), &renderGroupEntry->color);
     }
   }
 
