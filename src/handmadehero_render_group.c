@@ -94,7 +94,7 @@ PushRectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struc
 }
 
 inline void
-DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 *color)
+DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color)
 {
   assert(min.x < max.x);
   assert(min.y < max.y);
@@ -124,13 +124,13 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
 
   u32 colorRGBA =
       /* alpha */
-      roundf32tou32(color->a * 255.0f) << 24
+      roundf32tou32(color.a * 255.0f) << 24
       /* red */
-      | roundf32tou32(color->r * 255.0f) << 16
+      | roundf32tou32(color.r * 255.0f) << 16
       /* green */
-      | roundf32tou32(color->g * 255.0f) << 8
+      | roundf32tou32(color.g * 255.0f) << 8
       /* blue */
-      | roundf32tou32(color->b * 255.0f) << 0;
+      | roundf32tou32(color.b * 255.0f) << 0;
 
   for (i32 y = minY; y < maxY; y++) {
     u32 *pixel = (u32 *)row;
@@ -143,7 +143,7 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
 }
 
 internal inline void
-DrawRectangleOutline(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 *color, f32 thickness)
+DrawRectangleOutline(struct bitmap *buffer, struct v2 min, struct v2 max, struct v4 color, f32 thickness)
 {
   // NOTE(e2dk4r): top and bottom
   DrawRectangle(buffer, v2(min.x - thickness, min.y - thickness), v2(max.x + thickness, min.y + thickness), color);
@@ -284,7 +284,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
                           renderGroupEntry->color.a);
     } else {
       struct v2 halfDim = v2_mul(v2_mul(renderGroupEntry->dim, 0.5f), metersToPixels);
-      DrawRectangle(outputTarget, v2_sub(center, halfDim), v2_add(center, halfDim), &renderGroupEntry->color);
+      DrawRectangle(outputTarget, v2_sub(center, halfDim), v2_add(center, halfDim), renderGroupEntry->color);
     }
   }
 }

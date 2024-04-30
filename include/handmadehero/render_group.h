@@ -58,7 +58,7 @@ void
 PushRectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
 
 void
-DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 *color);
+DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color);
 
 void
 DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v2 align);
