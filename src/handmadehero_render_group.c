@@ -34,52 +34,55 @@ PushRenderEntry(struct render_group *group, u32 size, enum render_group_entry_ty
 }
 
 internal inline void
-PushEntryWithZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
-               struct v2 dim, struct v4 color, f32 z)
+PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
+                f32 alpha, f32 z)
 {
-  struct render_group_entry_rectangle *entry =
-      PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
+  struct render_group_entry_bitmap *entry = PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_BITMAP);
   entry->basis = group->defaultBasis;
   entry->bitmap = bitmap;
   entry->offset = v2_mul(v2_hadamard(offset, v2(1.0f, -1.0f)), group->metersToPixels);
   entry->offsetZ = offsetZ;
   entry->align = align;
   entry->cZ = z;
-  entry->dim = dim;
-  entry->color = color;
+  entry->alpha = alpha;
 }
 
 internal inline void
-PushEntry(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
-          struct v2 dim, struct v4 color)
+PushRectangleEntry(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
 {
-  PushEntryWithZ(group, bitmap, offset, offsetZ, align, dim, color, 1.0f);
+  struct render_group_entry_rectangle *entry =
+      PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
+  entry->basis = group->defaultBasis;
+  entry->offset = v2_mul(v2_hadamard(offset, v2(1.0f, -1.0f)), group->metersToPixels);
+  entry->offsetZ = offsetZ;
+  entry->dim = dim;
+  entry->color = color;
 }
 
 inline void
 PushBitmap(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align)
 {
-  PushEntry(group, bitmap, offset, offsetZ, align, v2(0.0f, 0.0f), v4(1.0f, 1.0f, 1.0f, 1.0f));
+  PushBitmapEntry(group, bitmap, offset, offsetZ, align, 1.0f, 1.0f);
 }
 
 inline void
 PushBitmapWithAlpha(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
                     f32 alpha)
 {
-  PushEntry(group, bitmap, offset, offsetZ, align, v2(0.0f, 0.0f), v4(1.0f, 1.0f, 1.0f, alpha));
+  PushBitmapEntry(group, bitmap, offset, offsetZ, align, alpha, 1.0f);
 }
 
 inline void
 PushBitmapWithAlphaAndZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ,
                         struct v2 align, f32 alpha, f32 z)
 {
-  PushEntryWithZ(group, bitmap, offset, offsetZ, align, v2(0.0f, 0.0f), v4(1.0f, 1.0f, 1.0f, alpha), z);
+  PushBitmapEntry(group, bitmap, offset, offsetZ, align, alpha, z);
 }
 
 inline void
 PushRect(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
 {
-  PushEntry(group, 0, offset, offsetZ, v2(0.0f, 0.0f), dim, color);
+  PushRectangleEntry(group, offset, offsetZ, dim, color);
 }
 
 inline void
@@ -88,12 +91,12 @@ PushRectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struc
   f32 thickness = 0.1f;
 
   // NOTE(e2dk4r): top and bottom
-  PushEntry(group, 0, v2_sub(offset, v2(0.0f, 0.5f * dim.y)), offsetZ, v2(0.0f, 0.0f), v2(dim.x, thickness), color);
-  PushEntry(group, 0, v2_add(offset, v2(0.0f, 0.5f * dim.y)), offsetZ, v2(0.0f, 0.0f), v2(dim.x, thickness), color);
+  PushRectangleEntry(group, v2_sub(offset, v2(0.0f, 0.5f * dim.y)), offsetZ, v2(dim.x, thickness), color);
+  PushRectangleEntry(group, v2_add(offset, v2(0.0f, 0.5f * dim.y)), offsetZ, v2(dim.x, thickness), color);
 
   // NOTE(e2dk4r): left right
-  PushEntry(group, 0, v2_sub(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(0.0f, 0.0f), v2(thickness, dim.y), color);
-  PushEntry(group, 0, v2_add(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(0.0f, 0.0f), v2(thickness, dim.y), color);
+  PushRectangleEntry(group, v2_sub(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(thickness, dim.y), color);
+  PushRectangleEntry(group, v2_add(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(thickness, dim.y), color);
 }
 
 inline void
@@ -265,11 +268,14 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 
   for (u32 pushBufferIndex = 0; pushBufferIndex < renderGroup->pushBufferSize;) {
     struct render_group_entry *typelessEntry = renderGroup->pushBufferBase + pushBufferIndex;
+
     if (typelessEntry->type == RENDER_GROUP_ENTRY_TYPE_CLEAR) {
       struct render_group_entry_clear *entry = (struct render_group_entry_clear *)typelessEntry;
       pushBufferIndex += sizeof(*entry);
-    } else if (typelessEntry->type & RENDER_GROUP_ENTRY_TYPE_RECTANGLE) {
-      struct render_group_entry_rectangle *entry = (struct render_group_entry_rectangle *)typelessEntry;
+    }
+
+    else if (typelessEntry->type & RENDER_GROUP_ENTRY_TYPE_BITMAP) {
+      struct render_group_entry_bitmap *entry = (struct render_group_entry_bitmap *)typelessEntry;
       pushBufferIndex += sizeof(*entry);
 
       struct v3 entityBasePosition = entry->basis->position;
@@ -287,13 +293,35 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct v2 center = v2_add(entityGroundPoint, entry->offset);
       center.y += entry->cZ * entityZ;
 
-      if (entry->bitmap) {
-        DrawBitmapWithAlpha(outputTarget, entry->bitmap, center, entry->align, entry->color.a);
-      } else {
-        struct v2 halfDim = v2_mul(v2_mul(entry->dim, 0.5f), metersToPixels);
-        DrawRectangle(outputTarget, v2_sub(center, halfDim), v2_add(center, halfDim), entry->color);
-      }
-    } else {
+      assert(entry->bitmap);
+      DrawBitmapWithAlpha(outputTarget, entry->bitmap, center, entry->align, entry->alpha);
+    }
+
+    else if (typelessEntry->type & RENDER_GROUP_ENTRY_TYPE_RECTANGLE) {
+      struct render_group_entry_rectangle *entry = (struct render_group_entry_rectangle *)typelessEntry;
+      pushBufferIndex += sizeof(*entry);
+
+      struct v3 entityBasePosition = entry->basis->position;
+
+      entityBasePosition.y += entry->offsetZ;
+      /* screen's coordinate system uses y values inverse,
+       * so that means going up in space means negative y values
+       */
+      entityBasePosition.y *= -1;
+      v2_mul_ref(&entityBasePosition.xy, metersToPixels);
+
+      f32 entityZ = -entityBasePosition.z * metersToPixels;
+
+      struct v2 entityGroundPoint = v2_add(screenCenter, entityBasePosition.xy);
+      struct v2 center = v2_add(entityGroundPoint, entry->offset);
+      center.y += entityZ;
+
+      struct v2 halfDim = v2_mul(v2_mul(entry->dim, 0.5f), metersToPixels);
+      DrawRectangle(outputTarget, v2_sub(center, halfDim), v2_add(center, halfDim), entry->color);
+    }
+
+    // typelessEntry->type is invalid
+    else {
       assert(0 && "this renderer does not know how to handle render group entry type");
     }
   }
