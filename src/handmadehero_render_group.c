@@ -112,7 +112,7 @@ PushRectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struc
   PushRectangleEntry(group, v2_add(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(thickness, dim.y), color);
 }
 
-inline void
+internal inline void
 DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color)
 {
   assert(min.x < max.x);
