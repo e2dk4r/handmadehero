@@ -9,7 +9,6 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, f32 metersToPixels)
   group->defaultBasis->position = v3(0.0f, 0.0f, 0.0f);
 
   group->metersToPixels = metersToPixels;
-  group->entityCount = 0;
 
   group->pushBufferSize = 0;
   group->pushBufferTotal = pushBufferTotal;

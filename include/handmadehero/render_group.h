@@ -27,7 +27,6 @@ struct render_entity {
 struct render_group {
   struct render_basis *defaultBasis;
   f32 metersToPixels;
-  u32 entityCount;
 
   u64 pushBufferTotal;
   u64 pushBufferSize;
