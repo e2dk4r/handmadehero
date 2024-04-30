@@ -12,7 +12,26 @@ struct render_basis {
   struct v3 position;
 };
 
+enum render_group_entry_type {
+  RENDER_GROUP_ENTRY_TYPE_CLEAR = 0,
+  RENDER_GROUP_ENTRY_TYPE_RECTANGLE = (1 << 0),
+};
+
+// render_group_entry is tagged union
 struct render_group_entry {
+  enum render_group_entry_type type : 4;
+};
+
+struct render_group_entry_clear {
+  struct render_group_entry header;
+
+  struct bitmap *bitmap;
+  struct v4 color;
+};
+
+struct render_group_entry_rectangle {
+  struct render_group_entry header;
+
   struct render_basis *basis;
   struct bitmap *bitmap;
   struct v2 offset;
