@@ -917,6 +917,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           if (furthestBuffer) {
             FillGroundChunk(transientState, state, furthestBuffer, &chunkCenterPosition);
           }
+
+          struct v3 rel = WorldPositionSub(world, &chunkCenterPosition, &state->cameraPosition);
+          PushRectOutline(renderGroup, rel.xy, 0.0f, world->chunkDimInMeters.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
         }
       }
     }
