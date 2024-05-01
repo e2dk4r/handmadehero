@@ -322,7 +322,7 @@ HeroAdd(struct game_state *state)
 
   /* if followed entity, does not exits */
   if (state->followedEntityIndex == 0)
-    state->followedEntityIndex = addResult.index;
+    state->followedEntityIndex = hero->storageIndex;
 
   return addResult.index;
 }
