@@ -7,12 +7,6 @@
 
 struct stored_entity;
 
-#define TILE_INVALID 0
-#define TILE_WALKABLE (1 << 0)
-#define TILE_BLOCKED (1 << 1)
-#define TILE_LADDER_UP (1 << 2)
-#define TILE_LADDER_DOWN (1 << 3)
-
 struct world_entity_block {
   u32 entityCount;
   u32 entityLowIndexes[16];
