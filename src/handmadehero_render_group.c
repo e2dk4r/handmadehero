@@ -280,7 +280,7 @@ DrawBitmapWithAlpha(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos,
   }
 }
 
-inline void
+internal inline void
 DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v2 align)
 {
   DrawBitmapWithAlpha(buffer, bitmap, pos, align, 1.0f);

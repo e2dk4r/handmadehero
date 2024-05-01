@@ -456,12 +456,15 @@ internal void
 FillGroundChunk(struct transient_state *transientState, struct game_state *state, struct ground_buffer *groundBuffer,
                 struct world_position *chunkPosition)
 {
+  struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
+  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 1 * MEGABYTES, 1.0f);
+  PushClear(renderGroup, v4(1.0f, 1.0f, 0.0f, 1.0f));
+
   struct bitmap *buffer = &groundBuffer->bitmap;
-
-  groundBuffer->position = *chunkPosition;
-
   f32 width = (f32)buffer->width;
   f32 height = (f32)buffer->width;
+
+  groundBuffer->position = *chunkPosition;
 
   for (i32 chunkOffsetY = -1; chunkOffsetY <= 1; chunkOffsetY++) {
     for (i32 chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
@@ -486,7 +489,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
         struct v2 offset = v2_add(center, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
 
-        DrawBitmap(buffer, stamp, offset, stampCenter);
+        PushBitmap(renderGroup, stamp, offset, 0.0f, stampCenter);
       }
     }
   }
@@ -509,10 +512,13 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
         struct v2 offset = v2_add(center, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
 
-        DrawBitmap(buffer, tuft, offset, tuftCenter);
+        PushBitmap(renderGroup, tuft, offset, 0.0f, tuftCenter);
       }
     }
   }
+
+  DrawRenderGroup(renderGroup, buffer);
+  EndTemporaryMemory(&renderMemory);
 }
 
 void
