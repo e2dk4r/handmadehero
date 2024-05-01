@@ -30,6 +30,7 @@ WorldChunkGetOrInsert(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, s
   assert(chunkY < U32_MAX - WORLD_CHUNK_SAFE_MARGIN);
   assert(chunkZ < U32_MAX - WORLD_CHUNK_SAFE_MARGIN);
 
+  // TODO(e2dk4r): Better hash function!
   u32 hashValue = 19 * chunkX + 7 * chunkY + 3 * chunkZ;
   u32 hashSlot = hashValue & (ARRAY_COUNT(world->chunkHash) - 1);
   assert(hashSlot < ARRAY_COUNT(world->chunkHash));
@@ -46,7 +47,7 @@ WorldChunkGetOrInsert(struct world *world, u32 chunkX, u32 chunkY, u32 chunkZ, s
     if (arena && chunk->chunkX != WORLD_CHUNK_UNINITIALIZED && !chunk->next) {
       chunk->next = MemoryArenaPush(arena, sizeof(*chunk));
       chunk = chunk->next;
-      chunk->chunkX = 0;
+      chunk->chunkX = WORLD_CHUNK_UNINITIALIZED;
     }
 
     /* if we are on empty slot */
