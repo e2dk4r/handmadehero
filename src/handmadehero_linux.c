@@ -860,13 +860,15 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, i32 screen
     }
   }
 
-  if (state->wp_viewport) {
-    wp_viewport_destroy(state->wp_viewport);
-    state->wp_viewport = 0;
-  }
+  if (state->wp_viewporter) {
+    if (state->wp_viewport) {
+      wp_viewport_destroy(state->wp_viewport);
+      state->wp_viewport = 0;
+    }
 
-  state->wp_viewport = wp_viewporter_get_viewport(state->wp_viewporter, state->wl_surface);
-  wp_viewport_set_destination(state->wp_viewport, screen_width, screen_height);
+    state->wp_viewport = wp_viewporter_get_viewport(state->wp_viewporter, state->wl_surface);
+    wp_viewport_set_destination(state->wp_viewport, screen_width, screen_height);
+  }
 
   wl_surface_commit(state->wl_surface);
 }
