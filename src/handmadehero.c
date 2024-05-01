@@ -310,14 +310,14 @@ HeroAdd(struct game_state *state)
       StoredEntityAdd(state, ENTITY_TYPE_HERO, entityPosition, state->heroCollision);
 
   struct stored_entity *stored = addResult.stored;
-  struct entity *entity = &stored->sim;
+  struct entity *hero = &stored->sim;
 
-  EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
-  EntityHitPointsReset(entity, 3);
+  EntityAddFlag(hero, ENTITY_FLAG_COLLIDE);
+  EntityHitPointsReset(hero, 3);
 
   u32 swordIndex = SwordAdd(state);
-  entity->sword.index = swordIndex;
-  CollisionRuleAdd(state, addResult.index, swordIndex, 0);
+  hero->sword.index = swordIndex;
+  CollisionRuleAdd(state, hero->storageIndex, hero->sword.index, 0);
 
   /* if followed entity, does not exits */
   if (state->followedEntityIndex == 0)
