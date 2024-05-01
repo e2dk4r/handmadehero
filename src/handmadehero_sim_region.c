@@ -168,7 +168,7 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
 
         for (struct world_entity_block *block = &chunk->firstBlock; block; block = block->next) {
           for (u32 entityIndex = 0; entityIndex < block->entityCount; entityIndex++) {
-            u32 storedEntityIndex = block->entityLowIndexes[entityIndex];
+            u32 storedEntityIndex = block->entityStorageIndexes[entityIndex];
             struct stored_entity *storedEntity = StoredEntityGet(state, storedEntityIndex);
             assert(storedEntity);
             struct entity *entity = &storedEntity->sim;
@@ -210,8 +210,7 @@ EndSimRegion(struct sim_region *simRegion, struct game_state *state)
       newPosition = &relativePositionFromOrigin;
     }
 
-    EntityChangeLocation(&state->worldArena, state->world, entity->storageIndex, stored, &stored->position,
-                         newPosition);
+    EntityChangeLocation(&state->worldArena, state->world, stored, newPosition);
 
     /* sync camera with followed entity */
     if (entity->storageIndex == state->followedEntityIndex) {

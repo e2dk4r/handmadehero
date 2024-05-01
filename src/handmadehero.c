@@ -159,10 +159,11 @@ StoredEntityAdd(struct game_state *state, enum entity_type type, struct world_po
   assert(stored);
   *stored = (struct stored_entity){};
   struct entity *entity = &stored->sim;
+  entity->storageIndex = storedEntityIndex;
   entity->type = type;
   entity->collision = collision;
 
-  EntityChangeLocation(&state->worldArena, state->world, storedEntityIndex, stored, 0, position);
+  EntityChangeLocation(&state->worldArena, state->world, stored, position);
 
   state->storedEntityCount++;
 
@@ -896,7 +897,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
             struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
 
-            if (IsWorldPositionSame(world, &groundBuffer->position, &chunkCenterPosition)) {
+            if (IsChunkPositionSame(world, &groundBuffer->position, &chunkCenterPosition)) {
               furthestBuffer = 0;
               break;
             } else if (IsGroundBufferEmpty(groundBuffer)) {

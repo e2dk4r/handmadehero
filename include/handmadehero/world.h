@@ -9,7 +9,7 @@ struct stored_entity;
 
 struct world_entity_block {
   u32 entityCount;
-  u32 entityLowIndexes[16];
+  u32 entityStorageIndexes[16];
   struct world_entity_block *next;
 };
 
@@ -38,18 +38,11 @@ struct world_position {
   struct v3 offset;
 };
 
-internal inline struct world_position
-WorldPositionInvalid()
-{
-  struct world_position result = {};
-  return result;
-}
+struct world_position
+WorldPositionInvalid(void);
 
-internal inline u8
-WorldPositionIsValid(struct world_position *position)
-{
-  return position->chunkX != 0;
-}
+u8
+WorldPositionIsValid(struct world_position *position);
 
 void
 WorldInit(struct world *world, struct v3 chunkDimInMeters);
@@ -70,13 +63,13 @@ struct v3
 WorldPositionSub(struct world *world, struct world_position *a, struct world_position *b);
 
 void
-EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct stored_entity *stored,
-                     struct world_position *oldPosition, struct world_position *newPosition);
+EntityChangeLocation(struct memory_arena *arena, struct world *world, struct stored_entity *stored,
+                     struct world_position *newPosition);
 
 u8
 IsWorldPositionOffsetCalculated(struct world *world, struct v3 *offset);
 
 u8
-IsWorldPositionSame(struct world *world, struct world_position *left, struct world_position *right);
+IsChunkPositionSame(struct world *world, struct world_position *left, struct world_position *right);
 
 #endif /* HANDMADEHERO_WORLD_H */

@@ -7,6 +7,22 @@
 #define WORLD_CHUNK_SAFE_MARGIN 16
 #define WORLD_CHUNK_UNINITIALIZED 0
 
+struct world_position
+WorldPositionInvalid(void)
+{
+  struct world_position result = {};
+  return result;
+}
+
+inline u8
+WorldPositionIsValid(struct world_position *position)
+{
+  if (!position)
+    return 0;
+
+  return position->chunkX != WORLD_CHUNK_UNINITIALIZED;
+}
+
 void
 WorldInit(struct world *world, struct v3 chunkDimInMeters)
 {
@@ -139,7 +155,7 @@ WorldPositionSub(struct world *world, struct world_position *a, struct world_pos
 }
 
 inline u8
-IsWorldPositionSame(struct world *world, struct world_position *left, struct world_position *right)
+IsChunkPositionSame(struct world *world, struct world_position *left, struct world_position *right)
 {
   assert(IsWorldPositionOffsetCalculated(world, &left->offset));
   assert(IsWorldPositionOffsetCalculated(world, &right->offset));
@@ -153,12 +169,13 @@ IsWorldPositionSame(struct world *world, struct world_position *left, struct wor
 }
 
 internal inline void
-EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 entityLowIndex,
+EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 storageIndex,
                         struct world_position *oldPosition, struct world_position *newPosition)
 {
   assert(!oldPosition || WorldPositionIsValid(oldPosition));
   assert(!newPosition || WorldPositionIsValid(newPosition));
-  if (oldPosition && newPosition && IsWorldPositionSame(world, oldPosition, newPosition))
+
+  if (oldPosition && newPosition && IsChunkPositionSame(world, oldPosition, newPosition))
     // leave entity where it is
     return;
 
@@ -171,11 +188,11 @@ EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 ent
     for (struct world_entity_block *block = firstBlock; !found && block; block = block->next) {
       for (u32 blockEntityIndex = 0; !found && blockEntityIndex < block->entityCount; blockEntityIndex++) {
 
-        if (block->entityLowIndexes[blockEntityIndex] != entityLowIndex)
+        if (block->entityStorageIndexes[blockEntityIndex] != storageIndex)
           continue;
 
         u32 firstBlockEntityLastIndex = firstBlock->entityCount - 1;
-        block->entityLowIndexes[blockEntityIndex] = firstBlock->entityLowIndexes[firstBlockEntityLastIndex];
+        block->entityStorageIndexes[blockEntityIndex] = firstBlock->entityStorageIndexes[firstBlockEntityLastIndex];
         firstBlock->entityCount--;
 
         if (firstBlock->entityCount == 0) {
@@ -186,9 +203,6 @@ EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 ent
             nextBlock->next = world->firstFreeBlock;
             world->firstFreeBlock = nextBlock;
           }
-
-          found = 1;
-          break;
         }
 
         found = 1;
@@ -196,38 +210,50 @@ EntityChangeLocationRaw(struct memory_arena *arena, struct world *world, u32 ent
     }
   }
 
-  // insert into its new entity block
-  struct world_chunk *chunk =
-      WorldChunkGetOrInsert(world, newPosition->chunkX, newPosition->chunkY, newPosition->chunkZ, arena);
-  struct world_entity_block *block = &chunk->firstBlock;
-  if (block->entityCount == ARRAY_COUNT(block->entityLowIndexes)) {
-    // we're out of room, get a new block
-    struct world_entity_block *oldBlock = world->firstFreeBlock;
+  if (newPosition) {
+    // insert into its new entity block
+    struct world_chunk *chunk =
+        WorldChunkGetOrInsert(world, newPosition->chunkX, newPosition->chunkY, newPosition->chunkZ, arena);
+    struct world_entity_block *block = &chunk->firstBlock;
+    if (block->entityCount == ARRAY_COUNT(block->entityStorageIndexes)) {
+      // we're out of room, get a new block
+      struct world_entity_block *oldBlock = world->firstFreeBlock;
 
-    if (oldBlock) {
-      world->firstFreeBlock = oldBlock->next;
-    } else {
-      oldBlock = MemoryArenaPush(arena, sizeof(*oldBlock));
+      if (oldBlock) {
+        world->firstFreeBlock = oldBlock->next;
+      } else {
+        oldBlock = MemoryArenaPush(arena, sizeof(*oldBlock));
+      }
+
+      *oldBlock = *block;
+      block->next = oldBlock;
+      block->entityCount = 0;
     }
 
-    *oldBlock = *block;
-    block->next = oldBlock;
-    block->entityCount = 0;
+    assert(block->entityCount < ARRAY_COUNT(block->entityStorageIndexes));
+    block->entityStorageIndexes[block->entityCount] = storageIndex;
+    block->entityCount++;
   }
-
-  assert(block->entityCount < ARRAY_COUNT(block->entityLowIndexes));
-  block->entityLowIndexes[block->entityCount] = entityLowIndex;
-  block->entityCount++;
 }
 
 inline void
-EntityChangeLocation(struct memory_arena *arena, struct world *world, u32 entityLowIndex, struct stored_entity *stored,
-                     struct world_position *oldPosition, struct world_position *newPosition)
+EntityChangeLocation(struct memory_arena *arena, struct world *world, struct stored_entity *stored,
+                     struct world_position *newPosition)
 {
   struct entity *entity = &stored->sim;
+
+  struct world_position *oldPosition = 0;
+  if (WorldPositionIsValid(&stored->position))
+    oldPosition = &stored->position;
+
+  struct world_position *newPositionToBeApplied = 0;
+  if (WorldPositionIsValid(newPosition))
+    newPositionToBeApplied = newPosition;
+
+  EntityChangeLocationRaw(arena, world, entity->storageIndex, oldPosition, newPositionToBeApplied);
+
   if (newPosition) {
     stored->position = *newPosition;
-    EntityChangeLocationRaw(arena, world, entityLowIndex, oldPosition, newPosition);
     EntityClearFlag(entity, ENTITY_FLAG_NONSPACIAL);
   } else {
     stored->position = WorldPositionInvalid();
