@@ -307,7 +307,7 @@
 - [x] Handmade Hero Day 089 - Renderer Push Buffer Entry Types
       https://www.youtube.com/watch?v=lllby5vrEes
 
-- [ ] Handmade Hero Day 090 - Bases Part I
+- [x] Handmade Hero Day 090 - Bases Part I
       https://www.youtube.com/watch?v=lcmjmOfWPNU
 
 - [ ] Handmade Hero Day 091 - Bases Part II
