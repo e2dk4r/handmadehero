@@ -300,6 +300,17 @@ v2_to_v3(struct v2 a, f32 z)
   return result;
 }
 
+internal inline struct v2
+v2_perp(struct v2 a)
+{
+  struct v2 result;
+
+  result.x = -a.y;
+  result.y = a.x;
+
+  return result;
+}
+
 /****************************************************************
  * v3 OPERATIONS
  ****************************************************************/

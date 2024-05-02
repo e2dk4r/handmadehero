@@ -251,10 +251,12 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
     for (i32 x = xMin; x <= xMax; x++) {
 #if 1
       struct v2 pixelP = v2i(x, y);
-      f32 edge0 = v2_dot(v2_sub(pixelP, origin), v2_neg(yAxis));
-      f32 edge1 = v2_dot(v2_sub(pixelP, v2_add(origin, xAxis)), xAxis);
-      f32 edge2 = v2_dot(v2_sub(pixelP, v2_add(origin, v2_add(xAxis, yAxis))), yAxis);
-      f32 edge3 = v2_dot(v2_sub(pixelP, v2_add(origin, yAxis)), v2_neg(xAxis));
+      // TODO(e2dk4r): PerpDot()
+      // TODO(e2dk4r): Simpler origin
+      f32 edge0 = v2_dot(v2_sub(pixelP, origin), v2_neg(v2_perp(xAxis)));
+      f32 edge1 = v2_dot(v2_sub(pixelP, v2_add(origin, xAxis)), v2_neg(v2_perp(yAxis)));
+      f32 edge2 = v2_dot(v2_sub(pixelP, v2_add(origin, v2_add(xAxis, yAxis))), v2_perp(xAxis));
+      f32 edge3 = v2_dot(v2_sub(pixelP, v2_add(origin, yAxis)), v2_perp(yAxis));
 
       if (edge0 < 0 && edge1 < 0 && edge2 < 0 && edge3 < 0) {
         *pixel = colorRGBA;
