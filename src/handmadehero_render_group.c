@@ -79,6 +79,18 @@ PushRectangleEntry(struct render_group *group, struct v2 offset, f32 offsetZ, st
   entry->color = color;
 }
 
+struct render_group_entry_coordinate_system *
+CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color)
+{
+  struct render_group_entry_coordinate_system *entry =
+      PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM);
+  entry->origin = origin;
+  entry->xAxis = xAxis;
+  entry->yAxis = yAxis;
+  entry->color = color;
+  return entry;
+}
+
 void
 PushClear(struct render_group *group, struct v4 color)
 {
@@ -316,17 +328,17 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
   struct v2 screenCenter = v2_mul(screenWidthHeight, 0.5f);
 
   for (u32 pushBufferIndex = 0; pushBufferIndex < renderGroup->pushBufferSize;) {
-    struct render_group_entry *typelessEntry = renderGroup->pushBufferBase + pushBufferIndex;
+    struct render_group_entry *header = renderGroup->pushBufferBase + pushBufferIndex;
 
-    if (typelessEntry->type == RENDER_GROUP_ENTRY_TYPE_CLEAR) {
-      struct render_group_entry_clear *entry = (struct render_group_entry_clear *)typelessEntry;
+    if (header->type == RENDER_GROUP_ENTRY_TYPE_CLEAR) {
+      struct render_group_entry_clear *entry = (struct render_group_entry_clear *)header;
       pushBufferIndex += sizeof(*entry);
 
       DrawRectangle(outputTarget, v2(0.0f, 0.0f), screenWidthHeight, entry->color);
     }
 
-    else if (typelessEntry->type & RENDER_GROUP_ENTRY_TYPE_BITMAP) {
-      struct render_group_entry_bitmap *entry = (struct render_group_entry_bitmap *)typelessEntry;
+    else if (header->type & RENDER_GROUP_ENTRY_TYPE_BITMAP) {
+      struct render_group_entry_bitmap *entry = (struct render_group_entry_bitmap *)header;
       pushBufferIndex += sizeof(*entry);
 
       assert(entry->bitmap);
@@ -334,13 +346,34 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       DrawBitmapWithAlpha(outputTarget, entry->bitmap, center, entry->align, entry->alpha);
     }
 
-    else if (typelessEntry->type & RENDER_GROUP_ENTRY_TYPE_RECTANGLE) {
-      struct render_group_entry_rectangle *entry = (struct render_group_entry_rectangle *)typelessEntry;
+    else if (header->type & RENDER_GROUP_ENTRY_TYPE_RECTANGLE) {
+      struct render_group_entry_rectangle *entry = (struct render_group_entry_rectangle *)header;
       pushBufferIndex += sizeof(*entry);
 
       struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
       struct v2 halfDim = v2_mul(v2_mul(entry->dim, 0.5f), metersToPixels);
       DrawRectangle(outputTarget, v2_sub(center, halfDim), v2_add(center, halfDim), entry->color);
+    }
+
+    else if (header->type & RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM) {
+      struct render_group_entry_coordinate_system *entry = (struct render_group_entry_coordinate_system *)header;
+      pushBufferIndex += sizeof(*entry);
+
+      struct v2 dim = v2(2.0f, 2.0f);
+      struct v2 p = entry->origin;
+      DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), entry->color);
+
+      p = v2_add(entry->origin, entry->xAxis);
+      DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), entry->color);
+
+      p = v2_add(entry->origin, entry->yAxis);
+      DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), entry->color);
+
+      for (u32 pIndex = 0; pIndex < ARRAY_COUNT(entry->points); pIndex++) {
+        p = entry->points[pIndex];
+        p = v2_add(entry->origin, v2_add(v2_mul(entry->xAxis, p.x), v2_mul(entry->yAxis, p.y)));
+        DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), entry->color);
+      }
     }
 
     // typelessEntry->type is invalid

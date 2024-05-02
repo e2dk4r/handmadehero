@@ -775,7 +775,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 
 #if HANDMADEHERO_DEBUG
-  if (input->gameCodeReloaded) {
+  if (0 && input->gameCodeReloaded) {
     for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
       struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
       groundBuffer->position = WorldPositionInvalid();
@@ -1105,6 +1105,20 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     else {
       assert(0 && "unknown entity type");
+    }
+  }
+
+  state->time += dt;
+  f32 angle = state->time;
+  struct v2 origin = v2_add(screenCenter, v2(Sin(angle) * 10.0f, 0.0f));
+  struct v2 xAxis = v2_mul(v2(Cos(angle), Sin(angle)), 100.0f);
+  struct v2 yAxis = v2_mul(v2(Cos(angle + 1.0f), Sin(angle + 1.0f)), 100.0f);
+  struct render_group_entry_coordinate_system *c =
+      CoordinateSystem(renderGroup, origin, xAxis, yAxis, v4(1.0f, 1.0f, 0.0f, 1.0f));
+  u32 pIndex = 0;
+  for (f32 y = 0.0f; y < 1.0f; y += 0.25f) {
+    for (f32 x = 0.0f; x < 1.0f; x += 0.25f) {
+      c->points[pIndex++] = v2(x, y);
     }
   }
 

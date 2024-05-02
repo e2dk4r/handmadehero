@@ -92,6 +92,8 @@ struct game_state {
 #define BITMAP_HERO_LEFT 2
 #define BITMAP_HERO_RIGHT 0
   struct bitmap_hero textureHero[4];
+
+  f32 time;
 };
 
 struct transient_state {

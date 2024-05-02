@@ -23,9 +23,11 @@ enum render_group_entry_type {
   RENDER_GROUP_ENTRY_TYPE_CLEAR = 0,
   RENDER_GROUP_ENTRY_TYPE_RECTANGLE = (1 << 0),
   RENDER_GROUP_ENTRY_TYPE_BITMAP = (1 << 1),
+  RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM = (1 << 2),
 };
 
 // render_group_entry is tagged union
+// TODO(e2dk4r): remove the header from types
 struct render_group_entry {
   enum render_group_entry_type type : 4;
 };
@@ -50,6 +52,16 @@ struct render_group_entry_rectangle {
   struct render_entity_basis basis;
   struct v4 color;
   struct v2 dim;
+};
+
+struct render_group_entry_coordinate_system {
+  struct render_group_entry header;
+  struct v2 origin;
+  struct v2 xAxis;
+  struct v2 yAxis;
+  struct v4 color;
+
+  struct v2 points[16];
 };
 
 struct render_group {
@@ -90,5 +102,8 @@ PushRectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struc
 
 void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget);
+
+struct render_group_entry_coordinate_system *
+CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color);
 
 #endif /* HANDMADEHERO_RENDER_GROUP */

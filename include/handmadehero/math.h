@@ -72,6 +72,12 @@ Sin(f32 value)
   return __builtin_sinf(value);
 };
 
+internal inline f32
+Cos(f32 value)
+{
+  return __builtin_cosf(value);
+}
+
 /* linear blend
  *    .       .
  *    A       B
