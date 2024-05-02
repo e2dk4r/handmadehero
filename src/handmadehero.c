@@ -476,7 +476,6 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       struct random_series series = RandomSeed(seed);
 
       struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * width);
-      center.y = -center.y; /* y flipped for draw */
 
       for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
         struct bitmap *stamp = 0;
@@ -504,7 +503,6 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       struct random_series series = RandomSeed(seed);
 
       struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * width);
-      center.y = -center.y; /* y flipped for draw */
 
       for (u32 tuftIndex = 0; tuftIndex < 30; tuftIndex++) {
         struct bitmap *tuft = state->textureTuft + RandomChoice(&series, ARRAY_COUNT(state->textureTuft));
