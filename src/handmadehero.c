@@ -955,15 +955,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     basis->position = entity->position;
     renderGroup->defaultBasis = basis;
 
-    struct v2 entityScreenPosition = entity->position.xy;
-    /* screen's coordinate system uses y values inverse,
-     * so that means going up in space means negative y values
-     */
-    entityScreenPosition.y *= -1;
-    v2_mul_ref(&entityScreenPosition, metersToPixels);
-
-    struct v2 entityGroundPoint = v2_add(screenCenter, entityScreenPosition);
-
     if (entity->type & ENTITY_TYPE_HERO) {
       /* update */
       for (u8 controllerIndex = 0; controllerIndex < ARRAY_COUNT(state->controlledHeroes); controllerIndex++) {
