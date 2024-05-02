@@ -189,7 +189,52 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
 internal inline void
 DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, const struct v4 color)
 {
-  u8 *row = buffer->memory;
+  struct v2 p[4] = {
+      origin,
+      v2_add(origin, xAxis),
+      v2_add(origin, v2_add(xAxis, yAxis)),
+      v2_add(origin, yAxis),
+  };
+
+  i32 widthMax = (i32)buffer->width - 1;
+  i32 heightMax = (i32)buffer->height - 1;
+
+  i32 xMin = widthMax;
+  i32 xMax = 0;
+  i32 yMin = heightMax;
+  i32 yMax = 0;
+
+  for (u32 pIndex = 0; pIndex < ARRAY_COUNT(p); pIndex++) {
+    struct v2 testP = p[pIndex];
+    i32 floorX = Floor(testP.x);
+    i32 ceilX = Ceil(testP.x);
+    i32 floorY = Floor(testP.y);
+    i32 ceilY = Ceil(testP.y);
+
+    if (xMin > floorX)
+      xMin = floorX;
+
+    if (xMax < ceilX)
+      xMax = ceilX;
+
+    if (yMin > floorY)
+      yMin = floorY;
+
+    if (yMax < ceilY)
+      yMax = ceilY;
+  }
+
+  if (xMin < 0)
+    xMin = 0;
+  if (xMax > widthMax)
+    xMax = widthMax;
+
+  if (yMin < 0)
+    yMin = 0;
+  if (yMax > heightMax)
+    yMax = heightMax;
+
+  u8 *row = buffer->memory + yMin * buffer->stride + xMin * BITMAP_BYTES_PER_PIXEL;
 
   u32 colorRGBA =
       /* alpha */
@@ -201,10 +246,11 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
       /* blue */
       | roundf32tou32(color.b * 255.0f) << 0;
 
-  for (f32 y = 0; y < (f32)buffer->height; y++) {
+  for (i32 y = yMin; y <= yMax; y++) {
     u32 *pixel = (u32 *)row;
-    for (f32 x = 0; x < (f32)buffer->width; x++) {
-      struct v2 pixelP = v2(x, y);
+    for (i32 x = xMin; x <= xMax; x++) {
+#if 1
+      struct v2 pixelP = v2i(x, y);
       f32 edge0 = v2_dot(v2_sub(pixelP, origin), v2_neg(yAxis));
       f32 edge1 = v2_dot(v2_sub(pixelP, v2_add(origin, xAxis)), xAxis);
       f32 edge2 = v2_dot(v2_sub(pixelP, v2_add(origin, v2_add(xAxis, yAxis))), yAxis);
@@ -213,6 +259,10 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
       if (edge0 < 0 && edge1 < 0 && edge2 < 0 && edge3 < 0) {
         *pixel = colorRGBA;
       }
+#else
+      *pixel = colorRGBA;
+#endif
+
       pixel++;
     }
     row += buffer->stride;

@@ -28,13 +28,13 @@ truncatef32toi32(f32 value)
 }
 
 internal inline i32
-floorf32toi32(f32 value)
+Floor(f32 value)
 {
   return (i32)__builtin_floor(value);
 }
 
 internal inline i32
-ceilf32toi32(f32 value)
+Ceil(f32 value)
 {
   return (i32)__builtin_ceilf(value);
 }
