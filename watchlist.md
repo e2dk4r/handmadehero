@@ -310,7 +310,7 @@
 - [x] Handmade Hero Day 090 - Bases Part I
       https://www.youtube.com/watch?v=lcmjmOfWPNU
 
-- [ ] Handmade Hero Day 091 - Bases Part II
+- [x] Handmade Hero Day 091 - Bases Part II
       https://www.youtube.com/watch?v=2yKKcjBIaL0
 
 - [ ] Handmade Hero Day 092 - Filling Rotated and Scaled Rectangles
