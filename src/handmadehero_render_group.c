@@ -187,6 +187,39 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
 }
 
 internal inline void
+DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, const struct v4 color)
+{
+  u8 *row = buffer->memory;
+
+  u32 colorRGBA =
+      /* alpha */
+      roundf32tou32(color.a * 255.0f) << 24
+      /* red */
+      | roundf32tou32(color.r * 255.0f) << 16
+      /* green */
+      | roundf32tou32(color.g * 255.0f) << 8
+      /* blue */
+      | roundf32tou32(color.b * 255.0f) << 0;
+
+  for (f32 y = 0; y < (f32)buffer->height; y++) {
+    u32 *pixel = (u32 *)row;
+    for (f32 x = 0; x < (f32)buffer->width; x++) {
+      struct v2 pixelP = v2(x, y);
+      f32 edge0 = v2_dot(v2_sub(pixelP, origin), v2_neg(yAxis));
+      f32 edge1 = v2_dot(v2_sub(pixelP, v2_add(origin, xAxis)), xAxis);
+      f32 edge2 = v2_dot(v2_sub(pixelP, v2_add(origin, v2_add(xAxis, yAxis))), yAxis);
+      f32 edge3 = v2_dot(v2_sub(pixelP, v2_add(origin, yAxis)), v2_neg(xAxis));
+
+      if (edge0 < 0 && edge1 < 0 && edge2 < 0 && edge3 < 0) {
+        *pixel = colorRGBA;
+      }
+      pixel++;
+    }
+    row += buffer->stride;
+  }
+}
+
+internal inline void
 DrawRectangleOutline(struct bitmap *buffer, struct v2 min, struct v2 max, struct v4 color, f32 thickness)
 {
   // NOTE(e2dk4r): top and bottom
@@ -359,21 +392,29 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct render_group_entry_coordinate_system *entry = (struct render_group_entry_coordinate_system *)header;
       pushBufferIndex += sizeof(*entry);
 
+      DrawRectangleSlowly(outputTarget, entry->origin, entry->xAxis, entry->yAxis, entry->color);
+
+      struct v4 color = v4(1.0f, 0.0f, 0.0f, 1.0f);
       struct v2 dim = v2(2.0f, 2.0f);
       struct v2 p = entry->origin;
-      DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), entry->color);
+      DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), color);
 
       p = v2_add(entry->origin, entry->xAxis);
-      DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), entry->color);
+      DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), color);
 
       p = v2_add(entry->origin, entry->yAxis);
-      DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), entry->color);
+      DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), color);
 
+      p = v2_add(entry->origin, v2_add(entry->xAxis, entry->yAxis));
+      DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), color);
+
+#if 0
       for (u32 pIndex = 0; pIndex < ARRAY_COUNT(entry->points); pIndex++) {
         p = entry->points[pIndex];
         p = v2_add(entry->origin, v2_add(v2_mul(entry->xAxis, p.x), v2_mul(entry->yAxis, p.y)));
         DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), entry->color);
       }
+#endif
     }
 
     // typelessEntry->type is invalid

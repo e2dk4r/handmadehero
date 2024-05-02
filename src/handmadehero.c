@@ -1108,9 +1108,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   state->time += dt;
   f32 angle = state->time;
-  struct v2 origin = v2_add(screenCenter, v2(Sin(angle) * 10.0f, 0.0f));
-  struct v2 xAxis = v2_mul(v2(Cos(angle), Sin(angle)), 100.0f);
-  struct v2 yAxis = v2_mul(v2(Cos(angle + 1.0f), Sin(angle + 1.0f)), 100.0f);
+  struct v2 origin = screenCenter;
+  struct v2 xAxis = v2_mul(v2(Cos(angle), Sin(angle)), 50.0f + 50.0f * Cos(angle));
+  struct v2 yAxis = v2_mul(v2(-xAxis.y, xAxis.x), 1.0f);
   struct render_group_entry_coordinate_system *c =
       CoordinateSystem(renderGroup, origin, xAxis, yAxis, v4(1.0f, 1.0f, 0.0f, 1.0f));
   u32 pIndex = 0;
