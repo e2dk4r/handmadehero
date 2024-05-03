@@ -270,8 +270,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         f32 v = InvYAxisLengthSq * v2_dot(d, yAxis);
         assert(u > 0.0f && v > 0.0f);
 
-        f32 tX = 1.0f + u * (f32)(texture->width - 3) + 0.5f;
-        f32 tY = 1.0f + v * (f32)(texture->height - 3) + 0.5f;
+        f32 tX = 1.0f + u * (f32)(texture->width - 3);
+        f32 tY = 1.0f + v * (f32)(texture->height - 3);
 
         i32 texelX = (i32)tX;
         i32 texelY = (i32)tY;
@@ -283,6 +283,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         assert(texelY >= 0 && texelY < (i32)texture->height);
 
         /*
+         * Texture filtering, bilinear filtering
          * | A | B | ...
          * | C | D | ...
          */
