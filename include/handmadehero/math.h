@@ -531,6 +531,16 @@ v4_length_square(struct v4 a)
   return value;
 }
 
+internal inline struct v4
+v4_lerp(struct v4 a, struct v4 b, f32 t)
+{
+  struct v4 result;
+
+  result = v4_add(v4_mul(a, 1.0f - t), v4_mul(b, t));
+
+  return result;
+}
+
 /****************************************************************
  * rect OPERATIONS
  ****************************************************************/

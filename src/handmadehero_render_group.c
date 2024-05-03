@@ -270,20 +270,47 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         f32 v = InvYAxisLengthSq * v2_dot(d, yAxis);
         assert(u > 0.0f && v > 0.0f);
 
-        i32 texelX = (i32)(u * (f32)(texture->width - 1) + 0.5f);
-        i32 texelY = (i32)(v * (f32)(texture->height - 1) + 0.5f);
+        f32 tX = 1.0f + u * (f32)(texture->width - 3) + 0.5f;
+        f32 tY = 1.0f + v * (f32)(texture->height - 3) + 0.5f;
+
+        i32 texelX = (i32)tX;
+        i32 texelY = (i32)tY;
+
+        f32 fX = tX - (f32)texelX;
+        f32 fY = tY - (f32)texelY;
+
         assert(texelX >= 0 && texelX < (i32)texture->width);
         assert(texelY >= 0 && texelY < (i32)texture->height);
 
-        u32 *texel = (u32 *)((u8 *)texture->memory + texelY * texture->stride + texelX * BITMAP_BYTES_PER_PIXEL);
+        /*
+         * | A | B | ...
+         * | C | D | ...
+         */
+        u32 *texelPtrA = (u32 *)((u8 *)texture->memory + texelY * texture->stride + texelX * BITMAP_BYTES_PER_PIXEL);
+        u32 *texelPtrB = (u32 *)((u8 *)texelPtrA + BITMAP_BYTES_PER_PIXEL);
+        u32 *texelPtrC = (u32 *)((u8 *)texelPtrA + texture->stride);
+        u32 *texelPtrD = (u32 *)((u8 *)texelPtrC + BITMAP_BYTES_PER_PIXEL);
+
+        // TODO(e2dk4r): color.a
+        struct v4 texelA = v4((f32)((*texelPtrA >> 0x0f) & 0xff), (f32)((*texelPtrA >> 0x08) & 0xff),
+                              (f32)((*texelPtrA >> 0x00) & 0xff), (f32)((*texelPtrA >> 0x18) & 0xff));
+        struct v4 texelB = v4((f32)((*texelPtrB >> 0x0f) & 0xff), (f32)((*texelPtrB >> 0x08) & 0xff),
+                              (f32)((*texelPtrB >> 0x00) & 0xff), (f32)((*texelPtrB >> 0x18) & 0xff));
+        struct v4 texelC = v4((f32)((*texelPtrC >> 0x0f) & 0xff), (f32)((*texelPtrC >> 0x08) & 0xff),
+                              (f32)((*texelPtrC >> 0x00) & 0xff), (f32)((*texelPtrC >> 0x18) & 0xff));
+        struct v4 texelD = v4((f32)((*texelPtrD >> 0x0f) & 0xff), (f32)((*texelPtrD >> 0x08) & 0xff),
+                              (f32)((*texelPtrD >> 0x00) & 0xff), (f32)((*texelPtrD >> 0x18) & 0xff));
+
+        struct v4 texel = v4_lerp(v4_lerp(texelA, texelB, fX), v4_lerp(texelC, texelD, fX), fY);
+
         // source channels
-        f32 sA = (f32)((*texel >> 24) & 0xff);
-        f32 sR = color.a * (f32)((*texel >> 16) & 0xff);
-        f32 sG = color.a * (f32)((*texel >> 8) & 0xff);
-        f32 sB = color.a * (f32)((*texel >> 0) & 0xff);
+        f32 sA = texel.a;
+        f32 sR = texel.r;
+        f32 sG = texel.g;
+        f32 sB = texel.b;
 
         // normalized sA
-        f32 nsA = (sA / 255.0f) * color.a;
+        f32 nsA = (sA / 255.0f);
 
         // destination channels
         f32 dA = (f32)((*pixel >> 24) & 0xff);
