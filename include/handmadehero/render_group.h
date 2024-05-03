@@ -60,6 +60,7 @@ struct render_group_entry_coordinate_system {
   struct v2 xAxis;
   struct v2 yAxis;
   struct v4 color;
+  struct bitmap *texture;
 
   struct v2 points[16];
 };
@@ -104,6 +105,7 @@ void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget);
 
 struct render_group_entry_coordinate_system *
-CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color);
+CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
+                 struct bitmap *texture);
 
 #endif /* HANDMADEHERO_RENDER_GROUP */

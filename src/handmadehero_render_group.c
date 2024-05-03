@@ -80,7 +80,8 @@ PushRectangleEntry(struct render_group *group, struct v2 offset, f32 offsetZ, st
 }
 
 struct render_group_entry_coordinate_system *
-CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color)
+CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
+                 struct bitmap *texture)
 {
   struct render_group_entry_coordinate_system *entry =
       PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM);
@@ -88,6 +89,7 @@ CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, 
   entry->xAxis = xAxis;
   entry->yAxis = yAxis;
   entry->color = color;
+  entry->texture = texture;
   return entry;
 }
 
@@ -187,8 +189,12 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
 }
 
 internal inline void
-DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, const struct v4 color)
+DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, const struct v4 color,
+                    struct bitmap *texture)
 {
+  f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
+  f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
+
   struct v2 p[4] = {
       origin,
       v2_add(origin, xAxis),
@@ -251,15 +257,63 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
     for (i32 x = xMin; x <= xMax; x++) {
 #if 1
       struct v2 pixelP = v2i(x, y);
+      struct v2 d = v2_sub(pixelP, origin);
       // TODO(e2dk4r): PerpDot()
       // TODO(e2dk4r): Simpler origin
-      f32 edge0 = v2_dot(v2_sub(pixelP, origin), v2_neg(v2_perp(xAxis)));
-      f32 edge1 = v2_dot(v2_sub(pixelP, v2_add(origin, xAxis)), v2_neg(v2_perp(yAxis)));
-      f32 edge2 = v2_dot(v2_sub(pixelP, v2_add(origin, v2_add(xAxis, yAxis))), v2_perp(xAxis));
-      f32 edge3 = v2_dot(v2_sub(pixelP, v2_add(origin, yAxis)), v2_perp(yAxis));
+      f32 edge0 = v2_dot(d, v2_neg(v2_perp(xAxis)));
+      f32 edge1 = v2_dot(v2_sub(d, xAxis), v2_neg(v2_perp(yAxis)));
+      f32 edge2 = v2_dot(v2_sub(d, v2_add(xAxis, yAxis)), v2_perp(xAxis));
+      f32 edge3 = v2_dot(v2_sub(d, yAxis), v2_perp(yAxis));
 
       if (edge0 < 0 && edge1 < 0 && edge2 < 0 && edge3 < 0) {
-        *pixel = colorRGBA;
+        f32 u = InvXAxisLengthSq * v2_dot(d, xAxis);
+        f32 v = InvYAxisLengthSq * v2_dot(d, yAxis);
+        assert(u > 0.0f && v > 0.0f);
+
+        i32 texelX = (i32)(u * (f32)(texture->width - 1) + 0.5f);
+        i32 texelY = (i32)(v * (f32)(texture->height - 1) + 0.5f);
+        assert(texelX >= 0 && texelX < (i32)texture->width);
+        assert(texelY >= 0 && texelY < (i32)texture->height);
+
+        u32 *texel = (u32 *)((u8 *)texture->memory + texelY * texture->stride + texelX * BITMAP_BYTES_PER_PIXEL);
+        // source channels
+        f32 sA = (f32)((*texel >> 24) & 0xff);
+        f32 sR = color.a * (f32)((*texel >> 16) & 0xff);
+        f32 sG = color.a * (f32)((*texel >> 8) & 0xff);
+        f32 sB = color.a * (f32)((*texel >> 0) & 0xff);
+
+        // normalized sA
+        f32 nsA = (sA / 255.0f) * color.a;
+
+        // destination channels
+        f32 dA = (f32)((*pixel >> 24) & 0xff);
+        f32 dR = (f32)((*pixel >> 16) & 0xff);
+        f32 dG = (f32)((*pixel >> 8) & 0xff);
+        f32 dB = (f32)((*pixel >> 0) & 0xff);
+
+        // normalized dA
+        f32 ndA = (dA / 255.0f);
+
+        // percentage of normalized sA to be applied
+        f32 psA = (1.0f - nsA);
+
+        /*
+         * Math of calculating blended alpha
+         */
+        f32 a = 255.0f * (nsA + ndA - nsA * ndA);
+        f32 r = psA * dR + sR;
+        f32 g = psA * dG + sG;
+        f32 b = psA * dB + sB;
+
+        *pixel =
+            /* alpha */
+            (u32)(a + 0.5f) << 24
+            /* red */
+            | (u32)(r + 0.5f) << 16
+            /* green */
+            | (u32)(g + 0.5f) << 8
+            /* blue */
+            | (u32)(b + 0.5f) << 0;
       }
 #else
       *pixel = colorRGBA;
@@ -444,7 +498,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct render_group_entry_coordinate_system *entry = (struct render_group_entry_coordinate_system *)header;
       pushBufferIndex += sizeof(*entry);
 
-      DrawRectangleSlowly(outputTarget, entry->origin, entry->xAxis, entry->yAxis, entry->color);
+      DrawRectangleSlowly(outputTarget, entry->origin, entry->xAxis, entry->yAxis, entry->color, entry->texture);
 
       struct v4 color = v4(1.0f, 0.0f, 0.0f, 1.0f);
       struct v2 dim = v2(2.0f, 2.0f);
