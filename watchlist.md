@@ -316,7 +316,7 @@
 - [x] Handmade Hero Day 092 - Filling Rotated and Scaled Rectangles
       https://www.youtube.com/watch?v=kVU_QIxm3AA
 
-- [ ] Handmade Hero Day 093 - Textured Quadrilaterals
+- [x] Handmade Hero Day 093 - Textured Quadrilaterals
       https://www.youtube.com/watch?v=k5wzQeWRokA
 
 - [ ] Handmade Hero Day 094 - Converting sRGB to Light-linear Space
