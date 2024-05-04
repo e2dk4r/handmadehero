@@ -349,12 +349,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         // NOTE(e2dk4r): Go from sRGB to "linear" brightness space
         dest = sRGB255toLinear1(dest);
 
-        // percentage of normalized sA to be applied
-        f32 psA = 1.0f - texel.a;
-
         // blend alpha
-        struct v4 blended = v4(psA * dest.r + texel.r, psA * dest.g + texel.g, psA * dest.b + texel.b,
-                               texel.a + dest.a - texel.a * dest.a);
+        struct v4 blended = v4_add(v4_mul(dest, 1.0f - texel.a), texel);
 
         // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
         blended = Linear1tosRGB255(blended);
@@ -439,16 +435,12 @@ DrawBitmapWithAlpha(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos,
                        (f32)((*dst >> 0x18) & 0xff));
       d = sRGB255toLinear1(d);
 
-      // percentage of normalized sA to be applied
-      f32 psA = 1.0f - texel.a;
-
       /*
        * Math of calculating blended alpha
        * videoId:   bidrZj1YosA
        * timestamp: 01:06:19
        */
-      struct v4 blended =
-          v4(psA * d.r + texel.r, psA * d.g + texel.g, psA * d.b + texel.b, texel.a + d.a - texel.a * d.a);
+      struct v4 blended = v4_add(v4_mul(d, 1.0f - texel.a), texel);
 
       blended = Linear1tosRGB255(blended);
       *dst = (u32)(blended.a + 0.5f) << 0x18 | (u32)(blended.r + 0.5f) << 0x10 | (u32)(blended.g + 0.5f) << 0x08 |
