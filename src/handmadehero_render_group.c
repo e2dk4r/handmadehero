@@ -188,6 +188,33 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
   }
 }
 
+internal inline struct v4
+sRGB255toLinear1(struct v4 color)
+{
+  struct v4 result;
+
+  f32 inv255 = 1.0f / 255.0f;
+  result.r = square(inv255 * color.r);
+  result.g = square(inv255 * color.g);
+  result.b = square(inv255 * color.b);
+  result.a = inv255 * color.a;
+
+  return result;
+}
+
+internal inline struct v4
+Linear1tosRGB255(struct v4 color)
+{
+  struct v4 result;
+
+  result.r = 255.0f * SquareRoot(color.r);
+  result.g = 255.0f * SquareRoot(color.g);
+  result.b = 255.0f * SquareRoot(color.b);
+  result.a = 255.0f * color.a;
+
+  return result;
+}
+
 internal inline void
 DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, const struct v4 color,
                     struct bitmap *texture)
@@ -301,46 +328,33 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         struct v4 texelD = v4((f32)((*texelPtrD >> 0x10) & 0xff), (f32)((*texelPtrD >> 0x08) & 0xff),
                               (f32)((*texelPtrD >> 0x00) & 0xff), (f32)((*texelPtrD >> 0x18) & 0xff));
 
+        // NOTE(e2dk4r): Go from sRGB to "linear" brightness space
+        texelA = sRGB255toLinear1(texelA);
+        texelB = sRGB255toLinear1(texelB);
+        texelC = sRGB255toLinear1(texelC);
+        texelD = sRGB255toLinear1(texelD);
+
         struct v4 texel = v4_lerp(v4_lerp(texelA, texelB, fX), v4_lerp(texelC, texelD, fX), fY);
-
-        // source channels
-        f32 sA = texel.a;
-        f32 sR = texel.r;
-        f32 sG = texel.g;
-        f32 sB = texel.b;
-
-        // normalized sA
-        f32 nsA = (sA / 255.0f);
+        f32 nsA = texel.a * color.a;
 
         // destination channels
-        f32 dA = (f32)((*pixel >> 24) & 0xff);
-        f32 dR = (f32)((*pixel >> 16) & 0xff);
-        f32 dG = (f32)((*pixel >> 8) & 0xff);
-        f32 dB = (f32)((*pixel >> 0) & 0xff);
-
-        // normalized dA
-        f32 ndA = (dA / 255.0f);
+        struct v4 dest = v4((f32)((*pixel >> 0x10) & 0xff), (f32)((*pixel >> 0x08) & 0xff),
+                            (f32)((*pixel >> 0x00) & 0xff), (f32)((*pixel >> 0x18) & 0xff));
+        // NOTE(e2dk4r): Go from sRGB to "linear" brightness space
+        dest = sRGB255toLinear1(dest);
 
         // percentage of normalized sA to be applied
-        f32 psA = (1.0f - nsA);
+        f32 psA = 1.0f - nsA;
 
-        /*
-         * Math of calculating blended alpha
-         */
-        f32 a = 255.0f * (nsA + ndA - nsA * ndA);
-        f32 r = psA * dR + sR;
-        f32 g = psA * dG + sG;
-        f32 b = psA * dB + sB;
+        // blend alpha
+        struct v4 blended =
+            v4(psA * dest.r + texel.r, psA * dest.g + texel.g, psA * dest.b + texel.b, nsA + dest.a - nsA * dest.a);
 
-        *pixel =
-            /* alpha */
-            (u32)(a + 0.5f) << 24
-            /* red */
-            | (u32)(r + 0.5f) << 16
-            /* green */
-            | (u32)(g + 0.5f) << 8
-            /* blue */
-            | (u32)(b + 0.5f) << 0;
+        // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
+        struct v4 blended255 = Linear1tosRGB255(blended);
+
+        *pixel = (u32)(blended255.a + 0.5f) << 0x18 | (u32)(blended255.r + 0.5f) << 0x10 |
+                 (u32)(blended255.g + 0.5f) << 0x08 | (u32)(blended255.b + 0.5f) << 0x00;
       }
 #else
       *pixel = colorRGBA;
