@@ -1120,8 +1120,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #endif
   // color angle
   f32 cAngle = 5.0f * angle;
-  struct v4 color =
-      v4(0.5f + 0.5f * Sin(cAngle), 0.5f + 0.5f * Sin(2.9f * cAngle), 0.5f + 0.5f * Sin(9.9f * cAngle), 1.0f);
+  struct v4 color = v4(0.5f + 0.5f * Sin(cAngle), 0.5f + 0.5f * Sin(2.9f * cAngle), 0.5f + 0.5f * Sin(9.9f * cAngle),
+                       0.5f + 0.5f * Sin(cAngle));
   struct render_group_entry_coordinate_system *c = CoordinateSystem(
       renderGroup, v2_add(v2_add(origin, v2(disp, 0.0f)), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis,
       yAxis, color, &state->textureTree);
