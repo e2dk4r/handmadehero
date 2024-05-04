@@ -1108,19 +1108,23 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   state->time += dt;
   f32 angle = 0.1f * state->time;
-  f32 disp = 10.0f * Cos(5.0f * angle);
+  f32 disp = 0; // 10.0f * Cos(5.0f * angle);
 
   struct v2 origin = screenCenter;
-#if 0
-  struct v2 xAxis = v2_mul(v2(Cos(angle), Sin(angle)), 300.0f);
+#if 1
+  struct v2 xAxis = v2_mul(v2(Cos(angle), Sin(angle)), 100.0f);
   struct v2 yAxis = v2_perp(xAxis);
 #else
-  struct v2 xAxis = v2(300.0f, 0.0f);
+  struct v2 xAxis = v2(100.0f, 0.0f);
   struct v2 yAxis = v2_perp(xAxis);
 #endif
-  struct render_group_entry_coordinate_system *c =
-      CoordinateSystem(renderGroup, v2_add(v2_add(origin, v2(disp, 0.0f)), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis, yAxis,
-                       v4(1.0f, 1.0f, 0.0f, 1.0f), &state->textureTree);
+  // color angle
+  f32 cAngle = 5.0f * angle;
+  struct v4 color =
+      v4(0.5f + 0.5f * Sin(cAngle), 0.5f + 0.5f * Sin(2.9f * cAngle), 0.5f + 0.5f * Sin(9.9f * cAngle), 1.0f);
+  struct render_group_entry_coordinate_system *c = CoordinateSystem(
+      renderGroup, v2_add(v2_add(origin, v2(disp, 0.0f)), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis,
+      yAxis, color, &state->textureTree);
   u32 pIndex = 0;
   for (f32 y = 0.0f; y < 1.0f; y += 0.25f) {
     for (f32 x = 0.0f; x < 1.0f; x += 0.25f) {
