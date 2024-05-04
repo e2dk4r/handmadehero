@@ -545,6 +545,13 @@ v4_lerp(struct v4 a, struct v4 b, f32 t)
   return result;
 }
 
+internal inline struct v4
+v4_hadamard(struct v4 a, struct v4 b)
+{
+  struct v4 result = {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+  return result;
+}
+
 /****************************************************************
  * rect OPERATIONS
  ****************************************************************/

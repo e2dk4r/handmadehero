@@ -337,7 +337,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         texelD = sRGB255toLinear1(texelD);
 
         struct v4 texel = v4_lerp(v4_lerp(texelA, texelB, fX), v4_lerp(texelC, texelD, fX), fY);
-        v4_mul_ref(&texel, color.a);
+        texel = v4_hadamard(texel, color);
 
         // destination channels
         struct v4 dest = v4((f32)((*pixel >> 0x10) & 0xff), (f32)((*pixel >> 0x08) & 0xff),
@@ -349,8 +349,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         f32 psA = 1.0f - texel.a;
 
         // blend alpha
-        struct v4 blended = v4(psA * dest.r + color.r * texel.r, psA * dest.g + color.g * texel.g,
-                               psA * dest.b + color.b * texel.b, texel.a + dest.a - texel.a * dest.a);
+        struct v4 blended = v4(psA * dest.r + texel.r, psA * dest.g + texel.g, psA * dest.b + texel.b,
+                               texel.a + dest.a - texel.a * dest.a);
 
         // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
         struct v4 blended255 = Linear1tosRGB255(blended);
