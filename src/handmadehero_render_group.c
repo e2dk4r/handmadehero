@@ -21,16 +21,20 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, f32 metersToPixels)
 internal inline void *
 PushRenderEntry(struct render_group *group, u32 size, enum render_group_entry_type type)
 {
-  struct render_group_entry *result = 0;
+  void *data = 0;
+  struct render_group_entry *header;
+
+  size += sizeof(*header);
 
   assert(group->pushBufferSize + size <= group->pushBufferTotal);
 
-  result = group->pushBufferBase + group->pushBufferSize;
-  result->type = type;
+  header = group->pushBufferBase + group->pushBufferSize;
+  header->type = type;
+  data = (u8 *)header + sizeof(*header);
 
   group->pushBufferSize += size;
 
-  return result;
+  return data;
 }
 
 internal inline void
@@ -496,16 +500,18 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 
   for (u32 pushBufferIndex = 0; pushBufferIndex < renderGroup->pushBufferSize;) {
     struct render_group_entry *header = renderGroup->pushBufferBase + pushBufferIndex;
+    pushBufferIndex += sizeof(*header);
+    void *data = (u8 *)header + sizeof(*header);
 
     if (header->type == RENDER_GROUP_ENTRY_TYPE_CLEAR) {
-      struct render_group_entry_clear *entry = (struct render_group_entry_clear *)header;
+      struct render_group_entry_clear *entry = (struct render_group_entry_clear *)data;
       pushBufferIndex += sizeof(*entry);
 
       DrawRectangle(outputTarget, v2(0.0f, 0.0f), screenWidthHeight, entry->color);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_BITMAP) {
-      struct render_group_entry_bitmap *entry = (struct render_group_entry_bitmap *)header;
+      struct render_group_entry_bitmap *entry = (struct render_group_entry_bitmap *)data;
       pushBufferIndex += sizeof(*entry);
 
       assert(entry->bitmap);
@@ -514,7 +520,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_RECTANGLE) {
-      struct render_group_entry_rectangle *entry = (struct render_group_entry_rectangle *)header;
+      struct render_group_entry_rectangle *entry = (struct render_group_entry_rectangle *)data;
       pushBufferIndex += sizeof(*entry);
 
       struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
@@ -523,7 +529,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM) {
-      struct render_group_entry_coordinate_system *entry = (struct render_group_entry_coordinate_system *)header;
+      struct render_group_entry_coordinate_system *entry = (struct render_group_entry_coordinate_system *)data;
       pushBufferIndex += sizeof(*entry);
 
       DrawRectangleSlowly(outputTarget, entry->origin, entry->xAxis, entry->yAxis, entry->color, entry->texture);

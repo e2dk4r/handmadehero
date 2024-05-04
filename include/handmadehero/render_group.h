@@ -27,19 +27,15 @@ enum render_group_entry_type {
 };
 
 // render_group_entry is tagged union
-// TODO(e2dk4r): remove the header from types
 struct render_group_entry {
   enum render_group_entry_type type : 4;
 };
 
 struct render_group_entry_clear {
-  struct render_group_entry header;
   struct v4 color;
 };
 
 struct render_group_entry_bitmap {
-  struct render_group_entry header;
-
   struct bitmap *bitmap;
   struct v2 align;
   struct render_entity_basis basis;
@@ -47,15 +43,12 @@ struct render_group_entry_bitmap {
 };
 
 struct render_group_entry_rectangle {
-  struct render_group_entry header;
-
   struct render_entity_basis basis;
   struct v4 color;
   struct v2 dim;
 };
 
 struct render_group_entry_coordinate_system {
-  struct render_group_entry header;
   struct v2 origin;
   struct v2 xAxis;
   struct v2 yAxis;
