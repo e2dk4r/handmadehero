@@ -292,14 +292,13 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         u32 *texelPtrC = (u32 *)((u8 *)texelPtrA + texture->stride);
         u32 *texelPtrD = (u32 *)((u8 *)texelPtrC + BITMAP_BYTES_PER_PIXEL);
 
-        // TODO(e2dk4r): color.a
-        struct v4 texelA = v4((f32)((*texelPtrA >> 0x0f) & 0xff), (f32)((*texelPtrA >> 0x08) & 0xff),
+        struct v4 texelA = v4((f32)((*texelPtrA >> 0x10) & 0xff), (f32)((*texelPtrA >> 0x08) & 0xff),
                               (f32)((*texelPtrA >> 0x00) & 0xff), (f32)((*texelPtrA >> 0x18) & 0xff));
-        struct v4 texelB = v4((f32)((*texelPtrB >> 0x0f) & 0xff), (f32)((*texelPtrB >> 0x08) & 0xff),
+        struct v4 texelB = v4((f32)((*texelPtrB >> 0x10) & 0xff), (f32)((*texelPtrB >> 0x08) & 0xff),
                               (f32)((*texelPtrB >> 0x00) & 0xff), (f32)((*texelPtrB >> 0x18) & 0xff));
-        struct v4 texelC = v4((f32)((*texelPtrC >> 0x0f) & 0xff), (f32)((*texelPtrC >> 0x08) & 0xff),
+        struct v4 texelC = v4((f32)((*texelPtrC >> 0x10) & 0xff), (f32)((*texelPtrC >> 0x08) & 0xff),
                               (f32)((*texelPtrC >> 0x00) & 0xff), (f32)((*texelPtrC >> 0x18) & 0xff));
-        struct v4 texelD = v4((f32)((*texelPtrD >> 0x0f) & 0xff), (f32)((*texelPtrD >> 0x08) & 0xff),
+        struct v4 texelD = v4((f32)((*texelPtrD >> 0x10) & 0xff), (f32)((*texelPtrD >> 0x08) & 0xff),
                               (f32)((*texelPtrD >> 0x00) & 0xff), (f32)((*texelPtrD >> 0x18) & 0xff));
 
         struct v4 texel = v4_lerp(v4_lerp(texelA, texelB, fX), v4_lerp(texelC, texelD, fX), fY);
