@@ -87,10 +87,6 @@ PushBitmapWithAlpha(struct render_group *group, struct bitmap *bitmap, struct v2
                     f32 alpha);
 
 void
-PushBitmapWithZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
-                f32 z);
-
-void
 PushBitmapWithAlphaAndZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ,
                         struct v2 align, f32 alpha, f32 z);
 
