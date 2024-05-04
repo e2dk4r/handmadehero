@@ -216,7 +216,7 @@ Linear1tosRGB255(struct v4 color)
 }
 
 internal inline void
-DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, const struct v4 color,
+DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                     struct bitmap *texture)
 {
   f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
@@ -269,6 +269,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
 
   u8 *row = buffer->memory + yMin * buffer->stride + xMin * BITMAP_BYTES_PER_PIXEL;
 
+  // pre-multiplied alpha
+  v3_mul_ref(&color.rgb, color.a);
   u32 colorRGBA =
       /* alpha */
       roundf32tou32(color.a * 255.0f) << 24
@@ -347,8 +349,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         f32 psA = 1.0f - nsA;
 
         // blend alpha
-        struct v4 blended = v4(psA * dest.r + color.a * color.r * texel.r, psA * dest.g + color.a * color.g * texel.g,
-                               psA * dest.b + color.a * color.b * texel.b, nsA + dest.a - nsA * dest.a);
+        struct v4 blended = v4(psA * dest.r + color.r * texel.r, psA * dest.g + color.g * texel.g,
+                               psA * dest.b + color.b * texel.b, nsA + dest.a - nsA * dest.a);
 
         // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
         struct v4 blended255 = Linear1tosRGB255(blended);

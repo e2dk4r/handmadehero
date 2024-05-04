@@ -167,6 +167,10 @@ struct v4 {
       f32 b;
       f32 a;
     };
+    struct {
+      struct v3 rgb;
+      f32 _ignored;
+    };
     f32 e[4];
   };
 };
