@@ -353,10 +353,10 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
                                texel.a + dest.a - texel.a * dest.a);
 
         // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
-        struct v4 blended255 = Linear1tosRGB255(blended);
+        blended = Linear1tosRGB255(blended);
 
-        *pixel = (u32)(blended255.a + 0.5f) << 0x18 | (u32)(blended255.r + 0.5f) << 0x10 |
-                 (u32)(blended255.g + 0.5f) << 0x08 | (u32)(blended255.b + 0.5f) << 0x00;
+        *pixel = (u32)(blended.a + 0.5f) << 0x18 | (u32)(blended.r + 0.5f) << 0x10 | (u32)(blended.g + 0.5f) << 0x08 |
+                 (u32)(blended.b + 0.5f) << 0x00;
       }
 #else
       *pixel = colorRGBA;
