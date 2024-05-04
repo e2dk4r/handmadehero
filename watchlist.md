@@ -322,7 +322,7 @@
 - [x] Handmade Hero Day 094 - Converting sRGB to Light-linear Space
       https://www.youtube.com/watch?v=GKVMOmEGVoQ
 
-- [ ] Handmade Hero Day 095 - Gamma-correct Premultiplied Alpha
+- [x] Handmade Hero Day 095 - Gamma-correct Premultiplied Alpha
       https://www.youtube.com/watch?v=JTIzGsGqQaA
 
 - [ ] Handmade Hero Day 096 - Introduction to Lighting
