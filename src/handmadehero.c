@@ -86,28 +86,18 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
         u32 value = *srcDest;
 
         // extract pixel from file
-        f32 a = (f32)((value >> alphaShift) & 0xff);
-        f32 r = (f32)((value >> redShift) & 0xff);
-        f32 g = (f32)((value >> greenShift) & 0xff);
-        f32 b = (f32)((value >> blueShift) & 0xff);
+        struct v4 texel = v4((f32)((value >> redShift) & 0xff), (f32)((value >> greenShift) & 0xff),
+                             (f32)((value >> blueShift) & 0xff), (f32)((value >> alphaShift) & 0xff));
+        texel = sRGB255toLinear1(texel);
 
         /*
          * Store channels values pre-multiplied with alpha.
          */
-        f32 nA = a / 255.0f;
-        r *= nA;
-        g *= nA;
-        b *= nA;
+        v3_mul_ref(&texel.rgb, texel.a);
 
-        *srcDest =
-            /* alpha */
-            (u32)(a + 0.5f) << 24
-            /* red */
-            | (u32)(r + 0.5f) << 16
-            /* green */
-            | (u32)(g + 0.5f) << 8
-            /* blue */
-            | (u32)(b + 0.5f) << 0;
+        texel = Linear1tosRGB255(texel);
+        *srcDest = (u32)(texel.a + 0.5f) << 0x18 | (u32)(texel.r + 0.5f) << 0x10 | (u32)(texel.g + 0.5f) << 0x08 |
+                   (u32)(texel.b + 0.5f) << 0x00;
 
         srcDest++;
       }
@@ -1120,8 +1110,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #endif
   // color angle
   f32 cAngle = 5.0f * angle;
+#if 0
   struct v4 color = v4(0.5f + 0.5f * Sin(cAngle), 0.5f + 0.5f * Sin(2.9f * cAngle), 0.5f + 0.5f * Sin(9.9f * cAngle),
-                       0.5f + 0.5f * Sin(cAngle));
+                       0.5f + 0.5f * Sin(5.0f * cAngle));
+#else
+  struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
+#endif
   struct render_group_entry_coordinate_system *c = CoordinateSystem(
       renderGroup, v2_add(v2_add(origin, v2(disp, 0.0f)), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis,
       yAxis, color, &state->textureTree);

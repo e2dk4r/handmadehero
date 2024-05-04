@@ -188,7 +188,7 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
   }
 }
 
-internal inline struct v4
+inline struct v4
 sRGB255toLinear1(struct v4 color)
 {
   struct v4 result;
@@ -202,7 +202,7 @@ sRGB255toLinear1(struct v4 color)
   return result;
 }
 
-internal inline struct v4
+inline struct v4
 Linear1tosRGB255(struct v4 color)
 {
   struct v4 result;
@@ -337,7 +337,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         texelD = sRGB255toLinear1(texelD);
 
         struct v4 texel = v4_lerp(v4_lerp(texelA, texelB, fX), v4_lerp(texelC, texelD, fX), fY);
-        f32 nsA = texel.a * color.a;
+        v4_mul_ref(&texel, color.a);
 
         // destination channels
         struct v4 dest = v4((f32)((*pixel >> 0x10) & 0xff), (f32)((*pixel >> 0x08) & 0xff),
@@ -346,11 +346,11 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         dest = sRGB255toLinear1(dest);
 
         // percentage of normalized sA to be applied
-        f32 psA = 1.0f - nsA;
+        f32 psA = 1.0f - texel.a;
 
         // blend alpha
         struct v4 blended = v4(psA * dest.r + color.r * texel.r, psA * dest.g + color.g * texel.g,
-                               psA * dest.b + color.b * texel.b, nsA + dest.a - nsA * dest.a);
+                               psA * dest.b + color.b * texel.b, texel.a + dest.a - texel.a * dest.a);
 
         // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
         struct v4 blended255 = Linear1tosRGB255(blended);
@@ -425,45 +425,30 @@ DrawBitmapWithAlpha(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos,
 
     for (i32 x = minX; x < maxX; x++) {
       // source channels
-      f32 sA = (f32)((*src >> 24) & 0xff);
-      f32 sR = cAlpha * (f32)((*src >> 16) & 0xff);
-      f32 sG = cAlpha * (f32)((*src >> 8) & 0xff);
-      f32 sB = cAlpha * (f32)((*src >> 0) & 0xff);
-
-      // normalized sA
-      f32 nsA = (sA / 255.0f) * cAlpha;
+      struct v4 texel = v4((f32)((*src >> 0x10) & 0xff), (f32)((*src >> 0x08) & 0xff), (f32)((*src >> 0x00) & 0xff),
+                           (f32)((*src >> 0x18) & 0xff));
+      texel = sRGB255toLinear1(texel);
+      v3_mul_ref(&texel.rgb, cAlpha);
 
       // destination channels
-      f32 dA = (f32)((*dst >> 24) & 0xff);
-      f32 dR = (f32)((*dst >> 16) & 0xff);
-      f32 dG = (f32)((*dst >> 8) & 0xff);
-      f32 dB = (f32)((*dst >> 0) & 0xff);
-
-      // normalized dA
-      f32 ndA = (dA / 255.0f);
+      struct v4 d = v4((f32)((*dst >> 0x10) & 0xff), (f32)((*dst >> 0x08) & 0xff), (f32)((*dst >> 0x00) & 0xff),
+                       (f32)((*dst >> 0x18) & 0xff));
+      d = sRGB255toLinear1(d);
 
       // percentage of normalized sA to be applied
-      f32 psA = (1.0f - nsA);
+      f32 psA = 1.0f - texel.a;
 
       /*
        * Math of calculating blended alpha
        * videoId:   bidrZj1YosA
        * timestamp: 01:06:19
        */
-      f32 a = 255.0f * (nsA + ndA - nsA * ndA);
-      f32 r = psA * dR + sR;
-      f32 g = psA * dG + sG;
-      f32 b = psA * dB + sB;
+      struct v4 blended =
+          v4(psA * d.r + texel.r, psA * d.g + texel.g, psA * d.b + texel.b, texel.a + d.a - texel.a * d.a);
 
-      *dst =
-          /* alpha */
-          (u32)(a + 0.5f) << 24
-          /* red */
-          | (u32)(r + 0.5f) << 16
-          /* green */
-          | (u32)(g + 0.5f) << 8
-          /* blue */
-          | (u32)(b + 0.5f) << 0;
+      blended = Linear1tosRGB255(blended);
+      *dst = (u32)(blended.a + 0.5f) << 0x18 | (u32)(blended.r + 0.5f) << 0x10 | (u32)(blended.g + 0.5f) << 0x08 |
+             (u32)(blended.b + 0.5f) << 0x00;
 
       dst++;
       src++;

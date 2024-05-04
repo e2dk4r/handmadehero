@@ -74,6 +74,12 @@ struct render_group {
   void *pushBufferBase;
 };
 
+struct v4
+sRGB255toLinear1(struct v4 color);
+
+struct v4
+Linear1tosRGB255(struct v4 color);
+
 struct render_group *
 RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, f32 metersToPixels);
 
