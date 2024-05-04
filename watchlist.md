@@ -319,7 +319,7 @@
 - [x] Handmade Hero Day 093 - Textured Quadrilaterals
       https://www.youtube.com/watch?v=k5wzQeWRokA
 
-- [ ] Handmade Hero Day 094 - Converting sRGB to Light-linear Space
+- [x] Handmade Hero Day 094 - Converting sRGB to Light-linear Space
       https://www.youtube.com/watch?v=GKVMOmEGVoQ
 
 - [ ] Handmade Hero Day 095 - Gamma-correct Premultiplied Alpha
