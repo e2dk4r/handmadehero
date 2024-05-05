@@ -219,6 +219,13 @@ Linear1tosRGB255(struct v4 color)
   return result;
 }
 
+internal inline struct v4
+Unpack4x8(u32 *pixel)
+{
+  return v4((f32)((*pixel >> 0x10) & 0xff), (f32)((*pixel >> 0x08) & 0xff), (f32)((*pixel >> 0x00) & 0xff),
+            (f32)((*pixel >> 0x18) & 0xff));
+}
+
 internal inline void
 DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                     struct bitmap *texture)
@@ -325,14 +332,10 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         u32 *texelPtrC = (u32 *)((u8 *)texelPtrA + texture->stride);
         u32 *texelPtrD = (u32 *)((u8 *)texelPtrC + BITMAP_BYTES_PER_PIXEL);
 
-        struct v4 texelA = v4((f32)((*texelPtrA >> 0x10) & 0xff), (f32)((*texelPtrA >> 0x08) & 0xff),
-                              (f32)((*texelPtrA >> 0x00) & 0xff), (f32)((*texelPtrA >> 0x18) & 0xff));
-        struct v4 texelB = v4((f32)((*texelPtrB >> 0x10) & 0xff), (f32)((*texelPtrB >> 0x08) & 0xff),
-                              (f32)((*texelPtrB >> 0x00) & 0xff), (f32)((*texelPtrB >> 0x18) & 0xff));
-        struct v4 texelC = v4((f32)((*texelPtrC >> 0x10) & 0xff), (f32)((*texelPtrC >> 0x08) & 0xff),
-                              (f32)((*texelPtrC >> 0x00) & 0xff), (f32)((*texelPtrC >> 0x18) & 0xff));
-        struct v4 texelD = v4((f32)((*texelPtrD >> 0x10) & 0xff), (f32)((*texelPtrD >> 0x08) & 0xff),
-                              (f32)((*texelPtrD >> 0x00) & 0xff), (f32)((*texelPtrD >> 0x18) & 0xff));
+        struct v4 texelA = Unpack4x8(texelPtrA);
+        struct v4 texelB = Unpack4x8(texelPtrB);
+        struct v4 texelC = Unpack4x8(texelPtrC);
+        struct v4 texelD = Unpack4x8(texelPtrD);
 
         // NOTE(e2dk4r): Go from sRGB to "linear" brightness space
         texelA = sRGB255toLinear1(texelA);
