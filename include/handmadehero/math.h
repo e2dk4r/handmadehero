@@ -427,7 +427,7 @@ internal inline f32
 v3_length(struct v3 a)
 {
   f32 value;
-  value = SquareRoot(v3_dot(a, a));
+  value = SquareRoot(v3_length_square(a));
   return value;
 }
 
