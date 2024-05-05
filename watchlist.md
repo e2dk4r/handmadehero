@@ -325,7 +325,7 @@
 - [x] Handmade Hero Day 095 - Gamma-correct Premultiplied Alpha
       https://www.youtube.com/watch?v=JTIzGsGqQaA
 
-- [ ] Handmade Hero Day 096 - Introduction to Lighting
+- [x] Handmade Hero Day 096 - Introduction to Lighting
       https://www.youtube.com/watch?v=QtepVbq6_pw
 
 - [ ] Handmade Hero Day 097 - Adding Normal Maps to the Pipeline
