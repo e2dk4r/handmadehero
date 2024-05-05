@@ -273,7 +273,7 @@ ShouldMoveOverBlocked(struct entity *moving, struct entity *against, struct v3 t
     struct entity *stairwell = against;
     f32 ground = GetStairwellGround(stairwell, testPosition);
     f32 stepHeight = 0.1f;
-    moveOverBlocked = absolute(moving->position.z - ground) > stepHeight;
+    moveOverBlocked = Absolute(moving->position.z - ground) > stepHeight;
   }
 
   return moveOverBlocked;
@@ -698,7 +698,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
 
   if (entity->dPosition.x == 0.0f && entity->dPosition.y == 0.0f)
     ;
-  else if (absolute(entity->dPosition.x) > absolute(entity->dPosition.y)) {
+  else if (Absolute(entity->dPosition.x) > Absolute(entity->dPosition.y)) {
     if (entity->dPosition.x < 0)
       entity->facingDirection = BITMAP_HERO_LEFT;
     else

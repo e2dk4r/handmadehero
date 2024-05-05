@@ -52,10 +52,11 @@ Square(f32 value)
 }
 
 internal inline f32
-absolute(f32 value)
+Absolute(f32 value)
 {
   return __builtin_fabsf(value);
 }
+
 internal inline f32
 SquareRoot(f32 value)
 {
