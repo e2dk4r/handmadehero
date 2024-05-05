@@ -451,8 +451,7 @@ MakeSphereNormalMap(struct bitmap *bitmap, f32 roughness)
 
       // TODO(e2dk4r): actually generate sphere
       struct v3 normal = v2_to_v3(bitmapUnit, 0.0f);
-      normal.z = absolute(normal.x) + absolute(normal.x);
-      normal = v3_normalize(normal);
+      normal.z = SquareRoot(1.0f - Minimum(1.0f, Square(normal.x) + Square(normal.y)));
 
       struct v4 color = {.x = 255.0f * 0.5f * (normal.x + 1.0f),
                          .y = 255.0f * 0.5f * (normal.y + 1.0f),
