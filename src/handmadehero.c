@@ -1119,12 +1119,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct render_group_entry_coordinate_system *c = CoordinateSystem(
       renderGroup, v2_add(v2_add(origin, v2(disp, 0.0f)), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis,
       yAxis, color, &state->textureTree);
-  u32 pIndex = 0;
-  for (f32 y = 0.0f; y < 1.0f; y += 0.25f) {
-    for (f32 x = 0.0f; x < 1.0f; x += 0.25f) {
-      c->points[pIndex++] = v2(x, y);
-    }
-  }
 
   DrawRenderGroup(renderGroup, drawBuffer);
 

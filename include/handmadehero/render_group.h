@@ -54,8 +54,6 @@ struct render_group_entry_coordinate_system {
   struct v2 yAxis;
   struct v4 color;
   struct bitmap *texture;
-
-  struct v2 points[16];
 };
 
 struct render_group {

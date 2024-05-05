@@ -542,14 +542,6 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 
       p = v2_add(entry->origin, v2_add(entry->xAxis, entry->yAxis));
       DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), color);
-
-#if 0
-      for (u32 pIndex = 0; pIndex < ARRAY_COUNT(entry->points); pIndex++) {
-        p = entry->points[pIndex];
-        p = v2_add(entry->origin, v2_add(v2_mul(entry->xAxis, p.x), v2_mul(entry->yAxis, p.y)));
-        DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), entry->color);
-      }
-#endif
     }
 
     // typelessEntry->type is invalid
