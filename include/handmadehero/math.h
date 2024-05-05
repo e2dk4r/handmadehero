@@ -46,10 +46,11 @@ FindLeastSignificantBitSet(i32 value)
 }
 
 internal inline f32
-square(f32 value)
+Square(f32 value)
 {
   return value * value;
 }
+
 internal inline f32
 absolute(f32 value)
 {

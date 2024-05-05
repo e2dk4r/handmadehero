@@ -1026,7 +1026,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       struct entity *familiar = entity;
       struct entity *closestHero = 0;
       /* 10m maximum search radius */
-      f32 closestHeroDistanceSq = square(10.0f);
+      f32 closestHeroDistanceSq = Square(10.0f);
 
       for (u32 testEntityIndex = 0; testEntityIndex < simRegion->entityCount; testEntityIndex++) {
         struct entity *testEntity = simRegion->entities + testEntityIndex;
@@ -1044,7 +1044,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       }
 
       struct v3 ddPosition = {};
-      if (closestHero && closestHeroDistanceSq > square(3.0f)) {
+      if (closestHero && closestHeroDistanceSq > Square(3.0f)) {
         /* there is hero nearby, follow him */
         f32 oneOverLength = 1.0f / SquareRoot(closestHeroDistanceSq);
         ddPosition = v3_mul(v3_sub(closestHero->position, familiar->position), oneOverLength);

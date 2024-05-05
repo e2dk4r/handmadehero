@@ -451,7 +451,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
               /* 1/2 a */
               v3_mul(ddPosition, 0.5f),
               /* t² */
-              square(dt)), /* end: 1/2 a t² */
+              Square(dt)), /* end: 1/2 a t² */
           /* v t */
           v3_mul(
               /* v */
@@ -471,7 +471,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
                  dt));
 
   // TODO(e2dk4r): upgrade physical motion routines to handle capping the maximum velocity
-  assert(v3_length_square(entity->dPosition) <= square(simRegion->maxEntityVelocity));
+  assert(v3_length_square(entity->dPosition) <= Square(simRegion->maxEntityVelocity));
 
   /*****************************************************************
    * COLLISION DETECTION

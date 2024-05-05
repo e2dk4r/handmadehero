@@ -203,9 +203,9 @@ sRGB255toLinear1(struct v4 color)
   struct v4 result;
 
   f32 inv255 = 1.0f / 255.0f;
-  result.r = square(inv255 * color.r);
-  result.g = square(inv255 * color.g);
-  result.b = square(inv255 * color.b);
+  result.r = Square(inv255 * color.r);
+  result.g = Square(inv255 * color.g);
+  result.b = Square(inv255 * color.b);
   result.a = inv255 * color.a;
 
   return result;
