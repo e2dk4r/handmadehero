@@ -85,7 +85,8 @@ PushRectangleEntry(struct render_group *group, struct v2 offset, f32 offsetZ, st
 
 struct render_group_entry_coordinate_system *
 CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
-                 struct bitmap *texture)
+                 struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
+                 struct environment_map *middle, struct environment_map *bottom)
 {
   struct render_group_entry_coordinate_system *entry =
       PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM);
@@ -94,6 +95,10 @@ CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, 
   entry->yAxis = yAxis;
   entry->color = color;
   entry->texture = texture;
+  entry->normalMap = normalMap;
+  entry->top = top;
+  entry->middle = middle;
+  entry->bottom = bottom;
   return entry;
 }
 
@@ -226,9 +231,17 @@ Unpack4x8(u32 *pixel)
             (f32)((*pixel >> 0x18) & 0xff));
 }
 
+internal inline struct v3
+SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struct v3 normal, f32 roughness)
+{
+  struct v3 result = normal;
+  return result;
+}
+
 internal inline void
 DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
-                    struct bitmap *texture)
+                    struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
+                    struct environment_map *middle, struct environment_map *bottom)
 {
   f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
   f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
@@ -242,6 +255,9 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
 
   i32 widthMax = (i32)buffer->width - 1;
   i32 heightMax = (i32)buffer->height - 1;
+
+  f32 invWidthMax = 1.0f / (f32)widthMax;
+  f32 invHeightMax = 1.0f / (f32)heightMax;
 
   i32 xMin = widthMax;
   i32 xMax = 0;
@@ -306,6 +322,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
       f32 edge3 = v2_dot(v2_sub(d, yAxis), v2_perp(yAxis));
 
       if (edge0 < 0 && edge1 < 0 && edge2 < 0 && edge3 < 0) {
+        struct v2 screenSpaceUV = v2(pixelP.x * invWidthMax, pixelP.y * invHeightMax);
         f32 u = InvXAxisLengthSq * v2_dot(d, xAxis);
         f32 v = InvYAxisLengthSq * v2_dot(d, yAxis);
         assert(u > 0.0f && v > 0.0f);
@@ -344,11 +361,44 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         texelD = sRGB255toLinear1(texelD);
 
         struct v4 texel = v4_lerp(v4_lerp(texelA, texelB, fX), v4_lerp(texelC, texelD, fX), fY);
+
+        if (normalMap) {
+          u32 *normalPtrA =
+              (u32 *)((u8 *)normalMap->memory + texelY * normalMap->stride + texelX * BITMAP_BYTES_PER_PIXEL);
+          u32 *normalPtrB = (u32 *)((u8 *)normalPtrA + BITMAP_BYTES_PER_PIXEL);
+          u32 *normalPtrC = (u32 *)((u8 *)normalPtrA + normalMap->stride);
+          u32 *normalPtrD = (u32 *)((u8 *)normalPtrC + BITMAP_BYTES_PER_PIXEL);
+
+          struct v4 normalA = Unpack4x8(normalPtrA);
+          struct v4 normalB = Unpack4x8(normalPtrB);
+          struct v4 normalC = Unpack4x8(normalPtrC);
+          struct v4 normalD = Unpack4x8(normalPtrD);
+
+          struct v4 normal = v4_lerp(v4_lerp(normalA, normalB, fX), v4_lerp(normalC, normalD, fX), fY);
+          f32 tEnvMap = normal.z;
+          f32 tFarMap = 0.0f;
+          struct environment_map *farMap = 0;
+          if (tEnvMap < 0.25f) {
+            farMap = bottom;
+            tFarMap = 1.0f - (tEnvMap / 0.25f);
+          } else if (tEnvMap > 0.25f) {
+            farMap = top;
+            tFarMap = (1.0f - tEnvMap) / 0.25f;
+          }
+
+          struct v3 lightColor = SampleEnvironmentMap(middle, screenSpaceUV, normal.xyz, normal.w);
+          if (farMap) {
+            struct v3 farMapColor = SampleEnvironmentMap(farMap, screenSpaceUV, normal.xyz, normal.w);
+            lightColor = v3_lerp(lightColor, farMapColor, tFarMap);
+          }
+
+          v3_hadamard_ref(&texel.xyz, lightColor);
+        }
+
         texel = v4_hadamard(texel, color);
 
         // destination channels
-        struct v4 dest = v4((f32)((*pixel >> 0x10) & 0xff), (f32)((*pixel >> 0x08) & 0xff),
-                            (f32)((*pixel >> 0x00) & 0xff), (f32)((*pixel >> 0x18) & 0xff));
+        struct v4 dest = Unpack4x8(pixel);
         // NOTE(e2dk4r): Go from sRGB to "linear" brightness space
         dest = sRGB255toLinear1(dest);
 
@@ -509,9 +559,9 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct render_group_entry_bitmap *entry = (struct render_group_entry_bitmap *)data;
       pushBufferIndex += sizeof(*entry);
 
-      assert(entry->bitmap);
-      struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
-      DrawBitmapWithAlpha(outputTarget, entry->bitmap, center, entry->align, entry->alpha);
+      // assert(entry->bitmap);
+      // struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
+      // DrawBitmapWithAlpha(outputTarget, entry->bitmap, center, entry->align, entry->alpha);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_RECTANGLE) {
@@ -527,7 +577,8 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct render_group_entry_coordinate_system *entry = (struct render_group_entry_coordinate_system *)data;
       pushBufferIndex += sizeof(*entry);
 
-      DrawRectangleSlowly(outputTarget, entry->origin, entry->xAxis, entry->yAxis, entry->color, entry->texture);
+      DrawRectangleSlowly(outputTarget, entry->origin, entry->xAxis, entry->yAxis, entry->color, entry->texture,
+                          entry->normalMap, entry->top, entry->middle, entry->bottom);
 
       struct v4 color = v4(1.0f, 0.0f, 0.0f, 1.0f);
       struct v2 dim = v2(2.0f, 2.0f);

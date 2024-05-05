@@ -168,8 +168,12 @@ struct v4 {
       f32 a;
     };
     struct {
+      struct v3 xyz;
+      f32 _ignored0;
+    };
+    struct {
       struct v3 rgb;
-      f32 _ignored;
+      f32 _ignored1;
     };
     f32 e[4];
   };
@@ -230,6 +234,15 @@ v2_sub(struct v2 a, struct v2 b)
 {
   struct v2 result = a;
   v2_sub_ref(&result, b);
+  return result;
+}
+
+internal inline struct v2
+v2_sub_scaler(struct v2 a, f32 value)
+{
+  struct v2 result = a;
+  result.x -= value;
+  result.y -= value;
   return result;
 }
 
@@ -417,10 +430,19 @@ v3_length(struct v3 a)
   return value;
 }
 
+internal inline void
+v3_hadamard_ref(struct v3 *a, struct v3 b)
+{
+  a->x *= b.x;
+  a->y *= b.y;
+  a->z *= b.z;
+}
+
 internal inline struct v3
 v3_hadamard(struct v3 a, struct v3 b)
 {
-  struct v3 result = {a.x * b.x, a.y * b.y, a.z * b.z};
+  struct v3 result = a;
+  v3_hadamard_ref(&result, b);
   return result;
 }
 
@@ -433,6 +455,23 @@ v3_clamp01(struct v3 a)
   result.y = Clamp01(a.y);
   result.z = Clamp01(a.z);
 
+  return result;
+}
+
+internal inline struct v3
+v3_lerp(struct v3 a, struct v3 b, f32 t)
+{
+  struct v3 result;
+
+  result = v3_add(v3_mul(a, 1.0f - t), v3_mul(b, t));
+
+  return result;
+}
+
+internal inline struct v3
+v3_normalize(struct v3 a)
+{
+  struct v3 result = v3_mul(a, 1.0f / v3_length(a));
   return result;
 }
 

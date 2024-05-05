@@ -8,6 +8,13 @@
 struct game_state;
 struct bitmap;
 
+struct environment_map {
+  // NOTE(e2dk4r): lod[0] is 2^widthPow2 x 2^heightPow2
+  u32 widthPow2;
+  u32 heightPow2;
+  struct bitmap *lod[4];
+};
+
 struct render_basis {
   struct v3 position;
 };
@@ -54,6 +61,11 @@ struct render_group_entry_coordinate_system {
   struct v2 yAxis;
   struct v4 color;
   struct bitmap *texture;
+  struct bitmap *normalMap;
+
+  struct environment_map *top;
+  struct environment_map *middle;
+  struct environment_map *bottom;
 };
 
 struct render_group {
@@ -99,6 +111,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget);
 
 struct render_group_entry_coordinate_system *
 CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
-                 struct bitmap *texture);
+                 struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
+                 struct environment_map *middle, struct environment_map *bottom);
 
 #endif /* HANDMADEHERO_RENDER_GROUP */
