@@ -387,8 +387,6 @@ void
 EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity *entity, f32 dt,
            const struct move_spec *moveSpec, struct v3 ddPosition)
 {
-  struct world *world = simRegion->world;
-
   if (entity->type & ENTITY_TYPE_HERO) {
     u32 breakHere = 1;
   }
