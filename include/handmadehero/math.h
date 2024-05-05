@@ -4,10 +4,19 @@
 #include "assert.h"
 #include "types.h"
 
-#define minimum(a, b) (a < b) ? a : b
-#define maximum(a, b) (a > b) ? a : b
-
 comptime f32 PI32 = 3.14159274101257324f;
+
+internal inline f32
+Minimum(f32 a, f32 b)
+{
+  return (a < b) ? a : b;
+}
+
+internal inline f32
+Maximum(f32 a, f32 b)
+{
+  return (a > b) ? a : b;
+}
 
 internal inline i32
 roundf32toi32(f32 value)

@@ -586,7 +586,7 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
                 continue;
 
               const f32 tEpsilon = 0.001f;
-              tMinTest = maximum(0.0f, tResult - tEpsilon);
+              tMinTest = Maximum(0.0f, tResult - tEpsilon);
               testWallNormal = wall->normal;
               hitThis = 1;
             }
