@@ -148,7 +148,7 @@ PushRectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struc
   PushRectangleEntry(group, v2_add(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(thickness, dim.y), color);
 }
 
-internal inline void
+inline void
 DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color)
 {
   assert(min.x < max.x);
@@ -287,7 +287,7 @@ SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struc
   u32 lodIndex = (u32)(roughness * (f32)(ARRAY_COUNT(map->lod) - 1) + 0.5f);
   assert(lodIndex < ARRAY_COUNT(map->lod));
 
-  struct bitmap *lod = map->lod[lodIndex];
+  struct bitmap *lod = map->lod + lodIndex;
 
   // TODO(e2dk4r): Do intersection math to determine where we should be!
   f32 tX = 0.0f;

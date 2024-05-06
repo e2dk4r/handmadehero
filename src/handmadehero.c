@@ -800,6 +800,21 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         MakeEmptyBitmap(&transientState->transientArena, state->textureTree.width, state->textureTree.height);
     MakeSphereNormalMap(&state->textureTreeNormal, 0.0f);
 
+    transientState->envMapWidth = 512;
+    transientState->envMapHeight = 256;
+    for (u32 envMapIndex = 0; envMapIndex < ARRAY_COUNT(transientState->envMaps); envMapIndex++) {
+      struct environment_map *map = transientState->envMaps + envMapIndex;
+      u32 width = transientState->envMapWidth;
+      u32 height = transientState->envMapHeight;
+      for (u32 lodIndex = 0; lodIndex < ARRAY_COUNT(map->lod); lodIndex++) {
+        assert(width != 0 && height != 0);
+        map->lod[lodIndex] = MakeEmptyBitmap(&transientState->transientArena, width, height);
+
+        width >>= 1;
+        height >>= 1;
+      }
+    }
+
     transientState->initialized = 1;
   }
 
@@ -1141,6 +1156,35 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   f32 angle = 0.1f * state->time;
   f32 disp = 0; // 10.0f * Cos(5.0f * angle);
 
+  // set environment maps
+  struct v4 mapColors[] = {
+      v4(1.0f, 0.0f, 0.0f, 1.0f),
+      v4(0.0f, 1.0f, 0.0f, 1.0f),
+      v4(0.0f, 0.0f, 1.0f, 1.0f),
+  };
+
+  for (u32 envMapIndex = 0; envMapIndex < ARRAY_COUNT(transientState->envMaps); envMapIndex++) {
+    struct environment_map *map = transientState->envMaps + envMapIndex;
+    struct bitmap *lod = map->lod + 0;
+    u32 checkerWidth = 16;
+    u32 checkerHeight = 16;
+    u8 rowCheckerOn = 0;
+    for (u32 y = 0; y < lod->height; y += checkerHeight) {
+      u8 checkerOn = rowCheckerOn;
+      for (u32 x = 0; x < lod->width; x += checkerWidth) {
+        struct v4 color = checkerOn ? mapColors[envMapIndex] : v4(0.0f, 0.0f, 0.0f, 1.0f);
+        struct v2 min = v2u(x, y);
+        struct v2 max = v2_add(min, v2u(checkerWidth, checkerHeight));
+        DrawRectangle(lod, min, max, color);
+        checkerOn = !checkerOn;
+      }
+
+      rowCheckerOn = !rowCheckerOn;
+    }
+  }
+
+  // render scaled rotated textures
+
   struct v2 origin = screenCenter;
 #if 0
   struct v2 xAxis = v2_mul(v2(Cos(angle), Sin(angle)), 100.0f);
@@ -1159,7 +1203,23 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #endif
   struct render_group_entry_coordinate_system *c = CoordinateSystem(
       renderGroup, v2_add(v2_add(origin, v2(disp, 0.0f)), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis,
-      yAxis, color, &state->textureTree, &state->textureTreeNormal, 0, 0, 0);
+      yAxis, color, &state->textureTree, &state->textureTreeNormal, transientState->envMaps + 2,
+      transientState->envMaps + 1, transientState->envMaps + 0);
+
+  // render environment maps
+  origin = v2(0.0f, 0.0f);
+  for (u32 envMapIndex = 0; envMapIndex < ARRAY_COUNT(transientState->envMaps); envMapIndex++) {
+    struct environment_map *map = transientState->envMaps + envMapIndex;
+    struct bitmap *lod = map->lod + 0;
+
+    xAxis = v2_mul(v2u(lod->width, 0), 0.5f);
+    yAxis = v2_mul(v2u(0, lod->height), 0.5f);
+    color = v4(1.0f, 1.0f, 1.0f, 1.0f);
+
+    CoordinateSystem(renderGroup, origin, xAxis, yAxis, color, lod, 0, 0, 0, 0);
+
+    v2_add_ref(&origin, v2_add(yAxis, v2(0.0f, 6.0f)));
+  }
 
   DrawRenderGroup(renderGroup, drawBuffer);
 

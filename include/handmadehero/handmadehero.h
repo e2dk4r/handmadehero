@@ -3,16 +3,9 @@
 
 #include "memory_arena.h"
 #include "platform.h"
+#include "render_group.h"
 #include "sim_region.h"
 #include "world.h"
-
-#define BITMAP_BYTES_PER_PIXEL 4
-struct bitmap {
-  u32 width;
-  u32 height;
-  i32 stride;
-  void *memory;
-};
 
 struct bitmap_hero {
   struct v2 align;
@@ -104,6 +97,11 @@ struct transient_state {
 
   u32 groundBufferCount;
   struct ground_buffer *groundBuffers;
+
+  u32 envMapWidth;
+  u32 envMapHeight;
+  // NOTE(e2dk4r): 0 is bottom, 1 is middle, 2 is top
+  struct environment_map envMaps[3];
 };
 
 void

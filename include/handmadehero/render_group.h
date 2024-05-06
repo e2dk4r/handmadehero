@@ -5,11 +5,16 @@
 #include "memory_arena.h"
 #include "types.h"
 
-struct game_state;
-struct bitmap;
+#define BITMAP_BYTES_PER_PIXEL 4
+struct bitmap {
+  u32 width;
+  u32 height;
+  i32 stride;
+  void *memory;
+};
 
 struct environment_map {
-  struct bitmap *lod[4];
+  struct bitmap lod[4];
 };
 
 struct render_basis {
@@ -102,6 +107,9 @@ PushRect(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 di
 
 void
 PushRectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
+
+void
+DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color);
 
 void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget);
