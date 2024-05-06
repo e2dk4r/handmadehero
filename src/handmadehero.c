@@ -439,27 +439,34 @@ ClearBitmap(struct bitmap *bitmap)
 internal void
 MakeSphereNormalMap(struct bitmap *bitmap, f32 roughness)
 {
-  f32 invWidth = 1.0f / (1.0f - (f32)bitmap->width);
-  f32 invHeight = 1.0f / (1.0f - (f32)bitmap->height);
+  f32 invWidth = 1.0f / ((f32)bitmap->width - 1.0f);
+  f32 invHeight = 1.0f / ((f32)bitmap->height - 1.0f);
 
   u8 *row = bitmap->memory;
   for (u32 y = 0; y < bitmap->height; y++) {
     u32 *pixel = (u32 *)row;
     for (u32 x = 0; x < bitmap->width; x++) {
       struct v2 bitmapUV = v2((f32)x * invWidth, (f32)y * invHeight);
-      struct v2 bitmapUnit = v2_sub_scaler(v2_mul(bitmapUV, 2.0f), 1.0f);
 
-      // TODO(e2dk4r): actually generate sphere
-      struct v3 normal = v2_to_v3(bitmapUnit, 0.0f);
-      normal.z = SquareRoot(1.0f - Minimum(1.0f, Square(normal.x) + Square(normal.y)));
+      f32 Nx = 2.0f * bitmapUV.x - 1.0f;
+      f32 Ny = 2.0f * bitmapUV.y - 1.0f;
+
+      struct v3 normal = v3(0.0f, 0.0f, 1.0f);
+
+      f32 rootTerm = 1.0f - Square(Nx) - Square(Ny);
+      if (rootTerm >= 0.0f) {
+        f32 Nz = SquareRoot(rootTerm);
+        normal = v3(Nx, Ny, Nz);
+      }
 
       struct v4 color = {.x = 255.0f * 0.5f * (normal.x + 1.0f),
                          .y = 255.0f * 0.5f * (normal.y + 1.0f),
-                         .z = 127.0f * normal.z,
-                         .w = roughness};
+                         .z = 255.0f * 0.5f * (normal.z + 1.0f),
+                         .w = 255.0f * roughness};
 
       *pixel = (u32)(color.a + 0.5f) << 0x18 | (u32)(color.r + 0.5f) << 0x10 | (u32)(color.g + 0.5f) << 0x08 |
                (u32)(color.b + 0.5f) << 0x00;
+      pixel++;
     }
 
     row += bitmap->stride;
@@ -788,6 +795,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       groundBuffer->bitmap = MakeEmptyBitmap(&transientState->transientArena, groundBufferWidth, groundBufferHeight);
       groundBuffer->position = WorldPositionInvalid();
     }
+
+    state->textureTreeNormal =
+        MakeEmptyBitmap(&transientState->transientArena, state->textureTree.width, state->textureTree.height);
+    MakeSphereNormalMap(&state->textureTreeNormal, 0.0f);
 
     transientState->initialized = 1;
   }
@@ -1148,7 +1159,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #endif
   struct render_group_entry_coordinate_system *c = CoordinateSystem(
       renderGroup, v2_add(v2_add(origin, v2(disp, 0.0f)), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis,
-      yAxis, color, &state->textureTree, 0, 0, 0, 0);
+      yAxis, color, &state->textureTree, &state->textureTreeNormal, 0, 0, 0);
 
   DrawRenderGroup(renderGroup, drawBuffer);
 

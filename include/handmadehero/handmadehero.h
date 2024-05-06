@@ -84,6 +84,7 @@ struct game_state {
   struct bitmap textureBackground;
   struct bitmap textureShadow;
   struct bitmap textureTree;
+  struct bitmap textureTreeNormal;
   struct bitmap textureSword;
   struct bitmap textureStairwell;
 

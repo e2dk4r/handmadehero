@@ -251,6 +251,17 @@ BilinearSample(struct bitmap *texture, i32 x, i32 y)
   return result;
 }
 
+internal inline struct v4
+UnscaleAndBiasNormal(struct v4 normal)
+{
+  struct v4 result;
+
+  result = v4_mul(normal, 1.0f / 255.0f);
+  result.xyz = v3_sub(v3_mul(result.xyz, 2.0f), v3(1.0f, 1.0f, 1.0f));
+
+  return result;
+}
+
 internal inline struct v3
 SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struct v3 normal, f32 roughness)
 {
@@ -388,13 +399,15 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           struct v4 normalD = Unpack4x8(normalSample.d);
 
           struct v4 normal = v4_lerp(v4_lerp(normalA, normalB, fX), v4_lerp(normalC, normalD, fX), fY);
+
+          normal = UnscaleAndBiasNormal(normal);
           f32 tEnvMap = normal.z;
           f32 tFarMap = 0.0f;
           struct environment_map *farMap = 0;
           if (tEnvMap < 0.25f) {
             farMap = bottom;
             tFarMap = 1.0f - (tEnvMap / 0.25f);
-          } else if (tEnvMap > 0.25f) {
+          } else if (tEnvMap > 0.75f) {
             farMap = top;
             tFarMap = (1.0f - tEnvMap) / 0.25f;
           }
@@ -405,10 +418,13 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
             lightColor = v3_lerp(lightColor, farMapColor, tFarMap);
           }
 
-          v3_hadamard_ref(&texel.xyz, lightColor);
+          v3_add_ref(&texel.xyz, v3_mul(lightColor, texel.a));
         }
 
         texel = v4_hadamard(texel, color);
+        texel.r = Clamp01(texel.r);
+        texel.g = Clamp01(texel.g);
+        texel.b = Clamp01(texel.b);
 
         // destination channels
         struct v4 dest = Unpack4x8(pixel);
