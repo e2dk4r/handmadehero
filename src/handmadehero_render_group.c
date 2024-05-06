@@ -290,8 +290,8 @@ SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struc
   struct bitmap *lod = map->lod + lodIndex;
 
   // TODO(e2dk4r): Do intersection math to determine where we should be!
-  f32 tX = 0.0f;
-  f32 tY = 0.0f;
+  f32 tX = (f32)lod->width / 2.0f + normal.x * (f32)lod->width / 2.0f;
+  f32 tY = (f32)lod->height / 2.0f + normal.y * (f32)lod->height / 2.0f;
 
   i32 x = (i32)tX;
   i32 y = (i32)tY;
