@@ -252,6 +252,24 @@ BilinearSample(struct bitmap *texture, i32 x, i32 y)
 }
 
 internal inline struct v4
+sRGBBilinearBlend(struct bilinear_sample texelSample, f32 fX, f32 fY)
+{
+  struct v4 texelA = Unpack4x8(texelSample.a);
+  struct v4 texelB = Unpack4x8(texelSample.b);
+  struct v4 texelC = Unpack4x8(texelSample.c);
+  struct v4 texelD = Unpack4x8(texelSample.d);
+
+  // NOTE(e2dk4r): Go from sRGB to "linear" brightness space
+  texelA = sRGB255toLinear1(texelA);
+  texelB = sRGB255toLinear1(texelB);
+  texelC = sRGB255toLinear1(texelC);
+  texelD = sRGB255toLinear1(texelD);
+
+  struct v4 blend = v4_lerp(v4_lerp(texelA, texelB, fX), v4_lerp(texelC, texelD, fX), fY);
+  return blend;
+}
+
+internal inline struct v4
 UnscaleAndBiasNormal(struct v4 normal)
 {
   struct v4 result;
@@ -265,7 +283,28 @@ UnscaleAndBiasNormal(struct v4 normal)
 internal inline struct v3
 SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struct v3 normal, f32 roughness)
 {
-  struct v3 result = normal;
+
+  u32 lodIndex = (u32)(roughness * (f32)(ARRAY_COUNT(map->lod) - 1) + 0.5f);
+  assert(lodIndex < ARRAY_COUNT(map->lod));
+
+  struct bitmap *lod = map->lod[lodIndex];
+
+  // TODO(e2dk4r): Do intersection math to determine where we should be!
+  f32 tX = 0.0f;
+  f32 tY = 0.0f;
+
+  i32 x = (i32)tX;
+  i32 y = (i32)tY;
+
+  f32 fX = tX - (f32)x;
+  f32 fY = tY - (f32)y;
+
+  assert(x >= 0 && x < (i32)lod->width);
+  assert(y >= 0 && y < (i32)lod->height);
+
+  struct bilinear_sample sample = BilinearSample(lod, x, y);
+  struct v3 result = sRGBBilinearBlend(sample, fX, fY).xyz;
+
   return result;
 }
 
@@ -376,19 +415,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
          * | C | D | ...
          */
         struct bilinear_sample texelSample = BilinearSample(texture, texelX, texelY);
-
-        struct v4 texelA = Unpack4x8(texelSample.a);
-        struct v4 texelB = Unpack4x8(texelSample.b);
-        struct v4 texelC = Unpack4x8(texelSample.c);
-        struct v4 texelD = Unpack4x8(texelSample.d);
-
-        // NOTE(e2dk4r): Go from sRGB to "linear" brightness space
-        texelA = sRGB255toLinear1(texelA);
-        texelB = sRGB255toLinear1(texelB);
-        texelC = sRGB255toLinear1(texelC);
-        texelD = sRGB255toLinear1(texelD);
-
-        struct v4 texel = v4_lerp(v4_lerp(texelA, texelB, fX), v4_lerp(texelC, texelD, fX), fY);
+        struct v4 texel = sRGBBilinearBlend(texelSample, fX, fY);
 
         if (normalMap) {
           struct bilinear_sample normalSample = BilinearSample(normalMap, texelX, texelY);
@@ -404,15 +431,16 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           f32 tEnvMap = normal.z;
           f32 tFarMap = 0.0f;
           struct environment_map *farMap = 0;
-          if (tEnvMap < 0.25f) {
+          if (tEnvMap < -0.5f) {
             farMap = bottom;
-            tFarMap = 1.0f - (tEnvMap / 0.25f);
-          } else if (tEnvMap > 0.75f) {
+            tFarMap = 2.0f * (tEnvMap + 1.0f);
+          } else if (tEnvMap > 0.5f) {
             farMap = top;
-            tFarMap = (1.0f - tEnvMap) / 0.25f;
+            tFarMap = 2.0f * (tEnvMap - 0.5f);
           }
 
-          struct v3 lightColor = SampleEnvironmentMap(middle, screenSpaceUV, normal.xyz, normal.w);
+          struct v3 lightColor =
+              v3(0.0f, 0.0f, 0.0f); // SampleEnvironmentMap(middle, screenSpaceUV, normal.xyz, normal.w);
           if (farMap) {
             struct v3 farMapColor = SampleEnvironmentMap(farMap, screenSpaceUV, normal.xyz, normal.w);
             lightColor = v3_lerp(lightColor, farMapColor, tFarMap);

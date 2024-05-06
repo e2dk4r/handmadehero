@@ -9,9 +9,6 @@ struct game_state;
 struct bitmap;
 
 struct environment_map {
-  // NOTE(e2dk4r): lod[0] is 2^widthPow2 x 2^heightPow2
-  u32 widthPow2;
-  u32 heightPow2;
   struct bitmap *lod[4];
 };
 
