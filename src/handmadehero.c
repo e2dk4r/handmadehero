@@ -796,9 +796,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       groundBuffer->position = WorldPositionInvalid();
     }
 
-    state->textureTreeNormal =
-        MakeEmptyBitmap(&transientState->transientArena, state->textureTree.width, state->textureTree.height);
-    MakeSphereNormalMap(&state->textureTreeNormal, 0.0f);
+    state->testDiffuse = MakeEmptyBitmap(&transientState->transientArena, 256, 256);
+    DrawRectangle(&state->testDiffuse, v2(0.0f, 0.0f), v2u(state->testDiffuse.width, state->testDiffuse.height),
+                  v4(0.5, 0.5f, 0.5f, 1.0f));
+    state->testNormal =
+        MakeEmptyBitmap(&transientState->transientArena, state->testDiffuse.width, state->testDiffuse.height);
+    MakeSphereNormalMap(&state->testNormal, 0.0f);
 
     transientState->envMapWidth = 512;
     transientState->envMapHeight = 256;
@@ -904,7 +907,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #if 0
   PushBitmap(renderGroup, &state->textureBackground, v2(0.0f, 0.0f), 0.0f, v2(0, 0));
 #else
-  struct v4 backgroundColor = v4(0.5f, 0.5f, 0.5f, 1.0f);
+  struct v4 backgroundColor = v4(0.25f, 0.25f, 0.25f, 1.0f);
   PushClear(renderGroup, backgroundColor);
 #endif
 
@@ -1203,8 +1206,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #endif
   struct render_group_entry_coordinate_system *c = CoordinateSystem(
       renderGroup, v2_add(v2_add(origin, v2(disp, 0.0f)), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis,
-      yAxis, color, &state->textureTree, &state->textureTreeNormal, transientState->envMaps + 2,
-      transientState->envMaps + 1, transientState->envMaps + 0);
+      yAxis, color, &state->testDiffuse, &state->testNormal, transientState->envMaps + 2, transientState->envMaps + 1,
+      transientState->envMaps + 0);
 
   // render environment maps
   origin = v2(0.0f, 0.0f);

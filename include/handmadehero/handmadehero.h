@@ -77,7 +77,6 @@ struct game_state {
   struct bitmap textureBackground;
   struct bitmap textureShadow;
   struct bitmap textureTree;
-  struct bitmap textureTreeNormal;
   struct bitmap textureSword;
   struct bitmap textureStairwell;
 
@@ -88,6 +87,9 @@ struct game_state {
   struct bitmap_hero textureHero[4];
 
   f32 time;
+
+  struct bitmap testDiffuse;
+  struct bitmap testNormal;
 };
 
 struct transient_state {
