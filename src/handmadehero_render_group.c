@@ -231,6 +231,26 @@ Unpack4x8(u32 *pixel)
             (f32)((*pixel >> 0x18) & 0xff));
 }
 
+struct bilinear_sample {
+  u32 *a;
+  u32 *b;
+  u32 *c;
+  u32 *d;
+};
+
+internal inline struct bilinear_sample
+BilinearSample(struct bitmap *texture, i32 x, i32 y)
+{
+  struct bilinear_sample result;
+
+  result.a = (u32 *)((u8 *)texture->memory + y * texture->stride + x * BITMAP_BYTES_PER_PIXEL);
+  result.b = (u32 *)((u8 *)result.a + BITMAP_BYTES_PER_PIXEL);
+  result.c = (u32 *)((u8 *)result.a + texture->stride);
+  result.d = (u32 *)((u8 *)result.c + BITMAP_BYTES_PER_PIXEL);
+
+  return result;
+}
+
 internal inline struct v3
 SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struct v3 normal, f32 roughness)
 {
@@ -344,15 +364,12 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
          * | A | B | ...
          * | C | D | ...
          */
-        u32 *texelPtrA = (u32 *)((u8 *)texture->memory + texelY * texture->stride + texelX * BITMAP_BYTES_PER_PIXEL);
-        u32 *texelPtrB = (u32 *)((u8 *)texelPtrA + BITMAP_BYTES_PER_PIXEL);
-        u32 *texelPtrC = (u32 *)((u8 *)texelPtrA + texture->stride);
-        u32 *texelPtrD = (u32 *)((u8 *)texelPtrC + BITMAP_BYTES_PER_PIXEL);
+        struct bilinear_sample texelSample = BilinearSample(texture, texelX, texelY);
 
-        struct v4 texelA = Unpack4x8(texelPtrA);
-        struct v4 texelB = Unpack4x8(texelPtrB);
-        struct v4 texelC = Unpack4x8(texelPtrC);
-        struct v4 texelD = Unpack4x8(texelPtrD);
+        struct v4 texelA = Unpack4x8(texelSample.a);
+        struct v4 texelB = Unpack4x8(texelSample.b);
+        struct v4 texelC = Unpack4x8(texelSample.c);
+        struct v4 texelD = Unpack4x8(texelSample.d);
 
         // NOTE(e2dk4r): Go from sRGB to "linear" brightness space
         texelA = sRGB255toLinear1(texelA);
@@ -363,16 +380,12 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         struct v4 texel = v4_lerp(v4_lerp(texelA, texelB, fX), v4_lerp(texelC, texelD, fX), fY);
 
         if (normalMap) {
-          u32 *normalPtrA =
-              (u32 *)((u8 *)normalMap->memory + texelY * normalMap->stride + texelX * BITMAP_BYTES_PER_PIXEL);
-          u32 *normalPtrB = (u32 *)((u8 *)normalPtrA + BITMAP_BYTES_PER_PIXEL);
-          u32 *normalPtrC = (u32 *)((u8 *)normalPtrA + normalMap->stride);
-          u32 *normalPtrD = (u32 *)((u8 *)normalPtrC + BITMAP_BYTES_PER_PIXEL);
+          struct bilinear_sample normalSample = BilinearSample(normalMap, texelX, texelY);
 
-          struct v4 normalA = Unpack4x8(normalPtrA);
-          struct v4 normalB = Unpack4x8(normalPtrB);
-          struct v4 normalC = Unpack4x8(normalPtrC);
-          struct v4 normalD = Unpack4x8(normalPtrD);
+          struct v4 normalA = Unpack4x8(normalSample.a);
+          struct v4 normalB = Unpack4x8(normalSample.b);
+          struct v4 normalC = Unpack4x8(normalSample.c);
+          struct v4 normalD = Unpack4x8(normalSample.d);
 
           struct v4 normal = v4_lerp(v4_lerp(normalA, normalB, fX), v4_lerp(normalC, normalD, fX), fY);
           f32 tEnvMap = normal.z;
