@@ -428,6 +428,9 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           struct v4 normal = v4_lerp(v4_lerp(normalA, normalB, fX), v4_lerp(normalC, normalD, fX), fY);
 
           normal = UnscaleAndBiasNormal(normal);
+          // TODO(e2dk4r): do we need to do this?
+          normal.xyz = v3_normalize(normal.xyz);
+
           f32 tEnvMap = normal.z;
           f32 tFarMap = 0.0f;
           struct environment_map *farMap = 0;
