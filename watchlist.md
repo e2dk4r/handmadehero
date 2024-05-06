@@ -328,7 +328,7 @@
 - [x] Handmade Hero Day 096 - Introduction to Lighting
       https://www.youtube.com/watch?v=QtepVbq6_pw
 
-- [ ] Handmade Hero Day 097 - Adding Normal Maps to the Pipeline
+- [x] Handmade Hero Day 097 - Adding Normal Maps to the Pipeline
       https://www.youtube.com/watch?v=oww19zUryVg
 
 - [ ] Handmade Hero Day 098 - Normal Map Code Cleanup
