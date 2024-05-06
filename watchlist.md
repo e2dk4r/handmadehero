@@ -331,7 +331,7 @@
 - [x] Handmade Hero Day 097 - Adding Normal Maps to the Pipeline
       https://www.youtube.com/watch?v=oww19zUryVg
 
-- [ ] Handmade Hero Day 098 - Normal Map Code Cleanup
+- [x] Handmade Hero Day 098 - Normal Map Code Cleanup
       https://www.youtube.com/watch?v=xWQfjqAHvxs
 
 - [ ] Handmade Hero Day 099 - Test Environment Maps
