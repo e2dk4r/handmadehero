@@ -436,7 +436,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           struct environment_map *farMap = 0;
           if (tEnvMap < -0.5f) {
             farMap = bottom;
-            tFarMap = 2.0f * (tEnvMap + 1.0f);
+            tFarMap = -1.0f - 2.0f * tEnvMap;
           } else if (tEnvMap > 0.5f) {
             farMap = top;
             tFarMap = 2.0f * (tEnvMap - 0.5f);
