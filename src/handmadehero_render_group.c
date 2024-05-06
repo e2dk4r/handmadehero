@@ -431,7 +431,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           // TODO(e2dk4r): do we need to do this?
           normal.xyz = v3_normalize(normal.xyz);
 
-          f32 tEnvMap = normal.z;
+          f32 tEnvMap = normal.y;
           f32 tFarMap = 0.0f;
           struct environment_map *farMap = 0;
           if (tEnvMap < -0.5f) {
