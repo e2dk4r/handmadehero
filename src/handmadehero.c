@@ -451,7 +451,7 @@ MakeSphereNormalMap(struct bitmap *bitmap, f32 roughness)
       f32 Nx = 2.0f * bitmapUV.x - 1.0f;
       f32 Ny = 2.0f * bitmapUV.y - 1.0f;
 
-      struct v3 normal = v3(0.0f, 0.0f, 1.0f);
+      struct v3 normal = v3(0.0f, 1.0f, 0.0f);
 
       f32 rootTerm = 1.0f - Square(Nx) - Square(Ny);
       if (rootTerm >= 0.0f) {
