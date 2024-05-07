@@ -334,7 +334,7 @@
 - [x] Handmade Hero Day 098 - Normal Map Code Cleanup
       https://www.youtube.com/watch?v=xWQfjqAHvxs
 
-- [ ] Handmade Hero Day 099 - Test Environment Maps
+- [x] Handmade Hero Day 099 - Test Environment Maps
       https://www.youtube.com/watch?v=07UpVTmIKdU
 
 - [ ] Handmade Hero Day 100 - Reflection Vectors
