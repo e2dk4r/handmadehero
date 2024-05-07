@@ -449,6 +449,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           // TODO(e2dk4r): do we need to do this?
           normal.xyz = v3_normalize(normal.xyz);
 
+          // TODO(e2dk4r): Rotate normals based on x y axis!
+
           // NOTE(e2dk4r): The eye vector is always assumed to be e = [0, 0, 1]
           // This is just simplified version of reflection -e + 2 eTn n
           struct v3 bounceDirection = v3_mul(normal.xyz, 2.0f * normal.z);
