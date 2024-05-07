@@ -289,17 +289,27 @@ UnscaleAndBiasNormal(struct v4 normal)
 }
 
 internal inline struct v3
-SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struct v3 normal, f32 roughness)
+SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struct v3 sampleDirection, f32 roughness)
 {
 
   u32 lodIndex = (u32)(roughness * (f32)(ARRAY_COUNT(map->lod) - 1) + 0.5f);
   assert(lodIndex < ARRAY_COUNT(map->lod));
 
+  assert(sampleDirection.y > 0.0f);
+  f32 distanceFromMapInZ = 1.0f;
+  f32 uvPerMeter = 0.01f;
+  f32 c = uvPerMeter * distanceFromMapInZ / sampleDirection.y;
+  // TODO(e2dk4r): make sure w know what direction Z should go in Y
+  struct v2 offset = v2_mul(v2(sampleDirection.x, sampleDirection.z), c);
+  struct v2 uv = v2_add(screenSpaceUV, offset);
+  uv.x = Clamp01(uv.x);
+  uv.y = Clamp01(uv.y);
+
   struct bitmap *lod = map->lod + lodIndex;
 
   // TODO(e2dk4r): Do intersection math to determine where we should be!
-  f32 tX = (f32)lod->width / 2.0f + normal.x * (f32)lod->width / 2.0f;
-  f32 tY = (f32)lod->height / 2.0f + normal.y * (f32)lod->height / 2.0f;
+  f32 tX = uv.x * (f32)(lod->width - 2);
+  f32 tY = uv.y * (f32)(lod->height - 2);
 
   i32 x = (i32)tX;
   i32 y = (i32)tY;
@@ -439,21 +449,29 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           // TODO(e2dk4r): do we need to do this?
           normal.xyz = v3_normalize(normal.xyz);
 
-          f32 tEnvMap = normal.y;
+          // NOTE(e2dk4r): The eye vector is always assumed to be e = [0, 0, 1]
+          // This is just simplified version of reflection -e + 2 eTn n
+          struct v3 bounceDirection = v3_mul(normal.xyz, 2.0f * normal.z);
+          bounceDirection.z -= 1.0f;
+
+          f32 tEnvMap = bounceDirection.y;
           f32 tFarMap = 0.0f;
           struct environment_map *farMap = 0;
           if (tEnvMap < -0.5f) {
             farMap = bottom;
             tFarMap = -1.0f - 2.0f * tEnvMap;
+
+            // do not care direction after we selected map
+            bounceDirection.y = -bounceDirection.y;
           } else if (tEnvMap > 0.5f) {
             farMap = top;
             tFarMap = 2.0f * (tEnvMap - 0.5f);
           }
 
-          struct v3 lightColor =
-              v3(0.0f, 0.0f, 0.0f); // SampleEnvironmentMap(middle, screenSpaceUV, normal.xyz, normal.w);
+          // TODO(e2dk4r): How do we sample from middle map?
+          struct v3 lightColor = v3(0.0f, 0.0f, 0.0f);
           if (farMap) {
-            struct v3 farMapColor = SampleEnvironmentMap(farMap, screenSpaceUV, normal.xyz, normal.w);
+            struct v3 farMapColor = SampleEnvironmentMap(farMap, screenSpaceUV, bounceDirection, normal.w);
             lightColor = v3_lerp(lightColor, farMapColor, tFarMap);
           }
 
