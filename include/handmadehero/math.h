@@ -602,6 +602,13 @@ v4_hadamard(struct v4 a, struct v4 b)
   return result;
 }
 
+internal inline struct v4
+v3_to_v4(struct v3 a, f32 w)
+{
+  struct v4 result = {a.x, a.y, a.z, w};
+  return result;
+}
+
 /****************************************************************
  * rect OPERATIONS
  ****************************************************************/

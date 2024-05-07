@@ -1224,6 +1224,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     v2_add_ref(&origin, v2_add(yAxis, v2(0.0f, 6.0f)));
   }
 
+  Saturation(renderGroup, 0.5f + 0.5f * Sin(10 * state->time));
+
   DrawRenderGroup(renderGroup, drawBuffer);
 
   EndSimRegion(simRegion, state);
