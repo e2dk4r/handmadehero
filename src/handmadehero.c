@@ -473,6 +473,48 @@ MakeSphereNormalMap(struct bitmap *bitmap, f32 roughness)
   }
 }
 
+internal void
+MakePyramidNormalMap(struct bitmap *bitmap, f32 roughness)
+{
+  f32 invWidth = 1.0f / ((f32)bitmap->width - 1.0f);
+  f32 invHeight = 1.0f / ((f32)bitmap->height - 1.0f);
+
+  u8 *row = bitmap->memory;
+  for (u32 y = 0; y < bitmap->height; y++) {
+    u32 *pixel = (u32 *)row;
+    for (u32 x = 0; x < bitmap->width; x++) {
+      struct v2 bitmapUV = v2((f32)x * invWidth, (f32)y * invHeight);
+
+      f32 seven = 0.70710678118655f;
+      struct v3 normal = v3(0.0f, 0.0f, seven);
+
+      u32 invX = (bitmap->width - 1) - x;
+      if (x < y) {
+        if (invX < y)
+          normal.x = -seven;
+        else
+          normal.y = seven;
+      } else {
+        if (invX < y)
+          normal.y = -seven;
+        else
+          normal.x = seven;
+      }
+
+      struct v4 color = {.x = 255.0f * 0.5f * (normal.x + 1.0f),
+                         .y = 255.0f * 0.5f * (normal.y + 1.0f),
+                         .z = 255.0f * 0.5f * (normal.z + 1.0f),
+                         .w = 255.0f * roughness};
+
+      *pixel = (u32)(color.a + 0.5f) << 0x18 | (u32)(color.r + 0.5f) << 0x10 | (u32)(color.g + 0.5f) << 0x08 |
+               (u32)(color.b + 0.5f) << 0x00;
+      pixel++;
+    }
+
+    row += bitmap->stride;
+  }
+}
+
 internal inline u8
 IsGroundBufferEmpty(struct ground_buffer *groundBuffer)
 {
