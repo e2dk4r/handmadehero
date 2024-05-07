@@ -840,7 +840,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     state->testDiffuse = MakeEmptyBitmap(&transientState->transientArena, 256, 256);
     DrawRectangle(&state->testDiffuse, v2(0.0f, 0.0f), v2u(state->testDiffuse.width, state->testDiffuse.height),
-                  v4(0.5, 0.5f, 0.5f, 1.0f));
+                  v4(0.5f, 0.5f, 0.5f, 1.0f));
     state->testNormal =
         MakeEmptyBitmap(&transientState->transientArena, state->testDiffuse.width, state->testDiffuse.height);
     MakeSphereNormalMap(&state->testNormal, 0.0f);
