@@ -337,7 +337,7 @@
 - [x] Handmade Hero Day 099 - Test Environment Maps
       https://www.youtube.com/watch?v=07UpVTmIKdU
 
-- [ ] Handmade Hero Day 100 - Reflection Vectors
+- [x] Handmade Hero Day 100 - Reflection Vectors
       https://www.youtube.com/watch?v=PHz3ulc_mFk
 
 - [ ] Handmade Hero Day 101 - The Inverse and the Transpose
