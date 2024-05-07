@@ -1157,7 +1157,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   state->time += dt;
   f32 angle = 0.1f * state->time;
-  f32 disp = 0; // 10.0f * Cos(5.0f * angle);
+  f32 disp = 10.0f * Cos(50.0f * angle);
 
   // set environment maps
   struct v4 mapColors[] = {
