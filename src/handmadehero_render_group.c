@@ -359,13 +359,6 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
   struct v2 NyAxis = v2_mul(yAxis, xAxisLength / yAxisLength);
   f32 NzScale = 0.5f * (xAxisLength + yAxisLength);
 
-  struct v2 p[4] = {
-      origin,
-      v2_add(origin, xAxis),
-      v2_add(origin, v2_add(xAxis, yAxis)),
-      v2_add(origin, yAxis),
-  };
-
   i32 widthMax = (i32)buffer->width - 1;
   i32 heightMax = (i32)buffer->height - 1;
 
@@ -380,6 +373,13 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
   i32 xMax = 0;
   i32 yMin = heightMax;
   i32 yMax = 0;
+
+  struct v2 p[4] = {
+      origin,
+      v2_add(origin, xAxis),
+      v2_add(origin, v2_add(xAxis, yAxis)),
+      v2_add(origin, yAxis),
+  };
 
   for (u32 pIndex = 0; pIndex < ARRAY_COUNT(p); pIndex++) {
     struct v2 testP = p[pIndex];
