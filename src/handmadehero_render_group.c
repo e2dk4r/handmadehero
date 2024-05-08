@@ -334,6 +334,12 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
   f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
   f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
 
+  f32 xAxisLength = v2_length(xAxis);
+  f32 yAxisLength = v2_length(yAxis);
+  struct v2 NxAxis = v2_mul(xAxis, yAxisLength / xAxisLength);
+  struct v2 NyAxis = v2_mul(yAxis, xAxisLength / yAxisLength);
+  f32 NzScale = 0.5f * (xAxisLength + yAxisLength);
+
   struct v2 p[4] = {
       origin,
       v2_add(origin, xAxis),
@@ -446,10 +452,11 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           struct v4 normal = v4_lerp(v4_lerp(normalA, normalB, fX), v4_lerp(normalC, normalD, fX), fY);
 
           normal = UnscaleAndBiasNormal(normal);
-          // TODO(e2dk4r): do we need to do this?
-          normal.xyz = v3_normalize(normal.xyz);
 
-          // TODO(e2dk4r): Rotate normals based on x y axis!
+          // NOTE(e2dk4r): Rotate normals based on x y axis!
+          normal.xy = v2_add(v2_mul(NxAxis, normal.x), v2_mul(NyAxis, normal.y));
+          normal.z *= NzScale;
+          normal.xyz = v3_normalize(normal.xyz);
 
           // NOTE(e2dk4r): The eye vector is always assumed to be e = [0, 0, 1]
           // This is just simplified version of reflection -e + 2 eTn n
