@@ -509,7 +509,12 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
             lightColor = v3_lerp(lightColor, farMapColor, tFarMap);
           }
 
-          v3_add_ref(&texel.xyz, v3_mul(lightColor, texel.a));
+          v3_add_ref(&texel.rgb, v3_mul(lightColor, texel.a));
+#if 0
+          // NOTE(e2dk4r): draws the bounce direction
+          texel.rgb = v3_add(v3(0.5f, 0.5f, 0.5f), v3_mul(bounceDirection, 0.5f));
+          v3_mul_ref(&texel.rgb, texel.a);
+#endif
         }
 
         texel = v4_hadamard(texel, color);

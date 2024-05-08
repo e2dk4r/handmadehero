@@ -437,6 +437,40 @@ ClearBitmap(struct bitmap *bitmap)
 }
 
 internal void
+MakeSphereDiffuseMap(struct bitmap *bitmap)
+{
+  f32 invWidth = 1.0f / ((f32)bitmap->width - 1.0f);
+  f32 invHeight = 1.0f / ((f32)bitmap->height - 1.0f);
+
+  u8 *row = bitmap->memory;
+  for (u32 y = 0; y < bitmap->height; y++) {
+    u32 *pixel = (u32 *)row;
+    for (u32 x = 0; x < bitmap->width; x++) {
+      struct v2 bitmapUV = v2((f32)x * invWidth, (f32)y * invHeight);
+
+      f32 Nx = 2.0f * bitmapUV.x - 1.0f;
+      f32 Ny = 2.0f * bitmapUV.y - 1.0f;
+
+      f32 rootTerm = 1.0f - Square(Nx) - Square(Ny);
+      f32 alpha = 0.0f;
+      if (rootTerm >= 0.0f) {
+        alpha = 1.0f;
+      }
+
+      struct v3 baseColor = v3(1.0f, 1.0f, 1.0f);
+      alpha *= 255.0f;
+      struct v4 color = v4(alpha * baseColor.r, alpha * baseColor.g, alpha * baseColor.b, alpha);
+
+      *pixel = (u32)(color.a + 0.5f) << 0x18 | (u32)(color.r + 0.5f) << 0x10 | (u32)(color.g + 0.5f) << 0x08 |
+               (u32)(color.b + 0.5f) << 0x00;
+      pixel++;
+    }
+
+    row += bitmap->stride;
+  }
+}
+
+internal void
 MakeSphereNormalMap(struct bitmap *bitmap, f32 roughness)
 {
   f32 invWidth = 1.0f / ((f32)bitmap->width - 1.0f);
@@ -870,6 +904,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     state->testDiffuse = MakeEmptyBitmap(&transientState->transientArena, 256, 256);
+    // MakeSphereDiffuseMap(&state->testDiffuse);
     DrawRectangle(&state->testDiffuse, v2(0.0f, 0.0f), v2u(state->testDiffuse.width, state->testDiffuse.height),
                   v4(0.5f, 0.5f, 0.5f, 1.0f));
     state->testNormal =
