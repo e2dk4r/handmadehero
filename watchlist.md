@@ -340,7 +340,7 @@
 - [x] Handmade Hero Day 100 - Reflection Vectors
       https://www.youtube.com/watch?v=PHz3ulc_mFk
 
-- [ ] Handmade Hero Day 101 - The Inverse and the Transpose
+- [x] Handmade Hero Day 101 - The Inverse and the Transpose
       https://www.youtube.com/watch?v=PPDAqEJvUUQ
 
 - [ ] Handmade Hero Day 102 - Transforming Normals Properly
