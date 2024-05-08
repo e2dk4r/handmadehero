@@ -311,15 +311,19 @@ SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struc
   // NOTE(e2dk4r): compute the distance to the map
   f32 uvPerMeter = 0.01f;
   f32 c = uvPerMeter * distanceFromMapInZ / sampleDirection.y;
-  // TODO(e2dk4r): make sure w know what direction Z should go in Y
+  // TODO(e2dk4r): make sure we know what direction Z should go in Y
   struct v2 offset = v2_mul(v2(sampleDirection.x, sampleDirection.z), c);
+
+  // NOTE(e2dk4r): find the intersection point
   struct v2 uv = v2_add(screenSpaceUV, offset);
+
+  // NOTE(e2dk4r): clamp to the valid range
   uv.x = Clamp01(uv.x);
   uv.y = Clamp01(uv.y);
 
+  // NOTE(e2dk4r): bilinear sample
   struct bitmap *lod = map->lod + lodIndex;
 
-  // TODO(e2dk4r): Do intersection math to determine where we should be!
   f32 tX = uv.x * (f32)(lod->width - 2);
   f32 tY = uv.y * (f32)(lod->height - 2);
 
@@ -474,6 +478,11 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           // This is just simplified version of reflection -e + 2 eTn n
           struct v3 bounceDirection = v3_mul(normal.xyz, 2.0f * normal.z);
           bounceDirection.z -= 1.0f;
+
+          // TODO(e2dk4r): eventually we need to support two mappings,
+          // one for top-down view (which we don't do now) and one for
+          // sideways (which is what's happening here).
+          bounceDirection.z = -bounceDirection.z;
 
           f32 distanceFromMapInZ = 1.0f;
           f32 tEnvMap = bounceDirection.y;
