@@ -1279,10 +1279,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #else
   struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
 #endif
-  struct render_group_entry_coordinate_system *c =
-      CoordinateSystem(renderGroup, v2_add(v2_add(origin, disp), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))),
-                       xAxis, yAxis, color, &state->testDiffuse, &state->testNormal, transientState->envMaps + 2,
-                       transientState->envMaps + 1, transientState->envMaps + 0);
+  struct render_group_entry_coordinate_system *c = CoordinateSystem(
+      renderGroup, v2_add(v2_add(origin, disp), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis, yAxis,
+      color, &state->testDiffuse, &state->testNormal, transientState->envMaps + ENV_MAP_TOP,
+      transientState->envMaps + ENV_MAP_MIDDLE, transientState->envMaps + ENV_MAP_BOTTOM);
 
   // render environment maps
   origin = v2(0.0f, 0.0f);

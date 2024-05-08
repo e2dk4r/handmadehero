@@ -103,6 +103,9 @@ struct transient_state {
   u32 envMapWidth;
   u32 envMapHeight;
   // NOTE(e2dk4r): 0 is bottom, 1 is middle, 2 is top
+#define ENV_MAP_BOTTOM 0
+#define ENV_MAP_MIDDLE 1
+#define ENV_MAP_TOP 2
   struct environment_map envMaps[3];
 };
 
