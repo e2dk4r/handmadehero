@@ -336,8 +336,11 @@ SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struc
   assert(x >= 0 && x < (i32)lod->width);
   assert(y >= 0 && y < (i32)lod->height);
 
+#if 0
+  // NOTE(e2dk4r): turn this on to see where in the world you are sampling
   u8 *lodTexel = (u8 *)lod->memory + y * lod->stride + x * BITMAP_BYTES_PER_PIXEL;
   *(u32 *)lodTexel = 0xffffffff;
+#endif
 
   struct bilinear_sample sample = BilinearSample(lod, x, y);
   struct v3 result = sRGBBilinearBlend(sample, fX, fY).xyz;
