@@ -336,6 +336,9 @@ SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struc
   assert(x >= 0 && x < (i32)lod->width);
   assert(y >= 0 && y < (i32)lod->height);
 
+  u8 *lodTexel = (u8 *)lod->memory + y * lod->stride + x * BITMAP_BYTES_PER_PIXEL;
+  *(u32 *)lodTexel = 0xffffffff;
+
   struct bilinear_sample sample = BilinearSample(lod, x, y);
   struct v3 result = sRGBBilinearBlend(sample, fX, fY).xyz;
 
@@ -484,7 +487,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           // sideways (which is what's happening here).
           bounceDirection.z = -bounceDirection.z;
 
-          f32 distanceFromMapInZ = 1.0f;
+          f32 distanceFromMapInZ = 2.0f;
           f32 tEnvMap = bounceDirection.y;
           f32 tFarMap = 0.0f;
           struct environment_map *farMap = 0;

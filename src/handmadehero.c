@@ -1228,10 +1228,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
   }
 
-  state->time += dt;
-  f32 angle = 0.1f * state->time;
-  f32 disp = 10.0f * Cos(50.0f * angle);
-
   // set environment maps
   struct v4 mapColors[] = {
       v4(1.0f, 0.0f, 0.0f, 1.0f),
@@ -1260,9 +1256,15 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 
   // render scaled rotated textures
+  state->time += dt;
+  f32 angle = 0.1f * state->time;
+  struct v2 disp = {
+      100.0f * Cos(5.0f * angle),
+      100.0f * Sin(3.0f * angle),
+  };
 
   struct v2 origin = screenCenter;
-#if 0
+#if 1
   struct v2 xAxis = v2_mul(v2(Cos(angle), Sin(angle)), 100.0f);
   struct v2 yAxis = v2_perp(xAxis);
 #else
@@ -1277,10 +1279,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #else
   struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
 #endif
-  struct render_group_entry_coordinate_system *c = CoordinateSystem(
-      renderGroup, v2_add(v2_add(origin, v2(disp, 0.0f)), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis,
-      yAxis, color, &state->testDiffuse, &state->testNormal, transientState->envMaps + 2, transientState->envMaps + 1,
-      transientState->envMaps + 0);
+  struct render_group_entry_coordinate_system *c =
+      CoordinateSystem(renderGroup, v2_add(v2_add(origin, disp), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))),
+                       xAxis, yAxis, color, &state->testDiffuse, &state->testNormal, transientState->envMaps + 2,
+                       transientState->envMaps + 1, transientState->envMaps + 0);
 
   // render environment maps
   origin = v2(0.0f, 0.0f);
