@@ -415,20 +415,10 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
 
   // pre-multiplied alpha
   v3_mul_ref(&color.rgb, color.a);
-  u32 colorRGBA =
-      /* alpha */
-      roundf32tou32(color.a * 255.0f) << 24
-      /* red */
-      | roundf32tou32(color.r * 255.0f) << 16
-      /* green */
-      | roundf32tou32(color.g * 255.0f) << 8
-      /* blue */
-      | roundf32tou32(color.b * 255.0f) << 0;
 
   for (i32 y = yMin; y <= yMax; y++) {
     u32 *pixel = (u32 *)row;
     for (i32 x = xMin; x <= xMax; x++) {
-#if 1
       struct v2 pixelP = v2i(x, y);
       struct v2 d = v2_sub(pixelP, origin);
       // TODO(e2dk4r): PerpDot()
@@ -538,9 +528,6 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         *pixel = (u32)(blended.a + 0.5f) << 0x18 | (u32)(blended.r + 0.5f) << 0x10 | (u32)(blended.g + 0.5f) << 0x08 |
                  (u32)(blended.b + 0.5f) << 0x00;
       }
-#else
-      *pixel = colorRGBA;
-#endif
 
       pixel++;
     }
