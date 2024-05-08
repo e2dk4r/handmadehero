@@ -343,7 +343,7 @@
 - [x] Handmade Hero Day 101 - The Inverse and the Transpose
       https://www.youtube.com/watch?v=PPDAqEJvUUQ
 
-- [ ] Handmade Hero Day 102 - Transforming Normals Properly
+- [x] Handmade Hero Day 102 - Transforming Normals Properly
       https://www.youtube.com/watch?v=73u0sR4DU9E
 
 - [ ] Handmade Hero Day 103 - Card-like Normal Map Reflections
