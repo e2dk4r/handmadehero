@@ -890,6 +890,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         height >>= 1;
       }
     }
+    transientState->envMaps[ENV_MAP_BOTTOM].z = 0.0f;
+    transientState->envMaps[ENV_MAP_MIDDLE].z = 0.5f;
+    transientState->envMaps[ENV_MAP_TOP].z = 2.0f;
 
     transientState->initialized = 1;
   }

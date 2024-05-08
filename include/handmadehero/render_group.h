@@ -15,6 +15,7 @@ struct bitmap {
 
 struct environment_map {
   struct bitmap lod[4];
+  f32 z;
 };
 
 struct render_basis {

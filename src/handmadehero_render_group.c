@@ -348,7 +348,7 @@ SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struc
 internal inline void
 DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                     struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
-                    struct environment_map *middle, struct environment_map *bottom)
+                    struct environment_map *middle, struct environment_map *bottom, f32 pixelsToMeters)
 {
   f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
   f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
@@ -371,6 +371,10 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
 
   f32 invWidthMax = 1.0f / (f32)widthMax;
   f32 invHeightMax = 1.0f / (f32)heightMax;
+
+  // TODO(e2dk4r): this will need to be specified seperately
+  f32 originZ = 0.5f;
+  f32 fixedCastY = invHeightMax * origin.y;
 
   i32 xMin = widthMax;
   i32 xMax = 0;
@@ -435,7 +439,9 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
       f32 edge3 = v2_dot(v2_sub(d, yAxis), v2_perp(yAxis));
 
       if (edge0 < 0 && edge1 < 0 && edge2 < 0 && edge3 < 0) {
-        struct v2 screenSpaceUV = v2(pixelP.x * invWidthMax, pixelP.y * invHeightMax);
+        struct v2 screenSpaceUV = v2(invWidthMax * (f32)x, fixedCastY);
+        f32 zDiff = pixelsToMeters * ((f32)y - origin.y);
+
         f32 u = InvXAxisLengthSq * v2_dot(d, xAxis);
         f32 v = InvYAxisLengthSq * v2_dot(d, yAxis);
         assert(u > 0.0f && v > 0.0f);
@@ -487,14 +493,14 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           // sideways (which is what's happening here).
           bounceDirection.z = -bounceDirection.z;
 
-          f32 distanceFromMapInZ = 2.0f;
+          f32 z = originZ + zDiff;
+          f32 mapZ = 2.0f;
           f32 tEnvMap = bounceDirection.y;
           f32 tFarMap = 0.0f;
           struct environment_map *farMap = 0;
           if (tEnvMap < -0.5f) {
             farMap = bottom;
             tFarMap = -1.0f - 2.0f * tEnvMap;
-            distanceFromMapInZ = -distanceFromMapInZ;
           } else if (tEnvMap > 0.5f) {
             farMap = top;
             tFarMap = 2.0f * (tEnvMap - 0.5f);
@@ -503,6 +509,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           // TODO(e2dk4r): How do we sample from middle map?
           struct v3 lightColor = v3(0.0f, 0.0f, 0.0f);
           if (farMap) {
+            f32 distanceFromMapInZ = farMap->z - z;
+
             struct v3 farMapColor =
                 SampleEnvironmentMap(farMap, screenSpaceUV, bounceDirection, normal.w, distanceFromMapInZ);
             lightColor = v3_lerp(lightColor, farMapColor, tFarMap);
@@ -725,7 +733,8 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       pushBufferIndex += sizeof(*entry);
 
       DrawRectangleSlowly(outputTarget, entry->origin, entry->xAxis, entry->yAxis, entry->color, entry->texture,
-                          entry->normalMap, entry->top, entry->middle, entry->bottom);
+                          entry->normalMap, entry->top, entry->middle, entry->bottom,
+                          1.0f / renderGroup->metersToPixels);
 
       struct v4 color = v4(1.0f, 0.0f, 0.0f, 1.0f);
       struct v2 dim = v2(2.0f, 2.0f);
