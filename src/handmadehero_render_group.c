@@ -706,9 +706,9 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct render_group_entry_bitmap *entry = data;
       pushBufferIndex += sizeof(*entry);
 
-      // assert(entry->bitmap);
-      // struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
-      // DrawBitmapWithAlpha(outputTarget, entry->bitmap, center, entry->align, entry->alpha);
+      assert(entry->bitmap);
+      struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
+      DrawBitmapWithAlpha(outputTarget, entry->bitmap, center, entry->align, entry->alpha);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_RECTANGLE) {
