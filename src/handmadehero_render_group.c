@@ -488,7 +488,6 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           bounceDirection.z = -bounceDirection.z;
 
           f32 z = originZ + zDiff;
-          f32 mapZ = 2.0f;
           f32 tEnvMap = bounceDirection.y;
           f32 tFarMap = 0.0f;
           struct environment_map *farMap = 0;
