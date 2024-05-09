@@ -369,8 +369,9 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
   f32 invHeightMax = 1.0f / (f32)heightMax;
 
   // TODO(e2dk4r): this will need to be specified seperately
-  f32 originZ = 0.5f;
-  f32 fixedCastY = invHeightMax * origin.y;
+  f32 originZ = 0.0f;
+  f32 originY = v2_add(origin, v2_add(v2_mul(xAxis, 0.5f), v2_mul(yAxis, 0.5f))).y;
+  f32 fixedCastY = invHeightMax * originY;
 
   i32 xMin = widthMax;
   i32 xMax = 0;
@@ -433,7 +434,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
 
       if (edge0 < 0 && edge1 < 0 && edge2 < 0 && edge3 < 0) {
         struct v2 screenSpaceUV = v2(invWidthMax * (f32)x, fixedCastY);
-        f32 zDiff = pixelsToMeters * ((f32)y - origin.y);
+        f32 zDiff = pixelsToMeters * ((f32)y - originY);
 
         f32 u = InvXAxisLengthSq * v2_dot(d, xAxis);
         f32 v = InvYAxisLengthSq * v2_dot(d, yAxis);
