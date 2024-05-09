@@ -607,7 +607,7 @@ DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v
       // source channels
       struct v4 texel = Unpack4x8(src);
       texel = sRGB255toLinear1(texel);
-      v3_mul_ref(&texel.rgb, cAlpha);
+      v4_mul_ref(&texel, cAlpha);
 
       // destination channels
       struct v4 d = Unpack4x8(dst);
