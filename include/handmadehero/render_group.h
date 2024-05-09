@@ -1,6 +1,23 @@
 #ifndef HANDMADEHERO_RENDER_GROUP
 #define HANDMADEHERO_RENDER_GROUP
 
+/* NOTE(e2dk4r):
+ *
+ * 1. Everywhere outside of renderer, Y **always** goes upward, X to the right.
+ *
+ * 2. All bitmaps including the render target are assumed to be bottom-up
+ *    (meaning that the first row pointer points to the bottom-left row when
+ *    viewed on screen).
+ *
+ * 3. Unless otherwise specified, all inputs to the renderer are in world coordinate (meters),
+ *    NOT pixels. Anything that is in pixel values will be explicitly marked as such.
+ *
+ * 4. Z is special coordinate because it is broken up into discrete slices,
+ *    and the renderer actually understands the slices (potentially).
+ *    // TODO(e2dk4r): ZHANDLING
+ *
+ */
+
 #include "math.h"
 #include "memory_arena.h"
 #include "types.h"

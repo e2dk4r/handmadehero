@@ -1185,6 +1185,10 @@ main(int argc, char *argv[])
   wl_surface_attach(state.wl_surface, state.wl_buffer, 0, 0);
   wl_shm_pool_destroy(pool);
 
+  // make sure backbuffer is bottom-up
+  state.backbuffer.memory = state.backbuffer.memory + (state.backbuffer.height - 1) * state.backbuffer.stride;
+  state.backbuffer.stride = -state.backbuffer.stride;
+
   /* io_uring */
   struct io_uring_sqe *sqe;
   struct io_uring ring;

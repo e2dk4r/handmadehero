@@ -112,10 +112,22 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
   if (header->height < 0)
     result.height = (u32)-header->height;
 
-  result.stride = -(i32)result.width * BITMAP_BYTES_PER_PIXEL;
-  result.memory = pixels - (i32)(result.height - 1) * result.stride;
+  result.stride = (i32)result.width * BITMAP_BYTES_PER_PIXEL;
+  result.memory = pixels;
+
+  if (header->height < 0) {
+    result.memory = pixels + (i32)(result.height - 1) * result.stride;
+    result.stride = -result.stride;
+  }
 
   return result;
+}
+
+internal inline struct v2
+TopDownAlign(struct bitmap *bitmap, struct v2 align)
+{
+  align.y = (f32)(bitmap->height - 1) - align.y;
+  return align;
 }
 
 inline struct stored_entity *
@@ -735,25 +747,25 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_head.bmp");
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_torso.bmp");
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_cape.bmp");
-    bitmapHero->align = v2(72, 182);
+    bitmapHero->align = TopDownAlign(&bitmapHero->cape, v2(72, 182));
 
     bitmapHero = &state->textureHero[BITMAP_HERO_BACK];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_head.bmp");
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_torso.bmp");
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_cape.bmp");
-    bitmapHero->align = v2(72, 182);
+    bitmapHero->align = TopDownAlign(&bitmapHero->cape, v2(72, 182));
 
     bitmapHero = &state->textureHero[BITMAP_HERO_LEFT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_head.bmp");
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_torso.bmp");
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_cape.bmp");
-    bitmapHero->align = v2(72, 182);
+    bitmapHero->align = TopDownAlign(&bitmapHero->cape, v2(72, 182));
 
     bitmapHero = &state->textureHero[BITMAP_HERO_RIGHT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_head.bmp");
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_torso.bmp");
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_cape.bmp");
-    bitmapHero->align = v2(72, 182);
+    bitmapHero->align = TopDownAlign(&bitmapHero->cape, v2(72, 182));
 
     /* use entity with 0 index as null */
     StoredEntityAdd(state, ENTITY_TYPE_INVALID, 0, 0);
@@ -1228,13 +1240,16 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       }
 
       /* render */
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, v2(72.0f, 182.0f), 1.0f);
-      Bitmap(renderGroup, &state->textureSword, v2(0.0f, 0.0f), 0.0f, v2(29.0f, 10.0f));
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f,
+                      TopDownAlign(&state->textureShadow, v2(72.0f, 182.0f)), 1.0f);
+      Bitmap(renderGroup, &state->textureSword, v2(0.0f, 0.0f), 0.0f,
+             TopDownAlign(&state->textureSword, v2(29.0f, 10.0f)));
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      Bitmap(renderGroup, &state->textureTree, v2(0.0f, 0.0f), 0.0f, v2(40.0f, 80.0f));
+      struct v2 align = TopDownAlign(&state->textureTree, v2(40.0f, 80.0f));
+      Bitmap(renderGroup, &state->textureTree, v2(0.0f, 0.0f), 0.0f, align);
 #else
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {

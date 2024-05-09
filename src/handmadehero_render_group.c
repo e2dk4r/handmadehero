@@ -44,18 +44,6 @@ PushClearEntry(struct render_group *renderGroup, struct v4 color)
   entry->color = color;
 }
 
-internal inline struct v2
-v2_screen_coordinates(struct v2 a)
-{
-  return v2(a.x, -a.y);
-}
-
-internal inline struct v3
-v3_screen_coordinates(struct v3 a)
-{
-  return v3(a.x, -a.y, a.z);
-}
-
 internal inline void
 PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
                 f32 alpha, f32 z)
@@ -64,7 +52,7 @@ PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 off
   entry->bitmap = bitmap;
   entry->align = align;
   entry->basis.basis = group->defaultBasis;
-  entry->basis.offset = v2_mul(v2_screen_coordinates(offset), group->metersToPixels);
+  entry->basis.offset = v2_mul(offset, group->metersToPixels);
   entry->basis.offsetZ = offsetZ;
   entry->basis.cZ = z;
   entry->alpha = alpha;
@@ -76,7 +64,7 @@ PushRectangleEntry(struct render_group *group, struct v2 offset, f32 offsetZ, st
   struct render_group_entry_rectangle *entry =
       PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
   entry->basis.basis = group->defaultBasis;
-  entry->basis.offset = v2_mul(v2_screen_coordinates(offset), group->metersToPixels);
+  entry->basis.offset = v2_mul(offset, group->metersToPixels);
   entry->basis.offsetZ = offsetZ;
   entry->basis.cZ = 1.0f;
   entry->dim = dim;
@@ -662,17 +650,15 @@ DrawSaturation(struct bitmap *buffer, f32 level)
 internal struct v2
 GetEntityCenter(struct render_group *renderGroup, struct render_entity_basis *entityBasis, struct v2 screenCenter)
 {
+  // TODO(e2dk4r): ZHANDLING
+
   f32 metersToPixels = renderGroup->metersToPixels;
   struct v3 entityBasePosition = entityBasis->basis->position;
 
   entityBasePosition.y += entityBasis->offsetZ;
-  /* screen's coordinate system uses y values inverse,
-   * so that means going up in space means negative y values
-   */
-  entityBasePosition.y *= -1;
   v2_mul_ref(&entityBasePosition.xy, metersToPixels);
 
-  f32 entityZ = -entityBasePosition.z * metersToPixels;
+  f32 entityZ = entityBasePosition.z * metersToPixels;
 
   struct v2 entityGroundPoint = v2_add(screenCenter, entityBasePosition.xy);
   struct v2 center = v2_add(entityGroundPoint, entityBasis->offset);
