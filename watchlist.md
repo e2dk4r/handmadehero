@@ -346,7 +346,7 @@
 - [x] Handmade Hero Day 102 - Transforming Normals Properly
       https://www.youtube.com/watch?v=73u0sR4DU9E
 
-- [ ] Handmade Hero Day 103 - Card-like Normal Map Reflections
+- [x] Handmade Hero Day 103 - Card-like Normal Map Reflections
       https://www.youtube.com/watch?v=-LWk-TVfGTk
 
 - [ ] Handmade Hero Day 104 - Switching to Y-is-up Render Targets
