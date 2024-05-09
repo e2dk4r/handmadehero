@@ -349,7 +349,7 @@
 - [x] Handmade Hero Day 103 - Card-like Normal Map Reflections
       https://www.youtube.com/watch?v=-LWk-TVfGTk
 
-- [ ] Handmade Hero Day 104 - Switching to Y-is-up Render Targets
+- [x] Handmade Hero Day 104 - Switching to Y-is-up Render Targets
       https://www.youtube.com/watch?v=CfjMu8DwOnY
 
 - [ ] Handmade Hero Day 105 - Cleaning Up the Renderer API
