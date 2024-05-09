@@ -1266,6 +1266,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
   }
 
+#if 0
   // set environment maps
   struct v4 mapColors[] = {
       v4(1.0f, 0.0f, 0.0f, 1.0f),
@@ -1336,6 +1337,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     v2_add_ref(&origin, v2_add(yAxis, v2(0.0f, 6.0f)));
   }
+#endif
 
   // Saturation(renderGroup, 0.5f + 0.5f * Sin(10 * state->time));
 
