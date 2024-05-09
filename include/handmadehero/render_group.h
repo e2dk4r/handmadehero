@@ -95,27 +95,27 @@ struct render_group *
 RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, f32 metersToPixels);
 
 void
-Clear(struct render_group *group, struct v4 color);
+Clear(struct render_group *renderGroup, struct v4 color);
 
 void
-Saturation(struct render_group *group, f32 level);
+Saturation(struct render_group *renderGroup, f32 level);
 
 void
-Bitmap(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align);
+Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align);
 
 void
-BitmapWithAlpha(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
+BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
                 f32 alpha);
 
 void
-BitmapWithAlphaAndZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
-                    f32 alpha, f32 z);
+BitmapWithAlphaAndZ(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ,
+                    struct v2 align, f32 alpha, f32 z);
 
 void
-Rect(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
+Rect(struct render_group *renderGroup, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
 
 void
-RectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
+RectOutline(struct render_group *renderGroup, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
 
 void
 DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color);
@@ -124,7 +124,7 @@ void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget);
 
 struct render_group_entry_coordinate_system *
-CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
+CoordinateSystem(struct render_group *renderGroup, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                  struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
                  struct environment_map *middle, struct environment_map *bottom);
 

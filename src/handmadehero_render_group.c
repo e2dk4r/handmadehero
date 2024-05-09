@@ -4,43 +4,43 @@
 struct render_group *
 RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, f32 metersToPixels)
 {
-  struct render_group *group = MemoryArenaPush(arena, sizeof(*group));
+  struct render_group *renderGroup = MemoryArenaPush(arena, sizeof(*renderGroup));
 
-  group->defaultBasis = MemoryArenaPush(arena, sizeof(*group->defaultBasis));
-  group->defaultBasis->position = v3(0.0f, 0.0f, 0.0f);
+  renderGroup->defaultBasis = MemoryArenaPush(arena, sizeof(*renderGroup->defaultBasis));
+  renderGroup->defaultBasis->position = v3(0.0f, 0.0f, 0.0f);
 
-  group->metersToPixels = metersToPixels;
+  renderGroup->metersToPixels = metersToPixels;
 
-  group->pushBufferSize = 0;
-  group->pushBufferTotal = pushBufferTotal;
-  group->pushBufferBase = MemoryArenaPush(arena, group->pushBufferTotal);
+  renderGroup->pushBufferSize = 0;
+  renderGroup->pushBufferTotal = pushBufferTotal;
+  renderGroup->pushBufferBase = MemoryArenaPush(arena, renderGroup->pushBufferTotal);
 
-  return group;
+  return renderGroup;
 }
 
 internal inline void *
-PushRenderEntry(struct render_group *group, u32 size, enum render_group_entry_type type)
+PushRenderEntry(struct render_group *renderGroup, u32 size, enum render_group_entry_type type)
 {
   void *data = 0;
   struct render_group_entry *header;
 
   size += sizeof(*header);
 
-  assert(group->pushBufferSize + size <= group->pushBufferTotal);
+  assert(renderGroup->pushBufferSize + size <= renderGroup->pushBufferTotal);
 
-  header = group->pushBufferBase + group->pushBufferSize;
+  header = renderGroup->pushBufferBase + renderGroup->pushBufferSize;
   header->type = type;
   data = (u8 *)header + sizeof(*header);
 
-  group->pushBufferSize += size;
+  renderGroup->pushBufferSize += size;
 
   return data;
 }
 
 internal inline void
-PushClearEntry(struct render_group *group, struct v4 color)
+PushClearEntry(struct render_group *renderGroup, struct v4 color)
 {
-  struct render_group_entry_clear *entry = PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_CLEAR);
+  struct render_group_entry_clear *entry = PushRenderEntry(renderGroup, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_CLEAR);
   entry->color = color;
 }
 
@@ -103,49 +103,49 @@ CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, 
 }
 
 void
-Clear(struct render_group *group, struct v4 color)
+Clear(struct render_group *renderGroup, struct v4 color)
 {
-  PushClearEntry(group, color);
+  PushClearEntry(renderGroup, color);
 }
 
 inline void
-Bitmap(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align)
+Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align)
 {
-  PushBitmapEntry(group, bitmap, offset, offsetZ, align, 1.0f, 1.0f);
+  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, align, 1.0f, 1.0f);
 }
 
 inline void
-BitmapWithAlpha(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
+BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
                 f32 alpha)
 {
-  PushBitmapEntry(group, bitmap, offset, offsetZ, align, alpha, 1.0f);
+  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, align, alpha, 1.0f);
 }
 
 inline void
-BitmapWithAlphaAndZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
-                    f32 alpha, f32 z)
+BitmapWithAlphaAndZ(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ,
+                    struct v2 align, f32 alpha, f32 z)
 {
-  PushBitmapEntry(group, bitmap, offset, offsetZ, align, alpha, z);
+  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, align, alpha, z);
 }
 
 inline void
-Rect(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
+Rect(struct render_group *renderGroup, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
 {
-  PushRectangleEntry(group, offset, offsetZ, dim, color);
+  PushRectangleEntry(renderGroup, offset, offsetZ, dim, color);
 }
 
 inline void
-RectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
+RectOutline(struct render_group *renderGroup, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
 {
   f32 thickness = 0.1f;
 
   // NOTE(e2dk4r): top and bottom
-  PushRectangleEntry(group, v2_sub(offset, v2(0.0f, 0.5f * dim.y)), offsetZ, v2(dim.x, thickness), color);
-  PushRectangleEntry(group, v2_add(offset, v2(0.0f, 0.5f * dim.y)), offsetZ, v2(dim.x, thickness), color);
+  PushRectangleEntry(renderGroup, v2_sub(offset, v2(0.0f, 0.5f * dim.y)), offsetZ, v2(dim.x, thickness), color);
+  PushRectangleEntry(renderGroup, v2_add(offset, v2(0.0f, 0.5f * dim.y)), offsetZ, v2(dim.x, thickness), color);
 
   // NOTE(e2dk4r): left right
-  PushRectangleEntry(group, v2_sub(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(thickness, dim.y), color);
-  PushRectangleEntry(group, v2_add(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(thickness, dim.y), color);
+  PushRectangleEntry(renderGroup, v2_sub(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(thickness, dim.y), color);
+  PushRectangleEntry(renderGroup, v2_add(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(thickness, dim.y), color);
 }
 
 inline void
@@ -198,10 +198,10 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
 }
 
 void
-Saturation(struct render_group *group, f32 level)
+Saturation(struct render_group *renderGroup, f32 level)
 {
   struct render_group_entry_saturation *entry =
-      PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_SATURATION);
+      PushRenderEntry(renderGroup, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_SATURATION);
   entry->level = level;
 }
 

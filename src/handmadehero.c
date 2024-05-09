@@ -389,7 +389,7 @@ SpaceAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 }
 
 internal inline void
-HitPoints(struct render_group *group, struct entity *entity)
+HitPoints(struct render_group *renderGroup, struct entity *entity)
 {
   if (entity->hitPointMax == 0)
     return;
@@ -407,7 +407,7 @@ HitPoints(struct render_group *group, struct entity *entity)
       color = v4(0.2f, 0.2f, 0.2f, 1.0f);
     }
 
-    Rect(group, hitPosition, 0.0f, healthDim, color);
+    Rect(renderGroup, hitPosition, 0.0f, healthDim, color);
 
     v2_add_ref(&hitPosition, dHitPosition);
   }
