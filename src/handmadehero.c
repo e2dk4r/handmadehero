@@ -457,7 +457,7 @@ MakeSphereDiffuseMap(struct bitmap *bitmap)
         alpha = 1.0f;
       }
 
-      struct v3 baseColor = v3(1.0f, 1.0f, 1.0f);
+      struct v3 baseColor = v3(0.0f, 0.0f, 0.0f);
       alpha *= 255.0f;
       struct v4 color = v4(alpha * baseColor.r, alpha * baseColor.g, alpha * baseColor.b, alpha);
 
@@ -904,9 +904,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     state->testDiffuse = MakeEmptyBitmap(&transientState->transientArena, 256, 256);
-    // MakeSphereDiffuseMap(&state->testDiffuse);
-    DrawRectangle(&state->testDiffuse, v2(0.0f, 0.0f), v2u(state->testDiffuse.width, state->testDiffuse.height),
-                  v4(0.5f, 0.5f, 0.5f, 1.0f));
+    MakeSphereDiffuseMap(&state->testDiffuse);
+    // DrawRectangle(&state->testDiffuse, v2(0.0f, 0.0f), v2u(state->testDiffuse.width, state->testDiffuse.height),
+    //               v4(0.5f, 0.5f, 0.5f, 1.0f));
     state->testNormal =
         MakeEmptyBitmap(&transientState->transientArena, state->testDiffuse.width, state->testDiffuse.height);
     MakeSphereNormalMap(&state->testNormal, 0.0f);
@@ -925,8 +925,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         height >>= 1;
       }
     }
-    transientState->envMaps[ENV_MAP_BOTTOM].z = 0.0f;
-    transientState->envMaps[ENV_MAP_MIDDLE].z = 0.5f;
+    transientState->envMaps[ENV_MAP_BOTTOM].z = -2.0f;
+    transientState->envMaps[ENV_MAP_MIDDLE].z = 0.0f;
     transientState->envMaps[ENV_MAP_TOP].z = 2.0f;
 
     transientState->initialized = 1;
@@ -1303,7 +1303,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   struct v2 origin = screenCenter;
 #if 1
-  struct v2 xAxis = v2_mul(v2(Cos(angle), Sin(angle)), 100.0f);
+  struct v2 xAxis = v2_mul(v2(Cos(10.0f * angle), Sin(10.0f * angle)), 100.0f);
   struct v2 yAxis = v2_perp(xAxis);
 #else
   struct v2 xAxis = v2(100.0f, 0.0f);
