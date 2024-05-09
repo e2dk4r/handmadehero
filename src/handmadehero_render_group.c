@@ -556,7 +556,7 @@ DrawRectangleOutline(struct bitmap *buffer, struct v2 min, struct v2 max, struct
 }
 
 internal inline void
-DrawBitmapWithAlpha(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v2 align, f32 cAlpha)
+DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v2 align, f32 cAlpha)
 {
   v2_sub_ref(&pos, align);
 
@@ -625,12 +625,6 @@ DrawBitmapWithAlpha(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos,
     dstRow += buffer->stride;
     srcRow += bitmap->stride;
   }
-}
-
-internal inline void
-DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v2 align)
-{
-  DrawBitmapWithAlpha(buffer, bitmap, pos, align, 1.0f);
 }
 
 internal inline void
@@ -708,7 +702,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 
       assert(entry->bitmap);
       struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
-      DrawBitmapWithAlpha(outputTarget, entry->bitmap, center, entry->align, entry->alpha);
+      DrawBitmap(outputTarget, entry->bitmap, center, entry->align, entry->alpha);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_RECTANGLE) {
