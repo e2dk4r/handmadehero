@@ -239,6 +239,13 @@ Unpack4x8(u32 *pixel)
             (f32)((*pixel >> 0x18) & 0xff));
 }
 
+internal inline void
+Pack4x8(u32 *dest, struct v4 color)
+{
+  *dest = (u32)(color.a + 0.5f) << 0x18 | (u32)(color.r + 0.5f) << 0x10 | (u32)(color.g + 0.5f) << 0x08 |
+          (u32)(color.b + 0.5f) << 0x00;
+}
+
 struct bilinear_sample {
   u32 *a;
   u32 *b;
@@ -533,8 +540,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
         blended = Linear1tosRGB255(blended);
 
-        *pixel = (u32)(blended.a + 0.5f) << 0x18 | (u32)(blended.r + 0.5f) << 0x10 | (u32)(blended.g + 0.5f) << 0x08 |
-                 (u32)(blended.b + 0.5f) << 0x00;
+        Pack4x8(pixel, blended);
       }
 
       pixel++;
@@ -615,8 +621,7 @@ DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v
       struct v4 blended = v4_add(v4_mul(d, 1.0f - texel.a), texel);
 
       blended = Linear1tosRGB255(blended);
-      *dst = (u32)(blended.a + 0.5f) << 0x18 | (u32)(blended.r + 0.5f) << 0x10 | (u32)(blended.g + 0.5f) << 0x08 |
-             (u32)(blended.b + 0.5f) << 0x00;
+      Pack4x8(dst, blended);
 
       dst++;
       src++;
@@ -645,8 +650,7 @@ DrawSaturation(struct bitmap *buffer, f32 level)
       struct v4 result = v3_to_v4(color, d.a);
 
       result = Linear1tosRGB255(result);
-      *dst = (u32)(result.a + 0.5f) << 0x18 | (u32)(result.r + 0.5f) << 0x10 | (u32)(result.g + 0.5f) << 0x08 |
-             (u32)(result.b + 0.5f) << 0x00;
+      Pack4x8(dst, result);
 
       dst++;
     }
