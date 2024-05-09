@@ -103,39 +103,39 @@ CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, 
 }
 
 void
-PushClear(struct render_group *group, struct v4 color)
+Clear(struct render_group *group, struct v4 color)
 {
   PushClearEntry(group, color);
 }
 
 inline void
-PushBitmap(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align)
+Bitmap(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align)
 {
   PushBitmapEntry(group, bitmap, offset, offsetZ, align, 1.0f, 1.0f);
 }
 
 inline void
-PushBitmapWithAlpha(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
-                    f32 alpha)
+BitmapWithAlpha(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
+                f32 alpha)
 {
   PushBitmapEntry(group, bitmap, offset, offsetZ, align, alpha, 1.0f);
 }
 
 inline void
-PushBitmapWithAlphaAndZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ,
-                        struct v2 align, f32 alpha, f32 z)
+BitmapWithAlphaAndZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
+                    f32 alpha, f32 z)
 {
   PushBitmapEntry(group, bitmap, offset, offsetZ, align, alpha, z);
 }
 
 inline void
-PushRect(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
+Rect(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
 {
   PushRectangleEntry(group, offset, offsetZ, dim, color);
 }
 
 inline void
-PushRectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
+RectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
 {
   f32 thickness = 0.1f;
 

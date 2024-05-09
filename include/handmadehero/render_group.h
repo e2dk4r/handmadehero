@@ -95,27 +95,27 @@ struct render_group *
 RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, f32 metersToPixels);
 
 void
-PushClear(struct render_group *group, struct v4 color);
+Clear(struct render_group *group, struct v4 color);
 
 void
 Saturation(struct render_group *group, f32 level);
 
 void
-PushBitmap(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align);
+Bitmap(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align);
 
 void
-PushBitmapWithAlpha(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
-                    f32 alpha);
+BitmapWithAlpha(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
+                f32 alpha);
 
 void
-PushBitmapWithAlphaAndZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ,
-                        struct v2 align, f32 alpha, f32 z);
+BitmapWithAlphaAndZ(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
+                    f32 alpha, f32 z);
 
 void
-PushRect(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
+Rect(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
 
 void
-PushRectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
+RectOutline(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
 
 void
 DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color);

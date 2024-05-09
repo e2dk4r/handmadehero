@@ -389,7 +389,7 @@ SpaceAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
 }
 
 internal inline void
-PushHitPoints(struct render_group *group, struct entity *entity)
+HitPoints(struct render_group *group, struct entity *entity)
 {
   if (entity->hitPointMax == 0)
     return;
@@ -407,7 +407,7 @@ PushHitPoints(struct render_group *group, struct entity *entity)
       color = v4(0.2f, 0.2f, 0.2f, 1.0f);
     }
 
-    PushRect(group, hitPosition, 0.0f, healthDim, color);
+    Rect(group, hitPosition, 0.0f, healthDim, color);
 
     v2_add_ref(&hitPosition, dHitPosition);
   }
@@ -592,7 +592,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 {
   struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
   struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 1 * MEGABYTES, 1.0f);
-  PushClear(renderGroup, v4(1.0f, 1.0f, 0.0f, 1.0f));
+  Clear(renderGroup, v4(1.0f, 1.0f, 0.0f, 1.0f));
 
   struct bitmap *buffer = &groundBuffer->bitmap;
   f32 width = (f32)buffer->width;
@@ -622,7 +622,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
         struct v2 offset = v2_add(center, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
 
-        PushBitmap(renderGroup, stamp, offset, 0.0f, stampCenter);
+        Bitmap(renderGroup, stamp, offset, 0.0f, stampCenter);
       }
     }
   }
@@ -644,7 +644,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
         struct v2 offset = v2_add(center, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
 
-        PushBitmap(renderGroup, tuft, offset, 0.0f, tuftCenter);
+        Bitmap(renderGroup, tuft, offset, 0.0f, tuftCenter);
       }
     }
   }
@@ -1016,10 +1016,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
 /* drawing background */
 #if 0
-  PushBitmap(renderGroup, &state->textureBackground, v2(0.0f, 0.0f), 0.0f, v2(0, 0));
+  Bitmap(renderGroup, &state->textureBackground, v2(0.0f, 0.0f), 0.0f, v2(0, 0));
 #else
   struct v4 backgroundColor = v4(0.25f, 0.25f, 0.25f, 1.0f);
-  PushClear(renderGroup, backgroundColor);
+  Clear(renderGroup, backgroundColor);
 #endif
 
   struct v2 screenDim = {
@@ -1040,8 +1040,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     struct bitmap *bitmap = &groundBuffer->bitmap;
     struct v3 positionRelativeToCamera = WorldPositionSub(world, &groundBuffer->position, &state->cameraPosition);
-    PushBitmap(renderGroup, bitmap, positionRelativeToCamera.xy, positionRelativeToCamera.z,
-               v2_mul(v2u(bitmap->width, bitmap->height), 0.5f));
+    Bitmap(renderGroup, bitmap, positionRelativeToCamera.xy, positionRelativeToCamera.z,
+           v2_mul(v2u(bitmap->width, bitmap->height), 0.5f));
   }
 
   /* fill ground buffer chunks */
@@ -1083,7 +1083,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           }
 
           struct v3 rel = WorldPositionSub(world, &chunkCenterPosition, &state->cameraPosition);
-          PushRectOutline(renderGroup, rel.xy, 0.0f, world->chunkDimInMeters.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
+          RectOutline(renderGroup, rel.xy, 0.0f, world->chunkDimInMeters.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
         }
       }
     }
@@ -1151,13 +1151,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       if (shadowAlpha < 0.0f)
         shadowAlpha = 0.0f;
 
-      PushHitPoints(renderGroup, entity);
+      HitPoints(renderGroup, entity);
 
-      PushBitmapWithAlphaAndZ(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, bitmap->align, shadowAlpha,
-                              0.0f);
-      PushBitmap(renderGroup, &bitmap->torso, v2(0.0f, 0.0f), 0.0f, bitmap->align);
-      PushBitmap(renderGroup, &bitmap->cape, v2(0.0f, 0.0f), 0.0f, bitmap->align);
-      PushBitmap(renderGroup, &bitmap->head, v2(0.0f, 0.0f), 0.0f, bitmap->align);
+      BitmapWithAlphaAndZ(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, bitmap->align, shadowAlpha, 0.0f);
+      Bitmap(renderGroup, &bitmap->torso, v2(0.0f, 0.0f), 0.0f, bitmap->align);
+      Bitmap(renderGroup, &bitmap->cape, v2(0.0f, 0.0f), 0.0f, bitmap->align);
+      Bitmap(renderGroup, &bitmap->head, v2(0.0f, 0.0f), 0.0f, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
@@ -1201,8 +1200,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 bobSin = Sin(2.0f * entity->tBob);
       f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      PushBitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, bitmap->align, shadowAlpha);
-      PushBitmap(renderGroup, &bitmap->head, v2(0.0f, 0.0f), 0.25f * bobSin, bitmap->align);
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, bitmap->align, shadowAlpha);
+      Bitmap(renderGroup, &bitmap->head, v2(0.0f, 0.0f), 0.25f * bobSin, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_MONSTER) {
@@ -1210,9 +1209,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
       f32 alpha = 1.0f;
 
-      PushHitPoints(renderGroup, entity);
-      PushBitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, bitmap->align, alpha);
-      PushBitmap(renderGroup, &bitmap->torso, v2(0.0f, 0.0f), 0.0f, bitmap->align);
+      HitPoints(renderGroup, entity);
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, bitmap->align, alpha);
+      Bitmap(renderGroup, &bitmap->torso, v2(0.0f, 0.0f), 0.0f, bitmap->align);
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
@@ -1229,26 +1228,26 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       }
 
       /* render */
-      PushBitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, v2(72.0f, 182.0f), 1.0f);
-      PushBitmap(renderGroup, &state->textureSword, v2(0.0f, 0.0f), 0.0f, v2(29.0f, 10.0f));
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, v2(72.0f, 182.0f), 1.0f);
+      Bitmap(renderGroup, &state->textureSword, v2(0.0f, 0.0f), 0.0f, v2(29.0f, 10.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      PushBitmap(renderGroup, &state->textureTree, v2(0.0f, 0.0f), 0.0f, v2(40.0f, 80.0f));
+      Bitmap(renderGroup, &state->textureTree, v2(0.0f, 0.0f), 0.0f, v2(40.0f, 80.0f));
 #else
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {
         struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
 
-        PushRect(renderGroup, v2(0.0f, 0.0f), 0.0f, entityVolume->dim.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
+        Rect(renderGroup, v2(0.0f, 0.0f), 0.0f, entityVolume->dim.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
       }
 #endif
     }
 
     else if (entity->type & ENTITY_TYPE_STAIRWELL) {
-      PushRect(renderGroup, v2(0.0f, 0.0f), 0.0f, entity->walkableDim.xy, v4(1.0f, 0.5f, 0.0f, 1.0f));
-      PushRect(renderGroup, v2(0.0f, 0.0f), entity->walkableHeight, entity->walkableDim.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
+      Rect(renderGroup, v2(0.0f, 0.0f), 0.0f, entity->walkableDim.xy, v4(1.0f, 0.5f, 0.0f, 1.0f));
+      Rect(renderGroup, v2(0.0f, 0.0f), entity->walkableHeight, entity->walkableDim.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_SPACE) {
@@ -1256,7 +1255,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {
         struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
-        PushRectOutline(renderGroup, entityVolume->offset.xy, 0.0f, entityVolume->dim.xy, v4(0.0f, 0.5f, 1.0f, 1.0f));
+        RectOutline(renderGroup, entityVolume->offset.xy, 0.0f, entityVolume->dim.xy, v4(0.0f, 0.5f, 1.0f, 1.0f));
       }
 #endif
     }
