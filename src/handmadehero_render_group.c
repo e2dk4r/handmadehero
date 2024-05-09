@@ -599,14 +599,12 @@ DrawBitmapWithAlpha(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos,
 
     for (i32 x = minX; x < maxX; x++) {
       // source channels
-      struct v4 texel = v4((f32)((*src >> 0x10) & 0xff), (f32)((*src >> 0x08) & 0xff), (f32)((*src >> 0x00) & 0xff),
-                           (f32)((*src >> 0x18) & 0xff));
+      struct v4 texel = Unpack4x8(src);
       texel = sRGB255toLinear1(texel);
       v3_mul_ref(&texel.rgb, cAlpha);
 
       // destination channels
-      struct v4 d = v4((f32)((*dst >> 0x10) & 0xff), (f32)((*dst >> 0x08) & 0xff), (f32)((*dst >> 0x00) & 0xff),
-                       (f32)((*dst >> 0x18) & 0xff));
+      struct v4 d = Unpack4x8(dst);
       d = sRGB255toLinear1(d);
 
       /*
