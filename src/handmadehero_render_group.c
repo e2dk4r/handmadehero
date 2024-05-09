@@ -583,7 +583,6 @@ DrawBitmapWithAlpha(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos,
   if (maxY > (i32)buffer->height)
     maxY = (i32)buffer->height;
 
-  /* bitmap file pixels goes bottom to up */
   u8 *srcRow = (u8 *)bitmap->memory
                /* last row offset */
                + srcOffsetY * bitmap->stride
