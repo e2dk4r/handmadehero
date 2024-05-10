@@ -1353,8 +1353,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 #endif
 
-  // Saturation(renderGroup, 0.5f + 0.5f * Sin(10 * state->time));
-
   DrawRenderGroup(renderGroup, drawBuffer);
 
   EndSimRegion(simRegion, state);

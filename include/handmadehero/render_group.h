@@ -51,7 +51,6 @@ enum render_group_entry_type {
   RENDER_GROUP_ENTRY_TYPE_RECTANGLE = (1 << 0),
   RENDER_GROUP_ENTRY_TYPE_BITMAP = (1 << 1),
   RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM = (1 << 2),
-  RENDER_GROUP_ENTRY_TYPE_SATURATION = (1 << 3),
 };
 
 // render_group_entry is tagged union
@@ -89,10 +88,6 @@ struct render_group_entry_coordinate_system {
   struct environment_map *bottom;
 };
 
-struct render_group_entry_saturation {
-  f32 level;
-};
-
 struct render_group {
   struct render_basis *defaultBasis;
   f32 metersToPixels;
@@ -113,9 +108,6 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, f32 metersToPixels)
 
 void
 Clear(struct render_group *renderGroup, struct v4 color);
-
-void
-Saturation(struct render_group *renderGroup, f32 level);
 
 void
 Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align);

@@ -185,14 +185,6 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
   }
 }
 
-void
-Saturation(struct render_group *renderGroup, f32 level)
-{
-  struct render_group_entry_saturation *entry =
-      PushRenderEntry(renderGroup, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_SATURATION);
-  entry->level = level;
-}
-
 inline struct v4
 sRGB255toLinear1(struct v4 color)
 {
@@ -620,33 +612,6 @@ DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v
   }
 }
 
-internal inline void
-DrawSaturation(struct bitmap *buffer, f32 level)
-{
-  u8 *dstRow = (u8 *)buffer->memory;
-  for (u32 y = 0; y < buffer->height; y++) {
-    u32 *dst = (u32 *)dstRow;
-    for (u32 x = 0; x < buffer->width; x++) {
-      struct v4 d = Unpack4x8(dst);
-      d = sRGB255toLinear1(d);
-
-      f32 avg = (1.0f / 3.0f) * (d.r + d.g + d.b);
-      struct v3 vAvg = v3(avg, avg, avg);
-      struct v3 delta = v3_sub(d.rgb, vAvg);
-
-      struct v3 color = v3_add(vAvg, v3_mul(delta, level));
-      struct v4 result = v3_to_v4(color, d.a);
-
-      result = Linear1tosRGB255(result);
-      Pack4x8(dst, result);
-
-      dst++;
-    }
-
-    dstRow += buffer->stride;
-  }
-}
-
 internal struct v2
 GetEntityCenter(struct render_group *renderGroup, struct render_entity_basis *entityBasis, struct v2 screenCenter)
 {
@@ -725,13 +690,6 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 
       p = v2_add(entry->origin, v2_add(entry->xAxis, entry->yAxis));
       DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), color);
-    }
-
-    else if (header->type & RENDER_GROUP_ENTRY_TYPE_SATURATION) {
-      struct render_group_entry_saturation *entry = data;
-      pushBufferIndex += sizeof(*entry);
-
-      DrawSaturation(outputTarget, entry->level);
     }
 
     // typelessEntry->type is invalid
