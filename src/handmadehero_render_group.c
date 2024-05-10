@@ -285,7 +285,7 @@ SampleEnvironmentMap(struct environment_map *map, struct v2 screenSpaceUV, struc
   assert(lodIndex < ARRAY_COUNT(map->lod));
 
   // NOTE(e2dk4r): compute the distance to the map
-  f32 uvPerMeter = 0.01f;
+  f32 uvPerMeter = 0.05f;
   f32 c = uvPerMeter * distanceFromMapInZ / sampleDirection.y;
   // TODO(e2dk4r): make sure we know what direction Z should go in Y
   struct v2 offset = v2_mul(v2(sampleDirection.x, sampleDirection.z), c);
