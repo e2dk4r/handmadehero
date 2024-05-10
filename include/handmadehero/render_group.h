@@ -16,6 +16,8 @@
  *    and the renderer actually understands the slices (potentially).
  *    // TODO(e2dk4r): ZHANDLING
  *
+ * 5. All color values specified to the renderer as v4, and they are NOT
+ *    premultiplied with alpha.
  */
 
 #include "math.h"
