@@ -45,7 +45,7 @@ PushClearEntry(struct render_group *renderGroup, struct v4 color)
 }
 
 internal inline void
-PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha, f32 z)
+PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha)
 {
   struct render_group_entry_bitmap *entry = PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_BITMAP);
   entry->bitmap = bitmap;
@@ -54,7 +54,6 @@ PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 off
   struct v2 alignPixel = v2u(bitmap->alignX, bitmap->alignY);
   entry->basis.offset = v2_sub(v2_mul(offset, group->metersToPixels), alignPixel);
   entry->basis.offsetZ = offsetZ;
-  entry->basis.cZ = z;
   entry->alpha = alpha;
 }
 
@@ -66,7 +65,6 @@ PushRectangleEntry(struct render_group *group, struct v2 offset, f32 offsetZ, st
   entry->basis.basis = group->defaultBasis;
   entry->basis.offset = v2_mul(offset, group->metersToPixels);
   entry->basis.offsetZ = offsetZ;
-  entry->basis.cZ = 1.0f;
   entry->dim = dim;
   entry->color = color;
 }
@@ -99,20 +97,13 @@ Clear(struct render_group *renderGroup, struct v4 color)
 inline void
 Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, 1.0f, 1.0f);
+  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, 1.0f);
 }
 
 inline void
 BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, alpha, 1.0f);
-}
-
-inline void
-BitmapWithAlphaAndZ(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha,
-                    f32 z)
-{
-  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, alpha, z);
+  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, alpha);
 }
 
 inline void
@@ -624,7 +615,7 @@ GetEntityCenter(struct render_group *renderGroup, struct render_entity_basis *en
 
   struct v2 entityGroundPoint = v2_add(screenCenter, entityBasePosition.xy);
   struct v2 center = v2_add(entityGroundPoint, entityBasis->offset);
-  center.y += entityBasis->cZ * entityZ;
+  center.y += entityZ;
 
   return center;
 }

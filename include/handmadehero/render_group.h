@@ -48,7 +48,6 @@ struct render_entity_basis {
   struct render_basis *basis;
   struct v2 offset;
   f32 offsetZ;
-  f32 cZ;
 };
 
 enum render_group_entry_type {
@@ -118,10 +117,6 @@ Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset
 
 void
 BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha);
-
-void
-BitmapWithAlphaAndZ(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha,
-                    f32 z);
 
 void
 Rect(struct render_group *renderGroup, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);

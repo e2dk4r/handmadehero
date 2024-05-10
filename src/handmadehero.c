@@ -1167,7 +1167,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       HitPoints(renderGroup, entity);
 
-      BitmapWithAlphaAndZ(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, shadowAlpha, 0.0f);
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, shadowAlpha);
       Bitmap(renderGroup, &bitmap->torso, v2(0.0f, 0.0f), 0.0f);
       Bitmap(renderGroup, &bitmap->cape, v2(0.0f, 0.0f), 0.0f);
       Bitmap(renderGroup, &bitmap->head, v2(0.0f, 0.0f), 0.0f);
