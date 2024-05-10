@@ -51,9 +51,9 @@ PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v3 off
   entry->bitmap = bitmap;
   entry->basis.basis = group->defaultBasis;
 
+  entry->basis.offset = v3_mul(offset, group->metersToPixels);
   struct v2 alignPixel = v2u(bitmap->alignX, bitmap->alignY);
-  entry->basis.offset.xy = v2_sub(v2_mul(offset.xy, group->metersToPixels), alignPixel);
-  entry->basis.offset.z = offset.z;
+  v2_sub_ref(&entry->basis.offset.xy, alignPixel);
   entry->alpha = alpha;
 }
 
@@ -63,8 +63,7 @@ PushRectangleEntry(struct render_group *group, struct v3 offset, struct v2 dim, 
   struct render_group_entry_rectangle *entry =
       PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
   entry->basis.basis = group->defaultBasis;
-  entry->basis.offset.xy = v2_mul(offset.xy, group->metersToPixels);
-  entry->basis.offset.z = offset.z;
+  entry->basis.offset = v3_mul(offset, group->metersToPixels);
   entry->dim = dim;
   entry->color = color;
 }
