@@ -45,14 +45,14 @@ PushClearEntry(struct render_group *renderGroup, struct v4 color)
 }
 
 internal inline void
-PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
-                f32 alpha, f32 z)
+PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha, f32 z)
 {
   struct render_group_entry_bitmap *entry = PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_BITMAP);
   entry->bitmap = bitmap;
-  entry->align = align;
   entry->basis.basis = group->defaultBasis;
-  entry->basis.offset = v2_mul(offset, group->metersToPixels);
+
+  struct v2 alignPixel = v2u(bitmap->alignX, bitmap->alignY);
+  entry->basis.offset = v2_sub(v2_mul(offset, group->metersToPixels), alignPixel);
   entry->basis.offsetZ = offsetZ;
   entry->basis.cZ = z;
   entry->alpha = alpha;
@@ -97,23 +97,22 @@ Clear(struct render_group *renderGroup, struct v4 color)
 }
 
 inline void
-Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align)
+Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, align, 1.0f, 1.0f);
+  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, 1.0f, 1.0f);
 }
 
 inline void
-BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
-                f32 alpha)
+BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, align, alpha, 1.0f);
+  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, alpha, 1.0f);
 }
 
 inline void
-BitmapWithAlphaAndZ(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ,
-                    struct v2 align, f32 alpha, f32 z)
+BitmapWithAlphaAndZ(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha,
+                    f32 z)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, align, alpha, z);
+  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, alpha, z);
 }
 
 inline void
@@ -542,10 +541,8 @@ DrawRectangleOutline(struct bitmap *buffer, struct v2 min, struct v2 max, struct
 }
 
 internal inline void
-DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, struct v2 align, f32 cAlpha)
+DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, f32 cAlpha)
 {
-  v2_sub_ref(&pos, align);
-
   i32 minX = roundf32toi32(pos.x);
   i32 minY = roundf32toi32(pos.y);
   i32 maxX = roundf32toi32(pos.x + (f32)bitmap->width);
@@ -657,7 +654,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 
       assert(entry->bitmap);
       struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
-      DrawBitmap(outputTarget, entry->bitmap, center, entry->align, entry->alpha);
+      DrawBitmap(outputTarget, entry->bitmap, center, entry->alpha);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_RECTANGLE) {

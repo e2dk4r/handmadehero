@@ -26,6 +26,9 @@
 
 #define BITMAP_BYTES_PER_PIXEL 4
 struct bitmap {
+  u32 alignX;
+  u32 alignY;
+
   u32 width;
   u32 height;
   i32 stride;
@@ -66,7 +69,6 @@ struct render_group_entry_clear {
 
 struct render_group_entry_bitmap {
   struct bitmap *bitmap;
-  struct v2 align;
   struct render_entity_basis basis;
   f32 alpha;
 };
@@ -112,15 +114,14 @@ void
 Clear(struct render_group *renderGroup, struct v4 color);
 
 void
-Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align);
+Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ);
 
 void
-BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, struct v2 align,
-                f32 alpha);
+BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha);
 
 void
-BitmapWithAlphaAndZ(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ,
-                    struct v2 align, f32 alpha, f32 z);
+BitmapWithAlphaAndZ(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha,
+                    f32 z);
 
 void
 Rect(struct render_group *renderGroup, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
