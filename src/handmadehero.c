@@ -1269,8 +1269,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {
         struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
-        RectOutline(renderGroup, v2_to_v3(entityVolume->offset.xy, 0.0f), entityVolume->dim.xy,
-                    v4(0.0f, 0.5f, 1.0f, 1.0f));
+        RectOutline(renderGroup, v3_sub(entityVolume->offset, v3(0.0f, 0.0f, entityVolume->dim.z * 0.5f)),
+                    entityVolume->dim.xy, v4(0.0f, 0.5f, 1.0f, 1.0f));
       }
 #endif
     }
