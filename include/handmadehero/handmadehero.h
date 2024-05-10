@@ -8,8 +8,6 @@
 #include "world.h"
 
 struct bitmap_hero {
-  struct v2 align;
-
   struct bitmap head;
   struct bitmap torso;
   struct bitmap cape;
