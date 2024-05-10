@@ -605,16 +605,11 @@ GetEntityCenter(struct render_group *renderGroup, struct render_entity_basis *en
   // TODO(e2dk4r): ZHANDLING
 
   f32 metersToPixels = renderGroup->metersToPixels;
-  struct v3 entityBasePosition = entityBasis->basis->position;
-
-  entityBasePosition.y += entityBasis->offset.z;
-  v2_mul_ref(&entityBasePosition.xy, metersToPixels);
-
-  f32 entityZ = entityBasePosition.z * metersToPixels;
-
+  struct v3 entityBasePosition = v3_mul(entityBasis->basis->position, metersToPixels);
+  f32 totalZ = entityBasePosition.z + entityBasis->offset.z;
   struct v2 entityGroundPoint = v2_add(screenCenter, entityBasePosition.xy);
   struct v2 center = v2_add(entityGroundPoint, entityBasis->offset.xy);
-  center.y += entityZ;
+  center.y += totalZ;
 
   return center;
 }
