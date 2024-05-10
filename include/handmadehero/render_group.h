@@ -46,8 +46,7 @@ struct render_basis {
 
 struct render_entity_basis {
   struct render_basis *basis;
-  struct v2 offset;
-  f32 offsetZ;
+  struct v3 offset;
 };
 
 enum render_group_entry_type {
@@ -113,16 +112,16 @@ void
 Clear(struct render_group *renderGroup, struct v4 color);
 
 void
-Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ);
+Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset);
 
 void
-BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha);
+BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 alpha);
 
 void
-Rect(struct render_group *renderGroup, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
+Rect(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);
 
 void
-RectOutline(struct render_group *renderGroup, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color);
+RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);
 
 void
 DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color);

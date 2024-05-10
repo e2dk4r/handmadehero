@@ -45,26 +45,26 @@ PushClearEntry(struct render_group *renderGroup, struct v4 color)
 }
 
 internal inline void
-PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha)
+PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v3 offset, f32 alpha)
 {
   struct render_group_entry_bitmap *entry = PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_BITMAP);
   entry->bitmap = bitmap;
   entry->basis.basis = group->defaultBasis;
 
   struct v2 alignPixel = v2u(bitmap->alignX, bitmap->alignY);
-  entry->basis.offset = v2_sub(v2_mul(offset, group->metersToPixels), alignPixel);
-  entry->basis.offsetZ = offsetZ;
+  entry->basis.offset.xy = v2_sub(v2_mul(offset.xy, group->metersToPixels), alignPixel);
+  entry->basis.offset.z = offset.z;
   entry->alpha = alpha;
 }
 
 internal inline void
-PushRectangleEntry(struct render_group *group, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
+PushRectangleEntry(struct render_group *group, struct v3 offset, struct v2 dim, struct v4 color)
 {
   struct render_group_entry_rectangle *entry =
       PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
   entry->basis.basis = group->defaultBasis;
-  entry->basis.offset = v2_mul(offset, group->metersToPixels);
-  entry->basis.offsetZ = offsetZ;
+  entry->basis.offset.xy = v2_mul(offset.xy, group->metersToPixels);
+  entry->basis.offset.z = offset.z;
   entry->dim = dim;
   entry->color = color;
 }
@@ -95,35 +95,35 @@ Clear(struct render_group *renderGroup, struct v4 color)
 }
 
 inline void
-Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ)
+Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, 1.0f);
+  PushBitmapEntry(renderGroup, bitmap, offset, 1.0f);
 }
 
 inline void
-BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v2 offset, f32 offsetZ, f32 alpha)
+BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 alpha)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, offsetZ, alpha);
+  PushBitmapEntry(renderGroup, bitmap, offset, alpha);
 }
 
 inline void
-Rect(struct render_group *renderGroup, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
+Rect(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color)
 {
-  PushRectangleEntry(renderGroup, offset, offsetZ, dim, color);
+  PushRectangleEntry(renderGroup, offset, dim, color);
 }
 
 inline void
-RectOutline(struct render_group *renderGroup, struct v2 offset, f32 offsetZ, struct v2 dim, struct v4 color)
+RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color)
 {
   f32 thickness = 0.1f;
 
   // NOTE(e2dk4r): top and bottom
-  PushRectangleEntry(renderGroup, v2_sub(offset, v2(0.0f, 0.5f * dim.y)), offsetZ, v2(dim.x, thickness), color);
-  PushRectangleEntry(renderGroup, v2_add(offset, v2(0.0f, 0.5f * dim.y)), offsetZ, v2(dim.x, thickness), color);
+  PushRectangleEntry(renderGroup, v3_sub(offset, v3(0.0f, 0.5f * dim.y, 0.0f)), v2(dim.x, thickness), color);
+  PushRectangleEntry(renderGroup, v3_add(offset, v3(0.0f, 0.5f * dim.y, 0.0f)), v2(dim.x, thickness), color);
 
   // NOTE(e2dk4r): left right
-  PushRectangleEntry(renderGroup, v2_sub(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(thickness, dim.y), color);
-  PushRectangleEntry(renderGroup, v2_add(offset, v2(0.5f * dim.x, 0.0f)), offsetZ, v2(thickness, dim.y), color);
+  PushRectangleEntry(renderGroup, v3_sub(offset, v3(0.5f * dim.x, 0.0f, 0.0f)), v2(thickness, dim.y), color);
+  PushRectangleEntry(renderGroup, v3_add(offset, v3(0.5f * dim.x, 0.0f, 0.0f)), v2(thickness, dim.y), color);
 }
 
 inline void
@@ -608,13 +608,13 @@ GetEntityCenter(struct render_group *renderGroup, struct render_entity_basis *en
   f32 metersToPixels = renderGroup->metersToPixels;
   struct v3 entityBasePosition = entityBasis->basis->position;
 
-  entityBasePosition.y += entityBasis->offsetZ;
+  entityBasePosition.y += entityBasis->offset.z;
   v2_mul_ref(&entityBasePosition.xy, metersToPixels);
 
   f32 entityZ = entityBasePosition.z * metersToPixels;
 
   struct v2 entityGroundPoint = v2_add(screenCenter, entityBasePosition.xy);
-  struct v2 center = v2_add(entityGroundPoint, entityBasis->offset);
+  struct v2 center = v2_add(entityGroundPoint, entityBasis->offset.xy);
   center.y += entityZ;
 
   return center;

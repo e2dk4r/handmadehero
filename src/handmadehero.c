@@ -415,7 +415,7 @@ HitPoints(struct render_group *renderGroup, struct entity *entity)
       color = v4(0.2f, 0.2f, 0.2f, 1.0f);
     }
 
-    Rect(renderGroup, hitPosition, 0.0f, healthDim, color);
+    Rect(renderGroup, v2_to_v3(hitPosition, 0.0f), healthDim, color);
 
     v2_add_ref(&hitPosition, dHitPosition);
   }
@@ -632,7 +632,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
         v2_add_ref(&offset, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
         v2_sub_ref(&offset, stampCenter);
 
-        Bitmap(renderGroup, stamp, offset, 0.0f);
+        Bitmap(renderGroup, stamp, v2_to_v3(offset, 0.0f));
       }
     }
   }
@@ -656,7 +656,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
         v2_add_ref(&offset, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
         v2_sub_ref(&offset, tuftCenter);
 
-        Bitmap(renderGroup, tuft, offset, 0.0f);
+        Bitmap(renderGroup, tuft, v2_to_v3(offset, 0.0f));
       }
     }
   }
@@ -1055,7 +1055,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     bitmap->alignX = bitmap->width / 2;
     bitmap->alignY = bitmap->height / 2;
     struct v3 positionRelativeToCamera = WorldPositionSub(world, &groundBuffer->position, &state->cameraPosition);
-    Bitmap(renderGroup, bitmap, positionRelativeToCamera.xy, positionRelativeToCamera.z);
+    Bitmap(renderGroup, bitmap, positionRelativeToCamera);
   }
 
   /* fill ground buffer chunks */
@@ -1097,7 +1097,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           }
 
           struct v3 rel = WorldPositionSub(world, &chunkCenterPosition, &state->cameraPosition);
-          RectOutline(renderGroup, rel.xy, 0.0f, world->chunkDimInMeters.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
+          RectOutline(renderGroup, rel, world->chunkDimInMeters.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
         }
       }
     }
@@ -1167,10 +1167,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       HitPoints(renderGroup, entity);
 
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, shadowAlpha);
-      Bitmap(renderGroup, &bitmap->torso, v2(0.0f, 0.0f), 0.0f);
-      Bitmap(renderGroup, &bitmap->cape, v2(0.0f, 0.0f), 0.0f);
-      Bitmap(renderGroup, &bitmap->head, v2(0.0f, 0.0f), 0.0f);
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), shadowAlpha);
+      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f));
+      Bitmap(renderGroup, &bitmap->cape, v3(0.0f, 0.0f, 0.0f));
+      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
@@ -1214,8 +1214,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 bobSin = Sin(2.0f * entity->tBob);
       f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, shadowAlpha);
-      Bitmap(renderGroup, &bitmap->head, v2(0.0f, 0.0f), 0.25f * bobSin);
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), shadowAlpha);
+      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.25f * bobSin));
     }
 
     else if (entity->type & ENTITY_TYPE_MONSTER) {
@@ -1224,8 +1224,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 alpha = 1.0f;
 
       HitPoints(renderGroup, entity);
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, alpha);
-      Bitmap(renderGroup, &bitmap->torso, v2(0.0f, 0.0f), 0.0f);
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), alpha);
+      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
@@ -1242,34 +1242,35 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       }
 
       /* render */
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v2(0.0f, 0.0f), 0.0f, 1.0f);
-      Bitmap(renderGroup, &state->textureSword, v2(0.0f, 0.0f), 0.0f);
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 1.0f);
+      Bitmap(renderGroup, &state->textureSword, v3(0.0f, 0.0f, 0.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      Bitmap(renderGroup, &state->textureTree, v2(0.0f, 0.0f), 0.0f);
+      Bitmap(renderGroup, &state->textureTree, v3(0.0f, 0.0f, 0.0f));
 #else
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {
         struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
 
-        Rect(renderGroup, v2(0.0f, 0.0f), 0.0f, entityVolume->dim.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
+        Rect(renderGroup, v3(0.0f, 0.0f, 0.0f), entityVolume->dim.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
       }
 #endif
     }
 
     else if (entity->type & ENTITY_TYPE_STAIRWELL) {
-      Rect(renderGroup, v2(0.0f, 0.0f), 0.0f, entity->walkableDim.xy, v4(1.0f, 0.5f, 0.0f, 1.0f));
-      Rect(renderGroup, v2(0.0f, 0.0f), entity->walkableHeight, entity->walkableDim.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
+      Rect(renderGroup, v3(0.0f, 0.0f, 0.0f), entity->walkableDim.xy, v4(1.0f, 0.5f, 0.0f, 1.0f));
+      Rect(renderGroup, v3(0.0f, 0.0f, entity->walkableHeight), entity->walkableDim.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_SPACE) {
-#if 0
+#if 1
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {
         struct entity_collision_volume *entityVolume = entity->collision->volumes + entityVolumeIndex;
-        RectOutline(renderGroup, entityVolume->offset.xy, 0.0f, entityVolume->dim.xy, v4(0.0f, 0.5f, 1.0f, 1.0f));
+        RectOutline(renderGroup, v2_to_v3(entityVolume->offset.xy, 0.0f), entityVolume->dim.xy,
+                    v4(0.0f, 0.5f, 1.0f, 1.0f));
       }
 #endif
     }
