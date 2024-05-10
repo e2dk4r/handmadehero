@@ -352,7 +352,7 @@
 - [x] Handmade Hero Day 104 - Switching to Y-is-up Render Targets
       https://www.youtube.com/watch?v=CfjMu8DwOnY
 
-- [ ] Handmade Hero Day 105 - Cleaning Up the Renderer API
+- [x] Handmade Hero Day 105 - Cleaning Up the Renderer API
       https://www.youtube.com/watch?v=Jklm_p_qrKU
 
 - [ ] Handmade Hero Day 106 - World Scaling
