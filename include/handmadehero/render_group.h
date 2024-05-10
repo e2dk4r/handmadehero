@@ -14,7 +14,6 @@
  *
  * 4. Z is special coordinate because it is broken up into discrete slices,
  *    and the renderer actually understands the slices (potentially).
- *    // TODO(e2dk4r): ZHANDLING
  *
  * 5. All color values specified to the renderer as v4, and they are NOT
  *    premultiplied with alpha.

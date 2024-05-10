@@ -602,8 +602,6 @@ DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, f32 cAlp
 internal struct v2
 GetEntityCenter(struct render_group *renderGroup, struct render_entity_basis *entityBasis, struct v2 screenCenter)
 {
-  // TODO(e2dk4r): ZHANDLING
-
   f32 metersToPixels = renderGroup->metersToPixels;
   struct v3 entityBasePosition = v3_mul(entityBasis->basis->position, metersToPixels);
   f32 totalZ = entityBasePosition.z + entityBasis->offset.z;
