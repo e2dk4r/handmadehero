@@ -355,7 +355,7 @@
 - [x] Handmade Hero Day 105 - Cleaning Up the Renderer API
       https://www.youtube.com/watch?v=Jklm_p_qrKU
 
-- [ ] Handmade Hero Day 106 - World Scaling
+- [x] Handmade Hero Day 106 - World Scaling
       https://www.youtube.com/watch?v=UCTcu8vJ92c
 
 - [ ] Handmade Hero Day 107 - Fading Z Layers
