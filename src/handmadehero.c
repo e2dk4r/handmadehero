@@ -1058,6 +1058,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct v2 screenDimInMeters = v2_mul(screenDim, pixelsToMeters);
   struct rect cameraBoundsInMeters = RectCenterDim(v3(0.0f, 0.0f, 0.0f), v2_to_v3(screenDimInMeters, 0.0f));
 
+#if 0
   /* draw ground buffer chunks */
   for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
     struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
@@ -1121,6 +1122,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       }
     }
   }
+#endif
 
   struct memory_temp simRegionMemory = BeginTemporaryMemory(&transientState->transientArena);
   struct v3 simBoundExpansion = v3(15.0f, 15.0f, 15.0f);
