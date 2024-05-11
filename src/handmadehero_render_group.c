@@ -664,8 +664,8 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       pushBufferIndex += sizeof(*entry);
 
       struct render_entity_basis_p_result basis = GetRenderEntityBasisP(renderGroup, &entry->basis, screenCenter);
-      struct v2 halfDim = v2_mul(v2_mul(entry->dim, 0.5f), metersToPixels);
-      DrawRectangle(outputTarget, v2_sub(basis.p, halfDim), v2_add(basis.p, halfDim), entry->color);
+      struct v2 halfDim = v2_mul(v2_mul(v2_mul(entry->dim, 0.5f), metersToPixels), basis.scale);
+      // DrawRectangle(outputTarget, v2_sub(basis.p, halfDim), v2_add(basis.p, halfDim), entry->color);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM) {
