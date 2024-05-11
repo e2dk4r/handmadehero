@@ -13,7 +13,10 @@
  *    NOT pixels. Anything that is in pixel values will be explicitly marked as such.
  *
  * 4. Z is special coordinate because it is broken up into discrete slices,
- *    and the renderer actually understands the slices (potentially).
+ *    and the renderer actually understands the slices.
+ *
+ *    Z slices are what control the scaling of things,
+ *    Z offsets inside a slice are what control Y offsetting.
  *
  * 5. All color values specified to the renderer as v4, and they are NOT
  *    premultiplied with alpha.
