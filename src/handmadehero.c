@@ -1066,7 +1066,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     bitmap->alignX = bitmap->width / 2;
     bitmap->alignY = bitmap->height / 2;
     struct v3 positionRelativeToCamera = WorldPositionSub(world, &groundBuffer->position, &state->cameraPosition);
-    Bitmap(renderGroup, bitmap, positionRelativeToCamera);
+
+    struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
+    basis->position = v3_add(positionRelativeToCamera, v3(0.0f, 0.0f, state->zOffset));
+    renderGroup->defaultBasis = basis;
+
+    Bitmap(renderGroup, bitmap, v3(0.0f, 0.0f, 0.0f));
   }
 
   /* fill ground buffer chunks */
