@@ -616,6 +616,7 @@ inline void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 {
   f32 metersToPixels = renderGroup->metersToPixels;
+  f32 pixelsToMeters = 1.0f / metersToPixels;
   struct v2 screenWidthHeight = v2u(outputTarget->width, outputTarget->height);
   struct v2 screenCenter = v2_mul(screenWidthHeight, 0.5f);
 
@@ -636,8 +637,14 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       pushBufferIndex += sizeof(*entry);
 
       assert(entry->bitmap);
+
       struct v2 center = GetEntityCenter(renderGroup, &entry->basis, screenCenter);
+#if 0
       DrawBitmap(outputTarget, entry->bitmap, center, entry->alpha);
+#else
+      DrawRectangleSlowly(outputTarget, center, v2u(entry->bitmap->width, 0), v2u(0, entry->bitmap->height),
+                          v4(1.0f, 1.0f, 1.0f, entry->alpha), entry->bitmap, 0, 0, 0, 0, pixelsToMeters);
+#endif
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_RECTANGLE) {
@@ -654,8 +661,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       pushBufferIndex += sizeof(*entry);
 
       DrawRectangleSlowly(outputTarget, entry->origin, entry->xAxis, entry->yAxis, entry->color, entry->texture,
-                          entry->normalMap, entry->top, entry->middle, entry->bottom,
-                          1.0f / renderGroup->metersToPixels);
+                          entry->normalMap, entry->top, entry->middle, entry->bottom, pixelsToMeters);
 
       struct v4 color = v4(1.0f, 0.0f, 0.0f, 1.0f);
       struct v2 dim = v2(2.0f, 2.0f);
