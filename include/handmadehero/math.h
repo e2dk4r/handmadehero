@@ -130,6 +130,16 @@ Clamp01(f32 value)
   return Clamp(0.0f, 1.0f, value);
 }
 
+internal inline f32
+Clamp01Range(f32 min, f32 max, f32 value)
+{
+  assert(min != max);
+  f32 result = 0.0f;
+  f32 range = max - min;
+  result = (value - min) / range;
+  return result;
+}
+
 struct v2 {
   union {
     struct {

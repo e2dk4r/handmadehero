@@ -1142,7 +1142,23 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     // TODO(e2dk4r): probably indicates we want to seperate update and render for entities
     struct v3 cameraRelativeToGround = v3_sub(entity->position, cameraRelativeToSim);
-    renderGroup->alpha = Clamp01(1.5f - cameraRelativeToGround.z);
+    f32 fadeTopEndZ = 0.75f * state->floorHeight;
+    f32 fadeTopStartZ = 0.5f * state->floorHeight;
+    f32 fadeBottomStartZ = -0.5f * state->floorHeight;
+    f32 fadeBottomEndZ = -0.75f * state->floorHeight;
+
+    renderGroup->alpha = 1.0f;
+    if (cameraRelativeToGround.z > fadeTopStartZ) {
+      if (cameraRelativeToGround.z <= fadeTopEndZ)
+        renderGroup->alpha = 1.0f - Clamp01Range(fadeTopStartZ, fadeTopEndZ, cameraRelativeToGround.z);
+      else
+        renderGroup->alpha = 0.0f;
+    } else if (cameraRelativeToGround.z < fadeBottomStartZ) {
+      if (cameraRelativeToGround.z > fadeBottomEndZ)
+        renderGroup->alpha = 1.0f - Clamp01Range(fadeBottomStartZ, fadeBottomEndZ, cameraRelativeToGround.z);
+      else
+        renderGroup->alpha = 0.0f;
+    }
 
     if (entity->type & ENTITY_TYPE_HERO) {
       /* update */
