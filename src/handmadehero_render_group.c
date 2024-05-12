@@ -611,7 +611,7 @@ GetRenderEntityBasisP(struct render_group *renderGroup, struct render_entity_bas
   f32 metersToPixels = renderGroup->metersToPixels;
 
   struct v3 entityBasePosition = v3_mul(entityBasis->basis->position, metersToPixels);
-  f32 zFudge = 1.0f + 0.01f * entityBasePosition.z;
+  f32 zFudge = 1.0f + 0.0015f * entityBasePosition.z;
   struct v2 entityGroundPoint =
       v2_add(screenCenter, v2_mul(v2_add(entityBasePosition.xy, entityBasis->offset.xy), zFudge));
   struct v2 center = v2_add(entityGroundPoint, v2(0.0f, entityBasePosition.z + entityBasis->offset.z));
