@@ -1004,7 +1004,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     conHero->dSword = (struct v2){};
-#if 0
     if (controller->actionUp.pressed) {
       conHero->dSword = v2(0.0f, 1.0f);
     } else if (controller->actionDown.pressed) {
@@ -1014,16 +1013,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     } else if (controller->actionRight.pressed) {
       conHero->dSword = v2(1.0f, 0.0f);
     }
-#else
-    f32 zoomRate = 0.0f;
-    if (controller->actionUp.pressed) {
-      zoomRate = 1.0f;
-    } else if (controller->actionDown.pressed) {
-      zoomRate = -1.0f;
-    }
-    state->zOffset += zoomRate * dt;
-
-#endif
   }
 
   /****************************************************************
@@ -1072,7 +1061,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct v3 positionRelativeToCamera = WorldPositionSub(world, &groundBuffer->position, &state->cameraPosition);
 
     struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
-    basis->position = v3_add(positionRelativeToCamera, v3(0.0f, 0.0f, state->zOffset));
+    basis->position = positionRelativeToCamera;
     renderGroup->defaultBasis = basis;
 
     Bitmap(renderGroup, bitmap, v3(0.0f, 0.0f, 0.0f));
@@ -1145,7 +1134,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       continue;
 
     struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
-    basis->position = v3_add(entity->position, v3(0.0f, 0.0f, state->zOffset));
+    basis->position = entity->position;
     renderGroup->defaultBasis = basis;
 
     if (entity->type & ENTITY_TYPE_HERO) {
