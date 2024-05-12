@@ -1116,8 +1116,11 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct memory_temp simRegionMemory = BeginTemporaryMemory(&transientState->transientArena);
   struct v3 simBoundExpansion = v3(15.0f, 15.0f, 15.0f);
   struct rect simBounds = RectAddRadius(&cameraBoundsInMeters, simBoundExpansion);
+  struct world_position simRegionOrigin = state->cameraPosition;
   struct sim_region *simRegion =
-      BeginSimRegion(&transientState->transientArena, state, state->world, state->cameraPosition, simBounds, dt);
+      BeginSimRegion(&transientState->transientArena, state, state->world, simRegionOrigin, simBounds, dt);
+
+  struct v3 cameraRelativeToSim = WorldPositionSub(world, &state->cameraPosition, &simRegionOrigin);
 
   /* render entities */
   for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
@@ -1136,6 +1139,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
     basis->position = entity->position;
     renderGroup->defaultBasis = basis;
+
+    // TODO(e2dk4r): probably indicates we want to seperate update and render for entities
+    struct v3 cameraRelativeToGround = v3_sub(entity->position, cameraRelativeToSim);
+    renderGroup->alpha = Clamp01(1.5f - cameraRelativeToGround.z);
 
     if (entity->type & ENTITY_TYPE_HERO) {
       /* update */

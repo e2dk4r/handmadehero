@@ -95,6 +95,7 @@ struct render_group_entry_coordinate_system {
 struct render_group {
   struct render_basis *defaultBasis;
   f32 metersToPixels;
+  f32 alpha;
 
   u64 pushBufferTotal;
   u64 pushBufferSize;

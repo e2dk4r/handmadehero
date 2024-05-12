@@ -10,6 +10,7 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, f32 metersToPixels)
   renderGroup->defaultBasis->position = v3(0.0f, 0.0f, 0.0f);
 
   renderGroup->metersToPixels = metersToPixels;
+  renderGroup->alpha = 1.0f;
 
   renderGroup->pushBufferSize = 0;
   renderGroup->pushBufferTotal = pushBufferTotal;
@@ -96,13 +97,13 @@ Clear(struct render_group *renderGroup, struct v4 color)
 inline void
 Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, 1.0f);
+  PushBitmapEntry(renderGroup, bitmap, offset, renderGroup->alpha * 1.0f);
 }
 
 inline void
 BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 alpha)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, alpha);
+  PushBitmapEntry(renderGroup, bitmap, offset, renderGroup->alpha * alpha);
 }
 
 inline void
@@ -649,6 +650,8 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       assert(entry->bitmap);
 
       struct render_entity_basis_p_result basis = GetRenderEntityBasisP(renderGroup, &entry->basis, screenCenter);
+      if (basis.scale <= 0.0f)
+        continue;
 
 #if 0
       DrawBitmap(outputTarget, entry->bitmap, basis.p, entry->alpha);
@@ -664,8 +667,10 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       pushBufferIndex += sizeof(*entry);
 
       struct render_entity_basis_p_result basis = GetRenderEntityBasisP(renderGroup, &entry->basis, screenCenter);
+      if (basis.scale <= 0.0f)
+        continue;
       struct v2 halfDim = v2_mul(v2_mul(v2_mul(entry->dim, 0.5f), metersToPixels), basis.scale);
-      // DrawRectangle(outputTarget, v2_sub(basis.p, halfDim), v2_add(basis.p, halfDim), entry->color);
+      DrawRectangle(outputTarget, v2_sub(basis.p, halfDim), v2_add(basis.p, halfDim), entry->color);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM) {
