@@ -233,9 +233,9 @@ EndSimRegion(struct sim_region *simRegion, struct game_state *state)
       else if (entity->position.y < -maxDiffY)
         newCameraPosition.chunkY -= 1;
 #else
-      f32 cameraOffsetZ = state->cameraPosition.offset.z;
+      // f32 cameraOffsetZ = state->cameraPosition.offset.z;
       struct world_position newCameraPosition = stored->position;
-      newCameraPosition.offset.z = cameraOffsetZ;
+      // newCameraPosition.offset.z = cameraOffsetZ;
 #endif
       state->cameraPosition = newCameraPosition;
     }
