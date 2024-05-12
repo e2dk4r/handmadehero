@@ -1046,6 +1046,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   struct v2 screenDimInMeters = v2_mul(screenDim, pixelsToMeters);
   struct rect cameraBoundsInMeters = RectCenterDim(v3(0.0f, 0.0f, 0.0f), v2_to_v3(screenDimInMeters, 0.0f));
+  cameraBoundsInMeters.min.z = -3.0f * state->floorHeight;
+  cameraBoundsInMeters.max.z = 1.0f * state->floorHeight;
 
 #if 0
   /* draw ground buffer chunks */
@@ -1114,7 +1116,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #endif
 
   struct memory_temp simRegionMemory = BeginTemporaryMemory(&transientState->transientArena);
-  struct v3 simBoundExpansion = v3(15.0f, 15.0f, 15.0f);
+  struct v3 simBoundExpansion = v3(15.0f, 15.0f, 0);
   struct rect simBounds = RectAddRadius(&cameraBoundsInMeters, simBoundExpansion);
   struct world_position simRegionOrigin = state->cameraPosition;
   struct sim_region *simRegion =

@@ -146,8 +146,7 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
 
   simRegion->world = world;
   simRegion->origin = origin;
-  simRegion->updatableBounds =
-      RectAddRadius(&bounds, v3(simRegion->maxEntityRadius, simRegion->maxEntityRadius, simRegion->maxEntityRadius));
+  simRegion->updatableBounds = RectAddRadius(&bounds, v3(simRegion->maxEntityRadius, simRegion->maxEntityRadius, 0.0f));
   simRegion->bounds =
       RectAddRadius(&simRegion->updatableBounds, v3(updateSafetyMargin, updateSafetyMargin, updateSafetyMarginZ));
 
