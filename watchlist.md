@@ -358,7 +358,7 @@
 - [x] Handmade Hero Day 106 - World Scaling
       https://www.youtube.com/watch?v=UCTcu8vJ92c
 
-- [ ] Handmade Hero Day 107 - Fading Z Layers
+- [x] Handmade Hero Day 107 - Fading Z Layers
       https://www.youtube.com/watch?v=CmXCiK8dK9c
 
 - [ ] Handmade Hero Day 108 - Perspective Projection
