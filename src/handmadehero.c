@@ -784,18 +784,20 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct random_series series = RandomSeed(1234);
     for (u32 screenIndex = 0; screenIndex < 2000; screenIndex++) {
 #if 1
-      u32 choice = RandomChoice(&series, (isDoorUp || isDoorDown) ? 2 : 3);
+      u32 choice = RandomChoice(&series, (isDoorUp || isDoorDown) ? 2 : 4);
 #else
       u32 choice = RandomChoice(&series, 2);
 #endif
 
+      choice = 3;
+
       u8 isDoorZ = 0;
-      if (choice == 2) {
+      if (choice == 3) {
         isDoorZ = 1;
-        if (absTileZ == screenBaseZ)
-          isDoorUp = 1;
-        else
-          isDoorDown = 1;
+        isDoorDown = 1;
+      } else if (choice == 2) {
+        isDoorZ = 1;
+        isDoorUp = 1;
       } else if (choice == 1)
         isDoorRight = 1;
       else
@@ -825,9 +827,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
             shouldBlock = 1;
 
           if (shouldBlock) {
-            WallAdd(state, absTileX, absTileY, absTileZ);
+            if (tileX % 2 || tileY % 2)
+              WallAdd(state, absTileX, absTileY, absTileZ);
           } else if (isDoorZ) {
-            if (tileX == 10 && tileY == 5) {
+            if ((absTileZ % 2 && tileX == 10 && tileY == 5) || (!(absTileZ % 2) && tileX == 4 && tileY == 5)) {
               StairAdd(state, absTileX, absTileY, isDoorDown ? absTileZ - 1 : absTileZ);
             }
           }
@@ -848,11 +851,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         isDoorDown = 0;
       }
 
-      if (choice == 2)
-        if (absTileZ == screenBaseZ)
-          absTileZ = screenBaseZ + 1;
-        else
-          absTileZ = screenBaseZ;
+      if (choice == 3)
+        absTileZ -= 1;
+      else if (choice == 2)
+        absTileZ += 1;
       else if (choice == 1)
         screenX += 1;
       else
