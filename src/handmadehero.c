@@ -866,7 +866,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     u32 initialCameraY = screenBaseY * TILES_PER_HEIGHT + TILES_PER_HEIGHT / 2;
     u32 initialCameraZ = screenBaseZ;
 
-    for (u32 monsterIndex = 0; monsterIndex < 3; monsterIndex++) {
+    for (u32 monsterIndex = 0; monsterIndex < 1; monsterIndex++) {
       i32 monsterOffsetX = RandomBetweenI32(&series, -7, 7);
       i32 monsterOffsetY = RandomBetweenI32(&series, 1, 3);
 
