@@ -28,8 +28,7 @@
 
 #define BITMAP_BYTES_PER_PIXEL 4
 struct bitmap {
-  u32 alignX;
-  u32 alignY;
+  struct v2 alignPercentage;
 
   u32 width;
   u32 height;

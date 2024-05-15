@@ -112,8 +112,10 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 al
   if (header->height < 0)
     result.height = (u32)-header->height;
 
-  result.alignX = alignX;
-  result.alignY = (result.height - 1) - alignY;
+  assert(result.width != 0);
+  assert(result.height != 0);
+  result.alignPercentage =
+      v2((f32)alignX / (f32)result.width, (f32)((result.height - 1) - alignY) / (f32)result.height);
 
   result.stride = (i32)result.width * BITMAP_BYTES_PER_PIXEL;
   result.memory = pixels;

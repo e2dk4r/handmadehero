@@ -54,7 +54,7 @@ PushBitmapEntry(struct render_group *renderGroup, struct bitmap *bitmap, struct 
   entry->basis.basis = renderGroup->defaultBasis;
 
   entry->basis.offset = v3_mul(offset, renderGroup->metersToPixels);
-  struct v2 alignPixel = v2u(bitmap->alignX, bitmap->alignY);
+  struct v2 alignPixel = v2_hadamard(bitmap->alignPercentage, v2u(bitmap->width, bitmap->height));
   v2_sub_ref(&entry->basis.offset.xy, alignPixel);
 
   entry->alpha = alpha;
