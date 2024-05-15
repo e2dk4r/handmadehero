@@ -364,7 +364,7 @@
 - [x] Handmade Hero Day 108 - Perspective Projection
       https://www.youtube.com/watch?v=xgnEOFS8wTw
 
-- [ ] Handmade Hero Day 109 - Resolution-Independent Rendering
+- [x] Handmade Hero Day 109 - Resolution-Independent Rendering
       https://www.youtube.com/watch?v=e3d7kEtX6iw
 
 - [ ] Handmade Hero Day 110 - Unprojecting Screen Boundaries
