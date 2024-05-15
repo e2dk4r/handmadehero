@@ -9,8 +9,9 @@
  *    (meaning that the first row pointer points to the bottom-left row when
  *    viewed on screen).
  *
- * 3. Unless otherwise specified, all inputs to the renderer are in world coordinate (meters),
- *    NOT pixels. Anything that is in pixel values will be explicitly marked as such.
+ * 3. It is mandatory that all inputs to the renderer are in world coordinate (meters),
+ *    NOT pixels. If for some reason something absolutly has to be in pixels, that will
+ *    be marked in the API, but this should exceedingly few places.
  *
  * 4. Z is special coordinate because it is broken up into discrete slices,
  *    and the renderer actually understands the slices.
@@ -29,6 +30,7 @@
 #define BITMAP_BYTES_PER_PIXEL 4
 struct bitmap {
   struct v2 alignPercentage;
+  f32 widthOverHeight;
 
   u32 width;
   u32 height;
@@ -69,6 +71,7 @@ struct render_group_entry_clear {
 struct render_group_entry_bitmap {
   struct bitmap *bitmap;
   struct render_entity_basis basis;
+  struct v2 size;
   f32 alpha;
 };
 
@@ -93,7 +96,6 @@ struct render_group_entry_coordinate_system {
 
 struct render_group {
   struct render_basis *defaultBasis;
-  f32 metersToPixels;
   f32 alpha;
 
   u64 pushBufferTotal;
@@ -108,16 +110,16 @@ struct v4
 Linear1tosRGB255(struct v4 color);
 
 struct render_group *
-RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, f32 metersToPixels);
+RenderGroup(struct memory_arena *arena, u64 pushBufferTotal);
 
 void
 Clear(struct render_group *renderGroup, struct v4 color);
 
 void
-Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset);
+Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height);
 
 void
-BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 alpha);
+BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height, f32 alpha);
 
 void
 Rect(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);

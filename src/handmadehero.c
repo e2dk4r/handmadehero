@@ -116,6 +116,7 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 al
   assert(result.height != 0);
   result.alignPercentage =
       v2((f32)alignX / (f32)result.width, (f32)((result.height - 1) - alignY) / (f32)result.height);
+  result.widthOverHeight = (f32)result.width / (f32)result.height;
 
   result.stride = (i32)result.width * BITMAP_BYTES_PER_PIXEL;
   result.memory = pixels;
@@ -601,7 +602,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
                 struct world_position *chunkPosition)
 {
   struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
-  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 1 * MEGABYTES, 1.0f);
+  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 1 * MEGABYTES);
   Clear(renderGroup, v4(1.0f, 1.0f, 0.0f, 1.0f));
 
   struct bitmap *buffer = &groundBuffer->bitmap;
@@ -634,7 +635,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
         v2_add_ref(&offset, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
         v2_sub_ref(&offset, stampCenter);
 
-        Bitmap(renderGroup, stamp, v2_to_v3(offset, 0.0f));
+        Bitmap(renderGroup, stamp, v2_to_v3(offset, 0.0f), 1.0f);
       }
     }
   }
@@ -658,7 +659,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
         v2_add_ref(&offset, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
         v2_sub_ref(&offset, tuftCenter);
 
-        Bitmap(renderGroup, tuft, v2_to_v3(offset, 0.0f));
+        Bitmap(renderGroup, tuft, v2_to_v3(offset, 0.0f), 1.0f);
       }
     }
   }
@@ -673,6 +674,11 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   assert(sizeof(struct game_state) <= memory->permanentStorageSize);
   struct game_state *state = memory->permanentStorage;
   f32 dt = input->dtPerFrame;
+
+  /* unit: pixels/meters */
+  f32 metersToPixels = 42.0f;
+  /* unit: meters/pixels */
+  f32 pixelsToMeters = 1.0f / metersToPixels;
 
   u32 groundBufferWidth = 256;
   u32 groundBufferHeight = 256;
@@ -690,14 +696,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     state->floorHeight = 3.0f;
 
-    /* unit: pixels/meters */
-    state->metersToPixels = 42.0f;
-    /* unit: meters/pixels */
-    state->pixelsToMeters = 1.0f / state->metersToPixels;
-
     struct v3 chunkDimInMeters = {
-        state->pixelsToMeters * (f32)groundBufferWidth,
-        state->pixelsToMeters * (f32)groundBufferHeight,
+        pixelsToMeters * (f32)groundBufferWidth,
+        pixelsToMeters * (f32)groundBufferHeight,
         state->floorHeight,
     };
     WorldInit(world, chunkDimInMeters);
@@ -1022,8 +1023,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   /****************************************************************
    * RENDERING
    ****************************************************************/
-  f32 metersToPixels = state->metersToPixels;
-  f32 pixelsToMeters = state->pixelsToMeters;
   struct bitmap drawBuffer = {
       .width = backbuffer->width,
       .height = backbuffer->height,
@@ -1032,7 +1031,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   };
 
   struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
-  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 4 * MEGABYTES, state->metersToPixels);
+  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 4 * MEGABYTES);
 
 /* drawing background */
 #if 0
@@ -1206,10 +1205,11 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       HitPoints(renderGroup, entity);
 
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), shadowAlpha);
-      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f));
-      Bitmap(renderGroup, &bitmap->cape, v3(0.0f, 0.0f, 0.0f));
-      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.0f));
+      f32 heroHeight = 2.5f * 1.2f;
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 0.25f, shadowAlpha);
+      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), heroHeight);
+      Bitmap(renderGroup, &bitmap->cape, v3(0.0f, 0.0f, 0.0f), heroHeight);
+      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.0f), heroHeight);
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
@@ -1253,8 +1253,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 bobSin = Sin(2.0f * entity->tBob);
       f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), shadowAlpha);
-      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.25f * bobSin));
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), shadowAlpha, 0.5f);
+      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.25f * bobSin), 0.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_MONSTER) {
@@ -1263,8 +1263,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 alpha = 1.0f;
 
       HitPoints(renderGroup, entity);
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), alpha);
-      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f));
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 0.5f, alpha);
+      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), 0.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
@@ -1281,13 +1281,13 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       }
 
       /* render */
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 1.0f);
-      Bitmap(renderGroup, &state->textureSword, v3(0.0f, 0.0f, 0.0f));
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 0.5f, 1.0f);
+      Bitmap(renderGroup, &state->textureSword, v3(0.0f, 0.0f, 0.0f), 0.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      Bitmap(renderGroup, &state->textureTree, v3(0.0f, 0.0f, 0.0f));
+      Bitmap(renderGroup, &state->textureTree, v3(0.0f, 0.0f, 0.0f), 2.5f);
 #else
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {
