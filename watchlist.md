@@ -361,7 +361,7 @@
 - [x] Handmade Hero Day 107 - Fading Z Layers
       https://www.youtube.com/watch?v=CmXCiK8dK9c
 
-- [ ] Handmade Hero Day 108 - Perspective Projection
+- [x] Handmade Hero Day 108 - Perspective Projection
       https://www.youtube.com/watch?v=xgnEOFS8wTw
 
 - [ ] Handmade Hero Day 109 - Resolution-Independent Rendering
