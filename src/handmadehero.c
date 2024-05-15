@@ -1148,8 +1148,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct v3 cameraRelativeToGround = v3_sub(entity->position, cameraRelativeToSim);
     f32 fadeTopEndZ = 0.75f * state->floorHeight;
     f32 fadeTopStartZ = 0.5f * state->floorHeight;
-    f32 fadeBottomStartZ = -0.5f * state->floorHeight;
-    f32 fadeBottomEndZ = -0.75f * state->floorHeight;
+    f32 fadeBottomStartZ = -2.0f * state->floorHeight;
+    f32 fadeBottomEndZ = -2.75f * state->floorHeight;
 
     renderGroup->alpha = 1.0f;
     if (cameraRelativeToGround.z > fadeTopStartZ) {
