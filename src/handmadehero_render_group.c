@@ -46,36 +46,38 @@ PushClearEntry(struct render_group *renderGroup, struct v4 color)
 }
 
 internal inline void
-PushBitmapEntry(struct render_group *group, struct bitmap *bitmap, struct v3 offset, f32 alpha)
+PushBitmapEntry(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 alpha)
 {
-  struct render_group_entry_bitmap *entry = PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_BITMAP);
+  struct render_group_entry_bitmap *entry =
+      PushRenderEntry(renderGroup, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_BITMAP);
   entry->bitmap = bitmap;
-  entry->basis.basis = group->defaultBasis;
+  entry->basis.basis = renderGroup->defaultBasis;
 
-  entry->basis.offset = v3_mul(offset, group->metersToPixels);
+  entry->basis.offset = v3_mul(offset, renderGroup->metersToPixels);
   struct v2 alignPixel = v2u(bitmap->alignX, bitmap->alignY);
   v2_sub_ref(&entry->basis.offset.xy, alignPixel);
+
   entry->alpha = alpha;
 }
 
 internal inline void
-PushRectangleEntry(struct render_group *group, struct v3 offset, struct v2 dim, struct v4 color)
+PushRectangleEntry(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color)
 {
   struct render_group_entry_rectangle *entry =
-      PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
-  entry->basis.basis = group->defaultBasis;
-  entry->basis.offset = v3_mul(offset, group->metersToPixels);
+      PushRenderEntry(renderGroup, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
+  entry->basis.basis = renderGroup->defaultBasis;
+  entry->basis.offset = v3_mul(offset, renderGroup->metersToPixels);
   entry->dim = dim;
   entry->color = color;
 }
 
 struct render_group_entry_coordinate_system *
-CoordinateSystem(struct render_group *group, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
+CoordinateSystem(struct render_group *renderGroup, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                  struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
                  struct environment_map *middle, struct environment_map *bottom)
 {
   struct render_group_entry_coordinate_system *entry =
-      PushRenderEntry(group, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM);
+      PushRenderEntry(renderGroup, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM);
   entry->origin = origin;
   entry->xAxis = xAxis;
   entry->yAxis = yAxis;
