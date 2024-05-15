@@ -603,6 +603,7 @@ DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, f32 cAlp
 }
 
 struct render_entity_basis_p_result {
+  u8 valid : 1;
   struct v2 p;
   f32 scale;
 };
@@ -610,17 +611,25 @@ struct render_entity_basis_p_result {
 internal struct render_entity_basis_p_result
 GetRenderEntityBasisP(struct render_group *renderGroup, struct render_entity_basis *entityBasis, struct v2 screenCenter)
 {
-  struct render_entity_basis_p_result result;
+  struct render_entity_basis_p_result result = {};
   f32 metersToPixels = renderGroup->metersToPixels;
 
   struct v3 entityBasePosition = v3_mul(entityBasis->basis->position, metersToPixels);
-  f32 zFudge = 1.0f + 0.0015f * entityBasePosition.z;
-  struct v2 entityGroundPoint =
-      v2_add(screenCenter, v2_mul(v2_add(entityBasePosition.xy, entityBasis->offset.xy), zFudge));
-  struct v2 center = v2_add(entityGroundPoint, v2(0.0f, entityBasePosition.z + entityBasis->offset.z));
 
-  result.p = center;
-  result.scale = zFudge;
+  f32 focalLength = 20.0f * metersToPixels;
+  f32 cameraDistanceAboveTarget = 20.0f * metersToPixels;
+  f32 distanceToPZ = cameraDistanceAboveTarget - entityBasePosition.z;
+  f32 nearClipPlane = 0.2f * metersToPixels;
+
+  struct v3 rawXY = v2_to_v3(v2_add(entityBasePosition.xy, entityBasis->offset.xy), 1.0f);
+
+  if (distanceToPZ <= nearClipPlane)
+    return result;
+
+  struct v3 projectedXY = v3_mul(v3_mul(rawXY, focalLength), 1.0f / distanceToPZ);
+  result.p = v2_add(screenCenter, projectedXY.xy);
+  result.scale = projectedXY.z;
+  result.valid = 1;
 
   return result;
 }
@@ -652,7 +661,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       assert(entry->bitmap);
 
       struct render_entity_basis_p_result basis = GetRenderEntityBasisP(renderGroup, &entry->basis, screenCenter);
-      if (basis.scale <= 0.0f)
+      if (!basis.valid || basis.scale <= 0.0f)
         continue;
 
 #if 0
@@ -669,9 +678,9 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       pushBufferIndex += sizeof(*entry);
 
       struct render_entity_basis_p_result basis = GetRenderEntityBasisP(renderGroup, &entry->basis, screenCenter);
-      if (basis.scale <= 0.0f)
+      if (!basis.valid || basis.scale <= 0.0f)
         continue;
-      struct v2 halfDim = v2_mul(v2_mul(v2_mul(entry->dim, 0.5f), metersToPixels), basis.scale);
+      struct v2 halfDim = v2_mul(v2_mul(v2_mul(entry->dim, 0.5f), basis.scale), metersToPixels);
       DrawRectangle(outputTarget, v2_sub(basis.p, halfDim), v2_add(basis.p, halfDim), entry->color);
     }
 
