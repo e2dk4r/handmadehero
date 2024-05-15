@@ -67,7 +67,7 @@ PushRectangleEntry(struct render_group *renderGroup, struct v3 offset, struct v2
   struct render_group_entry_rectangle *entry =
       PushRenderEntry(renderGroup, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
   entry->basis.basis = renderGroup->defaultBasis;
-  entry->basis.offset = offset;
+  entry->basis.offset = v3_sub(offset, v2_to_v3(v2_mul(dim, 0.5f), 0.0f));
   entry->dim = dim;
   entry->color = color;
 }
@@ -682,8 +682,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct render_entity_basis_p_result basis = GetRenderEntityBasisP(&entry->basis, screenDim, metersToPixels);
       if (!basis.valid || basis.scale <= 0.0f)
         continue;
-      struct v2 halfDim = v2_mul(v2_mul(v2_mul(entry->dim, 0.5f), basis.scale), metersToPixels);
-      DrawRectangle(outputTarget, v2_sub(basis.p, halfDim), v2_add(basis.p, halfDim), entry->color);
+      DrawRectangle(outputTarget, basis.p, v2_add(basis.p, v2_mul(entry->dim, basis.scale)), entry->color);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM) {
