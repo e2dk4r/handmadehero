@@ -94,11 +94,15 @@ struct render_group_entry_coordinate_system {
   struct environment_map *bottom;
 };
 
-struct render_group {
-  // NOTE(e2dk4r): Camera properties
+struct render_group_camera {
   // How much far person sitting across from monitor in meters
   f32 focalLength;
   f32 cameraDistanceAboveTarget;
+};
+
+struct render_group {
+  struct render_group_camera gameCamera;
+  struct render_group_camera renderCamera;
 
   // NOTE(e2dk4r): Translates world meters into pixels on monitor
   f32 metersToPixels;

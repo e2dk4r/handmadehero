@@ -15,8 +15,8 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, u32 resolutionPixel
   renderGroup->pushBufferTotal = pushBufferTotal;
   renderGroup->pushBufferBase = MemoryArenaPush(arena, renderGroup->pushBufferTotal);
 
-  renderGroup->focalLength = 0.6f;
-  renderGroup->cameraDistanceAboveTarget = 10.0f;
+  renderGroup->gameCamera.focalLength = 0.6f;
+  renderGroup->gameCamera.cameraDistanceAboveTarget = 9.0f;
 
   // NOTE(e2dk4r): Horizontal measurement of monitor in meters
   f32 widthOfMonitor = 0.625f; // 25" in meters
@@ -26,13 +26,16 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, u32 resolutionPixel
   renderGroup->monitorHalfDimInMeters =
       v2((f32)resolutionPixelsX * pixelsToMeters * 0.5f, (f32)resolutionPixelsY * pixelsToMeters * 0.5f);
 
+  renderGroup->renderCamera = renderGroup->gameCamera;
+  renderGroup->renderCamera.cameraDistanceAboveTarget = 30.0f;
+
   return renderGroup;
 }
 
 internal inline struct v2
 Unproject(struct render_group *renderGroup, f32 atDistanceFromCamera)
 {
-  struct v2 worldXY = v2_mul(renderGroup->monitorHalfDimInMeters, (atDistanceFromCamera / renderGroup->focalLength));
+  struct v2 worldXY = v2_mul(renderGroup->monitorHalfDimInMeters, (atDistanceFromCamera / renderGroup->gameCamera.focalLength));
   return worldXY;
 }
 
@@ -49,7 +52,7 @@ GetCameraRectangleAtDistance(struct render_group *renderGroup, f32 distanceFromC
 inline struct rect2
 GetCameraRectangleAtTarget(struct render_group *renderGroup)
 {
-  struct rect2 result = GetCameraRectangleAtDistance(renderGroup, renderGroup->cameraDistanceAboveTarget);
+  struct rect2 result = GetCameraRectangleAtDistance(renderGroup, renderGroup->gameCamera.cameraDistanceAboveTarget);
   return result;
 }
 
@@ -652,7 +655,7 @@ GetRenderEntityBasisP(struct render_entity_basis *entityBasis, struct render_gro
   struct v2 screenCenter = v2_mul(screenDim, 0.5f);
   struct v3 entityBasePosition = entityBasis->basis->position;
 
-  f32 distanceToPZ = renderGroup->cameraDistanceAboveTarget - entityBasePosition.z;
+  f32 distanceToPZ = renderGroup->renderCamera.cameraDistanceAboveTarget - entityBasePosition.z;
   f32 nearClipPlane = 0.2f;
 
   struct v3 rawXY = v2_to_v3(v2_add(entityBasePosition.xy, entityBasis->offset.xy), 1.0f);
@@ -660,7 +663,7 @@ GetRenderEntityBasisP(struct render_entity_basis *entityBasis, struct render_gro
   if (distanceToPZ <= nearClipPlane)
     return result;
 
-  struct v3 projectedXY = v3_mul(v3_mul(rawXY, renderGroup->focalLength), 1.0f / distanceToPZ);
+  struct v3 projectedXY = v3_mul(v3_mul(rawXY, renderGroup->renderCamera.focalLength), 1.0f / distanceToPZ);
   result.p = v2_add(screenCenter, v2_mul(projectedXY.xy, renderGroup->metersToPixels));
   result.scale = projectedXY.z * renderGroup->metersToPixels;
   result.valid = 1;

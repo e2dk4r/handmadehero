@@ -795,7 +795,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       u32 choice = RandomChoice(&series, 2);
 #endif
 
-      choice = 3;
+      // choice = 3;
 
       u8 isDoorZ = 0;
       if (choice == 3) {
