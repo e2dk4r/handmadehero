@@ -678,11 +678,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct game_state *state = memory->permanentStorage;
   f32 dt = input->dtPerFrame;
 
-  /* unit: pixels/meters */
-  f32 metersToPixels = 42.0f;
-  /* unit: meters/pixels */
-  f32 pixelsToMeters = 1.0f / metersToPixels;
-
   u32 groundBufferWidth = 256;
   u32 groundBufferHeight = 256;
   /****************************************************************
@@ -699,6 +694,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     state->floorHeight = 3.0f;
 
+    // TODO(e2dk4r): Remove this!
+    /* unit: meters/pixels */
+    f32 pixelsToMeters = 1.0f / 42.0f;
     struct v3 chunkDimInMeters = {
         pixelsToMeters * (f32)groundBufferWidth,
         pixelsToMeters * (f32)groundBufferHeight,
