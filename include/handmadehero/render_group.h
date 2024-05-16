@@ -95,6 +95,15 @@ struct render_group_entry_coordinate_system {
 };
 
 struct render_group {
+  // NOTE(e2dk4r): Camera properties
+  // How much far person sitting across from monitor in meters
+  f32 focalLength;
+  f32 cameraDistanceAboveTarget;
+
+  // NOTE(e2dk4r): Translates world meters into pixels on monitor
+  f32 metersToPixels;
+  struct v2 monitorHalfDimInMeters;
+
   struct render_basis *defaultBasis;
   f32 alpha;
 
@@ -110,7 +119,13 @@ struct v4
 Linear1tosRGB255(struct v4 color);
 
 struct render_group *
-RenderGroup(struct memory_arena *arena, u64 pushBufferTotal);
+RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, u32 resolutionPixelsX, u32 resolutionPixelsY);
+
+struct rect2
+GetCameraRectangleAtDistance(struct render_group *renderGroup, f32 distanceFromCamera);
+
+struct rect2
+GetCameraRectangleAtTarget(struct render_group *renderGroup);
 
 void
 Clear(struct render_group *renderGroup, struct v4 color);

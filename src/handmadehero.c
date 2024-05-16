@@ -602,7 +602,10 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
                 struct world_position *chunkPosition)
 {
   struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
-  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 1 * MEGABYTES);
+
+  // TODO(e2dk4r): Pushbuffer size?
+  // TODO(e2dk4r): How do we want to control our ground chunk resolution?
+  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 1 * MEGABYTES, 1920, 1080);
   Clear(renderGroup, v4(1.0f, 1.0f, 0.0f, 1.0f));
 
   struct bitmap *buffer = &groundBuffer->bitmap;
@@ -1031,7 +1034,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   };
 
   struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
-  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 4 * MEGABYTES);
+  struct render_group *renderGroup =
+      RenderGroup(&transientState->transientArena, 4 * MEGABYTES, drawBuffer.width, drawBuffer.height);
 
 /* drawing background */
 #if 0

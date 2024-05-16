@@ -628,6 +628,20 @@ v3_to_v4(struct v3 a, f32 w)
  * rect OPERATIONS
  ****************************************************************/
 
+struct rect2 {
+  struct v2 min;
+  struct v2 max;
+};
+
+internal inline struct rect2
+Rect2CenterHalfDim(struct v2 center, struct v2 halfDim)
+{
+  return (struct rect2){
+      v2_sub(center, halfDim),
+      v2_add(center, halfDim),
+  };
+}
+
 struct rect {
   struct v3 min;
   struct v3 max;
