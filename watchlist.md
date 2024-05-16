@@ -367,7 +367,7 @@
 - [x] Handmade Hero Day 109 - Resolution-Independent Rendering
       https://www.youtube.com/watch?v=e3d7kEtX6iw
 
-- [ ] Handmade Hero Day 110 - Unprojecting Screen Boundaries
+- [x] Handmade Hero Day 110 - Unprojecting Screen Boundaries
       https://www.youtube.com/watch?v=s-eL7riOnwc
 
 - [ ] Handmade Hero Day 111 - Resolution-Independent Ground Chunks
