@@ -831,8 +831,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
             shouldBlock = 1;
 
           if (shouldBlock) {
-            if (tileX % 2 || tileY % 2)
-              WallAdd(state, absTileX, absTileY, absTileZ);
+            WallAdd(state, absTileX, absTileY, absTileZ);
           } else if (isDoorZ) {
             if ((absTileZ % 2 && tileX == 10 && tileY == 5) || (!(absTileZ % 2) && tileX == 4 && tileY == 5)) {
               StairAdd(state, absTileX, absTileY, isDoorDown ? absTileZ - 1 : absTileZ);
