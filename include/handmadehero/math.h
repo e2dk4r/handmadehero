@@ -642,6 +642,12 @@ Rect2CenterHalfDim(struct v2 center, struct v2 halfDim)
   };
 }
 
+internal inline struct v2
+Rect2GetDim(struct rect2 rect)
+{
+  return v2_sub(rect.max, rect.min);
+}
+
 struct rect {
   struct v3 min;
   struct v3 max;

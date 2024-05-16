@@ -1045,16 +1045,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   Clear(renderGroup, backgroundColor);
 #endif
 
-  struct v2 screenDim = {
-      .x = (f32)backbuffer->width,
-      .y = (f32)backbuffer->height,
-  };
-  struct v2 screenCenter = v2_mul(screenDim, 0.5f);
-
-  struct v2 screenDimInMeters = v2_mul(screenDim, pixelsToMeters);
-  struct rect cameraBoundsInMeters = RectCenterDim(v3(0.0f, 0.0f, 0.0f), v2_to_v3(screenDimInMeters, 0.0f));
-  cameraBoundsInMeters.min.z = -3.0f * state->floorHeight;
-  cameraBoundsInMeters.max.z = 1.0f * state->floorHeight;
+  struct rect2 screenBounds = GetCameraRectangleAtTarget(renderGroup);
+  struct rect cameraBoundsInMeters = RectMinMax(v2_to_v3(screenBounds.min, -3.0f * state->floorHeight),
+                                                v2_to_v3(screenBounds.max, 1.0f * state->floorHeight));
+  RectOutline(renderGroup, v3(0, 0, 0), Rect2GetDim(screenBounds), v4(1.0f, 0.5f, 0.5f, 1.0f));
 
 #if 0
   /* draw ground buffer chunks */
