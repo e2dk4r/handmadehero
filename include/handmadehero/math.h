@@ -686,6 +686,12 @@ RectCenterDim(struct v3 center, struct v3 dim)
   return RectCenterHalfDim(center, v3_mul(dim, 0.5f));
 }
 
+internal inline struct v3
+RectGetDim(struct rect rect)
+{
+  return v3_sub(rect.max, rect.min);
+}
+
 internal inline u8
 IsPointInsideRect(struct rect rect, struct v3 testPoint)
 {

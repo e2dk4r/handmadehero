@@ -1046,7 +1046,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct rect2 screenBounds = GetCameraRectangleAtTarget(renderGroup);
   struct rect cameraBoundsInMeters = RectMinMax(v2_to_v3(screenBounds.min, -3.0f * state->floorHeight),
                                                 v2_to_v3(screenBounds.max, 1.0f * state->floorHeight));
-  RectOutline(renderGroup, v3(0, 0, 0), Rect2GetDim(screenBounds), v4(1.0f, 0.5f, 0.5f, 1.0f));
 
 #if 0
   /* draw ground buffer chunks */
@@ -1120,6 +1119,11 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct world_position simRegionOrigin = state->cameraPosition;
   struct sim_region *simRegion =
       BeginSimRegion(&transientState->transientArena, state, state->world, simRegionOrigin, simBounds, dt);
+
+  RectOutline(renderGroup, v3(0, 0, 0), Rect2GetDim(screenBounds), v4(1.0f, 0.5f, 0.5f, 1.0f));
+  RectOutline(renderGroup, v3(0, 0, 0), RectGetDim(cameraBoundsInMeters).xy, v4(0.0f, 0.5f, 0.5f, 1.0f));
+  RectOutline(renderGroup, v3(0, 0, 0), RectGetDim(simRegion->updatableBounds).xy, v4(0.5f, 0.3f, 0.3f, 1.0f));
+  RectOutline(renderGroup, v3(0, 0, 0), RectGetDim(simRegion->bounds).xy, v4(0.5f, 0.2f, 0.2f, 1.0f));
 
   struct v3 cameraRelativeToSim = WorldPositionSub(world, &state->cameraPosition, &simRegionOrigin);
 
