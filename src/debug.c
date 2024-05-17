@@ -35,9 +35,9 @@ debugf(const char *format, ...)
 
   va_list ap;
   va_start(ap, format);
-  assert(vsnprintf(buffer, sizeof(buffer), format, ap) >= 0);
-  u64 len = strnlen(buffer, sizeof(buffer));
-  write(STDOUT_FILENO, buffer, len);
+  int len = vsnprintf(buffer, sizeof(buffer), format, ap);
+  assert(len > 0);
+  write(STDOUT_FILENO, buffer, (size_t)len);
   va_end(ap);
 }
 
