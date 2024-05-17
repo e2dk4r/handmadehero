@@ -1119,10 +1119,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct sim_region *simRegion =
       BeginSimRegion(&transientState->transientArena, state, state->world, simRegionOrigin, simBounds, dt);
 
-  RectOutline(renderGroup, v3(0, 0, 0), Rect2GetDim(screenBounds), v4(1.0f, 0.5f, 0.5f, 1.0f));
-  RectOutline(renderGroup, v3(0, 0, 0), RectGetDim(cameraBoundsInMeters).xy, v4(0.0f, 0.5f, 0.5f, 1.0f));
-  RectOutline(renderGroup, v3(0, 0, 0), RectGetDim(simRegion->updatableBounds).xy, v4(0.5f, 0.3f, 0.3f, 1.0f));
-  RectOutline(renderGroup, v3(0, 0, 0), RectGetDim(simRegion->bounds).xy, v4(0.5f, 0.2f, 0.2f, 1.0f));
+  RectOutline(renderGroup, v3(0, 0, 0), Rect2GetDim(screenBounds), COLOR_ROSE_600);
+  RectOutline(renderGroup, v3(0, 0, 0), RectGetDim(cameraBoundsInMeters).xy, COLOR_ROSE_500);
+  RectOutline(renderGroup, v3(0, 0, 0), RectGetDim(simRegion->updatableBounds).xy, COLOR_PINK_500);
+  RectOutline(renderGroup, v3(0, 0, 0), RectGetDim(simRegion->bounds).xy, COLOR_PINK_700);
 
   struct v3 cameraRelativeToSim = WorldPositionSub(world, &state->cameraPosition, &simRegionOrigin);
 
