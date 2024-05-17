@@ -373,7 +373,7 @@
 - [x] Handmade Hero Day 111 - Resolution-Independent Ground Chunks
       https://www.youtube.com/watch?v=qDE7_6K2pyY
 
-- [ ] Handmade Hero Day 112 - A Mental Model of CPU Performance
+- [x] Handmade Hero Day 112 - A Mental Model of CPU Performance
       https://www.youtube.com/watch?v=qin-Eps3U_E
 
 - [ ] Handmade Hero Day 113 - Simple Performance Counters
