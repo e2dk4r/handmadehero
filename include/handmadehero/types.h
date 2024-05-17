@@ -16,6 +16,8 @@ typedef int64_t i64;
 typedef float f32;
 typedef double f64;
 
+typedef u32 b32;
+
 #define I8_MIN (-128)
 #define I16_MIN (-32767 - 1)
 #define I32_MIN (-2147483647 - 1)

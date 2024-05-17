@@ -130,6 +130,14 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 al
   return result;
 }
 
+internal struct bitmap
+LoadBmpWithCenterAlignment(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
+{
+  struct bitmap bitmap = LoadBmp(PlatformReadEntireFile, filename, 0, 0);
+  bitmap.alignPercentage = v2(0.5f, 0.5f);
+  return bitmap;
+}
+
 inline struct stored_entity *
 StoredEntityGet(struct game_state *state, u32 index)
 {
@@ -434,6 +442,8 @@ MakeEmptyBitmap(struct memory_arena *arena, u32 width, u32 height)
       .height = height,
       .stride = (i32)width * BITMAP_BYTES_PER_PIXEL,
       .memory = MemoryArenaPush(arena, totalBitmapSize),
+      .alignPercentage = v2(0.5f, 0.5f),
+      .widthOverHeight = (f32)width / (f32)height,
   };
 
   return bitmap;
@@ -603,15 +613,19 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
                 struct world_position *chunkPosition)
 {
   struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
-
-  // TODO(e2dk4r): Pushbuffer size?
-  // TODO(e2dk4r): How do we want to control our ground chunk resolution?
-  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 1 * MEGABYTES, 1920, 1080);
-  Clear(renderGroup, v4(1.0f, 1.0f, 0.0f, 1.0f));
-
   struct bitmap *buffer = &groundBuffer->bitmap;
-  f32 width = (f32)buffer->width;
-  f32 height = (f32)buffer->width;
+  // TODO(e2dk4r): Pushbuffer size?
+  // TODO(e2dk4r): Need to be able to set an orthographic display mode
+  struct render_group *renderGroup =
+      RenderGroup(&transientState->transientArena, 1 * MEGABYTES, buffer->width, buffer->height);
+  Clear(renderGroup, COLOR_FUCHSIA_900);
+
+  f32 width = state->world->chunkDimInMeters.x;
+  f32 height = state->world->chunkDimInMeters.y;
+  struct v2 halfDim = v2_mul(state->world->chunkDimInMeters.xy, 0.5f);
+
+  // TODO(e2dk4r): Once we switch orthographic STOP doing this
+  v2_mul_ref(&halfDim, 2.0f);
 
   groundBuffer->position = *chunkPosition;
 
@@ -633,13 +647,10 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
         else
           stamp = state->textureGround + RandomChoice(&series, ARRAY_COUNT(state->textureGround));
 
-        struct v2 stampCenter = v2_mul(v2u(stamp->width, stamp->height), 0.5f);
+        struct v2 position = center;
+        v2_add_ref(&position, v2_hadamard(halfDim, v2(RandomUnit(&series), RandomUnit(&series))));
 
-        struct v2 offset = center;
-        v2_add_ref(&offset, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
-        v2_sub_ref(&offset, stampCenter);
-
-        Bitmap(renderGroup, stamp, v2_to_v3(offset, 0.0f), 1.0f);
+        Bitmap(renderGroup, stamp, v2_to_v3(position, 0.0f), 4.0f);
       }
     }
   }
@@ -659,11 +670,10 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
         struct bitmap *tuft = state->textureTuft + RandomChoice(&series, ARRAY_COUNT(state->textureTuft));
         struct v2 tuftCenter = v2_mul(v2u(tuft->width, tuft->height), 0.5f);
 
-        struct v2 offset = center;
-        v2_add_ref(&offset, v2(width * RandomNormal(&series), height * RandomNormal(&series)));
-        v2_sub_ref(&offset, tuftCenter);
+        struct v2 position = center;
+        v2_add_ref(&position, v2_hadamard(halfDim, v2(RandomUnit(&series), RandomUnit(&series))));
 
-        Bitmap(renderGroup, tuft, v2_to_v3(offset, 0.0f), 1.0f);
+        Bitmap(renderGroup, tuft, v2_to_v3(position, 0.0f), 0.4f);
       }
     }
   }
@@ -723,17 +733,17 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
                                                                               0.9f * tileDepthInMeters));
 
     /* load grass */
-    state->textureGrass[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/grass00.bmp", 0, 0);
-    state->textureGrass[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/grass01.bmp", 0, 0);
+    state->textureGrass[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass00.bmp");
+    state->textureGrass[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass01.bmp");
 
-    state->textureTuft[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft00.bmp", 0, 0);
-    state->textureTuft[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft01.bmp", 0, 0);
-    state->textureTuft[2] = LoadBmp(memory->PlatformReadEntireFile, "test2/tuft02.bmp", 0, 0);
+    state->textureTuft[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft00.bmp");
+    state->textureTuft[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft01.bmp");
+    state->textureTuft[2] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft02.bmp");
 
-    state->textureGround[0] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground00.bmp", 0, 0);
-    state->textureGround[1] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground01.bmp", 0, 0);
-    state->textureGround[2] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground02.bmp", 0, 0);
-    state->textureGround[3] = LoadBmp(memory->PlatformReadEntireFile, "test2/ground03.bmp", 0, 0);
+    state->textureGround[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground00.bmp");
+    state->textureGround[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground01.bmp");
+    state->textureGround[2] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground02.bmp");
+    state->textureGround[3] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground03.bmp");
 
     /* load background */
     state->textureBackground = LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp", 0, 0);
@@ -1046,7 +1056,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct rect cameraBoundsInMeters = RectMinMax(v2_to_v3(screenBounds.min, -3.0f * state->floorHeight),
                                                 v2_to_v3(screenBounds.max, 1.0f * state->floorHeight));
 
-#if 0
   /* draw ground buffer chunks */
   for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
     struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
@@ -1054,17 +1063,25 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     if (IsGroundBufferEmpty(groundBuffer))
       continue;
 
-    struct bitmap *bitmap = &groundBuffer->bitmap;
-    bitmap->alignX = bitmap->width / 2;
-    bitmap->alignY = bitmap->height / 2;
     struct v3 positionRelativeToCamera = WorldPositionSub(world, &groundBuffer->position, &state->cameraPosition);
+    if (!InRange(-1.0f, 1.0f, positionRelativeToCamera.z))
+      continue;
+
+    struct bitmap *bitmap = &groundBuffer->bitmap;
+    bitmap->alignPercentage = v2(0.5f, 0.5f);
 
     struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
     basis->position = positionRelativeToCamera;
     renderGroup->defaultBasis = basis;
 
-    Bitmap(renderGroup, bitmap, v3(0.0f, 0.0f, 0.0f));
+    struct v2 groundDim = world->chunkDimInMeters.xy;
+    Bitmap(renderGroup, bitmap, v3(0.0f, 0.0f, 0.0f), groundDim.y);
+    RectOutline(renderGroup, v3(0.0f, 0.0f, 0.0f), groundDim, COLOR_GRAY_500);
   }
+
+  struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
+  basis->position = v3(0.0f, 0.0f, 0.0f);
+  renderGroup->defaultBasis = basis;
 
   /* fill ground buffer chunks */
   {
@@ -1100,17 +1117,14 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
             }
           }
 
-          if (furthestBuffer) {
-            FillGroundChunk(transientState, state, furthestBuffer, &chunkCenterPosition);
-          }
+          if (!furthestBuffer)
+            continue;
 
-          struct v3 rel = WorldPositionSub(world, &chunkCenterPosition, &state->cameraPosition);
-          RectOutline(renderGroup, rel, world->chunkDimInMeters.xy, v4(1.0f, 1.0f, 0.0f, 1.0f));
+          FillGroundChunk(transientState, state, furthestBuffer, &chunkCenterPosition);
         }
       }
     }
   }
-#endif
 
   struct memory_temp simRegionMemory = BeginTemporaryMemory(&transientState->transientArena);
   struct v3 simBoundExpansion = v3(15.0f, 15.0f, 0);

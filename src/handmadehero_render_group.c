@@ -27,7 +27,7 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, u32 resolutionPixel
       v2((f32)resolutionPixelsX * pixelsToMeters * 0.5f, (f32)resolutionPixelsY * pixelsToMeters * 0.5f);
 
   renderGroup->renderCamera = renderGroup->gameCamera;
-  renderGroup->renderCamera.cameraDistanceAboveTarget = 50.0f;
+  // renderGroup->renderCamera.cameraDistanceAboveTarget = 50.0f;
 
   return renderGroup;
 }

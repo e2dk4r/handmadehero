@@ -18,6 +18,13 @@ Maximum(f32 a, f32 b)
   return (a > b) ? a : b;
 }
 
+internal inline b32
+InRange(f32 min, f32 max, f32 value)
+{
+  assert(min < max);
+  return value >= min && value <= max;
+}
+
 internal inline i32
 roundf32toi32(f32 value)
 {
