@@ -370,7 +370,7 @@
 - [x] Handmade Hero Day 110 - Unprojecting Screen Boundaries
       https://www.youtube.com/watch?v=s-eL7riOnwc
 
-- [ ] Handmade Hero Day 111 - Resolution-Independent Ground Chunks
+- [x] Handmade Hero Day 111 - Resolution-Independent Ground Chunks
       https://www.youtube.com/watch?v=qDE7_6K2pyY
 
 - [ ] Handmade Hero Day 112 - A Mental Model of CPU Performance
