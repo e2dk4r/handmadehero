@@ -35,7 +35,8 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, u32 resolutionPixel
 internal inline struct v2
 Unproject(struct render_group *renderGroup, f32 atDistanceFromCamera)
 {
-  struct v2 worldXY = v2_mul(renderGroup->monitorHalfDimInMeters, (atDistanceFromCamera / renderGroup->gameCamera.focalLength));
+  struct v2 worldXY =
+      v2_mul(renderGroup->monitorHalfDimInMeters, (atDistanceFromCamera / renderGroup->gameCamera.focalLength));
   return worldXY;
 }
 
