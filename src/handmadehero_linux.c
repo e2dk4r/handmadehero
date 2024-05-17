@@ -211,7 +211,6 @@ struct linux_state {
    * throughout the system.
    */
   u64 last_ust;
-  u64 frame;
 
   u8 running : 1;
 #if PAUSE_WHEN_SURFACE_OUT_OF_FOCUS
@@ -771,7 +770,6 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
     wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
     wl_surface_damage_buffer(state->wl_surface, 0, 0, (i32)backbuffer->width, (i32)backbuffer->height);
 
-    state->frame++;
     state->last_ust = ust;
 
     // swap inputs
