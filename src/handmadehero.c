@@ -1,4 +1,5 @@
 #include <handmadehero/assert.h>
+#include <handmadehero/color.h>
 #include <handmadehero/entity.h>
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/math.h>
@@ -1036,10 +1037,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
 /* drawing background */
 #if 0
-  Bitmap(renderGroup, &state->textureBackground, v2(0.0f, 0.0f), 0.0f, v2(0, 0));
+  Bitmap(renderGroup, &state->textureBackground, v3(0.0f, 0.0f, 0.0f), 1);
 #else
-  struct v4 backgroundColor = v4(0.25f, 0.25f, 0.25f, 1.0f);
-  Clear(renderGroup, backgroundColor);
+  Clear(renderGroup, COLOR_ZINC_800);
 #endif
 
   struct rect2 screenBounds = GetCameraRectangleAtTarget(renderGroup);
