@@ -114,7 +114,7 @@ HandleCycleCounters(struct game_memory *memory)
     if (counter->hitCount == 0)
       continue;
 
-    debugf("%s: %" PRIu64 "cy %" PRIu64 "h %" PRIu64 "cy/h\n", counterNameTable[counterIndex], counter->cycleCount,
+    debugf("  %s: %" PRIu64 "cy %" PRIu64 "h %" PRIu64 "cy/h\n", counterNameTable[counterIndex], counter->cycleCount,
            counter->hitCount, counter->cycleCount / counter->hitCount);
 
     counter->hitCount = 0;
