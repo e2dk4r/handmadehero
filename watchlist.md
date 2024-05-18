@@ -376,7 +376,7 @@
 - [x] Handmade Hero Day 112 - A Mental Model of CPU Performance
       https://www.youtube.com/watch?v=qin-Eps3U_E
 
-- [ ] Handmade Hero Day 113 - Simple Performance Counters
+- [x] Handmade Hero Day 113 - Simple Performance Counters
       https://www.youtube.com/watch?v=QdTqYhv8tL0
 
 - [ ] Handmade Hero Day 114 - Preparing a Function for Optimization
