@@ -126,7 +126,7 @@ struct game_memory {
   pfnPlatformWriteEntireFile PlatformWriteEntireFile;
   pfnPlatformFreeMemory PlatformFreeMemory;
 
-  struct cycle_counter counters[256];
+  struct cycle_counter counters[CYCLE_COUNTER_COUNT];
 #endif
 };
 
