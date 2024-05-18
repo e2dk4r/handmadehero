@@ -32,6 +32,7 @@ enum {
 
 struct cycle_counter {
   u64 cycleCount;
+  u64 hitCount;
 };
 
 u64
@@ -39,7 +40,8 @@ rdtsc(void);
 extern struct game_memory *DEBUG_GLOBAL_MEMORY;
 #define BEGIN_TIMER_BLOCK(tag) u64 startCycleCount##tag = rdtsc()
 #define END_TIMER_BLOCK(tag)                                                                                           \
-  DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;
+  DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;                     \
+  DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].hitCount += 1;
 
 #else
 

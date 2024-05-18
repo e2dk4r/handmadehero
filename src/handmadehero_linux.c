@@ -108,12 +108,16 @@ HandleCycleCounters(struct game_memory *memory)
   };
   static_assert(ARRAY_COUNT(counterNameTable) == CYCLE_COUNTER_COUNT);
 
-  for (u32 counterIndex = 0; counterIndex < ARRAY_COUNT(memory->counters) && counterIndex < CYCLE_COUNTER_COUNT;
-       counterIndex++) {
+  for (u32 counterIndex = 0; counterIndex < ARRAY_COUNT(memory->counters); counterIndex++) {
     struct cycle_counter *counter = memory->counters + counterIndex;
 
-    debugf("%s: %" PRIu64 "\n", counterNameTable[counterIndex], counter->cycleCount);
+    if (counter->hitCount == 0)
+      continue;
 
+    debugf("%s: %" PRIu64 "cy %" PRIu64 "h %" PRIu64 "cy/h\n", counterNameTable[counterIndex], counter->cycleCount,
+           counter->hitCount, counter->cycleCount / counter->hitCount);
+
+    counter->hitCount = 0;
     counter->cycleCount = 0;
   }
 #endif
