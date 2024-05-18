@@ -1,6 +1,7 @@
 project(
   'handmadehero',
   'c',
+  'nasm',
   version: '0.1-dev',
   default_options: [
     'c_std=c99',
@@ -56,7 +57,10 @@ common_src = [
   'src/handmadehero_memory_arena.c'
 ]
 if is_build_debug
-  common_src += 'src/debug.c'
+  common_src += [
+    'src/debug.c',
+    'src/rdtsc.asm',
+  ]
 endif
 
 platform_src = [

@@ -629,6 +629,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
   groundBuffer->position = *chunkPosition;
 
+#if 0
   for (i32 chunkOffsetY = -1; chunkOffsetY <= 1; chunkOffsetY++) {
     for (i32 chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
       u32 chunkX = chunkPosition->chunkX + (u32)chunkOffsetX;
@@ -677,14 +678,25 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       }
     }
   }
+#endif
 
   DrawRenderGroup(renderGroup, buffer);
   EndTemporaryMemory(&renderMemory);
 }
 
+#if HANDMADEHERO_INTERNAL
+struct game_memory *DEBUG_GLOBAL_MEMORY;
+#endif
+
 void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer)
 {
+#if HANDMADEHERO_INTERNAL
+  DEBUG_GLOBAL_MEMORY = memory;
+#endif
+
+  BEGIN_TIMER_BLOCK(GameUpdateAndRender);
+
   assert(sizeof(struct game_state) <= memory->permanentStorageSize);
   struct game_state *state = memory->permanentStorage;
   f32 dt = input->dtPerFrame;
@@ -1414,4 +1426,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   MemoryArenaCheck(&state->worldArena);
   MemoryArenaCheck(&transientState->transientArena);
+
+  END_TIMER_BLOCK(GameUpdateAndRender);
 }

@@ -95,6 +95,30 @@ PlatformFreeMemory(void *address)
 
 #endif /* HANDMADEHERO_INTERNAL */
 
+internal void
+HandleCycleCounters(struct game_memory *memory)
+{
+#if HANDMADEHERO_INTERNAL
+  debugf("CYCLE COUNTS:\n");
+
+  char *counterNameTable[] = {
+      "GameUpdateAndRender",
+      "DrawRenderGroup",
+      "DrawRectangleSlowly",
+  };
+  static_assert(ARRAY_COUNT(counterNameTable) == CYCLE_COUNTER_COUNT);
+
+  for (u32 counterIndex = 0; counterIndex < ARRAY_COUNT(memory->counters) && counterIndex < CYCLE_COUNTER_COUNT;
+       counterIndex++) {
+    struct cycle_counter *counter = memory->counters + counterIndex;
+
+    debugf("%s: %" PRIu64 "\n", counterNameTable[counterIndex], counter->cycleCount);
+
+    counter->cycleCount = 0;
+  }
+#endif
+}
+
 /*****************************************************************
  * memory bank
  *****************************************************************/
@@ -767,6 +791,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
 
     struct game_backbuffer *backbuffer = &state->backbuffer;
     GameUpdateAndRender(&state->game_memory, newInput, backbuffer);
+    HandleCycleCounters(&state->game_memory);
     wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
     wl_surface_damage_buffer(state->wl_surface, 0, 0, (i32)backbuffer->width, (i32)backbuffer->height);
 

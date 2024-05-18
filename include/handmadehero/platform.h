@@ -23,6 +23,29 @@ void
 PlatformFreeMemory(void *address);
 typedef void (*pfnPlatformFreeMemory)(void *address);
 
+enum {
+  CYCLE_COUNTER_GameUpdateAndRender,
+  CYCLE_COUNTER_DrawRenderGroup,
+  CYCLE_COUNTER_DrawRectangleSlowly,
+  CYCLE_COUNTER_COUNT
+};
+
+struct cycle_counter {
+  u64 cycleCount;
+};
+
+u64
+rdtsc(void);
+extern struct game_memory *DEBUG_GLOBAL_MEMORY;
+#define BEGIN_TIMER_BLOCK(tag) u64 startCycleCount##tag = rdtsc()
+#define END_TIMER_BLOCK(tag)                                                                                           \
+  DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;
+
+#else
+
+#define BEGIN_TIMER_BLOCK(tag)
+#define END_TIMER_BLOCK(tag)
+
 #endif
 
 struct game_backbuffer {
@@ -102,6 +125,8 @@ struct game_memory {
   pfnPlatformReadEntireFile PlatformReadEntireFile;
   pfnPlatformWriteEntireFile PlatformWriteEntireFile;
   pfnPlatformFreeMemory PlatformFreeMemory;
+
+  struct cycle_counter counters[256];
 #endif
 };
 

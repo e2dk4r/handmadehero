@@ -372,6 +372,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
                     struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
                     struct environment_map *middle, struct environment_map *bottom, f32 pixelsToMeters)
 {
+  BEGIN_TIMER_BLOCK(DrawRectangleSlowly);
+
   f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
   f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
 
@@ -559,6 +561,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
     }
     row += buffer->stride;
   }
+
+  END_TIMER_BLOCK(DrawRectangleSlowly);
 }
 
 internal inline void
@@ -675,6 +679,8 @@ GetRenderEntityBasisP(struct render_entity_basis *entityBasis, struct render_gro
 inline void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 {
+  BEGIN_TIMER_BLOCK(DrawRenderGroup);
+
   struct v2 screenDim = v2u(outputTarget->width, outputTarget->height);
 
   f32 pixelsToMeters = 1.0f / renderGroup->metersToPixels;
@@ -747,4 +753,6 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       assert(0 && "this renderer does not know how to handle render group entry type");
     }
   }
+
+  END_TIMER_BLOCK(DrawRenderGroup);
 }
