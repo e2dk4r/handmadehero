@@ -6,15 +6,21 @@ on:
   pull_request:
     branches: [ "master" ]
 
+env:
+  NINJA_VERSION: '1.12.1'
+  MUON_VERSION: '0.2.0'
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      PKG_CONFIG_PATH: '/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig'
     steps:
     - uses: actions/checkout@v3
 
     - name: install packages
       run: sudo apt-get install -y --no-install-recommends --no-install-suggests
-           wget python3 unzip libarchive-tools
+           wget unzip libarchive-tools
            nasm
            pkg-config
            libevdev-dev liburing-dev
@@ -22,16 +28,13 @@ jobs:
 
            sudo ln -sf /usr/bin/bsdtar /usr/bin/tar;
 
-           NINJA_VERSION=1.12.1;
            wget https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip;
            unzip ninja-linux.zip; rm ninja-linux.zip;
            sudo mv ninja /usr/bin/;
 
-           MESON_VERSION=1.4.0;
-           wget https://github.com/mesonbuild/meson/releases/download/$MESON_VERSION/meson-$MESON_VERSION.tar.gz;
-           tar xf meson-$MESON_VERSION.tar.gz; rm meson-$MESON_VERSION.tar.gz;
-           sudo mv meson-$MESON_VERSION/mesonbuild /usr/lib/python3/dist-packages/; sudo mv meson-$MESON_VERSION/meson.py /usr/bin/meson;
-           rm -rf meson-$MESON_VERSION/;
+           wget https://muon.build/releases/v$MUON_VERSION/muon-$MUON_VERSION-amd64-linux-static;
+           chmod 755 muon-$MUON_VERSION-amd64-linux-static;
+           sudo mv muon-$MUON_VERSION-amd64-linux-static /usr/bin/meson;
 
     - name: configure
       run: meson setup build
