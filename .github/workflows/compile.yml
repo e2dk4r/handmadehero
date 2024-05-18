@@ -37,7 +37,7 @@ jobs:
            sudo mv muon-$MUON_VERSION-amd64-linux-static /usr/bin/meson;
 
     - name: configure
-      run: meson setup build
+      run: meson setup build -Ddefault_library=shared
 
     - name: ninja
       run: ninja -C build
