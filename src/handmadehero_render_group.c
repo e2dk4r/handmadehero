@@ -444,6 +444,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
   for (i32 y = yMin; y <= yMax; y++) {
     u32 *pixel = (u32 *)row;
     for (i32 x = xMin; x <= xMax; x++) {
+      BEGIN_TIMER_BLOCK(TestPixel);
+
       struct v2 pixelP = v2i(x, y);
       struct v2 d = v2_sub(pixelP, origin);
       // TODO(e2dk4r): PerpDot()
@@ -454,6 +456,8 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
       f32 edge3 = v2_dot(v2_sub(d, yAxis), v2_perp(yAxis));
 
       if (edge0 < 0 && edge1 < 0 && edge2 < 0 && edge3 < 0) {
+        BEGIN_TIMER_BLOCK(FillPixel);
+
         struct v2 screenSpaceUV = v2(invWidthMax * (f32)x, fixedCastY);
         f32 zDiff = pixelsToMeters * ((f32)y - originY);
 
@@ -481,6 +485,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         struct bilinear_sample texelSample = BilinearSample(texture, texelX, texelY);
         struct v4 texel = sRGBBilinearBlend(texelSample, fX, fY);
 
+#if 0
         if (normalMap) {
           struct bilinear_sample normalSample = BilinearSample(normalMap, texelX, texelY);
 
@@ -537,6 +542,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
           v3_mul_ref(&texel.rgb, texel.a);
 #endif
         }
+#endif
 
         texel = v4_hadamard(texel, color);
         texel.r = Clamp01(texel.r);
@@ -555,9 +561,11 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         blended = Linear1tosRGB255(blended);
 
         Pack4x8(pixel, blended);
+        END_TIMER_BLOCK(FillPixel);
       }
 
       pixel++;
+      END_TIMER_BLOCK(TestPixel);
     }
     row += buffer->stride;
   }

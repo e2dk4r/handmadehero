@@ -102,9 +102,7 @@ HandleCycleCounters(struct game_memory *memory)
   debugf("CYCLE COUNTS:\n");
 
   char *counterNameTable[] = {
-      "GameUpdateAndRender",
-      "DrawRenderGroup",
-      "DrawRectangleSlowly",
+      "GameUpdateAndRender", "DrawRenderGroup", "DrawRectangleSlowly", "TestPixel", "FillPixel",
   };
   static_assert(ARRAY_COUNT(counterNameTable) == CYCLE_COUNTER_COUNT);
 

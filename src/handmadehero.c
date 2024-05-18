@@ -1088,7 +1088,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     struct v2 groundDim = world->chunkDimInMeters.xy;
     Bitmap(renderGroup, bitmap, v3(0.0f, 0.0f, 0.0f), groundDim.y);
+#if 0
     RectOutline(renderGroup, v3(0.0f, 0.0f, 0.0f), groundDim, COLOR_GRAY_500);
+#endif
   }
 
   struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
