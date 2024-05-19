@@ -219,11 +219,7 @@ struct v4 {
 internal inline struct v2
 v2(f32 x, f32 y)
 {
-  struct v2 result;
-
-  result.x = x;
-  result.y = y;
-
+  struct v2 result = {x, y};
   return result;
 }
 
@@ -319,18 +315,14 @@ v2_dot(struct v2 a, struct v2 b)
 internal inline f32
 v2_length_square(struct v2 a)
 {
-  f32 value;
-
-  value = v2_dot(a, a);
-
+  f32 value = v2_dot(a, a);
   return value;
 }
 
 internal inline f32
 v2_length(struct v2 a)
 {
-  f32 value;
-  value = SquareRoot(v2_length_square(a));
+  f32 value = SquareRoot(v2_length_square(a));
   return value;
 }
 
@@ -344,20 +336,14 @@ v2_hadamard(struct v2 a, struct v2 b)
 internal inline struct v3
 v2_to_v3(struct v2 a, f32 z)
 {
-  struct v3 result;
-  result.xy = a;
-  result.z = z;
+  struct v3 result = {.xy = a, z};
   return result;
 }
 
 internal inline struct v2
 v2_perp(struct v2 a)
 {
-  struct v2 result;
-
-  result.x = -a.y;
-  result.y = a.x;
-
+  struct v2 result = {-a.y, a.x};
   return result;
 }
 
@@ -368,10 +354,7 @@ v2_perp(struct v2 a)
 internal inline struct v3
 v3(f32 x, f32 y, f32 z)
 {
-  struct v3 result;
-  result.x = x;
-  result.y = y;
-  result.z = z;
+  struct v3 result = {x, y, z};
   return result;
 }
 
@@ -450,16 +433,14 @@ v3_dot(struct v3 a, struct v3 b)
 internal inline f32
 v3_length_square(struct v3 a)
 {
-  f32 value;
-  value = v3_dot(a, a);
+  f32 value = v3_dot(a, a);
   return value;
 }
 
 internal inline f32
 v3_length(struct v3 a)
 {
-  f32 value;
-  value = SquareRoot(v3_length_square(a));
+  f32 value = SquareRoot(v3_length_square(a));
   return value;
 }
 
@@ -515,11 +496,7 @@ v3_normalize(struct v3 a)
 internal inline struct v4
 v4(f32 x, f32 y, f32 z, f32 w)
 {
-  struct v4 result;
-  result.x = x;
-  result.y = y;
-  result.z = z;
-  result.w = w;
+  struct v4 result = {x, y, z, w};
   return result;
 }
 
@@ -602,18 +579,14 @@ v4_dot(struct v4 a, struct v4 b)
 internal inline f32
 v4_length_square(struct v4 a)
 {
-  f32 value;
-  value = v4_dot(a, a);
+  f32 value = v4_dot(a, a);
   return value;
 }
 
 internal inline struct v4
 v4_lerp(struct v4 a, struct v4 b, f32 t)
 {
-  struct v4 result;
-
-  result = v4_add(v4_mul(a, 1.0f - t), v4_mul(b, t));
-
+  struct v4 result = v4_add(v4_mul(a, 1.0f - t), v4_mul(b, t));
   return result;
 }
 
@@ -627,7 +600,7 @@ v4_hadamard(struct v4 a, struct v4 b)
 internal inline struct v4
 v3_to_v4(struct v3 a, f32 w)
 {
-  struct v4 result = {a.x, a.y, a.z, w};
+  struct v4 result = {.xyz = a, w};
   return result;
 }
 
