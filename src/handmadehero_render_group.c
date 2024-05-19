@@ -574,6 +574,228 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
 }
 
 internal inline void
+DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis,
+                              struct v4 color, struct bitmap *texture, f32 pixelsToMeters)
+{
+  BEGIN_TIMER_BLOCK(DrawRectangleHopefullyQuickly);
+
+  f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
+  f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
+
+  f32 xAxisLength = v2_length(xAxis);
+  f32 yAxisLength = v2_length(yAxis);
+  struct v2 NxAxis = v2_mul(xAxis, yAxisLength / xAxisLength);
+  struct v2 NyAxis = v2_mul(yAxis, xAxisLength / yAxisLength);
+  f32 NzScale = 0.5f * (xAxisLength + yAxisLength);
+
+  i32 widthMax = (i32)buffer->width - 1;
+  i32 heightMax = (i32)buffer->height - 1;
+
+  f32 invWidthMax = 1.0f / (f32)widthMax;
+  f32 invHeightMax = 1.0f / (f32)heightMax;
+
+  // TODO(e2dk4r): this will need to be specified seperately
+  f32 originZ = 0.0f;
+  f32 originY = v2_add(origin, v2_add(v2_mul(xAxis, 0.5f), v2_mul(yAxis, 0.5f))).y;
+  f32 fixedCastY = invHeightMax * originY;
+
+  i32 xMin = widthMax;
+  i32 xMax = 0;
+  i32 yMin = heightMax;
+  i32 yMax = 0;
+
+  struct v2 p[4] = {
+      origin,
+      v2_add(origin, xAxis),
+      v2_add(origin, v2_add(xAxis, yAxis)),
+      v2_add(origin, yAxis),
+  };
+
+  for (u32 pIndex = 0; pIndex < ARRAY_COUNT(p); pIndex++) {
+    struct v2 testP = p[pIndex];
+    i32 floorX = Floor(testP.x);
+    i32 ceilX = Ceil(testP.x);
+    i32 floorY = Floor(testP.y);
+    i32 ceilY = Ceil(testP.y);
+
+    if (xMin > floorX)
+      xMin = floorX;
+
+    if (xMax < ceilX)
+      xMax = ceilX;
+
+    if (yMin > floorY)
+      yMin = floorY;
+
+    if (yMax < ceilY)
+      yMax = ceilY;
+  }
+
+  if (xMin < 0)
+    xMin = 0;
+  if (xMax > widthMax)
+    xMax = widthMax;
+
+  if (yMin < 0)
+    yMin = 0;
+  if (yMax > heightMax)
+    yMax = heightMax;
+
+  u8 *row = buffer->memory + yMin * buffer->stride + xMin * BITMAP_BYTES_PER_PIXEL;
+
+  // pre-multiplied alpha
+  v3_mul_ref(&color.rgb, color.a);
+
+  // pre-multiplied axis
+  struct v2 nxAxis = v2_mul(xAxis, InvXAxisLengthSq);
+  struct v2 nyAxis = v2_mul(yAxis, InvYAxisLengthSq);
+
+  f32 inv255 = 1.0f / 255.0f;
+
+  for (i32 y = yMin; y <= yMax; y++) {
+    u32 *pixel = (u32 *)row;
+    for (i32 x = xMin; x <= xMax; x++) {
+      BEGIN_TIMER_BLOCK(TestPixel);
+
+      struct v2 pixelP = v2i(x, y);
+      struct v2 d = v2_sub(pixelP, origin);
+
+      f32 u = v2_dot(d, nxAxis);
+      f32 v = v2_dot(d, nyAxis);
+
+      if (u >= 0 && u < 1.0f && v >= 0 && v < 1.0f) {
+        BEGIN_TIMER_BLOCK(FillPixel);
+
+        f32 tX = u * (f32)(texture->width - 2);
+        f32 tY = v * (f32)(texture->height - 2);
+
+        i32 texelX = (i32)tX;
+        i32 texelY = (i32)tY;
+
+        f32 fX = tX - (f32)texelX;
+        f32 fY = tY - (f32)texelY;
+
+        assert(texelX >= 0 && texelX < (i32)texture->width);
+        assert(texelY >= 0 && texelY < (i32)texture->height);
+
+        // BilinearSample
+        u32 *sampleA = (u32 *)((u8 *)texture->memory + texelY * texture->stride + texelX * BITMAP_BYTES_PER_PIXEL);
+        u32 *sampleB = (u32 *)((u8 *)sampleA + BITMAP_BYTES_PER_PIXEL);
+        u32 *sampleC = (u32 *)((u8 *)sampleA + texture->stride);
+        u32 *sampleD = (u32 *)((u8 *)sampleC + BITMAP_BYTES_PER_PIXEL);
+
+        // sRGBBilinearBlend - Unpack4x8
+        f32 texelAr = (f32)((*sampleA >> 0x10) & 0xff);
+        f32 texelAg = (f32)((*sampleA >> 0x08) & 0xff);
+        f32 texelAb = (f32)((*sampleA >> 0x00) & 0xff);
+        f32 texelAa = (f32)((*sampleA >> 0x18) & 0xff);
+
+        f32 texelBr = (f32)((*sampleB >> 0x10) & 0xff);
+        f32 texelBg = (f32)((*sampleB >> 0x08) & 0xff);
+        f32 texelBb = (f32)((*sampleB >> 0x00) & 0xff);
+        f32 texelBa = (f32)((*sampleB >> 0x18) & 0xff);
+
+        f32 texelCr = (f32)((*sampleC >> 0x10) & 0xff);
+        f32 texelCg = (f32)((*sampleC >> 0x08) & 0xff);
+        f32 texelCb = (f32)((*sampleC >> 0x00) & 0xff);
+        f32 texelCa = (f32)((*sampleC >> 0x18) & 0xff);
+
+        f32 texelDr = (f32)((*sampleD >> 0x10) & 0xff);
+        f32 texelDg = (f32)((*sampleD >> 0x08) & 0xff);
+        f32 texelDb = (f32)((*sampleD >> 0x00) & 0xff);
+        f32 texelDa = (f32)((*sampleD >> 0x18) & 0xff);
+
+        // sRGBBilinearBlend - sRGB255toLinear1()
+        texelAr = Square(inv255 * texelAr);
+        texelAg = Square(inv255 * texelAg);
+        texelAb = Square(inv255 * texelAb);
+        texelAa = inv255 * texelAa;
+
+        texelBr = Square(inv255 * texelBr);
+        texelBg = Square(inv255 * texelBg);
+        texelBb = Square(inv255 * texelBb);
+        texelBa = inv255 * texelBa;
+
+        texelCr = Square(inv255 * texelCr);
+        texelCg = Square(inv255 * texelCg);
+        texelCb = Square(inv255 * texelCb);
+        texelCa = inv255 * texelCa;
+
+        texelDr = Square(inv255 * texelDr);
+        texelDg = Square(inv255 * texelDg);
+        texelDb = Square(inv255 * texelDb);
+        texelDa = inv255 * texelDa;
+
+        // sRGBBilinearBlend - v4_lerp()
+        f32 invfX = 1.0f - fX;
+        f32 invfY = 1.0f - fY;
+
+        f32 texelABr = texelAr * invfX + texelBr * fX;
+        f32 texelABg = texelAg * invfX + texelBg * fX;
+        f32 texelABb = texelAb * invfX + texelBb * fX;
+        f32 texelABa = texelAa * invfX + texelBa * fX;
+
+        f32 texelCDr = texelCr * invfX + texelDr * fX;
+        f32 texelCDg = texelCg * invfX + texelDg * fX;
+        f32 texelCDb = texelCb * invfX + texelDb * fX;
+        f32 texelCDa = texelCa * invfX + texelDa * fX;
+
+        f32 texelr = texelABr * invfY + texelCDr * fY;
+        f32 texelg = texelABg * invfY + texelCDg * fY;
+        f32 texelb = texelABb * invfY + texelCDb * fY;
+        f32 texela = texelABa * invfY + texelCDa * fY;
+
+        // v4_hadamard(texel, color)
+        texelr = texelr * color.r;
+        texelg = texelg * color.g;
+        texelb = texelb * color.b;
+        texela = texela * color.a;
+
+        // clamp
+        texelr = Clamp01(texelr);
+        texelg = Clamp01(texelg);
+        texelb = Clamp01(texelb);
+
+        // destination channels
+        f32 destr = (f32)((*pixel >> 0x10) & 0xff);
+        f32 destg = (f32)((*pixel >> 0x08) & 0xff);
+        f32 destb = (f32)((*pixel >> 0x00) & 0xff);
+        f32 desta = (f32)((*pixel >> 0x18) & 0xff);
+
+        // NOTE(e2dk4r): Go from sRGB to "linear" brightness space
+        destr = Square(inv255 * destr);
+        destg = Square(inv255 * destg);
+        destb = Square(inv255 * destb);
+        desta = inv255 * desta;
+
+        // blend alpha
+        f32 invTexela = 1.0f - texela;
+        f32 blendedr = destr * invTexela + texelr;
+        f32 blendedg = destg * invTexela + texelg;
+        f32 blendedb = destb * invTexela + texelb;
+        f32 blendeda = desta * invTexela + texela;
+
+        // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
+        blendedr = 255.0f * SquareRoot(blendedr);
+        blendedg = 255.0f * SquareRoot(blendedg);
+        blendedb = 255.0f * SquareRoot(blendedb);
+        blendeda = 255.0f * blendeda;
+
+        *pixel = (u32)(blendeda + 0.5f) << 0x18 | (u32)(blendedr + 0.5f) << 0x10 | (u32)(blendedg + 0.5f) << 0x08 |
+                 (u32)(blendedb + 0.5f) << 0x00;
+        END_TIMER_BLOCK(FillPixel);
+      }
+
+      pixel++;
+      END_TIMER_BLOCK(TestPixel);
+    }
+    row += buffer->stride;
+  }
+
+  END_TIMER_BLOCK(DrawRectangleHopefullyQuickly);
+}
+
+internal inline void
 DrawRectangleOutline(struct bitmap *buffer, struct v2 min, struct v2 max, struct v4 color, f32 thickness)
 {
   // NOTE(e2dk4r): top and bottom
@@ -718,9 +940,9 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 #if 0
       DrawBitmap(outputTarget, entry->bitmap, basis.p, entry->alpha);
 #else
-      DrawRectangleSlowly(outputTarget, basis.p, v2_mul(v2(entry->size.x, 0), basis.scale),
-                          v2_mul(v2(0, entry->size.y), basis.scale), v4(1.0f, 1.0f, 1.0f, entry->alpha), entry->bitmap,
-                          0, 0, 0, 0, pixelsToMeters);
+      DrawRectangleHopefullyQuickly(outputTarget, basis.p, v2_mul(v2(entry->size.x, 0), basis.scale),
+                                    v2_mul(v2(0, entry->size.y), basis.scale), v4(1.0f, 1.0f, 1.0f, entry->alpha),
+                                    entry->bitmap, pixelsToMeters);
 #endif
     }
 

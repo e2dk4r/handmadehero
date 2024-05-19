@@ -29,6 +29,7 @@ enum {
   CYCLE_COUNTER_DrawRectangleSlowly,
   CYCLE_COUNTER_TestPixel,
   CYCLE_COUNTER_FillPixel,
+  CYCLE_COUNTER_DrawRectangleHopefullyQuickly,
   CYCLE_COUNTER_COUNT
 };
 
