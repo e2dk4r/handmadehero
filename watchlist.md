@@ -379,7 +379,7 @@
 - [x] Handmade Hero Day 113 - Simple Performance Counters
       https://www.youtube.com/watch?v=QdTqYhv8tL0
 
-- [ ] Handmade Hero Day 114 - Preparing a Function for Optimization
+- [x] Handmade Hero Day 114 - Preparing a Function for Optimization
       https://www.youtube.com/watch?v=_vkI9BedvKA
 
 - [ ] Handmade Hero Day 115 - SIMD Basics
