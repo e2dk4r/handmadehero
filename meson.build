@@ -15,7 +15,7 @@ cc = meson.get_compiler('c')
 
 add_project_arguments(
   [
-    '-O2',
+    '-O3',
     '-march=x86-64-v3',
     '-funroll-loops',
     '-fomit-frame-pointer',
