@@ -444,8 +444,6 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
   for (i32 y = yMin; y <= yMax; y++) {
     u32 *pixel = (u32 *)row;
     for (i32 x = xMin; x <= xMax; x++) {
-      BEGIN_TIMER_BLOCK(TestPixel);
-
       struct v2 pixelP = v2i(x, y);
       struct v2 d = v2_sub(pixelP, origin);
       // TODO(e2dk4r): PerpDot()
@@ -456,7 +454,6 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
       f32 edge3 = v2_dot(v2_sub(d, yAxis), v2_perp(yAxis));
 
       if (edge0 < 0 && edge1 < 0 && edge2 < 0 && edge3 < 0) {
-        BEGIN_TIMER_BLOCK(FillPixel);
 
         struct v2 screenSpaceUV = v2(invWidthMax * (f32)x, fixedCastY);
         f32 zDiff = pixelsToMeters * ((f32)y - originY);
@@ -561,11 +558,9 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
         blended = Linear1tosRGB255(blended);
 
         Pack4x8(pixel, blended);
-        END_TIMER_BLOCK(FillPixel);
       }
 
       pixel++;
-      END_TIMER_BLOCK(TestPixel);
     }
     row += buffer->stride;
   }
@@ -653,10 +648,10 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
 
   f32 inv255 = 1.0f / 255.0f;
 
+  BEGIN_TIMER_BLOCK(ProcessPixel);
   for (i32 y = yMin; y <= yMax; y++) {
     u32 *pixel = (u32 *)row;
     for (i32 xi = xMin; xi <= xMax; xi += 4) {
-      BEGIN_TIMER_BLOCK(TestPixel);
 
       f32 texelAr[4];
       f32 texelAg[4];
@@ -833,12 +828,11 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       }
 
       pixel += 4;
-
-      END_TIMER_BLOCK(TestPixel);
     }
 
     row += buffer->stride;
   }
+  END_TIMER_BLOCK(ProcessPixel);
 
   END_TIMER_BLOCK(DrawRectangleHopefullyQuickly);
 }
