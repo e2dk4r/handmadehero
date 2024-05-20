@@ -1,5 +1,6 @@
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/render_group.h>
+#include <x86intrin.h>
 
 struct render_group *
 RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, u32 resolutionPixelsX, u32 resolutionPixelsY)
@@ -647,31 +648,32 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
   struct v2 nyAxis = v2_mul(yAxis, InvYAxisLengthSq);
 
   f32 inv255 = 1.0f / 255.0f;
+  __m128 inv255_4x = _mm_set_ps1(inv255);
 
   BEGIN_TIMER_BLOCK(ProcessPixel);
   for (i32 y = yMin; y <= yMax; y++) {
     u32 *pixel = (u32 *)row;
     for (i32 xi = xMin; xi <= xMax; xi += 4) {
 
-      f32 texelAr[4];
-      f32 texelAg[4];
-      f32 texelAb[4];
-      f32 texelAa[4];
+      __m128 texelAr;
+      __m128 texelAg;
+      __m128 texelAb;
+      __m128 texelAa;
 
-      f32 texelBr[4];
-      f32 texelBg[4];
-      f32 texelBb[4];
-      f32 texelBa[4];
+      __m128 texelBr;
+      __m128 texelBg;
+      __m128 texelBb;
+      __m128 texelBa;
 
-      f32 texelCr[4];
-      f32 texelCg[4];
-      f32 texelCb[4];
-      f32 texelCa[4];
+      __m128 texelCr;
+      __m128 texelCg;
+      __m128 texelCb;
+      __m128 texelCa;
 
-      f32 texelDr[4];
-      f32 texelDg[4];
-      f32 texelDb[4];
-      f32 texelDa[4];
+      __m128 texelDr;
+      __m128 texelDg;
+      __m128 texelDb;
+      __m128 texelDa;
 
       f32 destr[4];
       f32 destg[4];
@@ -744,42 +746,31 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
         }
       }
 
+#define mmSquare(a) _mm_mul_ps(a, a)
+      // sRGBBilinearBlend - sRGB255toLinear1()
+      texelAr = mmSquare(_mm_mul_ps(inv255_4x, texelAr));
+      texelAg = mmSquare(_mm_mul_ps(inv255_4x, texelAg));
+      texelAb = mmSquare(_mm_mul_ps(inv255_4x, texelAb));
+      texelAa = _mm_mul_ps(inv255_4x, texelAa);
+
+      texelBr = mmSquare(_mm_mul_ps(inv255_4x, texelBr));
+      texelBg = mmSquare(_mm_mul_ps(inv255_4x, texelBg));
+      texelBb = mmSquare(_mm_mul_ps(inv255_4x, texelBb));
+      texelBa = _mm_mul_ps(inv255_4x, texelBa);
+
+      texelCr = mmSquare(_mm_mul_ps(inv255_4x, texelCr));
+      texelCg = mmSquare(_mm_mul_ps(inv255_4x, texelCg));
+      texelCb = mmSquare(_mm_mul_ps(inv255_4x, texelCb));
+      texelCa = _mm_mul_ps(inv255_4x, texelCa);
+
+      texelDr = mmSquare(_mm_mul_ps(inv255_4x, texelDr));
+      texelDg = mmSquare(_mm_mul_ps(inv255_4x, texelDg));
+      texelDb = mmSquare(_mm_mul_ps(inv255_4x, texelDb));
+      texelDa = _mm_mul_ps(inv255_4x, texelDa);
+
       for (i32 i = 0; i < 4; i++) {
         if (!shouldFill[i])
           continue;
-
-        // sRGBBilinearBlend - sRGB255toLinear1()
-        texelAr[i] = inv255 * texelAr[i];
-        texelAr[i] *= texelAr[i];
-        texelAg[i] = inv255 * texelAg[i];
-        texelAg[i] *= texelAg[i];
-        texelAb[i] = inv255 * texelAb[i];
-        texelAb[i] *= texelAb[i];
-        texelAa[i] = inv255 * texelAa[i];
-
-        texelBr[i] = inv255 * texelBr[i];
-        texelBr[i] *= texelBr[i];
-        texelBg[i] = inv255 * texelBg[i];
-        texelBg[i] *= texelBg[i];
-        texelBb[i] = inv255 * texelBb[i];
-        texelBb[i] *= texelBb[i];
-        texelBa[i] = inv255 * texelBa[i];
-
-        texelCr[i] = inv255 * texelCr[i];
-        texelCr[i] *= texelCr[i];
-        texelCg[i] = inv255 * texelCg[i];
-        texelCg[i] *= texelCg[i];
-        texelCb[i] = inv255 * texelCb[i];
-        texelCb[i] *= texelCb[i];
-        texelCa[i] = inv255 * texelCa[i];
-
-        texelDr[i] = inv255 * texelDr[i];
-        texelDr[i] *= texelDr[i];
-        texelDg[i] = inv255 * texelDg[i];
-        texelDg[i] *= texelDg[i];
-        texelDb[i] = inv255 * texelDb[i];
-        texelDb[i] *= texelDb[i];
-        texelDa[i] = inv255 * texelDa[i];
 
         // sRGBBilinearBlend - v4_lerp()
         f32 invfX = 1.0f - fX[i];
