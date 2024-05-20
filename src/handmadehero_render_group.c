@@ -749,24 +749,36 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
           continue;
 
         // sRGBBilinearBlend - sRGB255toLinear1()
-        texelAr[i] = Square(inv255 * texelAr[i]);
-        texelAg[i] = Square(inv255 * texelAg[i]);
-        texelAb[i] = Square(inv255 * texelAb[i]);
+        texelAr[i] = inv255 * texelAr[i];
+        texelAr[i] *= texelAr[i];
+        texelAg[i] = inv255 * texelAg[i];
+        texelAg[i] *= texelAg[i];
+        texelAb[i] = inv255 * texelAb[i];
+        texelAb[i] *= texelAb[i];
         texelAa[i] = inv255 * texelAa[i];
 
-        texelBr[i] = Square(inv255 * texelBr[i]);
-        texelBg[i] = Square(inv255 * texelBg[i]);
-        texelBb[i] = Square(inv255 * texelBb[i]);
+        texelBr[i] = inv255 * texelBr[i];
+        texelBr[i] *= texelBr[i];
+        texelBg[i] = inv255 * texelBg[i];
+        texelBg[i] *= texelBg[i];
+        texelBb[i] = inv255 * texelBb[i];
+        texelBb[i] *= texelBb[i];
         texelBa[i] = inv255 * texelBa[i];
 
-        texelCr[i] = Square(inv255 * texelCr[i]);
-        texelCg[i] = Square(inv255 * texelCg[i]);
-        texelCb[i] = Square(inv255 * texelCb[i]);
+        texelCr[i] = inv255 * texelCr[i];
+        texelCr[i] *= texelCr[i];
+        texelCg[i] = inv255 * texelCg[i];
+        texelCg[i] *= texelCg[i];
+        texelCb[i] = inv255 * texelCb[i];
+        texelCb[i] *= texelCb[i];
         texelCa[i] = inv255 * texelCa[i];
 
-        texelDr[i] = Square(inv255 * texelDr[i]);
-        texelDg[i] = Square(inv255 * texelDg[i]);
-        texelDb[i] = Square(inv255 * texelDb[i]);
+        texelDr[i] = inv255 * texelDr[i];
+        texelDr[i] *= texelDr[i];
+        texelDg[i] = inv255 * texelDg[i];
+        texelDg[i] *= texelDg[i];
+        texelDb[i] = inv255 * texelDb[i];
+        texelDb[i] *= texelDb[i];
         texelDa[i] = inv255 * texelDa[i];
 
         // sRGBBilinearBlend - v4_lerp()
