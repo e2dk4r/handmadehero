@@ -382,7 +382,7 @@
 - [x] Handmade Hero Day 114 - Preparing a Function for Optimization
       https://www.youtube.com/watch?v=_vkI9BedvKA
 
-- [ ] Handmade Hero Day 115 - SIMD Basics
+- [x] Handmade Hero Day 115 - SIMD Basics
       https://www.youtube.com/watch?v=YnnTb0AQgYM
 
 - [ ] Handmade Hero Day 116 - Converting Math Operations to SIMD
