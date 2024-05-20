@@ -785,20 +785,15 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
         f32 invfX = 1.0f - fX[i];
         f32 invfY = 1.0f - fY[i];
 
-        f32 texelABr = texelAr[i] * invfX + texelBr[i] * fX[i];
-        f32 texelABg = texelAg[i] * invfX + texelBg[i] * fX[i];
-        f32 texelABb = texelAb[i] * invfX + texelBb[i] * fX[i];
-        f32 texelABa = texelAa[i] * invfX + texelBa[i] * fX[i];
+        f32 l0 = invfX * invfY;
+        f32 l1 = fX[i] * invfY;
+        f32 l2 = invfX * fY[i];
+        f32 l3 = fX[i] * fY[i];
 
-        f32 texelCDr = texelCr[i] * invfX + texelDr[i] * fX[i];
-        f32 texelCDg = texelCg[i] * invfX + texelDg[i] * fX[i];
-        f32 texelCDb = texelCb[i] * invfX + texelDb[i] * fX[i];
-        f32 texelCDa = texelCa[i] * invfX + texelDa[i] * fX[i];
-
-        f32 texelr = texelABr * invfY + texelCDr * fY[i];
-        f32 texelg = texelABg * invfY + texelCDg * fY[i];
-        f32 texelb = texelABb * invfY + texelCDb * fY[i];
-        f32 texela = texelABa * invfY + texelCDa * fY[i];
+        f32 texelr = texelAr[i] * l0 + texelBr[i] * l1 + texelCr[i] * l2 + texelDr[i] * l3;
+        f32 texelg = texelAg[i] * l0 + texelBg[i] * l1 + texelCg[i] * l2 + texelDg[i] * l3;
+        f32 texelb = texelAb[i] * l0 + texelBb[i] * l1 + texelCb[i] * l2 + texelDb[i] * l3;
+        f32 texela = texelAa[i] * l0 + texelBa[i] * l1 + texelCa[i] * l2 + texelDa[i] * l3;
 
         // v4_hadamard(texel, color)
         texelr = texelr * color.r;
