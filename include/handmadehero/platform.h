@@ -44,6 +44,9 @@ extern struct game_memory *DEBUG_GLOBAL_MEMORY;
 #define END_TIMER_BLOCK(tag)                                                                                           \
   DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;                     \
   DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].hitCount += 1;
+#define END_TIMER_BLOCK_COUNTED(tag, count)                                                                            \
+  DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;                     \
+  DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].hitCount += (count);
 
 #else
 

@@ -832,7 +832,7 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
 
     row += buffer->stride;
   }
-  END_TIMER_BLOCK(ProcessPixel);
+  END_TIMER_BLOCK_COUNTED(ProcessPixel, (u64)((xMax - xMin + 1) * (yMax - yMin + 1)));
 
   END_TIMER_BLOCK(DrawRectangleHopefullyQuickly);
 }
