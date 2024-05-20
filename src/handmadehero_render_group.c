@@ -648,10 +648,6 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
   struct v2 nyAxis = v2_mul(yAxis, InvYAxisLengthSq);
 
   f32 inv255 = 1.0f / 255.0f;
-  __m128 inv255_4x = _mm_set_ps1(inv255);
-
-  __m128 zero = _mm_set_ps1(0.0f);
-  __m128 one = _mm_set_ps1(1.0f);
 
   BEGIN_TIMER_BLOCK(ProcessPixel);
   for (i32 y = yMin; y <= yMax; y++) {
@@ -749,27 +745,27 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
         }
       }
 
-#define mmSquare(a) _mm_mul_ps(a, a)
+#define mmSquare(a) (a * a)
       // sRGBBilinearBlend - sRGB255toLinear1()
-      texelAr = mmSquare(_mm_mul_ps(inv255_4x, texelAr));
-      texelAg = mmSquare(_mm_mul_ps(inv255_4x, texelAg));
-      texelAb = mmSquare(_mm_mul_ps(inv255_4x, texelAb));
-      texelAa = _mm_mul_ps(inv255_4x, texelAa);
+      texelAr = mmSquare(inv255 * texelAr);
+      texelAg = mmSquare(inv255 * texelAg);
+      texelAb = mmSquare(inv255 * texelAb);
+      texelAa = inv255 * texelAa;
 
-      texelBr = mmSquare(_mm_mul_ps(inv255_4x, texelBr));
-      texelBg = mmSquare(_mm_mul_ps(inv255_4x, texelBg));
-      texelBb = mmSquare(_mm_mul_ps(inv255_4x, texelBb));
-      texelBa = _mm_mul_ps(inv255_4x, texelBa);
+      texelBr = mmSquare(inv255 * texelBr);
+      texelBg = mmSquare(inv255 * texelBg);
+      texelBb = mmSquare(inv255 * texelBb);
+      texelBa = inv255 * texelBa;
 
-      texelCr = mmSquare(_mm_mul_ps(inv255_4x, texelCr));
-      texelCg = mmSquare(_mm_mul_ps(inv255_4x, texelCg));
-      texelCb = mmSquare(_mm_mul_ps(inv255_4x, texelCb));
-      texelCa = _mm_mul_ps(inv255_4x, texelCa);
+      texelCr = mmSquare(inv255 * texelCr);
+      texelCg = mmSquare(inv255 * texelCg);
+      texelCb = mmSquare(inv255 * texelCb);
+      texelCa = inv255 * texelCa;
 
-      texelDr = mmSquare(_mm_mul_ps(inv255_4x, texelDr));
-      texelDg = mmSquare(_mm_mul_ps(inv255_4x, texelDg));
-      texelDb = mmSquare(_mm_mul_ps(inv255_4x, texelDb));
-      texelDa = _mm_mul_ps(inv255_4x, texelDa);
+      texelDr = mmSquare(inv255 * texelDr);
+      texelDg = mmSquare(inv255 * texelDg);
+      texelDb = mmSquare(inv255 * texelDb);
+      texelDa = inv255 * texelDa;
 
       // sRGBBilinearBlend - v4_lerp()
       __m128 invfX = 1.0f - fX;
