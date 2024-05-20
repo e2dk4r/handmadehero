@@ -385,7 +385,7 @@
 - [x] Handmade Hero Day 115 - SIMD Basics
       https://www.youtube.com/watch?v=YnnTb0AQgYM
 
-- [ ] Handmade Hero Day 116 - Converting Math Operations to SIMD
+- [x] Handmade Hero Day 116 - Converting Math Operations to SIMD
       https://www.youtube.com/watch?v=1CVmlnhgT3g
 
 - [ ] Handmade Hero Day 117 - Packing Pixels for the Framebuffer
