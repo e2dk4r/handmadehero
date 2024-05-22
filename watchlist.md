@@ -388,7 +388,7 @@
 - [x] Handmade Hero Day 116 - Converting Math Operations to SIMD
       https://www.youtube.com/watch?v=1CVmlnhgT3g
 
-- [ ] Handmade Hero Day 117 - Packing Pixels for the Framebuffer
+- [x] Handmade Hero Day 117 - Packing Pixels for the Framebuffer
       https://www.youtube.com/watch?v=90eSF6jLzvQ
 
 - [ ] Handmade Hero Day 118 - Wide Unpacking and Masking
