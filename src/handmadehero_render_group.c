@@ -689,6 +689,9 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
 
       b32 shouldFill[4];
 
+      __m128i originalDest = _mm_loadu_si128((__m128i *)pixel);
+      __m128i writeMask = _mm_set1_epi32(0x0);
+
       for (i32 i = 0; i < 4; i++) {
         struct v2 pixelP = v2i(xi + i, y);
         struct v2 d = v2_sub(pixelP, origin);
@@ -742,6 +745,8 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
           destg[i] = (f32)((*(pixel + i) >> 0x08) & 0xff);
           destb[i] = (f32)((*(pixel + i) >> 0x00) & 0xff);
           desta[i] = (f32)((*(pixel + i) >> 0x18) & 0xff);
+
+          *((u32 *)&writeMask + i) = 0xffffffff;
         }
       }
 
@@ -816,7 +821,10 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       __m128i intb = _mm_cvtps_epi32(blendedb);
       __m128i inta = _mm_cvtps_epi32(blendeda);
 
-      _mm_storeu_si128((__m128i *)pixel, intr << 0x10 | intg << 0x08 | intb << 0x00 | inta << 0x18);
+      __m128i out = intr << 0x10 | intg << 0x08 | intb << 0x00 | inta << 0x18;
+
+      __m128i maskedOut = (out & writeMask) | (originalDest & ~writeMask);
+      _mm_storeu_si128((__m128i *)pixel, maskedOut);
 
       pixel += 4;
     }
