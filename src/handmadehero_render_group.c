@@ -811,11 +811,10 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       blendedb = 255.0f * _mm_sqrt_ps(blendedb);
       blendeda = 255.0f * blendeda;
 
-      // TODO(e2dk4r): Should we set the rounding mode to nearest and shave the adds?
-      __m128i intr = _mm_cvttps_epi32(blendedr + 0.5f);
-      __m128i intg = _mm_cvttps_epi32(blendedg + 0.5f);
-      __m128i intb = _mm_cvttps_epi32(blendedb + 0.5f);
-      __m128i inta = _mm_cvttps_epi32(blendeda + 0.5f);
+      __m128i intr = _mm_cvtps_epi32(blendedr);
+      __m128i intg = _mm_cvtps_epi32(blendedg);
+      __m128i intb = _mm_cvtps_epi32(blendedb);
+      __m128i inta = _mm_cvtps_epi32(blendeda);
 
       _mm_storeu_si128((__m128i *)pixel, intr << 0x10 | intg << 0x08 | intb << 0x00 | inta << 0x18);
 
