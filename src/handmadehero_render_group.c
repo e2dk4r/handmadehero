@@ -811,13 +811,13 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       blendedb = 255.0f * _mm_sqrt_ps(blendedb);
       blendeda = 255.0f * blendeda;
 
-      for (i32 i = 0; i < 4; i++) {
-        if (!shouldFill[i])
-          continue;
+      // TODO(e2dk4r): set the rounding mode to something known
+      __m128i intr = _mm_cvtps_epi32(blendedr);
+      __m128i intg = _mm_cvtps_epi32(blendedg);
+      __m128i intb = _mm_cvtps_epi32(blendedb);
+      __m128i inta = _mm_cvtps_epi32(blendeda);
 
-        *(pixel + i) = (u32)(blendeda[i] + 0.5f) << 0x18 | (u32)(blendedr[i] + 0.5f) << 0x10 |
-                       (u32)(blendedg[i] + 0.5f) << 0x08 | (u32)(blendedb[i] + 0.5f) << 0x00;
-      }
+      _mm_storeu_si128((__m128i *)pixel, intr << 0x10 | intg << 0x08 | intb << 0x00 | inta << 0x18);
 
       pixel += 4;
     }
