@@ -707,8 +707,7 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       __m128 fY = tY - _mm_cvtepi32_ps(texelY);
 
       __m128i originalDest = _mm_loadu_si128((__m128i *)pixel);
-      __m128i writeMask =
-          _mm_castps_si128(_mm_and_ps(_mm_and_ps(u >= 0.0f, u < 1.0f), _mm_and_ps(v >= 0.0f, v < 1.0f)));
+      __m128i writeMask = u >= 0.0f & u < 1.0f & v >= 0.0f & v < 1.0f;
 
       u32 sampleA[4];
       u32 sampleB[4];
