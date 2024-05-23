@@ -391,7 +391,7 @@
 - [x] Handmade Hero Day 117 - Packing Pixels for the Framebuffer
       https://www.youtube.com/watch?v=90eSF6jLzvQ
 
-- [ ] Handmade Hero Day 118 - Wide Unpacking and Masking
+- [x] Handmade Hero Day 118 - Wide Unpacking and Masking
       https://www.youtube.com/watch?v=-_X0UYCGaVA
 
 - [ ] Handmade Hero Day 119 - Counting Intrinsics
