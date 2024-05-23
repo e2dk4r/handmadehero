@@ -569,6 +569,10 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
   END_TIMER_BLOCK(DrawRectangleSlowly);
 }
 
+#if !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 internal inline void
 DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis,
                               struct v4 color, struct bitmap *texture, f32 pixelsToMeters)
@@ -677,7 +681,7 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       __m128 fY = tY - _mm_cvtepi32_ps(texelY);
 
       __m128i originalDest = _mm_loadu_si128((__m128i *)pixel);
-      __m128i writeMask = u >= 0.0f & u < 1.0f & v >= 0.0f & v < 1.0f;
+      __m128i writeMask = (u >= 0.0f) & (u < 1.0f) & (v >= 0.0f) & (v < 1.0f);
 
       __m128i sampleA;
       __m128i sampleB;
@@ -815,6 +819,9 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
 
   END_TIMER_BLOCK(DrawRectangleHopefullyQuickly);
 }
+#if !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 internal inline void
 DrawRectangleOutline(struct bitmap *buffer, struct v2 min, struct v2 max, struct v4 color, f32 thickness)
