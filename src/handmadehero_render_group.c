@@ -687,7 +687,6 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       __m128 blendedb;
       __m128 blendeda;
 
-      b32 shouldFill[4];
       __m128 pixelPx = _mm_set_ps((f32)(xi + 3), (f32)(xi + 2), (f32)(xi + 1), (f32)(xi + 0));
       __m128 pixelPy = _mm_set1_ps((f32)y);
 
@@ -701,33 +700,34 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       __m128i writeMask =
           _mm_castps_si128(_mm_and_ps(_mm_and_ps(u >= 0.0f, u < 1.0f), _mm_and_ps(v >= 0.0f, v < 1.0f)));
 
+#define mmClamp01(a) _mm_min_ps(_mm_max_ps(a, _mm_set1_ps(0.0f)), _mm_set1_ps(1.0f))
+      u = mmClamp01(u);
+      v = mmClamp01(v);
+
       u32 sampleA[4];
       u32 sampleB[4];
       u32 sampleC[4];
       u32 sampleD[4];
 
       for (i32 i = 0; i < 4; i++) {
-        shouldFill[i] = u[i] >= 0 && u[i] < 1.0f && v[i] >= 0 && v[i] < 1.0f;
-        if (shouldFill[i]) {
-          f32 tX = u[i] * (f32)(texture->width - 2);
-          f32 tY = v[i] * (f32)(texture->height - 2);
+        f32 tX = u[i] * (f32)(texture->width - 2);
+        f32 tY = v[i] * (f32)(texture->height - 2);
 
-          i32 texelX = (i32)tX;
-          i32 texelY = (i32)tY;
+        i32 texelX = (i32)tX;
+        i32 texelY = (i32)tY;
 
-          fX[i] = tX - (f32)texelX;
-          fY[i] = tY - (f32)texelY;
+        fX[i] = tX - (f32)texelX;
+        fY[i] = tY - (f32)texelY;
 
-          assert(texelX >= 0 && texelX < (i32)texture->width);
-          assert(texelY >= 0 && texelY < (i32)texture->height);
+        assert(texelX >= 0 && texelX < (i32)texture->width);
+        assert(texelY >= 0 && texelY < (i32)texture->height);
 
-          // BilinearSample
-          u8 *texelPtr = ((u8 *)texture->memory + texelY * texture->stride + texelX * BITMAP_BYTES_PER_PIXEL);
-          sampleA[i] = *(u32 *)texelPtr;
-          sampleB[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
-          sampleC[i] = *(u32 *)(texelPtr + texture->stride);
-          sampleD[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
-        }
+        // BilinearSample
+        u8 *texelPtr = ((u8 *)texture->memory + texelY * texture->stride + texelX * BITMAP_BYTES_PER_PIXEL);
+        sampleA[i] = *(u32 *)texelPtr;
+        sampleB[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
+        sampleC[i] = *(u32 *)(texelPtr + texture->stride);
+        sampleD[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
       }
 
       // sRGBBilinearBlend - Unpack4x8
@@ -878,7 +878,6 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       texelb = texelb * color.b;
       texela = texela * color.a;
 
-#define mmClamp01(a) _mm_min_ps(_mm_max_ps(a, _mm_set1_ps(0.0f)), _mm_set1_ps(1.0f))
       texelr = mmClamp01(texelr);
       texelg = mmClamp01(texelg);
       texelb = mmClamp01(texelb);
