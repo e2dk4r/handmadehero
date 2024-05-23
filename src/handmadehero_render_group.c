@@ -725,12 +725,6 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
           sampleC[i] = *(u32 *)(texelPtr + texture->stride);
           sampleD[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
 
-          // destination channels
-          destr[i] = (f32)((*(pixel + i) >> 0x10) & 0xff);
-          destg[i] = (f32)((*(pixel + i) >> 0x08) & 0xff);
-          destb[i] = (f32)((*(pixel + i) >> 0x00) & 0xff);
-          desta[i] = (f32)((*(pixel + i) >> 0x18) & 0xff);
-
           *((u32 *)&writeMask + i) = 0xffffffff;
         }
       }
@@ -819,6 +813,27 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       texelDg[3] = (f32)((*(sampleD + 3) >> 0x08) & 0xff);
       texelDb[3] = (f32)((*(sampleD + 3) >> 0x00) & 0xff);
       texelDa[3] = (f32)((*(sampleD + 3) >> 0x18) & 0xff);
+
+      // destination channels
+      destr[0] = (f32)((*(pixel + 0) >> 0x10) & 0xff);
+      destg[0] = (f32)((*(pixel + 0) >> 0x08) & 0xff);
+      destb[0] = (f32)((*(pixel + 0) >> 0x00) & 0xff);
+      desta[0] = (f32)((*(pixel + 0) >> 0x18) & 0xff);
+
+      destr[1] = (f32)((*(pixel + 1) >> 0x10) & 0xff);
+      destg[1] = (f32)((*(pixel + 1) >> 0x08) & 0xff);
+      destb[1] = (f32)((*(pixel + 1) >> 0x00) & 0xff);
+      desta[1] = (f32)((*(pixel + 1) >> 0x18) & 0xff);
+
+      destr[2] = (f32)((*(pixel + 2) >> 0x10) & 0xff);
+      destg[2] = (f32)((*(pixel + 2) >> 0x08) & 0xff);
+      destb[2] = (f32)((*(pixel + 2) >> 0x00) & 0xff);
+      desta[2] = (f32)((*(pixel + 2) >> 0x18) & 0xff);
+
+      destr[3] = (f32)((*(pixel + 3) >> 0x10) & 0xff);
+      destg[3] = (f32)((*(pixel + 3) >> 0x08) & 0xff);
+      destb[3] = (f32)((*(pixel + 3) >> 0x00) & 0xff);
+      desta[3] = (f32)((*(pixel + 3) >> 0x18) & 0xff);
 
 #define mmSquare(a) (a * a)
       // sRGBBilinearBlend - sRGB255toLinear1()
