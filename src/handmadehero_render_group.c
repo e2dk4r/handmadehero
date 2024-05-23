@@ -692,6 +692,11 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       __m128i originalDest = _mm_loadu_si128((__m128i *)pixel);
       __m128i writeMask = _mm_set1_epi32(0x0);
 
+      u32 sampleA[4];
+      u32 sampleB[4];
+      u32 sampleC[4];
+      u32 sampleD[4];
+
       for (i32 i = 0; i < 4; i++) {
         struct v2 pixelP = v2i(xi + i, y);
         struct v2 d = v2_sub(pixelP, origin);
@@ -714,31 +719,11 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
           assert(texelY >= 0 && texelY < (i32)texture->height);
 
           // BilinearSample
-          u32 *sampleA = (u32 *)((u8 *)texture->memory + texelY * texture->stride + texelX * BITMAP_BYTES_PER_PIXEL);
-          u32 *sampleB = (u32 *)((u8 *)sampleA + BITMAP_BYTES_PER_PIXEL);
-          u32 *sampleC = (u32 *)((u8 *)sampleA + texture->stride);
-          u32 *sampleD = (u32 *)((u8 *)sampleC + BITMAP_BYTES_PER_PIXEL);
-
-          // sRGBBilinearBlend - Unpack4x8
-          texelAr[i] = (f32)((*sampleA >> 0x10) & 0xff);
-          texelAg[i] = (f32)((*sampleA >> 0x08) & 0xff);
-          texelAb[i] = (f32)((*sampleA >> 0x00) & 0xff);
-          texelAa[i] = (f32)((*sampleA >> 0x18) & 0xff);
-
-          texelBr[i] = (f32)((*sampleB >> 0x10) & 0xff);
-          texelBg[i] = (f32)((*sampleB >> 0x08) & 0xff);
-          texelBb[i] = (f32)((*sampleB >> 0x00) & 0xff);
-          texelBa[i] = (f32)((*sampleB >> 0x18) & 0xff);
-
-          texelCr[i] = (f32)((*sampleC >> 0x10) & 0xff);
-          texelCg[i] = (f32)((*sampleC >> 0x08) & 0xff);
-          texelCb[i] = (f32)((*sampleC >> 0x00) & 0xff);
-          texelCa[i] = (f32)((*sampleC >> 0x18) & 0xff);
-
-          texelDr[i] = (f32)((*sampleD >> 0x10) & 0xff);
-          texelDg[i] = (f32)((*sampleD >> 0x08) & 0xff);
-          texelDb[i] = (f32)((*sampleD >> 0x00) & 0xff);
-          texelDa[i] = (f32)((*sampleD >> 0x18) & 0xff);
+          u8 *texelPtr = ((u8 *)texture->memory + texelY * texture->stride + texelX * BITMAP_BYTES_PER_PIXEL);
+          sampleA[i] = *(u32 *)texelPtr;
+          sampleB[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
+          sampleC[i] = *(u32 *)(texelPtr + texture->stride);
+          sampleD[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
 
           // destination channels
           destr[i] = (f32)((*(pixel + i) >> 0x10) & 0xff);
@@ -749,6 +734,91 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
           *((u32 *)&writeMask + i) = 0xffffffff;
         }
       }
+
+      // sRGBBilinearBlend - Unpack4x8
+      // texelA
+      texelAr[0] = (f32)((*(sampleA + 0) >> 0x10) & 0xff);
+      texelAg[0] = (f32)((*(sampleA + 0) >> 0x08) & 0xff);
+      texelAb[0] = (f32)((*(sampleA + 0) >> 0x00) & 0xff);
+      texelAa[0] = (f32)((*(sampleA + 0) >> 0x18) & 0xff);
+
+      texelAr[1] = (f32)((*(sampleA + 1) >> 0x10) & 0xff);
+      texelAg[1] = (f32)((*(sampleA + 1) >> 0x08) & 0xff);
+      texelAb[1] = (f32)((*(sampleA + 1) >> 0x00) & 0xff);
+      texelAa[1] = (f32)((*(sampleA + 1) >> 0x18) & 0xff);
+
+      texelAr[2] = (f32)((*(sampleA + 2) >> 0x10) & 0xff);
+      texelAg[2] = (f32)((*(sampleA + 2) >> 0x08) & 0xff);
+      texelAb[2] = (f32)((*(sampleA + 2) >> 0x00) & 0xff);
+      texelAa[2] = (f32)((*(sampleA + 2) >> 0x18) & 0xff);
+
+      texelAr[3] = (f32)((*(sampleA + 3) >> 0x10) & 0xff);
+      texelAg[3] = (f32)((*(sampleA + 3) >> 0x08) & 0xff);
+      texelAb[3] = (f32)((*(sampleA + 3) >> 0x00) & 0xff);
+      texelAa[3] = (f32)((*(sampleA + 3) >> 0x18) & 0xff);
+
+      // texelB
+      texelBr[0] = (f32)((*(sampleB + 0) >> 0x10) & 0xff);
+      texelBg[0] = (f32)((*(sampleB + 0) >> 0x08) & 0xff);
+      texelBb[0] = (f32)((*(sampleB + 0) >> 0x00) & 0xff);
+      texelBa[0] = (f32)((*(sampleB + 0) >> 0x18) & 0xff);
+
+      texelBr[1] = (f32)((*(sampleB + 1) >> 0x10) & 0xff);
+      texelBg[1] = (f32)((*(sampleB + 1) >> 0x08) & 0xff);
+      texelBb[1] = (f32)((*(sampleB + 1) >> 0x00) & 0xff);
+      texelBa[1] = (f32)((*(sampleB + 1) >> 0x18) & 0xff);
+
+      texelBr[2] = (f32)((*(sampleB + 2) >> 0x10) & 0xff);
+      texelBg[2] = (f32)((*(sampleB + 2) >> 0x08) & 0xff);
+      texelBb[2] = (f32)((*(sampleB + 2) >> 0x00) & 0xff);
+      texelBa[2] = (f32)((*(sampleB + 2) >> 0x18) & 0xff);
+
+      texelBr[3] = (f32)((*(sampleB + 3) >> 0x10) & 0xff);
+      texelBg[3] = (f32)((*(sampleB + 3) >> 0x08) & 0xff);
+      texelBb[3] = (f32)((*(sampleB + 3) >> 0x00) & 0xff);
+      texelBa[3] = (f32)((*(sampleB + 3) >> 0x18) & 0xff);
+
+      // texelC
+      texelCr[0] = (f32)((*(sampleC + 0) >> 0x10) & 0xff);
+      texelCg[0] = (f32)((*(sampleC + 0) >> 0x08) & 0xff);
+      texelCb[0] = (f32)((*(sampleC + 0) >> 0x00) & 0xff);
+      texelCa[0] = (f32)((*(sampleC + 0) >> 0x18) & 0xff);
+
+      texelCr[1] = (f32)((*(sampleC + 1) >> 0x10) & 0xff);
+      texelCg[1] = (f32)((*(sampleC + 1) >> 0x08) & 0xff);
+      texelCb[1] = (f32)((*(sampleC + 1) >> 0x00) & 0xff);
+      texelCa[1] = (f32)((*(sampleC + 1) >> 0x18) & 0xff);
+
+      texelCr[2] = (f32)((*(sampleC + 2) >> 0x10) & 0xff);
+      texelCg[2] = (f32)((*(sampleC + 2) >> 0x08) & 0xff);
+      texelCb[2] = (f32)((*(sampleC + 2) >> 0x00) & 0xff);
+      texelCa[2] = (f32)((*(sampleC + 2) >> 0x18) & 0xff);
+
+      texelCr[3] = (f32)((*(sampleC + 3) >> 0x10) & 0xff);
+      texelCg[3] = (f32)((*(sampleC + 3) >> 0x08) & 0xff);
+      texelCb[3] = (f32)((*(sampleC + 3) >> 0x00) & 0xff);
+      texelCa[3] = (f32)((*(sampleC + 3) >> 0x18) & 0xff);
+
+      // texelD
+      texelDr[0] = (f32)((*(sampleD + 0) >> 0x10) & 0xff);
+      texelDg[0] = (f32)((*(sampleD + 0) >> 0x08) & 0xff);
+      texelDb[0] = (f32)((*(sampleD + 0) >> 0x00) & 0xff);
+      texelDa[0] = (f32)((*(sampleD + 0) >> 0x18) & 0xff);
+
+      texelDr[1] = (f32)((*(sampleD + 1) >> 0x10) & 0xff);
+      texelDg[1] = (f32)((*(sampleD + 1) >> 0x08) & 0xff);
+      texelDb[1] = (f32)((*(sampleD + 1) >> 0x00) & 0xff);
+      texelDa[1] = (f32)((*(sampleD + 1) >> 0x18) & 0xff);
+
+      texelDr[2] = (f32)((*(sampleD + 2) >> 0x10) & 0xff);
+      texelDg[2] = (f32)((*(sampleD + 2) >> 0x08) & 0xff);
+      texelDb[2] = (f32)((*(sampleD + 2) >> 0x00) & 0xff);
+      texelDa[2] = (f32)((*(sampleD + 2) >> 0x18) & 0xff);
+
+      texelDr[3] = (f32)((*(sampleD + 3) >> 0x10) & 0xff);
+      texelDg[3] = (f32)((*(sampleD + 3) >> 0x08) & 0xff);
+      texelDb[3] = (f32)((*(sampleD + 3) >> 0x00) & 0xff);
+      texelDa[3] = (f32)((*(sampleD + 3) >> 0x18) & 0xff);
 
 #define mmSquare(a) (a * a)
       // sRGBBilinearBlend - sRGB255toLinear1()
