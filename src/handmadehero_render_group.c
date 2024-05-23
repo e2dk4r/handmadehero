@@ -679,9 +679,6 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       __m128 destb;
       __m128 desta;
 
-      __m128 fX;
-      __m128 fY;
-
       __m128 blendedr;
       __m128 blendedg;
       __m128 blendedb;
@@ -695,14 +692,23 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
 
       __m128 u = dx * nxAxis.x + dy * nxAxis.y;
       __m128 v = dx * nyAxis.x + dy * nyAxis.y;
+#define mmClamp01(a) _mm_min_ps(_mm_max_ps(a, _mm_set1_ps(0.0f)), _mm_set1_ps(1.0f))
+      u = mmClamp01(u);
+      v = mmClamp01(v);
+
+      // TODO(e2dk4r): Formalize texture boundaries!
+      __m128 tX = u * (f32)(texture->width - 2);
+      __m128 tY = v * (f32)(texture->height - 2);
+
+      __m128i texelX = _mm_cvttps_epi32(tX);
+      __m128i texelY = _mm_cvttps_epi32(tY);
+
+      __m128 fX = tX - _mm_cvtepi32_ps(texelX);
+      __m128 fY = tY - _mm_cvtepi32_ps(texelY);
 
       __m128i originalDest = _mm_loadu_si128((__m128i *)pixel);
       __m128i writeMask =
           _mm_castps_si128(_mm_and_ps(_mm_and_ps(u >= 0.0f, u < 1.0f), _mm_and_ps(v >= 0.0f, v < 1.0f)));
-
-#define mmClamp01(a) _mm_min_ps(_mm_max_ps(a, _mm_set1_ps(0.0f)), _mm_set1_ps(1.0f))
-      u = mmClamp01(u);
-      v = mmClamp01(v);
 
       u32 sampleA[4];
       u32 sampleB[4];
@@ -710,20 +716,13 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       u32 sampleD[4];
 
       for (i32 i = 0; i < 4; i++) {
-        f32 tX = u[i] * (f32)(texture->width - 2);
-        f32 tY = v[i] * (f32)(texture->height - 2);
-
-        i32 texelX = (i32)tX;
-        i32 texelY = (i32)tY;
-
-        fX[i] = tX - (f32)texelX;
-        fY[i] = tY - (f32)texelY;
-
-        assert(texelX >= 0 && texelX < (i32)texture->width);
-        assert(texelY >= 0 && texelY < (i32)texture->height);
+        i32 fetchX = *((i32 *)&texelX + i);
+        i32 fetchY = *((i32 *)&texelY + i);
+        assert(fetchX >= 0 && fetchX < (i32)texture->width);
+        assert(fetchY >= 0 && fetchY < (i32)texture->height);
 
         // BilinearSample
-        u8 *texelPtr = ((u8 *)texture->memory + texelY * texture->stride + texelX * BITMAP_BYTES_PER_PIXEL);
+        u8 *texelPtr = ((u8 *)texture->memory + fetchY * texture->stride + fetchX * BITMAP_BYTES_PER_PIXEL);
         sampleA[i] = *(u32 *)texelPtr;
         sampleB[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
         sampleC[i] = *(u32 *)(texelPtr + texture->stride);
