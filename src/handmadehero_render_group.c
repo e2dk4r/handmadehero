@@ -679,129 +679,51 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       __m128i originalDest = _mm_loadu_si128((__m128i *)pixel);
       __m128i writeMask = u >= 0.0f & u < 1.0f & v >= 0.0f & v < 1.0f;
 
-      u32 sampleA[4];
-      u32 sampleB[4];
-      u32 sampleC[4];
-      u32 sampleD[4];
+      __m128i sampleA;
+      __m128i sampleB;
+      __m128i sampleC;
+      __m128i sampleD;
+
+#define mi(a, i) *((i32 *)&a + i)
 
       for (i32 i = 0; i < 4; i++) {
-        i32 fetchX = *((i32 *)&texelX + i);
-        i32 fetchY = *((i32 *)&texelY + i);
+        i32 fetchX = mi(texelX, i);
+        i32 fetchY = mi(texelY, i);
         assert(fetchX >= 0 && fetchX < (i32)texture->width);
         assert(fetchY >= 0 && fetchY < (i32)texture->height);
 
         // BilinearSample
         u8 *texelPtr = ((u8 *)texture->memory + fetchY * texture->stride + fetchX * BITMAP_BYTES_PER_PIXEL);
-        sampleA[i] = *(u32 *)texelPtr;
-        sampleB[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
-        sampleC[i] = *(u32 *)(texelPtr + texture->stride);
-        sampleD[i] = *(u32 *)(texelPtr + texture->stride + BITMAP_BYTES_PER_PIXEL);
+        mi(sampleA, i) = *(i32 *)(texelPtr);
+        mi(sampleB, i) = *(i32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
+        mi(sampleC, i) = *(i32 *)(texelPtr + texture->stride);
+        mi(sampleD, i) = *(i32 *)(texelPtr + texture->stride + BITMAP_BYTES_PER_PIXEL);
       }
 
       // sRGBBilinearBlend - Unpack4x8
       // texelA
-      __m128 texelAr;
-      __m128 texelAg;
-      __m128 texelAb;
-      __m128 texelAa;
-
-      texelAr[0] = (f32)((*(sampleA + 0) >> 0x10) & 0xff);
-      texelAg[0] = (f32)((*(sampleA + 0) >> 0x08) & 0xff);
-      texelAb[0] = (f32)((*(sampleA + 0) >> 0x00) & 0xff);
-      texelAa[0] = (f32)((*(sampleA + 0) >> 0x18) & 0xff);
-
-      texelAr[1] = (f32)((*(sampleA + 1) >> 0x10) & 0xff);
-      texelAg[1] = (f32)((*(sampleA + 1) >> 0x08) & 0xff);
-      texelAb[1] = (f32)((*(sampleA + 1) >> 0x00) & 0xff);
-      texelAa[1] = (f32)((*(sampleA + 1) >> 0x18) & 0xff);
-
-      texelAr[2] = (f32)((*(sampleA + 2) >> 0x10) & 0xff);
-      texelAg[2] = (f32)((*(sampleA + 2) >> 0x08) & 0xff);
-      texelAb[2] = (f32)((*(sampleA + 2) >> 0x00) & 0xff);
-      texelAa[2] = (f32)((*(sampleA + 2) >> 0x18) & 0xff);
-
-      texelAr[3] = (f32)((*(sampleA + 3) >> 0x10) & 0xff);
-      texelAg[3] = (f32)((*(sampleA + 3) >> 0x08) & 0xff);
-      texelAb[3] = (f32)((*(sampleA + 3) >> 0x00) & 0xff);
-      texelAa[3] = (f32)((*(sampleA + 3) >> 0x18) & 0xff);
+      __m128 texelAr = _mm_cvtepi32_ps(sampleA >> 0x10 & _mm_set1_epi32(0xff));
+      __m128 texelAg = _mm_cvtepi32_ps(sampleA >> 0x08 & _mm_set1_epi32(0xff));
+      __m128 texelAb = _mm_cvtepi32_ps(sampleA >> 0x00 & _mm_set1_epi32(0xff));
+      __m128 texelAa = _mm_cvtepi32_ps(sampleA >> 0x18 & _mm_set1_epi32(0xff));
 
       // texelB
-      __m128 texelBr;
-      __m128 texelBg;
-      __m128 texelBb;
-      __m128 texelBa;
-
-      texelBr[0] = (f32)((*(sampleB + 0) >> 0x10) & 0xff);
-      texelBg[0] = (f32)((*(sampleB + 0) >> 0x08) & 0xff);
-      texelBb[0] = (f32)((*(sampleB + 0) >> 0x00) & 0xff);
-      texelBa[0] = (f32)((*(sampleB + 0) >> 0x18) & 0xff);
-
-      texelBr[1] = (f32)((*(sampleB + 1) >> 0x10) & 0xff);
-      texelBg[1] = (f32)((*(sampleB + 1) >> 0x08) & 0xff);
-      texelBb[1] = (f32)((*(sampleB + 1) >> 0x00) & 0xff);
-      texelBa[1] = (f32)((*(sampleB + 1) >> 0x18) & 0xff);
-
-      texelBr[2] = (f32)((*(sampleB + 2) >> 0x10) & 0xff);
-      texelBg[2] = (f32)((*(sampleB + 2) >> 0x08) & 0xff);
-      texelBb[2] = (f32)((*(sampleB + 2) >> 0x00) & 0xff);
-      texelBa[2] = (f32)((*(sampleB + 2) >> 0x18) & 0xff);
-
-      texelBr[3] = (f32)((*(sampleB + 3) >> 0x10) & 0xff);
-      texelBg[3] = (f32)((*(sampleB + 3) >> 0x08) & 0xff);
-      texelBb[3] = (f32)((*(sampleB + 3) >> 0x00) & 0xff);
-      texelBa[3] = (f32)((*(sampleB + 3) >> 0x18) & 0xff);
+      __m128 texelBr = _mm_cvtepi32_ps(sampleB >> 0x10 & _mm_set1_epi32(0xff));
+      __m128 texelBg = _mm_cvtepi32_ps(sampleB >> 0x08 & _mm_set1_epi32(0xff));
+      __m128 texelBb = _mm_cvtepi32_ps(sampleB >> 0x00 & _mm_set1_epi32(0xff));
+      __m128 texelBa = _mm_cvtepi32_ps(sampleB >> 0x18 & _mm_set1_epi32(0xff));
 
       // texelC
-      __m128 texelCr;
-      __m128 texelCg;
-      __m128 texelCb;
-      __m128 texelCa;
-
-      texelCr[0] = (f32)((*(sampleC + 0) >> 0x10) & 0xff);
-      texelCg[0] = (f32)((*(sampleC + 0) >> 0x08) & 0xff);
-      texelCb[0] = (f32)((*(sampleC + 0) >> 0x00) & 0xff);
-      texelCa[0] = (f32)((*(sampleC + 0) >> 0x18) & 0xff);
-
-      texelCr[1] = (f32)((*(sampleC + 1) >> 0x10) & 0xff);
-      texelCg[1] = (f32)((*(sampleC + 1) >> 0x08) & 0xff);
-      texelCb[1] = (f32)((*(sampleC + 1) >> 0x00) & 0xff);
-      texelCa[1] = (f32)((*(sampleC + 1) >> 0x18) & 0xff);
-
-      texelCr[2] = (f32)((*(sampleC + 2) >> 0x10) & 0xff);
-      texelCg[2] = (f32)((*(sampleC + 2) >> 0x08) & 0xff);
-      texelCb[2] = (f32)((*(sampleC + 2) >> 0x00) & 0xff);
-      texelCa[2] = (f32)((*(sampleC + 2) >> 0x18) & 0xff);
-
-      texelCr[3] = (f32)((*(sampleC + 3) >> 0x10) & 0xff);
-      texelCg[3] = (f32)((*(sampleC + 3) >> 0x08) & 0xff);
-      texelCb[3] = (f32)((*(sampleC + 3) >> 0x00) & 0xff);
-      texelCa[3] = (f32)((*(sampleC + 3) >> 0x18) & 0xff);
+      __m128 texelCr = _mm_cvtepi32_ps(sampleC >> 0x10 & _mm_set1_epi32(0xff));
+      __m128 texelCg = _mm_cvtepi32_ps(sampleC >> 0x08 & _mm_set1_epi32(0xff));
+      __m128 texelCb = _mm_cvtepi32_ps(sampleC >> 0x00 & _mm_set1_epi32(0xff));
+      __m128 texelCa = _mm_cvtepi32_ps(sampleC >> 0x18 & _mm_set1_epi32(0xff));
 
       // texelD
-      __m128 texelDr;
-      __m128 texelDg;
-      __m128 texelDb;
-      __m128 texelDa;
-
-      texelDr[0] = (f32)((*(sampleD + 0) >> 0x10) & 0xff);
-      texelDg[0] = (f32)((*(sampleD + 0) >> 0x08) & 0xff);
-      texelDb[0] = (f32)((*(sampleD + 0) >> 0x00) & 0xff);
-      texelDa[0] = (f32)((*(sampleD + 0) >> 0x18) & 0xff);
-
-      texelDr[1] = (f32)((*(sampleD + 1) >> 0x10) & 0xff);
-      texelDg[1] = (f32)((*(sampleD + 1) >> 0x08) & 0xff);
-      texelDb[1] = (f32)((*(sampleD + 1) >> 0x00) & 0xff);
-      texelDa[1] = (f32)((*(sampleD + 1) >> 0x18) & 0xff);
-
-      texelDr[2] = (f32)((*(sampleD + 2) >> 0x10) & 0xff);
-      texelDg[2] = (f32)((*(sampleD + 2) >> 0x08) & 0xff);
-      texelDb[2] = (f32)((*(sampleD + 2) >> 0x00) & 0xff);
-      texelDa[2] = (f32)((*(sampleD + 2) >> 0x18) & 0xff);
-
-      texelDr[3] = (f32)((*(sampleD + 3) >> 0x10) & 0xff);
-      texelDg[3] = (f32)((*(sampleD + 3) >> 0x08) & 0xff);
-      texelDb[3] = (f32)((*(sampleD + 3) >> 0x00) & 0xff);
-      texelDa[3] = (f32)((*(sampleD + 3) >> 0x18) & 0xff);
+      __m128 texelDr = _mm_cvtepi32_ps(sampleD >> 0x10 & _mm_set1_epi32(0xff));
+      __m128 texelDg = _mm_cvtepi32_ps(sampleD >> 0x08 & _mm_set1_epi32(0xff));
+      __m128 texelDb = _mm_cvtepi32_ps(sampleD >> 0x00 & _mm_set1_epi32(0xff));
+      __m128 texelDa = _mm_cvtepi32_ps(sampleD >> 0x18 & _mm_set1_epi32(0xff));
 
       // destination channels
       __m128 destr = _mm_cvtepi32_ps(originalDest >> 0x10 & _mm_set1_epi32(0xff));
