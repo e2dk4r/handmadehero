@@ -654,36 +654,6 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
     u32 *pixel = (u32 *)row;
     for (i32 xi = xMin; xi <= xMax; xi += 4) {
 
-      __m128 texelAr;
-      __m128 texelAg;
-      __m128 texelAb;
-      __m128 texelAa;
-
-      __m128 texelBr;
-      __m128 texelBg;
-      __m128 texelBb;
-      __m128 texelBa;
-
-      __m128 texelCr;
-      __m128 texelCg;
-      __m128 texelCb;
-      __m128 texelCa;
-
-      __m128 texelDr;
-      __m128 texelDg;
-      __m128 texelDb;
-      __m128 texelDa;
-
-      __m128 destr;
-      __m128 destg;
-      __m128 destb;
-      __m128 desta;
-
-      __m128 blendedr;
-      __m128 blendedg;
-      __m128 blendedb;
-      __m128 blendeda;
-
       __m128 pixelPx = _mm_set_ps((f32)(xi + 3), (f32)(xi + 2), (f32)(xi + 1), (f32)(xi + 0));
       __m128 pixelPy = _mm_set1_ps((f32)y);
 
@@ -730,6 +700,11 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
 
       // sRGBBilinearBlend - Unpack4x8
       // texelA
+      __m128 texelAr;
+      __m128 texelAg;
+      __m128 texelAb;
+      __m128 texelAa;
+
       texelAr[0] = (f32)((*(sampleA + 0) >> 0x10) & 0xff);
       texelAg[0] = (f32)((*(sampleA + 0) >> 0x08) & 0xff);
       texelAb[0] = (f32)((*(sampleA + 0) >> 0x00) & 0xff);
@@ -751,6 +726,11 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       texelAa[3] = (f32)((*(sampleA + 3) >> 0x18) & 0xff);
 
       // texelB
+      __m128 texelBr;
+      __m128 texelBg;
+      __m128 texelBb;
+      __m128 texelBa;
+
       texelBr[0] = (f32)((*(sampleB + 0) >> 0x10) & 0xff);
       texelBg[0] = (f32)((*(sampleB + 0) >> 0x08) & 0xff);
       texelBb[0] = (f32)((*(sampleB + 0) >> 0x00) & 0xff);
@@ -772,6 +752,11 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       texelBa[3] = (f32)((*(sampleB + 3) >> 0x18) & 0xff);
 
       // texelC
+      __m128 texelCr;
+      __m128 texelCg;
+      __m128 texelCb;
+      __m128 texelCa;
+
       texelCr[0] = (f32)((*(sampleC + 0) >> 0x10) & 0xff);
       texelCg[0] = (f32)((*(sampleC + 0) >> 0x08) & 0xff);
       texelCb[0] = (f32)((*(sampleC + 0) >> 0x00) & 0xff);
@@ -793,6 +778,11 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       texelCa[3] = (f32)((*(sampleC + 3) >> 0x18) & 0xff);
 
       // texelD
+      __m128 texelDr;
+      __m128 texelDg;
+      __m128 texelDb;
+      __m128 texelDa;
+
       texelDr[0] = (f32)((*(sampleD + 0) >> 0x10) & 0xff);
       texelDg[0] = (f32)((*(sampleD + 0) >> 0x08) & 0xff);
       texelDb[0] = (f32)((*(sampleD + 0) >> 0x00) & 0xff);
@@ -814,6 +804,11 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       texelDa[3] = (f32)((*(sampleD + 3) >> 0x18) & 0xff);
 
       // destination channels
+      __m128 destr;
+      __m128 destg;
+      __m128 destb;
+      __m128 desta;
+
       destr[0] = (f32)((*(pixel + 0) >> 0x10) & 0xff);
       destg[0] = (f32)((*(pixel + 0) >> 0x08) & 0xff);
       destb[0] = (f32)((*(pixel + 0) >> 0x00) & 0xff);
@@ -888,10 +883,10 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
 
       // blend alpha
       __m128 invTexela = 1.0f - texela;
-      blendedr = destr * invTexela + texelr;
-      blendedg = destg * invTexela + texelg;
-      blendedb = destb * invTexela + texelb;
-      blendeda = desta * invTexela + texela;
+      __m128 blendedr = destr * invTexela + texelr;
+      __m128 blendedg = destg * invTexela + texelg;
+      __m128 blendedb = destb * invTexela + texelb;
+      __m128 blendeda = desta * invTexela + texela;
 
       // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
       blendedr = 255.0f * _mm_sqrt_ps(blendedr);
