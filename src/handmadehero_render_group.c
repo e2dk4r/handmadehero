@@ -688,9 +688,18 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       __m128 blendeda;
 
       b32 shouldFill[4];
+      __m128 pixelPx = _mm_set_ps((f32)(xi + 3), (f32)(xi + 2), (f32)(xi + 1), (f32)(xi + 0));
+      __m128 pixelPy = _mm_set1_ps((f32)y);
+
+      __m128 dx = pixelPx - origin.x;
+      __m128 dy = pixelPy - origin.y;
+
+      __m128 u = dx * nxAxis.x + dy * nxAxis.y;
+      __m128 v = dx * nyAxis.x + dy * nyAxis.y;
 
       __m128i originalDest = _mm_loadu_si128((__m128i *)pixel);
-      __m128i writeMask = _mm_set1_epi32(0x0);
+      __m128i writeMask =
+          _mm_castps_si128(_mm_and_ps(_mm_and_ps(u >= 0.0f, u < 1.0f), _mm_and_ps(v >= 0.0f, v < 1.0f)));
 
       u32 sampleA[4];
       u32 sampleB[4];
@@ -698,16 +707,10 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
       u32 sampleD[4];
 
       for (i32 i = 0; i < 4; i++) {
-        struct v2 pixelP = v2i(xi + i, y);
-        struct v2 d = v2_sub(pixelP, origin);
-
-        f32 u = v2_dot(d, nxAxis);
-        f32 v = v2_dot(d, nyAxis);
-
-        shouldFill[i] = u >= 0 && u < 1.0f && v >= 0 && v < 1.0f;
+        shouldFill[i] = u[i] >= 0 && u[i] < 1.0f && v[i] >= 0 && v[i] < 1.0f;
         if (shouldFill[i]) {
-          f32 tX = u * (f32)(texture->width - 2);
-          f32 tY = v * (f32)(texture->height - 2);
+          f32 tX = u[i] * (f32)(texture->width - 2);
+          f32 tY = v[i] * (f32)(texture->height - 2);
 
           i32 texelX = (i32)tX;
           i32 texelY = (i32)tY;
@@ -724,8 +727,6 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
           sampleB[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
           sampleC[i] = *(u32 *)(texelPtr + texture->stride);
           sampleD[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
-
-          *((u32 *)&writeMask + i) = 0xffffffff;
         }
       }
 
