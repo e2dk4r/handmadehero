@@ -727,7 +727,7 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
         sampleA[i] = *(u32 *)texelPtr;
         sampleB[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
         sampleC[i] = *(u32 *)(texelPtr + texture->stride);
-        sampleD[i] = *(u32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
+        sampleD[i] = *(u32 *)(texelPtr + texture->stride + BITMAP_BYTES_PER_PIXEL);
       }
 
       // sRGBBilinearBlend - Unpack4x8
