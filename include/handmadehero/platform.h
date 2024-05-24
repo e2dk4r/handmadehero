@@ -28,7 +28,7 @@ enum {
   CYCLE_COUNTER_DrawRenderGroup,
   CYCLE_COUNTER_DrawRectangleSlowly,
   CYCLE_COUNTER_ProcessPixel,
-  CYCLE_COUNTER_DrawRectangleHopefullyQuickly,
+  CYCLE_COUNTER_DrawRectangleQuickly,
   CYCLE_COUNTER_COUNT
 };
 

@@ -574,10 +574,10 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 internal inline void
-DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis,
-                              struct v4 color, struct bitmap *texture, f32 pixelsToMeters)
+DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
+                     struct bitmap *texture, f32 pixelsToMeters)
 {
-  BEGIN_TIMER_BLOCK(DrawRectangleHopefullyQuickly);
+  BEGIN_TIMER_BLOCK(DrawRectangleQuickly);
 
   f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
   f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
@@ -820,7 +820,7 @@ DrawRectangleHopefullyQuickly(struct bitmap *buffer, struct v2 origin, struct v2
   }
   END_TIMER_BLOCK_COUNTED(ProcessPixel, (u64)((xMax - xMin + 1) * (yMax - yMin + 1)));
 
-  END_TIMER_BLOCK(DrawRectangleHopefullyQuickly);
+  END_TIMER_BLOCK(DrawRectangleQuickly);
 }
 #if !defined(__clang__)
 #pragma GCC diagnostic pop
@@ -971,9 +971,9 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 #if 0
       DrawBitmap(outputTarget, entry->bitmap, basis.p, entry->alpha);
 #else
-      DrawRectangleHopefullyQuickly(outputTarget, basis.p, v2_mul(v2(entry->size.x, 0), basis.scale),
-                                    v2_mul(v2(0, entry->size.y), basis.scale), v4(1.0f, 1.0f, 1.0f, entry->alpha),
-                                    entry->bitmap, pixelsToMeters);
+      DrawRectangleQuickly(outputTarget, basis.p, v2_mul(v2(entry->size.x, 0), basis.scale),
+                           v2_mul(v2(0, entry->size.y), basis.scale), v4(1.0f, 1.0f, 1.0f, entry->alpha), entry->bitmap,
+                           pixelsToMeters);
 #endif
     }
 
