@@ -394,7 +394,7 @@
 - [x] Handmade Hero Day 118 - Wide Unpacking and Masking
       https://www.youtube.com/watch?v=-_X0UYCGaVA
 
-- [ ] Handmade Hero Day 119 - Counting Intrinsics
+- [x] Handmade Hero Day 119 - Counting Intrinsics
       https://www.youtube.com/watch?v=NPDL1OENYio
 
 - [ ] Handmade Hero Day 120 - Measuring Port Usage with IACA
