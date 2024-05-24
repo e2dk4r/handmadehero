@@ -656,16 +656,15 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   BEGIN_TIMER_BLOCK(ProcessPixel);
   for (i32 y = yMin; y <= yMax; y++) {
     u32 *pixel = (u32 *)row;
+
+    __m128 pixelPx = _mm_set_ps((f32)(xMin + 3), (f32)(xMin + 2), (f32)(xMin + 1), (f32)(xMin + 0));
+    pixelPx -= origin.x;
+    __m128 pixelPy = _mm_set1_ps((f32)y);
+    pixelPy -= origin.y;
+
     for (i32 xi = xMin; xi <= xMax; xi += 4) {
-
-      __m128 pixelPx = _mm_set_ps((f32)(xi + 3), (f32)(xi + 2), (f32)(xi + 1), (f32)(xi + 0));
-      __m128 pixelPy = _mm_set1_ps((f32)y);
-
-      __m128 dx = pixelPx - origin.x;
-      __m128 dy = pixelPy - origin.y;
-
-      __m128 u = dx * nxAxis.x + dy * nxAxis.y;
-      __m128 v = dx * nyAxis.x + dy * nyAxis.y;
+      __m128 u = pixelPx * nxAxis.x + pixelPy * nxAxis.y;
+      __m128 v = pixelPx * nyAxis.x + pixelPy * nyAxis.y;
 #define mmClamp01(a) _mm_min_ps(_mm_max_ps(a, _mm_set1_ps(0.0f)), _mm_set1_ps(1.0f))
       u = mmClamp01(u);
       v = mmClamp01(v);
@@ -814,6 +813,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       _mm_storeu_si128((__m128i *)pixel, maskedOut);
 
       pixel += 4;
+      pixelPx += 4;
     }
 
     row += buffer->stride;
