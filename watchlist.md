@@ -397,7 +397,7 @@
 - [x] Handmade Hero Day 119 - Counting Intrinsics
       https://www.youtube.com/watch?v=NPDL1OENYio
 
-- [ ] Handmade Hero Day 120 - Measuring Port Usage with IACA
+- [x] Handmade Hero Day 120 - Measuring Port Usage with IACA
       https://www.youtube.com/watch?v=-c-0s6KiPSw
 
 - [ ] Handmade Hero Day 121 - Rendering in Tiles (Marathon)
