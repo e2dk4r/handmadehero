@@ -795,9 +795,9 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       __m128 blendeda = desta * invTexela + texela;
 
       // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
-      blendedr = _mm_sqrt_ps(blendedr);
-      blendedg = _mm_sqrt_ps(blendedg);
-      blendedb = _mm_sqrt_ps(blendedb);
+      blendedr *= _mm_rsqrt_ps(blendedr);
+      blendedg *= _mm_rsqrt_ps(blendedg);
+      blendedb *= _mm_rsqrt_ps(blendedb);
       // blendeda = blendeda;
 
       __m128i intr = _mm_cvtps_epi32(blendedr);
