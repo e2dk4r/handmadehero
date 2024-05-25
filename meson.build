@@ -14,7 +14,7 @@ is_build_debug = get_option('buildtype').startswith('debug')
 cc = meson.get_compiler('c')
 
 add_project_arguments(
-  [
+  cc.get_supported_arguments([
     '-O3',
     '-march=x86-64-v3',
     '-funroll-loops',
@@ -24,20 +24,20 @@ add_project_arguments(
     '-Wno-unused-parameter',
     '-Wno-unused-result',
     '-Wno-missing-braces',
-  ],
+  ]),
   language: 'c',
 )
 
 if is_build_debug
   add_project_arguments(
-    [
+    cc.get_supported_arguments([
       '-DHANDMADEHERO_DEBUG=1',
       '-DHANDMADEHERO_INTERNAL=1',
 
       '-Wno-unused-but-set-variable',
       '-Wno-unused-function',
       '-Wno-unused-variable',
-    ],
+    ]),
     language : 'c'
   )
 endif
