@@ -665,6 +665,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
     for (i32 xi = xMin; xi <= xMax; xi += 4) {
       __m128 u = pixelPx * nxAxis.x + pixelPy * nxAxis.y;
       __m128 v = pixelPx * nyAxis.x + pixelPy * nyAxis.y;
+
 #define mmClamp01(a) _mm_min_ps(_mm_max_ps(a, _mm_set1_ps(0.0f)), _mm_set1_ps(1.0f))
       u = mmClamp01(u);
       v = mmClamp01(v);
@@ -739,25 +740,21 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
 
 #define mmSquare(a) (a * a)
       // sRGBBilinearBlend - sRGB255toLinear1()
-      texelAr = mmSquare(inv255 * texelAr);
-      texelAg = mmSquare(inv255 * texelAg);
-      texelAb = mmSquare(inv255 * texelAb);
-      texelAa = inv255 * texelAa;
+      texelAr = mmSquare(texelAr);
+      texelAg = mmSquare(texelAg);
+      texelAb = mmSquare(texelAb);
 
-      texelBr = mmSquare(inv255 * texelBr);
-      texelBg = mmSquare(inv255 * texelBg);
-      texelBb = mmSquare(inv255 * texelBb);
-      texelBa = inv255 * texelBa;
+      texelBr = mmSquare(texelBr);
+      texelBg = mmSquare(texelBg);
+      texelBb = mmSquare(texelBb);
 
-      texelCr = mmSquare(inv255 * texelCr);
-      texelCg = mmSquare(inv255 * texelCg);
-      texelCb = mmSquare(inv255 * texelCb);
-      texelCa = inv255 * texelCa;
+      texelCr = mmSquare(texelCr);
+      texelCg = mmSquare(texelCg);
+      texelCb = mmSquare(texelCb);
 
-      texelDr = mmSquare(inv255 * texelDr);
-      texelDg = mmSquare(inv255 * texelDg);
-      texelDb = mmSquare(inv255 * texelDb);
-      texelDa = inv255 * texelDa;
+      texelDr = mmSquare(texelDr);
+      texelDg = mmSquare(texelDg);
+      texelDb = mmSquare(texelDb);
 
       // sRGBBilinearBlend - v4_lerp()
       __m128 invfX = 1.0f - fX;
@@ -779,28 +776,29 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       texelb = texelb * color.b;
       texela = texela * color.a;
 
-      texelr = mmClamp01(texelr);
-      texelg = mmClamp01(texelg);
-      texelb = mmClamp01(texelb);
+#define mmClamp0(a, max) _mm_min_ps(_mm_max_ps(a, _mm_set1_ps(0.0f)), _mm_set1_ps(max))
+      texelr = mmClamp0(texelr, Square(255.0f));
+      texelg = mmClamp0(texelg, Square(255.0f));
+      texelb = mmClamp0(texelb, Square(255.0f));
 
       // NOTE(e2dk4r): Go from sRGB to "linear" brightness space
-      destr = mmSquare(inv255 * destr);
-      destg = mmSquare(inv255 * destg);
-      destb = mmSquare(inv255 * destb);
-      desta = inv255 * desta;
+      destr = mmSquare(destr);
+      destg = mmSquare(destg);
+      destb = mmSquare(destb);
+      // desta = desta;
 
       // blend alpha
-      __m128 invTexela = 1.0f - texela;
+      __m128 invTexela = 1.0f - inv255 * texela;
       __m128 blendedr = destr * invTexela + texelr;
       __m128 blendedg = destg * invTexela + texelg;
       __m128 blendedb = destb * invTexela + texelb;
       __m128 blendeda = desta * invTexela + texela;
 
       // NOTE(e2dk4r): Go from "linear" brightness space to sRGB
-      blendedr = 255.0f * _mm_sqrt_ps(blendedr);
-      blendedg = 255.0f * _mm_sqrt_ps(blendedg);
-      blendedb = 255.0f * _mm_sqrt_ps(blendedb);
-      blendeda = 255.0f * blendeda;
+      blendedr = _mm_sqrt_ps(blendedr);
+      blendedg = _mm_sqrt_ps(blendedg);
+      blendedb = _mm_sqrt_ps(blendedb);
+      // blendeda = blendeda;
 
       __m128i intr = _mm_cvtps_epi32(blendedr);
       __m128i intg = _mm_cvtps_epi32(blendedg);
