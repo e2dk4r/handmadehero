@@ -21,7 +21,7 @@
 
 #else
 
-#define assert()
+#define assert(expression)
 #define InvalidCodePath
 
 #endif

@@ -52,6 +52,7 @@ extern struct game_memory *DEBUG_GLOBAL_MEMORY;
 
 #define BEGIN_TIMER_BLOCK(tag)
 #define END_TIMER_BLOCK(tag)
+#define END_TIMER_BLOCK_COUNTED(tag, count)
 
 #endif
 
