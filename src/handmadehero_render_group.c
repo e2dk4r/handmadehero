@@ -699,8 +699,6 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       for (i32 i = 0; i < 4; i++) {
         i32 fetchX = mi(texelX, i);
         i32 fetchY = mi(texelY, i);
-        assert(fetchX >= 0 && fetchX < (i32)texture->width);
-        assert(fetchY >= 0 && fetchY < (i32)texture->height);
 
         // BilinearSample
         u8 *texelPtr = ((u8 *)texture->memory + fetchY * texture->stride + fetchX * BITMAP_BYTES_PER_PIXEL);
