@@ -8,7 +8,7 @@
 
 #else
 
-#define BEGIN_ANALYSIS()
+#define BEGIN_ANALYSIS(x)
 #define END_ANALYSIS()
 
 #endif
