@@ -1,3 +1,4 @@
+#include <handmadehero/analysis.h>
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/render_group.h>
 #include <x86intrin.h>
@@ -663,6 +664,8 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
     pixelPy -= origin.y;
 
     for (i32 xi = xMin; xi <= xMax; xi += 4) {
+      BEGIN_ANALYSIS("ProcessPixel");
+
       __m128 u = pixelPx * nxAxis.x + pixelPy * nxAxis.y;
       __m128 v = pixelPx * nyAxis.x + pixelPy * nyAxis.y;
 
@@ -812,6 +815,8 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
 
       pixel += 4;
       pixelPx += 4;
+
+      END_ANALYSIS();
     }
 
     row += buffer->stride;
