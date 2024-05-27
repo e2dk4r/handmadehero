@@ -1,7 +1,7 @@
 #ifndef HANDMADEHERO_ANALYSIS_H
 #define HANDMADEHERO_ANALYSIS_H
 
-#if defined(__clang__)
+#if COMPILER_CLANG
 
 #define BEGIN_ANALYSIS(x) __asm volatile("# LLVM-MCA-BEGIN " x);
 #define END_ANALYSIS() __asm volatile("# LLVM-MCA-END")

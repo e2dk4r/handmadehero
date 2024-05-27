@@ -570,7 +570,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
   END_TIMER_BLOCK(DrawRectangleSlowly);
 }
 
-#if !defined(__clang__)
+#if COMPILER_GCC
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
@@ -823,7 +823,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
 
   END_TIMER_BLOCK(DrawRectangleQuickly);
 }
-#if !defined(__clang__)
+#if COMPILER_GCC
 #pragma GCC diagnostic pop
 #endif
 

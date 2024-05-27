@@ -14,6 +14,14 @@ is_build_debug = get_option('buildtype').startswith('debug')
 cc = meson.get_compiler('c')
 
 add_project_arguments(
+  [
+    '-DCOMPILER_GCC=' + (cc.get_id() == 'gcc').to_int().to_string(),
+    '-DCOMPILER_CLANG=' + (cc.get_id() == 'clang').to_int().to_string(),
+  ],
+  language: 'c',
+)
+
+add_project_arguments(
   cc.get_supported_arguments([
     '-O3',
     '-march=x86-64-v3',
