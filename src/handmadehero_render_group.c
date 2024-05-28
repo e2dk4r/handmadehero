@@ -649,11 +649,9 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   for (i32 y = fillRect.minY; y < fillRect.maxY; y += 2) {
     u32 *pixel = (u32 *)row;
 
-    __m128 pixelPx = _mm_set_ps((f32)(fillRect.minX + 3), (f32)(fillRect.minX + 2), (f32)(fillRect.minX + 1),
-                                (f32)(fillRect.minX + 0));
-    pixelPx -= origin.x;
-    __m128 pixelPy = _mm_set1_ps((f32)y);
-    pixelPy -= origin.y;
+    __m128 pixelPx = _mm_setr_ps((f32)(fillRect.minX + 0) - origin.x, (f32)(fillRect.minX + 1) - origin.x,
+                                 (f32)(fillRect.minX + 2) - origin.x, (f32)(fillRect.minX + 3) - origin.x);
+    __m128 pixelPy = _mm_set1_ps((f32)y - origin.y);
 
     for (i32 xi = fillRect.minX; xi < fillRect.maxX; xi += 4) {
       BEGIN_ANALYSIS("ProcessPixel");
