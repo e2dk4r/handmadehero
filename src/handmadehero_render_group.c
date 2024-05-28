@@ -576,7 +576,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
 #endif
 internal inline void
 DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
-                     struct bitmap *texture, f32 pixelsToMeters)
+                     struct bitmap *texture, f32 pixelsToMeters, b32 even)
 {
   BEGIN_TIMER_BLOCK(DrawRectangleQuickly);
 
@@ -643,7 +643,12 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   if (yMax > heightMax)
     yMax = heightMax;
 
+  if (!even == ((yMin & 1) != 0)) {
+    yMin += 1;
+  }
+
   u8 *row = buffer->memory + yMin * buffer->stride + xMin * BITMAP_BYTES_PER_PIXEL;
+  i32 rowAdvance = buffer->stride * 2;
 
   // pre-multiplied alpha
   v3_mul_ref(&color.rgb, color.a);
@@ -655,7 +660,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   f32 inv255 = 1.0f / 255.0f;
 
   BEGIN_TIMER_BLOCK(ProcessPixel);
-  for (i32 y = yMin; y <= yMax; y++) {
+  for (i32 y = yMin; y <= yMax; y += 2) {
     u32 *pixel = (u32 *)row;
 
     __m128 pixelPx = _mm_set_ps((f32)(xMin + 3), (f32)(xMin + 2), (f32)(xMin + 1), (f32)(xMin + 0));
@@ -817,9 +822,9 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       END_ANALYSIS();
     }
 
-    row += buffer->stride;
+    row += rowAdvance;
   }
-  END_TIMER_BLOCK_COUNTED(ProcessPixel, (u64)((xMax - xMin + 1) * (yMax - yMin + 1)));
+  END_TIMER_BLOCK_COUNTED(ProcessPixel, (u64)((xMax - xMin + 1) * ((yMax - yMin + 1) / 2)));
 
   END_TIMER_BLOCK(DrawRectangleQuickly);
 }
@@ -974,7 +979,10 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 #else
       DrawRectangleQuickly(outputTarget, basis.p, v2_mul(v2(entry->size.x, 0), basis.scale),
                            v2_mul(v2(0, entry->size.y), basis.scale), v4(1.0f, 1.0f, 1.0f, entry->alpha), entry->bitmap,
-                           pixelsToMeters);
+                           pixelsToMeters, 0);
+      DrawRectangleQuickly(outputTarget, basis.p, v2_mul(v2(entry->size.x, 0), basis.scale),
+                           v2_mul(v2(0, entry->size.y), basis.scale), v4(1.0f, 1.0f, 1.0f, entry->alpha), entry->bitmap,
+                           pixelsToMeters, 1);
 #endif
     }
 
