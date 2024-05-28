@@ -121,13 +121,7 @@ Lerp(f32 a, f32 b, f32 t)
 internal inline f32
 Clamp(f32 min, f32 max, f32 value)
 {
-  f32 result = value;
-
-  if (result < min)
-    result = min;
-  else if (result > max)
-    result = max;
-
+  f32 result = Minimum(Maximum(value, min), max);
   return result;
 }
 
