@@ -782,4 +782,18 @@ Rect2iArea(struct rect2i a)
   return (u32)area;
 }
 
+internal inline b32
+HasRect2iArea(struct rect2i a)
+{
+  b32 result = (a.minX < a.maxX) && (a.minY < a.maxY);
+  return result;
+}
+
+internal inline struct rect2i
+Rect2iInvertedInfinity(void)
+{
+  struct rect2i result = {I32_MAX, I32_MAX, I32_MIN, I32_MIN};
+  return result;
+}
+
 #endif /* HANDMADEHERO_MATH_H */

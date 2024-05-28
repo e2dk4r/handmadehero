@@ -680,7 +680,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
   }
 #endif
 
-  DrawRenderGroup(renderGroup, buffer);
+  TiledDrawRenderGroup(renderGroup, buffer);
   EndTemporaryMemory(&renderMemory);
 }
 
@@ -1420,7 +1420,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 #endif
 
-  DrawRenderGroup(renderGroup, &drawBuffer);
+  TiledDrawRenderGroup(renderGroup, &drawBuffer);
 
   EndSimRegion(simRegion, state);
   EndTemporaryMemory(&simRegionMemory);

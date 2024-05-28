@@ -147,10 +147,14 @@ void
 RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);
 
 void
-DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color);
+DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color, struct rect2i clipRect,
+              b32 even);
 
 void
-DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget);
+TiledDrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget);
+
+void
+DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2i clipRect, b32 even);
 
 struct render_group_entry_coordinate_system *
 CoordinateSystem(struct render_group *renderGroup, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,

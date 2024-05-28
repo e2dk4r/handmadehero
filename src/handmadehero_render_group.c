@@ -159,6 +159,7 @@ Rect(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v
 inline void
 RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color)
 {
+#if 0
   f32 thickness = 0.1f;
 
   // NOTE(e2dk4r): top and bottom
@@ -168,36 +169,27 @@ RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, s
   // NOTE(e2dk4r): left right
   PushRectangleEntry(renderGroup, v3_sub(offset, v3(0.5f * dim.x, 0.0f, 0.0f)), v2(thickness, dim.y), color);
   PushRectangleEntry(renderGroup, v3_add(offset, v3(0.5f * dim.x, 0.0f, 0.0f)), v2(thickness, dim.y), color);
+#endif
 }
 
 inline void
-DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color)
+DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color, struct rect2i clipRect,
+              b32 even)
 {
   assert(min.x < max.x);
   assert(min.y < max.y);
 
-  i32 minX = roundf32toi32(min.x);
-  i32 minY = roundf32toi32(min.y);
-  i32 maxX = roundf32toi32(max.x);
-  i32 maxY = roundf32toi32(max.y);
-
-  if (minX < 0)
-    minX = 0;
-
-  if (minY < 0)
-    minY = 0;
-
-  if (maxX > (i32)buffer->width)
-    maxX = (i32)buffer->width;
-
-  if (maxY > (i32)buffer->height)
-    maxY = (i32)buffer->height;
+  struct rect2i fillRect = {roundf32toi32(min.x), roundf32toi32(min.y), roundf32toi32(max.x), roundf32toi32(max.y)};
+  fillRect = Rect2iIntersect(fillRect, clipRect);
+  if (!even == ((fillRect.minY & 1) != 0)) {
+    fillRect.minY += 1;
+  }
 
   u8 *row = buffer->memory
             /* x offset */
-            + (minX * BITMAP_BYTES_PER_PIXEL)
+            + (fillRect.minX * BITMAP_BYTES_PER_PIXEL)
             /* y offset */
-            + (minY * buffer->stride);
+            + (fillRect.minY * buffer->stride);
 
   u32 colorRGBA =
       /* alpha */
@@ -209,13 +201,13 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
       /* blue */
       | roundf32tou32(color.b * 255.0f) << 0;
 
-  for (i32 y = minY; y < maxY; y++) {
+  for (i32 y = fillRect.minY; y < fillRect.maxY; y += 2) {
     u32 *pixel = (u32 *)row;
-    for (i32 x = minX; x < maxX; x++) {
+    for (i32 x = fillRect.minX; x < fillRect.maxX; x++) {
       *pixel = colorRGBA;
       pixel++;
     }
-    row += buffer->stride;
+    row += 2 * buffer->stride;
   }
 }
 
@@ -576,7 +568,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
 #endif
 internal inline void
 DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
-                     struct bitmap *texture, f32 pixelsToMeters, b32 even)
+                     struct bitmap *texture, f32 pixelsToMeters, struct rect2i clipRect, b32 even)
 {
   BEGIN_TIMER_BLOCK(DrawRectangleQuickly);
 
@@ -590,14 +582,12 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   f32 NzScale = 0.5f * (xAxisLength + yAxisLength);
 
   // TODO(e2dk4r): IMPORTANT: REMOVE THIS ONCE WE HAVE REAL ROW LOADING
-  i32 widthMax = (i32)buffer->width - 3;
-  i32 heightMax = (i32)buffer->height - 3;
+  // i32 widthMax = (i32)buffer->width - 3;
+  // i32 heightMax = (i32)buffer->height - 3;
 
   // TODO(e2dk4r): this will need to be specified seperately
   f32 originZ = 0.0f;
   f32 originY = v2_add(origin, v2_add(v2_mul(xAxis, 0.5f), v2_mul(yAxis, 0.5f))).y;
-
-  struct rect2i fillRect = {widthMax, heightMax, 0, 0};
 
   struct v2 p[4] = {
       origin,
@@ -606,6 +596,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       v2_add(origin, yAxis),
   };
 
+  struct rect2i fillRect = Rect2iInvertedInfinity();
   for (u32 pIndex = 0; pIndex < ARRAY_COUNT(p); pIndex++) {
     struct v2 testP = p[pIndex];
     i32 floorX = Floor(testP.x);
@@ -626,11 +617,37 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       fillRect.maxY = ceilY;
   }
 
-  struct rect2i clipRect = {128, 128, 256, 256};
+  // struct rect2i clipRect = // {0, 0, widthMax, heightMax};
+  //                             {128, 128, 256, 256};
   fillRect = Rect2iIntersect(fillRect, clipRect);
-
   if (!even == ((fillRect.minY & 1) != 0)) {
     fillRect.minY += 1;
+  }
+
+  if (!HasRect2iArea(fillRect)) {
+    END_TIMER_BLOCK(DrawRectangleQuickly);
+    return;
+  }
+
+  __m128i startupClipMask = _mm_set1_epi8(-1);
+  i32 fillWidth = fillRect.maxX - fillRect.minX;
+  i32 fillWidthAlign = fillWidth & 3;
+  if (fillWidthAlign > 0) {
+    i32 adjustment = (4 - fillWidthAlign);
+    // TODO(e2dk4r): this is stupid
+    switch (adjustment) {
+    case 0:
+      startupClipMask = _mm_slli_si128(startupClipMask, 1 * 4);
+      break;
+    case 1:
+      startupClipMask = _mm_slli_si128(startupClipMask, 2 * 4);
+      break;
+    case 2:
+      startupClipMask = _mm_slli_si128(startupClipMask, 3 * 4);
+      break;
+    }
+    fillWidth += adjustment;
+    fillRect.minX = fillRect.maxX - fillWidth;
   }
 
   u8 *row = buffer->memory + fillRect.minY * buffer->stride + fillRect.minX * BITMAP_BYTES_PER_PIXEL;
@@ -653,6 +670,8 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
                                  (f32)(fillRect.minX + 2) - origin.x, (f32)(fillRect.minX + 3) - origin.x);
     __m128 pixelPy = _mm_set1_ps((f32)y - origin.y);
 
+    __m128i clipMask = startupClipMask;
+
     for (i32 xi = fillRect.minX; xi < fillRect.maxX; xi += 4) {
       BEGIN_ANALYSIS("ProcessPixel");
 
@@ -666,6 +685,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       __m128i writeMask = (u >= 0.0f) & (u < 1.0f) & (v >= 0.0f) & (v < 1.0f);
       if (!_mm_movemask_epi8(writeMask))
         continue;
+      writeMask &= clipMask;
 
       // TODO(e2dk4r): Formalize texture boundaries!
       __m128 tX = u * (f32)(texture->width - 2);
@@ -803,6 +823,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
 
       pixel += 4;
       pixelPx += 4;
+      clipMask = _mm_set1_epi8(-1);
 
       END_ANALYSIS();
     }
@@ -918,7 +939,33 @@ GetRenderEntityBasisP(struct render_entity_basis *entityBasis, struct render_gro
 }
 
 inline void
-DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
+TiledDrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
+{
+  i32 tileCountX = 4;
+  i32 tileCountY = 4;
+
+  // TODO(e2dk4r): round to 4?
+  i32 tileWidth = (i32)outputTarget->width / tileCountX;
+  i32 tileHeight = (i32)outputTarget->height / tileCountY;
+
+  for (i32 tileY = 0; tileY < tileCountY; tileY++) {
+    for (i32 tileX = 0; tileX < tileCountX; tileX++) {
+      // TODO(e2dk4r): buffers with overflow!
+      // struct rect2i clipRect = {0, 0, (i32)outputTarget->width, (i32)outputTarget->height};
+      struct rect2i clipRect;
+      clipRect.minX = tileX * tileWidth + 4;
+      clipRect.maxX = clipRect.minX + tileWidth - 4;
+      clipRect.minY = tileY * tileHeight + 4;
+      clipRect.maxY = clipRect.minY + tileHeight - 4;
+
+      DrawRenderGroup(renderGroup, outputTarget, clipRect, 0);
+      DrawRenderGroup(renderGroup, outputTarget, clipRect, 1);
+    }
+  }
+}
+
+inline void
+DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2i clipRect, b32 even)
 {
   BEGIN_TIMER_BLOCK(DrawRenderGroup);
 
@@ -935,7 +982,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct render_group_entry_clear *entry = data;
       pushBufferIndex += sizeof(*entry);
 
-      DrawRectangle(outputTarget, v2(0.0f, 0.0f), screenDim, entry->color);
+      DrawRectangle(outputTarget, v2(0.0f, 0.0f), screenDim, entry->color, clipRect, even);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_BITMAP) {
@@ -953,10 +1000,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 #else
       DrawRectangleQuickly(outputTarget, basis.p, v2_mul(v2(entry->size.x, 0), basis.scale),
                            v2_mul(v2(0, entry->size.y), basis.scale), v4(1.0f, 1.0f, 1.0f, entry->alpha), entry->bitmap,
-                           pixelsToMeters, 0);
-      DrawRectangleQuickly(outputTarget, basis.p, v2_mul(v2(entry->size.x, 0), basis.scale),
-                           v2_mul(v2(0, entry->size.y), basis.scale), v4(1.0f, 1.0f, 1.0f, entry->alpha), entry->bitmap,
-                           pixelsToMeters, 1);
+                           pixelsToMeters, clipRect, even);
 #endif
     }
 
@@ -967,13 +1011,15 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
       struct render_entity_basis_p_result basis = GetRenderEntityBasisP(&entry->basis, renderGroup, screenDim);
       if (!basis.valid || basis.scale <= 0.0f)
         continue;
-      DrawRectangle(outputTarget, basis.p, v2_add(basis.p, v2_mul(entry->dim, basis.scale)), entry->color);
+      DrawRectangle(outputTarget, basis.p, v2_add(basis.p, v2_mul(entry->dim, basis.scale)), entry->color, clipRect,
+                    even);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM) {
       struct render_group_entry_coordinate_system *entry = data;
       pushBufferIndex += sizeof(*entry);
 
+#if 0
       DrawRectangleSlowly(outputTarget, entry->origin, entry->xAxis, entry->yAxis, entry->color, entry->texture,
                           entry->normalMap, entry->top, entry->middle, entry->bottom, pixelsToMeters);
 
@@ -990,6 +1036,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 
       p = v2_add(entry->origin, v2_add(entry->xAxis, entry->yAxis));
       DrawRectangle(outputTarget, v2_sub(p, dim), v2_add(p, dim), color);
+#endif
     }
 
     // typelessEntry->type is invalid
