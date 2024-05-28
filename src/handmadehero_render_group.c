@@ -633,21 +633,15 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       yMax = ceilY;
   }
 
-  if (xMin < 0)
-    xMin = 0;
-  if (xMax > widthMax)
-    xMax = widthMax;
+  struct rect2i clipRect = {128, 128, 256, 256};
+  struct rect2i fillRect = {xMin, yMin, xMax, yMax};
+  fillRect = Rect2iIntersect(fillRect, clipRect);
 
-  if (yMin < 0)
-    yMin = 0;
-  if (yMax > heightMax)
-    yMax = heightMax;
-
-  if (!even == ((yMin & 1) != 0)) {
-    yMin += 1;
+  if (!even == ((fillRect.minY & 1) != 0)) {
+    fillRect.minY += 1;
   }
 
-  u8 *row = buffer->memory + yMin * buffer->stride + xMin * BITMAP_BYTES_PER_PIXEL;
+  u8 *row = buffer->memory + fillRect.minY * buffer->stride + fillRect.minX * BITMAP_BYTES_PER_PIXEL;
   i32 rowAdvance = buffer->stride * 2;
 
   // pre-multiplied alpha
@@ -660,15 +654,16 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   f32 inv255 = 1.0f / 255.0f;
 
   BEGIN_TIMER_BLOCK(ProcessPixel);
-  for (i32 y = yMin; y <= yMax; y += 2) {
+  for (i32 y = fillRect.minY; y <= fillRect.maxY; y += 2) {
     u32 *pixel = (u32 *)row;
 
-    __m128 pixelPx = _mm_set_ps((f32)(xMin + 3), (f32)(xMin + 2), (f32)(xMin + 1), (f32)(xMin + 0));
+    __m128 pixelPx = _mm_set_ps((f32)(fillRect.minX + 3), (f32)(fillRect.minX + 2), (f32)(fillRect.minX + 1),
+                                (f32)(fillRect.minX + 0));
     pixelPx -= origin.x;
     __m128 pixelPy = _mm_set1_ps((f32)y);
     pixelPy -= origin.y;
 
-    for (i32 xi = xMin; xi <= xMax; xi += 4) {
+    for (i32 xi = fillRect.minX; xi <= fillRect.maxX; xi += 4) {
       BEGIN_ANALYSIS("ProcessPixel");
 
       __m128 u = pixelPx * nxAxis.x + pixelPy * nxAxis.y;
@@ -826,8 +821,8 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   }
 
   u64 pixelCount = 0;
-  if (xMax >= xMin && yMax >= yMin) {
-    pixelCount = (u64)((xMax - xMin + 1) * ((yMax - yMin + 1) / 2));
+  if (fillRect.maxX >= fillRect.minX && fillRect.maxY >= fillRect.minY) {
+    pixelCount = (u64)((fillRect.maxX - fillRect.minX + 1) * ((fillRect.maxY - fillRect.minY + 1) / 2));
   }
   END_TIMER_BLOCK_COUNTED(ProcessPixel, pixelCount);
 

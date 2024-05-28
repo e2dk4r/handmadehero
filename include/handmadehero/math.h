@@ -745,4 +745,35 @@ GetBarycentric(struct rect a, struct v3 p)
   return result;
 }
 
+struct rect2i {
+  i32 minX, minY;
+  i32 maxX, maxY;
+};
+
+internal inline struct rect2i
+Rect2iIntersect(struct rect2i a, struct rect2i b)
+{
+  struct rect2i result;
+
+  result.minX = (a.minX < b.minX) ? b.minX : a.minX;
+  result.minY = (a.minY < b.minY) ? b.minY : a.minY;
+  result.maxX = (a.maxX > b.maxX) ? b.maxX : a.maxX;
+  result.maxY = (a.maxY > b.maxY) ? b.maxY : a.maxY;
+
+  return result;
+}
+
+internal inline struct rect2i
+Rect2iUnion(struct rect2i a, struct rect2i b)
+{
+  struct rect2i result;
+
+  result.minX = (a.minX < b.minX) ? a.minX : b.minX;
+  result.minY = (a.minY < b.minY) ? a.minY : b.minY;
+  result.maxX = (a.maxX > b.maxX) ? a.maxX : b.maxX;
+  result.maxY = (a.maxY > b.maxY) ? a.maxY : b.maxY;
+
+  return result;
+}
+
 #endif /* HANDMADEHERO_MATH_H */
