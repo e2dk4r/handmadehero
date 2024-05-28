@@ -824,7 +824,12 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
 
     row += rowAdvance;
   }
-  END_TIMER_BLOCK_COUNTED(ProcessPixel, (u64)((xMax - xMin + 1) * ((yMax - yMin + 1) / 2)));
+
+  u64 pixelCount = 0;
+  if (xMax >= xMin && yMax >= yMin) {
+    pixelCount = (u64)((xMax - xMin + 1) * ((yMax - yMin + 1) / 2));
+  }
+  END_TIMER_BLOCK_COUNTED(ProcessPixel, pixelCount);
 
   END_TIMER_BLOCK(DrawRectangleQuickly);
 }
