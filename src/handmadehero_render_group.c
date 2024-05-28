@@ -816,11 +816,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
     row += rowAdvance;
   }
 
-  u64 pixelCount = 0;
-  if (fillRect.maxX >= fillRect.minX && fillRect.maxY >= fillRect.minY) {
-    pixelCount = (u64)((fillRect.maxX - fillRect.minX + 1) * ((fillRect.maxY - fillRect.minY + 1) / 2));
-  }
-  END_TIMER_BLOCK_COUNTED(ProcessPixel, pixelCount);
+  END_TIMER_BLOCK_COUNTED(ProcessPixel, Rect2iArea(fillRect) / 2);
 
   END_TIMER_BLOCK(DrawRectangleQuickly);
 }

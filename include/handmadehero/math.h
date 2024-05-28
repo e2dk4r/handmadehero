@@ -776,4 +776,16 @@ Rect2iUnion(struct rect2i a, struct rect2i b)
   return result;
 }
 
+internal inline u32
+Rect2iArea(struct rect2i a)
+{
+  i32 width = (a.maxX - a.minX);
+  i32 height = (a.maxY - a.minY);
+  i32 area = width * height;
+  if (width < 0 || height < 0)
+    area = 0;
+
+  return (u32)area;
+}
+
 #endif /* HANDMADEHERO_MATH_H */
