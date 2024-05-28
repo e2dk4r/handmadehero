@@ -400,7 +400,7 @@
 - [x] Handmade Hero Day 120 - Measuring Port Usage with IACA
       https://www.youtube.com/watch?v=-c-0s6KiPSw
 
-- [ ] Handmade Hero Day 121 - Rendering in Tiles (Marathon)
+- [x] Handmade Hero Day 121 - Rendering in Tiles (Marathon)
       https://www.youtube.com/watch?v=kZlPYka1T0g
 
 - [ ] The Terminator Gene (30 minute version)
