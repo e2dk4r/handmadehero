@@ -590,8 +590,8 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   f32 NzScale = 0.5f * (xAxisLength + yAxisLength);
 
   // TODO(e2dk4r): IMPORTANT: REMOVE THIS ONCE WE HAVE REAL ROW LOADING
-  i32 widthMax = ((i32)buffer->width - 1) - 3;
-  i32 heightMax = ((i32)buffer->height - 1) - 3;
+  i32 widthMax = (i32)buffer->width - 3;
+  i32 heightMax = (i32)buffer->height - 3;
 
   // TODO(e2dk4r): this will need to be specified seperately
   f32 originZ = 0.0f;
@@ -612,9 +612,9 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   for (u32 pIndex = 0; pIndex < ARRAY_COUNT(p); pIndex++) {
     struct v2 testP = p[pIndex];
     i32 floorX = Floor(testP.x);
-    i32 ceilX = Ceil(testP.x);
+    i32 ceilX = Ceil(testP.x) + 1;
     i32 floorY = Floor(testP.y);
-    i32 ceilY = Ceil(testP.y);
+    i32 ceilY = Ceil(testP.y) + 1;
 
     if (xMin > floorX)
       xMin = floorX;
@@ -650,7 +650,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   f32 inv255 = 1.0f / 255.0f;
 
   BEGIN_TIMER_BLOCK(ProcessPixel);
-  for (i32 y = fillRect.minY; y <= fillRect.maxY; y += 2) {
+  for (i32 y = fillRect.minY; y < fillRect.maxY; y += 2) {
     u32 *pixel = (u32 *)row;
 
     __m128 pixelPx = _mm_set_ps((f32)(fillRect.minX + 3), (f32)(fillRect.minX + 2), (f32)(fillRect.minX + 1),
@@ -659,7 +659,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
     __m128 pixelPy = _mm_set1_ps((f32)y);
     pixelPy -= origin.y;
 
-    for (i32 xi = fillRect.minX; xi <= fillRect.maxX; xi += 4) {
+    for (i32 xi = fillRect.minX; xi < fillRect.maxX; xi += 4) {
       BEGIN_ANALYSIS("ProcessPixel");
 
       __m128 u = pixelPx * nxAxis.x + pixelPy * nxAxis.y;
