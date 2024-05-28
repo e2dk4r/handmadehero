@@ -597,10 +597,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   f32 originZ = 0.0f;
   f32 originY = v2_add(origin, v2_add(v2_mul(xAxis, 0.5f), v2_mul(yAxis, 0.5f))).y;
 
-  i32 xMin = widthMax;
-  i32 xMax = 0;
-  i32 yMin = heightMax;
-  i32 yMax = 0;
+  struct rect2i fillRect = {widthMax, heightMax, 0, 0};
 
   struct v2 p[4] = {
       origin,
@@ -616,21 +613,20 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
     i32 floorY = Floor(testP.y);
     i32 ceilY = Ceil(testP.y) + 1;
 
-    if (xMin > floorX)
-      xMin = floorX;
+    if (fillRect.minX > floorX)
+      fillRect.minX = floorX;
 
-    if (xMax < ceilX)
-      xMax = ceilX;
+    if (fillRect.maxX < ceilX)
+      fillRect.maxX = ceilX;
 
-    if (yMin > floorY)
-      yMin = floorY;
+    if (fillRect.minY > floorY)
+      fillRect.minY = floorY;
 
-    if (yMax < ceilY)
-      yMax = ceilY;
+    if (fillRect.maxY < ceilY)
+      fillRect.maxY = ceilY;
   }
 
   struct rect2i clipRect = {128, 128, 256, 256};
-  struct rect2i fillRect = {xMin, yMin, xMax, yMax};
   fillRect = Rect2iIntersect(fillRect, clipRect);
 
   if (!even == ((fillRect.minY & 1) != 0)) {
