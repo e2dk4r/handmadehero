@@ -593,13 +593,9 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   i32 widthMax = ((i32)buffer->width - 1) - 3;
   i32 heightMax = ((i32)buffer->height - 1) - 3;
 
-  f32 invWidthMax = 1.0f / (f32)widthMax;
-  f32 invHeightMax = 1.0f / (f32)heightMax;
-
   // TODO(e2dk4r): this will need to be specified seperately
   f32 originZ = 0.0f;
   f32 originY = v2_add(origin, v2_add(v2_mul(xAxis, 0.5f), v2_mul(yAxis, 0.5f))).y;
-  f32 fixedCastY = invHeightMax * originY;
 
   i32 xMin = widthMax;
   i32 xMax = 0;
