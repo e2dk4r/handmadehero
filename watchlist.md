@@ -406,7 +406,7 @@
 - [ ] The Terminator Gene (30 minute version)
       https://www.youtube.com/watch?v=biuRt_qdcIg
 
-- [ ] Handmade Hero Day 122 - Introduction to Multithreading
+- [x] Handmade Hero Day 122 - Introduction to Multithreading
       https://www.youtube.com/watch?v=qkugPXGeX58
 
 - [ ] Handmade Hero Day 123 - Interlocked Operations
