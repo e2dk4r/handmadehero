@@ -57,6 +57,7 @@ libevdev = dependency('libevdev')
 liburing = dependency('liburing')
 vulkan = dependency('vulkan')
 libm = cc.find_library('m')
+libpthread = cc.find_library('pthread')
 
 subdir('protocol')
 
@@ -115,5 +116,6 @@ executable(
     liburing,
     vulkan,
     libm,
+    libpthread,
   ]
 )

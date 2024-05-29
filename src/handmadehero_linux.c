@@ -8,6 +8,7 @@
 #include <libevdev/libevdev.h>
 #include <liburing.h>
 #include <linux/input.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1020,9 +1021,26 @@ libevdev_is_joystick(struct libevdev *evdev)
   return libevdev_has_event_type(evdev, EV_ABS) && libevdev_has_event_code(evdev, EV_ABS, ABS_RX);
 }
 
+internal void *
+thread_start(void *arg)
+{
+  while (1) {
+    debugf("bad thread\n");
+    sleep(1);
+  }
+  return 0;
+}
+
 int
 main(int argc, char *argv[])
 {
+  {
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_t threadId;
+    pthread_create(&threadId, &attr, thread_start, 0);
+  }
+
   int error_code = 0;
   struct linux_state state = {
     .running = 1,
