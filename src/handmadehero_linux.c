@@ -1021,25 +1021,74 @@ libevdev_is_joystick(struct libevdev *evdev)
   return libevdev_has_event_type(evdev, EV_ABS) && libevdev_has_event_code(evdev, EV_ABS, ABS_RX);
 }
 
+struct work_queue_entry {
+  char *stringToPrint;
+};
+
+global_variable u32 nextEntryToDo = 0;
+global_variable u32 entryCount = 0;
+global_variable struct work_queue_entry Entries[256];
+
+internal void
+PushString(char *str)
+{
+  assert(entryCount < ARRAY_COUNT(Entries));
+
+  struct work_queue_entry *entry = Entries + entryCount;
+  // TODO(e2dk4r): these writes not in order!
+  entryCount++;
+  entry->stringToPrint = str;
+}
+
+struct thread_info_linux {
+  u32 logicalThreadIndex;
+};
+
 internal void *
 thread_start(void *arg)
 {
+  struct thread_info_linux *threadInfo = arg;
+
   while (1) {
-    debugf("bad thread\n");
-    sleep(1);
+    if (nextEntryToDo < entryCount) {
+      // TODO(e2dk4r): this line is not interlocked, so two threads could see the same value.
+      // TODO(e2dk4r): compiler does not know that multiple threads could write this value!
+      u32 entryIndex = nextEntryToDo;
+      nextEntryToDo++;
+
+      // TODO(e2dk4r): these reads are not in order!
+      struct work_queue_entry *entry = Entries + entryIndex;
+      debugf("thread %" PRIu32 ": %s\n", threadInfo->logicalThreadIndex, entry->stringToPrint);
+    }
   }
+
   return 0;
 }
 
 int
 main(int argc, char *argv[])
 {
-  {
+  struct thread_info_linux threadInfos[16] = {};
+  for (u32 threadIndex = 0; threadIndex < ARRAY_COUNT(threadInfos); threadIndex++) {
+    struct thread_info_linux *threadInfo = threadInfos + threadIndex;
+    threadInfo->logicalThreadIndex = threadIndex;
+
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_t threadId;
-    pthread_create(&threadId, &attr, thread_start, 0);
+    pthread_create(&threadId, &attr, thread_start, threadInfo);
   }
+
+  PushString("string 0");
+  PushString("string 1");
+  PushString("string 2");
+  PushString("string 3");
+  PushString("string 4");
+  PushString("string 5");
+  PushString("string 6");
+  PushString("string 7");
+  PushString("string 8");
+  PushString("string 9");
 
   int error_code = 0;
   struct linux_state state = {

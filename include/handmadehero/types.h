@@ -38,6 +38,7 @@ typedef u32 b32;
 
 #define comptime static const
 #define internal static
+#define global_variable static
 
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof(array[0]))
 
