@@ -409,7 +409,7 @@
 - [x] Handmade Hero Day 122 - Introduction to Multithreading
       https://www.youtube.com/watch?v=qkugPXGeX58
 
-- [ ] Handmade Hero Day 123 - Interlocked Operations
+- [x] Handmade Hero Day 123 - Interlocked Operations
       https://www.youtube.com/watch?v=_olNhuuRYxo
 
 - [ ] Handmade Hero Day 124 - Memory Barriers and Semaphores
