@@ -1,6 +1,7 @@
 #include <handmadehero/assert.h>
 #include <handmadehero/debug.h>
 #include <handmadehero/types.h>
+#include <pthread.h>
 
 #if HANDMADEHERO_DEBUG
 
@@ -31,7 +32,10 @@ debug(const char *string)
 void
 debugf(const char *format, ...)
 {
-  static char buffer[1024] = {};
+  global_variable char buffer[1024] = {};
+  global_variable pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+  pthread_mutex_lock(&lock);
 
   va_list ap;
   va_start(ap, format);
@@ -39,6 +43,8 @@ debugf(const char *format, ...)
   assert(len > 0);
   write(STDOUT_FILENO, buffer, (size_t)len);
   va_end(ap);
+
+  pthread_mutex_unlock(&lock);
 }
 
 #endif /* HANDMADEHERO_DEBUG */

@@ -1025,24 +1025,15 @@ struct work_queue_entry {
   char *stringToPrint;
 };
 
-global_variable u32 nextEntryToDo = 0;
-global_variable u32 entryCount = 0;
-global_variable struct work_queue_entry Entries[256];
-
-internal void
-PushString(char *str)
-{
-  assert(entryCount < ARRAY_COUNT(Entries));
-
-  struct work_queue_entry *entry = Entries + entryCount;
-  // TODO(e2dk4r): these writes not in order!
-  entryCount++;
-  entry->stringToPrint = str;
-}
-
 struct thread_info_linux {
   u32 logicalThreadIndex;
 };
+
+#define ALIGNED_TO_CACHE_LINE __attribute__((aligned(64)))
+global_variable struct work_queue_entry Entries[256];
+global_variable u32 EntryCount;
+global_variable ALIGNED_TO_CACHE_LINE volatile u32 SubmissionQueue = ARRAY_COUNT(Entries);
+global_variable ALIGNED_TO_CACHE_LINE volatile u32 CompletionQueue = 0;
 
 internal void *
 thread_start(void *arg)
@@ -1050,25 +1041,44 @@ thread_start(void *arg)
   struct thread_info_linux *threadInfo = arg;
 
   while (1) {
-    if (nextEntryToDo < entryCount) {
-      // TODO(e2dk4r): this line is not interlocked, so two threads could see the same value.
-      // TODO(e2dk4r): compiler does not know that multiple threads could write this value!
-      u32 entryIndex = nextEntryToDo;
-      nextEntryToDo++;
+    __asm__ volatile("" ::: "memory");
 
-      // TODO(e2dk4r): these reads are not in order!
-      struct work_queue_entry *entry = Entries + entryIndex;
-      debugf("thread %" PRIu32 ": %s\n", threadInfo->logicalThreadIndex, entry->stringToPrint);
+    u32 latestEntryIndex = __atomic_load_n(&SubmissionQueue, __ATOMIC_RELAXED);
+    u32 completedEntryIndex = __atomic_load_n(&CompletionQueue, __ATOMIC_RELAXED);
+    if (latestEntryIndex != ARRAY_COUNT(Entries) && completedEntryIndex <= latestEntryIndex) {
+      __asm__ volatile("" ::: "memory");
+      __atomic_thread_fence(__ATOMIC_ACQUIRE);
+      completedEntryIndex = __atomic_fetch_add(&CompletionQueue, 1, __ATOMIC_RELEASE);
+
+      struct work_queue_entry *currentWork = Entries + completedEntryIndex;
+      debugf("thread #%u: work #%u %s\n", threadInfo->logicalThreadIndex, completedEntryIndex,
+             currentWork->stringToPrint);
+    } else {
+      // TODO(e2dk4r): suspend execution of thread until new data arrives
     }
   }
 
   return 0;
 }
 
+internal void
+PushWork(char *message)
+{
+  __asm__ volatile("" ::: "memory");
+  u32 entryIndex = EntryCount;
+  EntryCount++;
+
+  struct work_queue_entry *nextEntry = Entries + entryIndex;
+  nextEntry->stringToPrint = message;
+  __atomic_store_n(&SubmissionQueue, entryIndex, __ATOMIC_RELEASE);
+
+  // TODO(e2dk4r): wake suspended threads for new work
+}
+
 int
 main(int argc, char *argv[])
 {
-  struct thread_info_linux threadInfos[16] = {};
+  struct thread_info_linux threadInfos[8] = {};
   for (u32 threadIndex = 0; threadIndex < ARRAY_COUNT(threadInfos); threadIndex++) {
     struct thread_info_linux *threadInfo = threadInfos + threadIndex;
     threadInfo->logicalThreadIndex = threadIndex;
@@ -1077,18 +1087,40 @@ main(int argc, char *argv[])
     pthread_attr_init(&attr);
     pthread_t threadId;
     pthread_create(&threadId, &attr, thread_start, threadInfo);
+    pthread_detach(threadId);
   }
 
-  PushString("string 0");
-  PushString("string 1");
-  PushString("string 2");
-  PushString("string 3");
-  PushString("string 4");
-  PushString("string 5");
-  PushString("string 6");
-  PushString("string 7");
-  PushString("string 8");
-  PushString("string 9");
+  PushWork("work a0");
+  PushWork("work a1");
+  PushWork("work a2");
+  PushWork("work a3");
+  PushWork("work a4");
+  PushWork("work a5");
+  PushWork("work a6");
+  PushWork("work a7");
+  PushWork("work a8");
+  PushWork("work a9");
+
+  while (EntryCount != CompletionQueue)
+    ;
+  debugf("completed: %u\n", CompletionQueue);
+
+  PushWork("second work C0");
+  PushWork("second work C1");
+  PushWork("second work C2");
+  PushWork("second work C3");
+  PushWork("second work C4");
+  PushWork("second work C5");
+  PushWork("second work C6");
+  PushWork("second work C7");
+  PushWork("second work C8");
+  PushWork("second work C9");
+
+  while (EntryCount != CompletionQueue)
+    ;
+  debugf("completed: %u\n", CompletionQueue);
+
+  sleep(5);
 
   int error_code = 0;
   struct linux_state state = {
