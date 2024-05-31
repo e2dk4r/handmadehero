@@ -3,8 +3,8 @@
 
 #if COMPILER_CLANG
 
-#define BEGIN_ANALYSIS(x) __asm volatile("# LLVM-MCA-BEGIN " x);
-#define END_ANALYSIS() __asm volatile("# LLVM-MCA-END")
+#define BEGIN_ANALYSIS(x) __asm__ volatile("# LLVM-MCA-BEGIN " x);
+#define END_ANALYSIS() __asm__ volatile("# LLVM-MCA-END")
 
 #else
 
