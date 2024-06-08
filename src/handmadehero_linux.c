@@ -9,6 +9,7 @@
 #include <liburing.h>
 #include <linux/input.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1027,6 +1028,7 @@ struct work_queue_entry {
 
 struct thread_info_linux {
   u32 logicalThreadIndex;
+  sem_t *semaphore;
 };
 
 #define ALIGNED_TO_CACHE_LINE __attribute__((aligned(64)))
@@ -1042,6 +1044,7 @@ thread_start(void *arg)
 
   while (1) {
     __asm__ volatile("" ::: "memory");
+    sem_wait(threadInfo->semaphore);
 
     u32 latestEntryIndex = __atomic_load_n(&SubmissionQueue, __ATOMIC_RELAXED);
     u32 completedEntryIndex = __atomic_load_n(&CompletionQueue, __ATOMIC_RELAXED);
@@ -1053,8 +1056,6 @@ thread_start(void *arg)
       struct work_queue_entry *currentWork = Entries + completedEntryIndex;
       debugf("thread #%u: work #%u %s\n", threadInfo->logicalThreadIndex, completedEntryIndex,
              currentWork->stringToPrint);
-    } else {
-      // TODO(e2dk4r): suspend execution of thread until new data arrives
     }
   }
 
@@ -1062,7 +1063,7 @@ thread_start(void *arg)
 }
 
 internal void
-PushWork(char *message)
+PushWork(char *message, sem_t *semaphore)
 {
   __asm__ volatile("" ::: "memory");
   u32 entryIndex = EntryCount;
@@ -1072,16 +1073,20 @@ PushWork(char *message)
   nextEntry->stringToPrint = message;
   __atomic_store_n(&SubmissionQueue, entryIndex, __ATOMIC_RELEASE);
 
-  // TODO(e2dk4r): wake suspended threads for new work
+  sem_post(semaphore);
 }
 
 int
 main(int argc, char *argv[])
 {
   struct thread_info_linux threadInfos[8] = {};
+  sem_t semaphore;
+  sem_init(&semaphore, 0, 0);
+
   for (u32 threadIndex = 0; threadIndex < ARRAY_COUNT(threadInfos); threadIndex++) {
     struct thread_info_linux *threadInfo = threadInfos + threadIndex;
     threadInfo->logicalThreadIndex = threadIndex;
+    threadInfo->semaphore = &semaphore;
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -1090,31 +1095,31 @@ main(int argc, char *argv[])
     pthread_detach(threadId);
   }
 
-  PushWork("work a0");
-  PushWork("work a1");
-  PushWork("work a2");
-  PushWork("work a3");
-  PushWork("work a4");
-  PushWork("work a5");
-  PushWork("work a6");
-  PushWork("work a7");
-  PushWork("work a8");
-  PushWork("work a9");
+  PushWork("work a0", &semaphore);
+  PushWork("work a1", &semaphore);
+  PushWork("work a2", &semaphore);
+  PushWork("work a3", &semaphore);
+  PushWork("work a4", &semaphore);
+  PushWork("work a5", &semaphore);
+  PushWork("work a6", &semaphore);
+  PushWork("work a7", &semaphore);
+  PushWork("work a8", &semaphore);
+  PushWork("work a9", &semaphore);
 
   while (EntryCount != CompletionQueue)
     ;
   debugf("completed: %u\n", CompletionQueue);
 
-  PushWork("second work C0");
-  PushWork("second work C1");
-  PushWork("second work C2");
-  PushWork("second work C3");
-  PushWork("second work C4");
-  PushWork("second work C5");
-  PushWork("second work C6");
-  PushWork("second work C7");
-  PushWork("second work C8");
-  PushWork("second work C9");
+  PushWork("second work C0", &semaphore);
+  PushWork("second work C1", &semaphore);
+  PushWork("second work C2", &semaphore);
+  PushWork("second work C3", &semaphore);
+  PushWork("second work C4", &semaphore);
+  PushWork("second work C5", &semaphore);
+  PushWork("second work C6", &semaphore);
+  PushWork("second work C7", &semaphore);
+  PushWork("second work C8", &semaphore);
+  PushWork("second work C9", &semaphore);
 
   while (EntryCount != CompletionQueue)
     ;
