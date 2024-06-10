@@ -1013,9 +1013,6 @@ struct op_joystick_read {
   struct input_event event;
 };
 
-#define ACTION_ADD (1 << 0)
-#define ACTION_REMOVE (1 << 1)
-
 internal inline u8
 libevdev_is_joystick(struct libevdev *evdev)
 {
