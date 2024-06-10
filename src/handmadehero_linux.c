@@ -1037,19 +1037,21 @@ global_variable u32 EntryCount;
 global_variable ALIGNED_TO_CACHE_LINE volatile u32 SubmissionQueue = ARRAY_COUNT(Entries);
 global_variable ALIGNED_TO_CACHE_LINE volatile u32 CompletionQueue = 0;
 
+#define COMPILER_PROGRAM_ORDER __asm__ volatile("" ::: "memory")
+
 internal void *
 thread_start(void *arg)
 {
   struct thread_info_linux *threadInfo = arg;
 
   while (1) {
-    __asm__ volatile("" ::: "memory");
+    COMPILER_PROGRAM_ORDER;
     sem_wait(threadInfo->semaphore);
 
     u32 latestEntryIndex = __atomic_load_n(&SubmissionQueue, __ATOMIC_RELAXED);
     u32 completedEntryIndex = __atomic_load_n(&CompletionQueue, __ATOMIC_RELAXED);
     if (latestEntryIndex != ARRAY_COUNT(Entries) && completedEntryIndex <= latestEntryIndex) {
-      __asm__ volatile("" ::: "memory");
+      COMPILER_PROGRAM_ORDER;
       __atomic_thread_fence(__ATOMIC_ACQUIRE);
       completedEntryIndex = __atomic_fetch_add(&CompletionQueue, 1, __ATOMIC_RELEASE);
 
@@ -1065,7 +1067,7 @@ thread_start(void *arg)
 internal void
 PushWork(char *message, sem_t *semaphore)
 {
-  __asm__ volatile("" ::: "memory");
+  COMPILER_PROGRAM_ORDER;
   u32 entryIndex = EntryCount;
   EntryCount++;
 
