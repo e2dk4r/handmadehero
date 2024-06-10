@@ -412,7 +412,7 @@
 - [x] Handmade Hero Day 123 - Interlocked Operations
       https://www.youtube.com/watch?v=_olNhuuRYxo
 
-- [ ] Handmade Hero Day 124 - Memory Barriers and Semaphores
+- [x] Handmade Hero Day 124 - Memory Barriers and Semaphores
       https://www.youtube.com/watch?v=W_szrzjYuvs
 
 - [ ] Handmade Hero Day 125 - Abstracting the Work Queue
