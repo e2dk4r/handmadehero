@@ -938,11 +938,30 @@ GetRenderEntityBasisP(struct render_entity_basis *entityBasis, struct render_gro
   return result;
 }
 
+struct tile_render_work {
+  struct render_group *renderGroup;
+  struct bitmap *outputTarget;
+  struct rect2i clipRect;
+};
+
+internal void
+DoTiledRenderWork(void *userPointer)
+{
+  struct tile_render_work *work = userPointer;
+
+  DrawRenderGroup(work->renderGroup, work->outputTarget, work->clipRect, 0);
+  DrawRenderGroup(work->renderGroup, work->outputTarget, work->clipRect, 1);
+}
+
 inline void
-TiledDrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
+TiledDrawRenderGroup( // struct platform_work_queue *renderQueue,
+    struct render_group *renderGroup, struct bitmap *outputTarget)
 {
   i32 tileCountX = 4;
   i32 tileCountY = 4;
+
+  struct tile_render_work workArray[tileCountX * tileCountY];
+  u32 workCount = 0;
 
   // TODO(e2dk4r): round to 4?
   i32 tileWidth = (i32)outputTarget->width / tileCountX;
@@ -958,9 +977,22 @@ TiledDrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarg
       clipRect.minY = tileY * tileHeight + 4;
       clipRect.maxY = clipRect.minY + tileHeight - 4;
 
-      DrawRenderGroup(renderGroup, outputTarget, clipRect, 0);
-      DrawRenderGroup(renderGroup, outputTarget, clipRect, 1);
+      u32 workIndex = workCount;
+      struct tile_render_work *work = workArray + workIndex;
+      work->renderGroup = renderGroup;
+      work->outputTarget = outputTarget;
+      work->clipRect = clipRect;
+      workCount++;
+
+      // PlatformWorkQueueAddEntry(renderQueue, DoTiledRenderWork, work);
     }
+  }
+
+  // PlatformWorkQueueCompleteAllWork(renderQueue);
+
+  for (u32 workIndex = 0; workIndex < workCount; workIndex++) {
+    struct tile_render_work *work = workArray + workIndex;
+    DoTiledRenderWork(work);
   }
 }
 

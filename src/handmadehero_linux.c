@@ -1019,22 +1019,89 @@ libevdev_is_joystick(struct libevdev *evdev)
   return libevdev_has_event_type(evdev, EV_ABS) && libevdev_has_event_code(evdev, EV_ABS, ABS_RX);
 }
 
+#define ALIGNED_TO_CACHE_LINE __attribute__((aligned(64)))
+
+struct work_queue_entry_storage {
+  void *userPointer;
+};
+
+struct work_queue {
+  sem_t *semaphore;
+  u32 entryCount;
+  ALIGNED_TO_CACHE_LINE volatile u32 submissionQueue;
+  ALIGNED_TO_CACHE_LINE volatile u32 completionQueue;
+  struct work_queue_entry_storage entries[256];
+};
+
 struct work_queue_entry {
-  char *stringToPrint;
+  b32 isValid;
+  void *userPointer;
 };
 
 struct thread_info_linux {
   u32 logicalThreadIndex;
-  sem_t *semaphore;
+  struct work_queue *queue;
 };
 
-#define ALIGNED_TO_CACHE_LINE __attribute__((aligned(64)))
-global_variable struct work_queue_entry Entries[256];
-global_variable u32 EntryCount;
-global_variable ALIGNED_TO_CACHE_LINE volatile u32 SubmissionQueue = ARRAY_COUNT(Entries);
-global_variable ALIGNED_TO_CACHE_LINE volatile u32 CompletionQueue = 0;
-
 #define COMPILER_PROGRAM_ORDER __asm__ volatile("" ::: "memory")
+
+internal struct work_queue_entry
+WorkQueueGetNextEntry(struct work_queue *queue)
+{
+  struct work_queue_entry entry;
+  entry.isValid = 0;
+
+  u32 latestEntryIndex = __atomic_load_n(&queue->submissionQueue, __ATOMIC_RELAXED);
+  u32 completedEntryIndex = __atomic_load_n(&queue->completionQueue, __ATOMIC_RELAXED);
+  if (latestEntryIndex != ARRAY_COUNT(queue->entries) && completedEntryIndex <= latestEntryIndex) {
+    __atomic_thread_fence(__ATOMIC_ACQUIRE);
+    u32 entryIndex = __atomic_fetch_add(&queue->completionQueue, 1, __ATOMIC_RELEASE);
+    struct work_queue_entry_storage *storage = queue->entries + entryIndex;
+    entry.userPointer = storage->userPointer;
+    entry.isValid = 1;
+  }
+
+  return entry;
+}
+
+internal b32
+WorkQueueDoWork(struct work_queue_entry entry, u32 logicalThreadIndex)
+{
+  if (!entry.isValid)
+    return 0;
+
+  assert(entry.userPointer);
+  debugf("thread #%u: %s\n", logicalThreadIndex, entry.userPointer);
+
+  return 1;
+}
+
+internal inline b32
+IsWorkQueueNotFinished(struct work_queue *queue)
+{
+  b32 result = queue->entryCount != queue->completionQueue;
+  return result;
+}
+
+internal inline void
+WorkQueueAddEntry(struct work_queue *queue, void *userPointer)
+{
+  COMPILER_PROGRAM_ORDER;
+  u32 nextEntryIndex = queue->entryCount;
+  assert(nextEntryIndex < ARRAY_COUNT(queue->entries));
+  struct work_queue_entry_storage *nextEntry = queue->entries + nextEntryIndex;
+  nextEntry->userPointer = userPointer;
+
+  queue->entryCount++;
+  __atomic_store_n(&queue->submissionQueue, nextEntryIndex, __ATOMIC_RELEASE);
+  sem_post(queue->semaphore);
+}
+
+internal void
+PushString(struct work_queue *queue, char *string)
+{
+  WorkQueueAddEntry(queue, string);
+}
 
 internal void *
 thread_start(void *arg)
@@ -1042,51 +1109,32 @@ thread_start(void *arg)
   struct thread_info_linux *threadInfo = arg;
 
   while (1) {
-    COMPILER_PROGRAM_ORDER;
-
-    u32 latestEntryIndex = __atomic_load_n(&SubmissionQueue, __ATOMIC_RELAXED);
-    u32 completedEntryIndex = __atomic_load_n(&CompletionQueue, __ATOMIC_RELAXED);
-    if (latestEntryIndex != ARRAY_COUNT(Entries) && completedEntryIndex <= latestEntryIndex) {
-      COMPILER_PROGRAM_ORDER;
-      __atomic_thread_fence(__ATOMIC_ACQUIRE);
-      completedEntryIndex = __atomic_fetch_add(&CompletionQueue, 1, __ATOMIC_RELEASE);
-
-      struct work_queue_entry *currentWork = Entries + completedEntryIndex;
-      debugf("thread #%u: work #%u %s\n", threadInfo->logicalThreadIndex, completedEntryIndex,
-             currentWork->stringToPrint);
+    struct work_queue_entry entry = WorkQueueGetNextEntry(threadInfo->queue);
+    if (entry.isValid) {
+      WorkQueueDoWork(entry, threadInfo->logicalThreadIndex);
     } else {
-      sem_wait(threadInfo->semaphore);
+      sem_wait(threadInfo->queue->semaphore);
     }
   }
 
   return 0;
 }
 
-internal void
-PushWork(char *message, sem_t *semaphore)
-{
-  COMPILER_PROGRAM_ORDER;
-  u32 entryIndex = EntryCount;
-  EntryCount++;
-
-  struct work_queue_entry *nextEntry = Entries + entryIndex;
-  nextEntry->stringToPrint = message;
-  __atomic_store_n(&SubmissionQueue, entryIndex, __ATOMIC_RELEASE);
-
-  sem_post(semaphore);
-}
-
 int
 main(int argc, char *argv[])
 {
-  struct thread_info_linux threadInfos[8] = {};
+  struct thread_info_linux threadInfos[7] = {};
+  struct work_queue queue = {};
   sem_t semaphore;
   sem_init(&semaphore, 0, 0);
+
+  queue.submissionQueue = ARRAY_COUNT(queue.entries); // required for invalid submission queue
+  queue.semaphore = &semaphore;
 
   for (u32 threadIndex = 0; threadIndex < ARRAY_COUNT(threadInfos); threadIndex++) {
     struct thread_info_linux *threadInfo = threadInfos + threadIndex;
     threadInfo->logicalThreadIndex = threadIndex;
-    threadInfo->semaphore = &semaphore;
+    threadInfo->queue = &queue;
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
@@ -1095,37 +1143,36 @@ main(int argc, char *argv[])
     pthread_detach(threadId);
   }
 
-  PushWork("work a0", &semaphore);
-  PushWork("work a1", &semaphore);
-  PushWork("work a2", &semaphore);
-  PushWork("work a3", &semaphore);
-  PushWork("work a4", &semaphore);
-  PushWork("work a5", &semaphore);
-  PushWork("work a6", &semaphore);
-  PushWork("work a7", &semaphore);
-  PushWork("work a8", &semaphore);
-  PushWork("work a9", &semaphore);
+  PushString(&queue, "work a0");
+  PushString(&queue, "work a1");
+  PushString(&queue, "work a2");
+  PushString(&queue, "work a3");
+  PushString(&queue, "work a4");
+  PushString(&queue, "work a5");
+  PushString(&queue, "work a6");
+  PushString(&queue, "work a7");
+  PushString(&queue, "work a8");
+  PushString(&queue, "work a9");
 
-  while (EntryCount != CompletionQueue)
-    ;
-  debugf("completed: %u\n", CompletionQueue);
+  PushString(&queue, "second work C0");
+  PushString(&queue, "second work C1");
+  PushString(&queue, "second work C2");
+  PushString(&queue, "second work C3");
+  PushString(&queue, "second work C4");
+  PushString(&queue, "second work C5");
+  PushString(&queue, "second work C6");
+  PushString(&queue, "second work C7");
+  PushString(&queue, "second work C8");
+  PushString(&queue, "second work C9");
 
-  PushWork("second work C0", &semaphore);
-  PushWork("second work C1", &semaphore);
-  PushWork("second work C2", &semaphore);
-  PushWork("second work C3", &semaphore);
-  PushWork("second work C4", &semaphore);
-  PushWork("second work C5", &semaphore);
-  PushWork("second work C6", &semaphore);
-  PushWork("second work C7", &semaphore);
-  PushWork("second work C8", &semaphore);
-  PushWork("second work C9", &semaphore);
+  while (IsWorkQueueNotFinished(&queue)) {
 
-  while (EntryCount != CompletionQueue)
-    ;
-  debugf("completed: %u\n", CompletionQueue);
-
-  sleep(5);
+    struct work_queue_entry entry = WorkQueueGetNextEntry(&queue);
+    if (entry.isValid) {
+      WorkQueueDoWork(entry, ARRAY_COUNT(threadInfos));
+    }
+  }
+  debugf("completed: %u\n", queue.completionQueue);
 
   int error_code = 0;
   struct linux_state state = {
