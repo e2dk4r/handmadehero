@@ -1046,7 +1046,6 @@ thread_start(void *arg)
 
   while (1) {
     COMPILER_PROGRAM_ORDER;
-    sem_wait(threadInfo->semaphore);
 
     u32 latestEntryIndex = __atomic_load_n(&SubmissionQueue, __ATOMIC_RELAXED);
     u32 completedEntryIndex = __atomic_load_n(&CompletionQueue, __ATOMIC_RELAXED);
@@ -1058,6 +1057,8 @@ thread_start(void *arg)
       struct work_queue_entry *currentWork = Entries + completedEntryIndex;
       debugf("thread #%u: work #%u %s\n", threadInfo->logicalThreadIndex, completedEntryIndex,
              currentWork->stringToPrint);
+    } else {
+      sem_wait(threadInfo->semaphore);
     }
   }
 
