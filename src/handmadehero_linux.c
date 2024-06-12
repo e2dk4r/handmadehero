@@ -1023,10 +1023,11 @@ libevdev_is_joystick(struct libevdev *evdev)
 
 struct linux_work_queue {
   sem_t *semaphore;
-  u32 entryCount;
-  ALIGNED_TO_CACHE_LINE volatile u32 submissionQueue;
-  ALIGNED_TO_CACHE_LINE volatile u32 completionQueue;
-  struct platform_work_queue_entry entries[256];
+  u32 completeGoal;
+  ALIGNED_TO_CACHE_LINE volatile u32 completeCount;
+  ALIGNED_TO_CACHE_LINE volatile u32 writeIndex;
+  ALIGNED_TO_CACHE_LINE volatile u32 readIndex;
+  struct platform_work_queue_entry entries[128];
 };
 
 struct linux_thread_info {
@@ -1043,15 +1044,18 @@ LinuxWorkQueueDoNextQueueEntry(struct linux_work_queue *queue)
 {
   b32 done = 0;
 
-  u32 latestEntryIndex = __atomic_load_n(&queue->submissionQueue, __ATOMIC_RELAXED);
-  u32 completedEntryIndex = __atomic_load_n(&queue->completionQueue, __ATOMIC_RELAXED);
-  if (latestEntryIndex != ARRAY_COUNT(queue->entries) && completedEntryIndex <= latestEntryIndex) {
-    if (__atomic_compare_exchange_n(&queue->completionQueue, &completedEntryIndex, completedEntryIndex + 1, 1,
-                                    __ATOMIC_ACQ_REL, __ATOMIC_RELAXED)) {
-      struct platform_work_queue_entry *storage = queue->entries + completedEntryIndex;
+  u32 currentEntryToRead = queue->readIndex;
+  u32 nextEntryToRead = (currentEntryToRead + 1) % ARRAY_COUNT(queue->entries);
+  if (currentEntryToRead != queue->writeIndex) {
+    if (__atomic_compare_exchange_n(&queue->readIndex, &currentEntryToRead, nextEntryToRead, 1, __ATOMIC_ACQUIRE,
+                                    __ATOMIC_RELAXED)) {
+      __atomic_thread_fence(__ATOMIC_RELEASE);
+      struct platform_work_queue_entry *entry = queue->entries + currentEntryToRead;
+      entry->callback((struct platform_work_queue *)queue, entry->data);
+      __atomic_fetch_add(&queue->completeCount, 1, __ATOMIC_RELEASE);
       done = 1;
-      storage->callback((struct platform_work_queue *)queue, storage->data);
     }
+    // else some other thread beat us to it
   }
 
   return done;
@@ -1062,28 +1066,33 @@ LinuxWorkQueueAddEntry(struct linux_work_queue *queue, pfnLinuxWorkQueueCallback
 {
   // TODO(e2dk4r): switch to __atomic_compare_exchange_n eventually so that any thread can add
   COMPILER_PROGRAM_ORDER;
-  u32 nextEntryIndex = queue->entryCount;
-  assert(nextEntryIndex < ARRAY_COUNT(queue->entries));
-  struct platform_work_queue_entry *nextEntry = queue->entries + nextEntryIndex;
-  nextEntry->callback = (pfnPlatformWorkQueueCallback)callback;
-  nextEntry->data = data;
+  u32 currentEntryToWrite = queue->writeIndex;
+  u32 nextEntryToWrite = (currentEntryToWrite + 1) % ARRAY_COUNT(queue->entries);
 
-  queue->entryCount++;
-  __atomic_store_n(&queue->submissionQueue, nextEntryIndex, __ATOMIC_RELEASE);
+  // assert(nextEntryToWrite != queue->readIndex); fails when queue is small
+  while (nextEntryToWrite == queue->readIndex)
+    /* queue overflowed and is in invalid state,
+     * so wait for it to catch up (completes remaining works). */
+    ;
+
+  struct platform_work_queue_entry *entry = queue->entries + currentEntryToWrite;
+  entry->callback = (pfnPlatformWorkQueueCallback)callback;
+  entry->data = data;
+
+  queue->completeGoal++;
+  __atomic_store_n(&queue->writeIndex, nextEntryToWrite, __ATOMIC_RELEASE);
   sem_post(queue->semaphore);
 }
 
 internal inline void
 LinuxWorkQueueCompleteAllWork(struct linux_work_queue *queue)
 {
-  while (queue->entryCount != queue->completionQueue) {
+  while (queue->completeGoal != queue->completeCount) {
     LinuxWorkQueueDoNextQueueEntry(queue);
   }
 
-  // TODO(e2dk4r): remove when circular work queue implemented
-  queue->entryCount = 0;
-  queue->submissionQueue = ARRAY_COUNT(queue->entries); // required for invalid submission queue
-  queue->completionQueue = 0;
+  queue->completeGoal = 0;
+  queue->completeCount = 0;
 }
 
 internal void
@@ -1115,7 +1124,6 @@ main(int argc, char *argv[])
   sem_t semaphore;
   sem_init(&semaphore, 0, 0);
 
-  queue.submissionQueue = ARRAY_COUNT(queue.entries); // required for invalid submission queue
   queue.semaphore = &semaphore;
 
   debugf("main thread #%u\n", pthread_self());
