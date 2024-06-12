@@ -680,13 +680,15 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
   }
 #endif
 
-  TiledDrawRenderGroup(renderGroup, buffer);
+  // TiledDrawRenderGroup(transientState->renderQueue, renderGroup, buffer);
   EndTemporaryMemory(&renderMemory);
 }
 
 #if HANDMADEHERO_INTERNAL
 struct game_memory *DEBUG_GLOBAL_MEMORY;
 #endif
+pfnPlatformWorkQueueAddEntry PlatformWorkQueueAddEntry;
+pfnPlatformWorkQueueCompleteAllWork PlatformWorkQueueCompleteAllWork;
 
 void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer)
@@ -707,6 +709,13 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * INITIALIZATION
    ****************************************************************/
   if (!memory->initialized) {
+    assert(memory->highPriorityQueue && "platform layer NOT provided high priority queue implementation");
+    assert(memory->PlatformWorkQueueAddEntry && "platform layer NOT implemented PlatformWorkQueueAddEntry");
+    PlatformWorkQueueAddEntry = memory->PlatformWorkQueueAddEntry;
+    assert(memory->PlatformWorkQueueCompleteAllWork &&
+           "platform layer NOT implemented PlatformWorkQueueCompleteAllWork");
+    PlatformWorkQueueCompleteAllWork = memory->PlatformWorkQueueCompleteAllWork;
+
     void *data = memory->permanentStorage + sizeof(*state);
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
     MemoryArenaInit(&state->worldArena, data, size);
@@ -929,6 +938,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     void *data = memory->transientStorage + sizeof(*transientState);
     memory_arena_size_t size = memory->transientStorageSize - sizeof(*transientState);
     MemoryArenaInit(&transientState->transientArena, data, size);
+
+    transientState->renderQueue = memory->highPriorityQueue;
 
     /* cache composited ground drawing */
     // TODO(e2dk4r): pick a real value here
@@ -1420,7 +1431,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 #endif
 
-  TiledDrawRenderGroup(renderGroup, &drawBuffer);
+  TiledDrawRenderGroup(transientState->renderQueue, renderGroup, &drawBuffer);
 
   EndSimRegion(simRegion, state);
   EndTemporaryMemory(&simRegionMemory);

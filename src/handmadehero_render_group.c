@@ -945,17 +945,17 @@ struct tile_render_work {
 };
 
 internal void
-DoTiledRenderWork(void *userPointer)
+DoTiledRenderWork(struct platform_work_queue *queue, void *data)
 {
-  struct tile_render_work *work = userPointer;
+  struct tile_render_work *work = data;
 
   DrawRenderGroup(work->renderGroup, work->outputTarget, work->clipRect, 0);
   DrawRenderGroup(work->renderGroup, work->outputTarget, work->clipRect, 1);
 }
 
 inline void
-TiledDrawRenderGroup( // struct platform_work_queue *renderQueue,
-    struct render_group *renderGroup, struct bitmap *outputTarget)
+TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_group *renderGroup,
+                     struct bitmap *outputTarget)
 {
   i32 tileCountX = 4;
   i32 tileCountY = 4;
@@ -984,16 +984,11 @@ TiledDrawRenderGroup( // struct platform_work_queue *renderQueue,
       work->clipRect = clipRect;
       workCount++;
 
-      // PlatformWorkQueueAddEntry(renderQueue, DoTiledRenderWork, work);
+      PlatformWorkQueueAddEntry(renderQueue, DoTiledRenderWork, work);
     }
   }
 
-  // PlatformWorkQueueCompleteAllWork(renderQueue);
-
-  for (u32 workIndex = 0; workIndex < workCount; workIndex++) {
-    struct tile_render_work *work = workArray + workIndex;
-    DoTiledRenderWork(work);
-  }
+  PlatformWorkQueueCompleteAllWork(renderQueue);
 }
 
 inline void

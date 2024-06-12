@@ -1021,99 +1021,85 @@ libevdev_is_joystick(struct libevdev *evdev)
 
 #define ALIGNED_TO_CACHE_LINE __attribute__((aligned(64)))
 
-struct work_queue_entry_storage {
-  void *userPointer;
-};
-
-struct work_queue {
+struct linux_work_queue {
   sem_t *semaphore;
   u32 entryCount;
   ALIGNED_TO_CACHE_LINE volatile u32 submissionQueue;
   ALIGNED_TO_CACHE_LINE volatile u32 completionQueue;
-  struct work_queue_entry_storage entries[256];
+  struct platform_work_queue_entry entries[256];
 };
 
-struct work_queue_entry {
-  b32 isValid;
-  void *userPointer;
-};
-
-struct thread_info_linux {
+struct linux_thread_info {
   u32 logicalThreadIndex;
-  struct work_queue *queue;
+  struct linux_work_queue *queue;
 };
+
+typedef void (*pfnLinuxWorkQueueCallback)(struct linux_work_queue *queue, void *data);
 
 #define COMPILER_PROGRAM_ORDER __asm__ volatile("" ::: "memory")
 
-internal struct work_queue_entry
-WorkQueueGetNextEntry(struct work_queue *queue)
+internal b32
+LinuxWorkQueueDoNextQueueEntry(struct linux_work_queue *queue)
 {
-  struct work_queue_entry entry;
-  entry.isValid = 0;
+  b32 done = 0;
 
   u32 latestEntryIndex = __atomic_load_n(&queue->submissionQueue, __ATOMIC_RELAXED);
   u32 completedEntryIndex = __atomic_load_n(&queue->completionQueue, __ATOMIC_RELAXED);
   if (latestEntryIndex != ARRAY_COUNT(queue->entries) && completedEntryIndex <= latestEntryIndex) {
     if (__atomic_compare_exchange_n(&queue->completionQueue, &completedEntryIndex, completedEntryIndex + 1, 1,
                                     __ATOMIC_ACQ_REL, __ATOMIC_RELAXED)) {
-      struct work_queue_entry_storage *storage = queue->entries + completedEntryIndex;
-      entry.userPointer = storage->userPointer;
-      entry.isValid = 1;
+      struct platform_work_queue_entry *storage = queue->entries + completedEntryIndex;
+      done = 1;
+      storage->callback((struct platform_work_queue *)queue, storage->data);
     }
   }
 
-  return entry;
-}
-
-internal b32
-WorkQueueDoWork(struct work_queue_entry entry, u32 logicalThreadIndex)
-{
-  if (!entry.isValid)
-    return 0;
-
-  assert(entry.userPointer);
-  debugf("thread #%u: %s\n", logicalThreadIndex, entry.userPointer);
-
-  return 1;
-}
-
-internal inline b32
-IsWorkQueueNotFinished(struct work_queue *queue)
-{
-  b32 result = queue->entryCount != queue->completionQueue;
-  return result;
+  return done;
 }
 
 internal inline void
-WorkQueueAddEntry(struct work_queue *queue, void *userPointer)
+LinuxWorkQueueAddEntry(struct linux_work_queue *queue, pfnLinuxWorkQueueCallback callback, void *data)
 {
+  // TODO(e2dk4r): switch to __atomic_compare_exchange_n eventually so that any thread can add
   COMPILER_PROGRAM_ORDER;
   u32 nextEntryIndex = queue->entryCount;
   assert(nextEntryIndex < ARRAY_COUNT(queue->entries));
-  struct work_queue_entry_storage *nextEntry = queue->entries + nextEntryIndex;
-  nextEntry->userPointer = userPointer;
+  struct platform_work_queue_entry *nextEntry = queue->entries + nextEntryIndex;
+  nextEntry->callback = (pfnPlatformWorkQueueCallback)callback;
+  nextEntry->data = data;
 
   queue->entryCount++;
   __atomic_store_n(&queue->submissionQueue, nextEntryIndex, __ATOMIC_RELEASE);
   sem_post(queue->semaphore);
 }
 
-internal void
-PushString(struct work_queue *queue, char *string)
+internal inline void
+LinuxWorkQueueCompleteAllWork(struct linux_work_queue *queue)
 {
-  WorkQueueAddEntry(queue, string);
+  while (queue->entryCount != queue->completionQueue) {
+    LinuxWorkQueueDoNextQueueEntry(queue);
+  }
+
+  // TODO(e2dk4r): remove when circular work queue implemented
+  queue->entryCount = 0;
+  queue->submissionQueue = ARRAY_COUNT(queue->entries); // required for invalid submission queue
+  queue->completionQueue = 0;
+}
+
+internal void
+LinuxStringCallback(struct linux_work_queue *queue, void *data)
+{
+  assert(data);
+  debugf("thread #%u: %s\n", pthread_self(), data);
 }
 
 internal void *
 thread_start(void *arg)
 {
-  struct thread_info_linux *threadInfo = arg;
+  struct linux_thread_info *threadInfo = arg;
 
   while (1) {
-    struct work_queue_entry entry = WorkQueueGetNextEntry(threadInfo->queue);
-    if (entry.isValid) {
-      WorkQueueDoWork(entry, threadInfo->logicalThreadIndex);
-    } else {
+    if (LinuxWorkQueueDoNextQueueEntry(threadInfo->queue) == 0) {
       sem_wait(threadInfo->queue->semaphore);
     }
   }
@@ -1124,16 +1110,17 @@ thread_start(void *arg)
 int
 main(int argc, char *argv[])
 {
-  struct thread_info_linux threadInfos[7] = {};
-  struct work_queue queue = {};
+  struct linux_thread_info threadInfos[7] = {};
+  struct linux_work_queue queue = {};
   sem_t semaphore;
   sem_init(&semaphore, 0, 0);
 
   queue.submissionQueue = ARRAY_COUNT(queue.entries); // required for invalid submission queue
   queue.semaphore = &semaphore;
 
+  debugf("main thread #%u\n", pthread_self());
   for (u32 threadIndex = 0; threadIndex < ARRAY_COUNT(threadInfos); threadIndex++) {
-    struct thread_info_linux *threadInfo = threadInfos + threadIndex;
+    struct linux_thread_info *threadInfo = threadInfos + threadIndex;
     threadInfo->logicalThreadIndex = threadIndex;
     threadInfo->queue = &queue;
 
@@ -1144,36 +1131,29 @@ main(int argc, char *argv[])
     pthread_detach(threadId);
   }
 
-  PushString(&queue, "work a0");
-  PushString(&queue, "work a1");
-  PushString(&queue, "work a2");
-  PushString(&queue, "work a3");
-  PushString(&queue, "work a4");
-  PushString(&queue, "work a5");
-  PushString(&queue, "work a6");
-  PushString(&queue, "work a7");
-  PushString(&queue, "work a8");
-  PushString(&queue, "work a9");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a0");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a1");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a2");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a3");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a4");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a5");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a6");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a7");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a8");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a9");
 
-  PushString(&queue, "second work C0");
-  PushString(&queue, "second work C1");
-  PushString(&queue, "second work C2");
-  PushString(&queue, "second work C3");
-  PushString(&queue, "second work C4");
-  PushString(&queue, "second work C5");
-  PushString(&queue, "second work C6");
-  PushString(&queue, "second work C7");
-  PushString(&queue, "second work C8");
-  PushString(&queue, "second work C9");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C0");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C1");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C2");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C3");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C4");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C5");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C6");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C7");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C8");
+  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C9");
 
-  while (IsWorkQueueNotFinished(&queue)) {
-
-    struct work_queue_entry entry = WorkQueueGetNextEntry(&queue);
-    if (entry.isValid) {
-      WorkQueueDoWork(entry, ARRAY_COUNT(threadInfos));
-    }
-  }
-  debugf("completed: %u\n", queue.completionQueue);
+  LinuxWorkQueueCompleteAllWork(&queue);
 
   int error_code = 0;
   struct linux_state state = {
@@ -1242,6 +1222,9 @@ main(int argc, char *argv[])
   game_memory->PlatformWriteEntireFile = PlatformWriteEntireFile;
   game_memory->PlatformFreeMemory = PlatformFreeMemory;
 #endif
+  game_memory->highPriorityQueue = (struct platform_work_queue *)&queue;
+  game_memory->PlatformWorkQueueAddEntry = (pfnPlatformWorkQueueAddEntry)LinuxWorkQueueAddEntry;
+  game_memory->PlatformWorkQueueCompleteAllWork = (pfnPlatformWorkQueueCompleteAllWork)LinuxWorkQueueCompleteAllWork;
 
   /* setup arenas */
   struct memory_arena event_arena;

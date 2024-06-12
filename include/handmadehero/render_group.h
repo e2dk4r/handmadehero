@@ -25,6 +25,7 @@
 
 #include "math.h"
 #include "memory_arena.h"
+#include "platform.h"
 #include "types.h"
 
 #define BITMAP_BYTES_PER_PIXEL 4
@@ -151,7 +152,8 @@ DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct 
               b32 even);
 
 void
-TiledDrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget);
+TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_group *renderGroup,
+                     struct bitmap *outputTarget);
 
 void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2i clipRect, b32 even);

@@ -54,7 +54,7 @@ extern struct game_memory *DEBUG_GLOBAL_MEMORY;
 #define END_TIMER_BLOCK(tag)
 #define END_TIMER_BLOCK_COUNTED(tag, count)
 
-#endif
+#endif /* HANDMADEHERO_INTERNAL */
 
 struct game_backbuffer {
   u32 width;
@@ -120,6 +120,19 @@ GetController(struct game_input *input, u8 index)
   return &input->controllers[index];
 }
 
+struct platform_work_queue;
+typedef void (*pfnPlatformWorkQueueCallback)(struct platform_work_queue *queue, void *data);
+typedef void (*pfnPlatformWorkQueueAddEntry)(struct platform_work_queue *queue, pfnPlatformWorkQueueCallback callback,
+                                             void *data);
+typedef void (*pfnPlatformWorkQueueCompleteAllWork)(struct platform_work_queue *queue);
+extern pfnPlatformWorkQueueAddEntry PlatformWorkQueueAddEntry;
+extern pfnPlatformWorkQueueCompleteAllWork PlatformWorkQueueCompleteAllWork;
+
+struct platform_work_queue_entry {
+  void *data;
+  pfnPlatformWorkQueueCallback callback;
+};
+
 struct game_memory {
   u8 initialized : 1;
 
@@ -128,6 +141,11 @@ struct game_memory {
 
   u64 transientStorageSize;
   void *transientStorage;
+
+  struct platform_work_queue *highPriorityQueue;
+
+  pfnPlatformWorkQueueAddEntry PlatformWorkQueueAddEntry;
+  pfnPlatformWorkQueueCompleteAllWork PlatformWorkQueueCompleteAllWork;
 
 #if HANDMADEHERO_INTERNAL
   pfnPlatformReadEntireFile PlatformReadEntireFile;

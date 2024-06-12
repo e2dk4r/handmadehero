@@ -96,6 +96,8 @@ struct transient_state {
   u32 groundBufferCount;
   struct ground_buffer *groundBuffers;
 
+  struct platform_work_queue *renderQueue;
+
   u32 envMapWidth;
   u32 envMapHeight;
   // NOTE(e2dk4r): 0 is bottom, 1 is middle, 2 is top
