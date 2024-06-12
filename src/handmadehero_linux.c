@@ -1054,11 +1054,12 @@ WorkQueueGetNextEntry(struct work_queue *queue)
   u32 latestEntryIndex = __atomic_load_n(&queue->submissionQueue, __ATOMIC_RELAXED);
   u32 completedEntryIndex = __atomic_load_n(&queue->completionQueue, __ATOMIC_RELAXED);
   if (latestEntryIndex != ARRAY_COUNT(queue->entries) && completedEntryIndex <= latestEntryIndex) {
-    __atomic_thread_fence(__ATOMIC_ACQUIRE);
-    u32 entryIndex = __atomic_fetch_add(&queue->completionQueue, 1, __ATOMIC_RELEASE);
-    struct work_queue_entry_storage *storage = queue->entries + entryIndex;
-    entry.userPointer = storage->userPointer;
-    entry.isValid = 1;
+    if (__atomic_compare_exchange_n(&queue->completionQueue, &completedEntryIndex, completedEntryIndex + 1, 1,
+                                    __ATOMIC_ACQ_REL, __ATOMIC_RELAXED)) {
+      struct work_queue_entry_storage *storage = queue->entries + completedEntryIndex;
+      entry.userPointer = storage->userPointer;
+      entry.isValid = 1;
+    }
   }
 
   return entry;
