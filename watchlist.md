@@ -418,7 +418,7 @@
 - [x] Handmade Hero Day 125 - Abstracting the Work Queue
       https://www.youtube.com/watch?v=ZAZV_PGlQ0s
 
-- [ ] Handmade Hero Day 126 - Circular FIFO Work Queue
+- [x] Handmade Hero Day 126 - Circular FIFO Work Queue
       https://www.youtube.com/watch?v=0jfDwujUY4Y
 
 - [ ] Handmade Hero Day 127 - Aligning Rendering Memory
