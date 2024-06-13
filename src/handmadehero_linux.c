@@ -41,6 +41,7 @@
 
 #define PAUSE_WHEN_SURFACE_OUT_OF_FOCUS 0
 #define RESOLUTION 1080
+#define DISABLE_SURFACE_SCALING 1
 
 /*****************************************************************
  * platform layer implementation
@@ -888,6 +889,7 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, i32 screen
     }
   }
 
+#if !DISABLE_SURFACE_SCALING
   if (state->wp_viewporter) {
     if (state->wp_viewport) {
       wp_viewport_destroy(state->wp_viewport);
@@ -897,6 +899,7 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, i32 screen
     state->wp_viewport = wp_viewporter_get_viewport(state->wp_viewporter, state->wl_surface);
     wp_viewport_set_destination(state->wp_viewport, screen_width, screen_height);
   }
+#endif
 
   wl_surface_commit(state->wl_surface);
 }
