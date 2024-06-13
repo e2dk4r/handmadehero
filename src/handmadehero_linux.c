@@ -40,6 +40,7 @@
 #include <handmadehero/platform.h>
 
 #define PAUSE_WHEN_SURFACE_OUT_OF_FOCUS 0
+#define RESOLUTION 1080
 
 /*****************************************************************
  * platform layer implementation
@@ -1206,13 +1207,23 @@ main(int argc, char *argv[])
 
   /* game: backbuffer */
   /*
-   *  960x540x4 ~1.10M single, ~3.98M with double buffering
-   * 1280x720x4 ~3.53M single, ~7.32M with double buffering
+   *  resolution single double buffering
+   *   960x540x4 ~1.10M  ~3.98M
+   *  1280x720x4 ~3.53M  ~7.32M
+   * 1920x1080x4 ~7.91M ~15.82M
    */
 
-  state.backbuffer = (struct game_backbuffer){
-      .width = 960,
-      .height = 540,
+  state.backbuffer = (struct game_backbuffer)
+  {
+#if RESOLUTION == 540
+    .width = 960, .height = 540,
+#elif RESOLUTION == 720
+    .width = 1280, .height = 720,
+#elif RESOLUTION == 1080
+    .width = 1920, .height = 1080,
+#else
+#error "resolution is invalid"
+#endif
   };
   state.backbuffer.stride = state.backbuffer.width * BITMAP_BYTES_PER_PIXEL;
 
@@ -1241,7 +1252,13 @@ main(int argc, char *argv[])
     u64 size;
 
     // for wayland allocations
+#if RESOLUTION == 540
     size = 2 * MEGABYTES;
+#elif RESOLUTION == 720
+    size = 4 * MEGABYTES;
+#elif RESOLUTION == 1080
+    size = 8 * MEGABYTES;
+#endif
     MemoryArenaInit(&state.wayland_arena, game_memory->permanentStorage + used, size);
     used += size;
 
