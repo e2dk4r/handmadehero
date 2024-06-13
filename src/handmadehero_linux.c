@@ -41,7 +41,7 @@
 
 #define PAUSE_WHEN_SURFACE_OUT_OF_FOCUS 0
 #define RESOLUTION 1080
-#define DISABLE_SURFACE_SCALING 1
+#define DISABLE_SURFACE_SCALING 0
 
 /*****************************************************************
  * platform layer implementation
