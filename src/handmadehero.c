@@ -680,7 +680,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
   }
 #endif
 
-  // TiledDrawRenderGroup(transientState->renderQueue, renderGroup, buffer);
+  TiledDrawRenderGroup(transientState->renderQueue, renderGroup, buffer);
   EndTemporaryMemory(&renderMemory);
 }
 
