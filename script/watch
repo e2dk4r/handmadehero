@@ -1,0 +1,2 @@
+interval=${1:-1}
+watch -n $interval -d -- 'ps Ho tid,rsz,pcpu,time p $(pidof handmadehero)'
