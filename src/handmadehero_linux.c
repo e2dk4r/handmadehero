@@ -1027,7 +1027,7 @@ struct linux_work_queue {
   ALIGNED_TO_CACHE_LINE volatile u32 completeCount;
   ALIGNED_TO_CACHE_LINE volatile u32 writeIndex;
   ALIGNED_TO_CACHE_LINE volatile u32 readIndex;
-  struct platform_work_queue_entry entries[128];
+  struct platform_work_queue_entry entries[256];
 };
 
 struct linux_thread_info {
