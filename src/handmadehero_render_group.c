@@ -984,7 +984,13 @@ TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_grou
       work->clipRect = clipRect;
       workCount++;
 
+#if 1
+      /* rendering multi-threaded */
       PlatformWorkQueueAddEntry(renderQueue, DoTiledRenderWork, work);
+#else
+      /* rendering single-threaded */
+      DoTiledRenderWork(renderQueue, work);
+#endif
     }
   }
 
