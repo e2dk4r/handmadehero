@@ -1283,8 +1283,7 @@ main(int argc, char *argv[])
   wl_registry_add_listener(registry, &registry_listener, &state);
   wl_display_roundtrip(wl_display);
 
-  if (!state.wl_compositor || !state.wl_shm || !state.wl_seat || !state.xdg_wm_base || !state.wp_viewporter ||
-      !state.wp_presentation) {
+  if (!state.wl_compositor || !state.wl_shm || !state.wl_seat || !state.xdg_wm_base || !state.wp_presentation) {
     comptime char msg[] = "error: cannot get wayland globals!\n";
     comptime u64 msgLength = sizeof(msg) - 1;
     write(STDERR_FILENO, msg, msgLength);
