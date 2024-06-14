@@ -629,25 +629,31 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
     return;
   }
 
-  __m128i startupClipMask = _mm_set1_epi8(-1);
-  i32 fillWidth = fillRect.maxX - fillRect.minX;
-  i32 fillWidthAlign = fillWidth & 3;
-  if (fillWidthAlign > 0) {
-    i32 adjustment = (4 - fillWidthAlign);
-    // TODO(e2dk4r): this is stupid
-    switch (adjustment) {
-    case 0:
-      startupClipMask = _mm_slli_si128(startupClipMask, 1 * 4);
-      break;
-    case 1:
-      startupClipMask = _mm_slli_si128(startupClipMask, 2 * 4);
-      break;
-    case 2:
-      startupClipMask = _mm_slli_si128(startupClipMask, 3 * 4);
-      break;
-    }
-    fillWidth += adjustment;
-    fillRect.minX = fillRect.maxX - fillWidth;
+  __m128i startClipMask = _mm_set1_epi8(-1);
+  __m128i endClipMask = _mm_set1_epi8(-1);
+
+  __m128i startClipMasks[] = {
+      _mm_slli_si128(startClipMask, 0 * 4),
+      _mm_slli_si128(startClipMask, 1 * 4),
+      _mm_slli_si128(startClipMask, 2 * 4),
+      _mm_slli_si128(startClipMask, 3 * 4),
+  };
+
+  __m128i endClipMasks[] = {
+      _mm_srli_si128(endClipMask, 0 * 4),
+      _mm_srli_si128(endClipMask, 3 * 4),
+      _mm_srli_si128(endClipMask, 2 * 4),
+      _mm_srli_si128(endClipMask, 1 * 4),
+  };
+
+  if (fillRect.minX & 3) {
+    startClipMask = startClipMasks[fillRect.minX & 3];
+    fillRect.minX = fillRect.minX & ~3;
+  }
+
+  if (fillRect.maxX & 3) {
+    endClipMask = endClipMasks[fillRect.maxX & 3];
+    fillRect.maxX = fillRect.maxX & ~3;
   }
 
   u8 *row = buffer->memory + fillRect.minY * buffer->stride + fillRect.minX * BITMAP_BYTES_PER_PIXEL;
@@ -670,7 +676,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
                                  (f32)(fillRect.minX + 2) - origin.x, (f32)(fillRect.minX + 3) - origin.x);
     __m128 pixelPy = _mm_set1_ps((f32)y - origin.y);
 
-    __m128i clipMask = startupClipMask;
+    __m128i clipMask = startClipMask;
 
     for (i32 xi = fillRect.minX; xi < fillRect.maxX; xi += 4) {
       BEGIN_ANALYSIS("ProcessPixel");
@@ -697,7 +703,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       __m128 fX = tX - _mm_cvtepi32_ps(texelX);
       __m128 fY = tY - _mm_cvtepi32_ps(texelY);
 
-      __m128i originalDest = _mm_loadu_si128((__m128i *)pixel);
+      __m128i originalDest = _mm_load_si128((__m128i *)pixel);
 
       __m128i sampleA;
       __m128i sampleB;
@@ -819,11 +825,15 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       __m128i out = intr << 0x10 | intg << 0x08 | intb << 0x00 | inta << 0x18;
 
       __m128i maskedOut = (out & writeMask) | (originalDest & ~writeMask);
-      _mm_storeu_si128((__m128i *)pixel, maskedOut);
+      _mm_store_si128((__m128i *)pixel, maskedOut);
 
       pixel += 4;
       pixelPx += 4;
+
       clipMask = _mm_set1_epi8(-1);
+      if (xi + 8 >= fillRect.maxX) {
+        clipMask = endClipMask;
+      }
 
       END_ANALYSIS();
     }
@@ -963,19 +973,24 @@ TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_grou
   struct tile_render_work workArray[tileCountX * tileCountY];
   u32 workCount = 0;
 
-  // TODO(e2dk4r): round to 4?
+  // TODO(e2dk4r): make sure to allocate enough space for rounding?
+  assert(((uptr)outputTarget->memory & (4 * BITMAP_BYTES_PER_PIXEL - 1)) == 0 &&
+         "must be aligned to 4 pixels (4x4 bytes)");
   i32 tileWidth = (i32)outputTarget->width / tileCountX;
   i32 tileHeight = (i32)outputTarget->height / tileCountY;
 
+  tileWidth = (tileWidth + 3) / 4 * 4;
+
   for (i32 tileY = 0; tileY < tileCountY; tileY++) {
     for (i32 tileX = 0; tileX < tileCountX; tileX++) {
-      // TODO(e2dk4r): buffers with overflow!
-      // struct rect2i clipRect = {0, 0, (i32)outputTarget->width, (i32)outputTarget->height};
       struct rect2i clipRect;
-      clipRect.minX = tileX * tileWidth + 4;
-      clipRect.maxX = clipRect.minX + tileWidth - 4;
-      clipRect.minY = tileY * tileHeight + 4;
-      clipRect.maxY = clipRect.minY + tileHeight - 4;
+      clipRect.minX = tileX * tileWidth;
+      clipRect.maxX = clipRect.minX + tileWidth;
+      clipRect.minY = tileY * tileHeight;
+      clipRect.maxY = clipRect.minY + tileHeight;
+
+      if (clipRect.maxX > (i32)outputTarget->width)
+        clipRect.maxX = (i32)outputTarget->width;
 
       u32 workIndex = workCount;
       struct tile_render_work *work = workArray + workIndex;
