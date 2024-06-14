@@ -1224,6 +1224,8 @@ main(int argc, char *argv[])
     .width = 1280, .height = 720,
 #elif RESOLUTION == 1080
     .width = 1920, .height = 1080,
+#elif RESOLUTION == 719 // WEIRD
+    .width = 1279, .height = 719,
 #else
 #error "resolution is invalid"
 #endif
@@ -1261,6 +1263,8 @@ main(int argc, char *argv[])
     size = 4 * MEGABYTES;
 #elif RESOLUTION == 1080
     size = 8 * MEGABYTES;
+#elif RESOLUTION == 719 // WEIRD
+    size = 4 * MEGABYTES;
 #endif
     MemoryArenaInit(&state.wayland_arena, game_memory->permanentStorage + used, size);
     used += size;
