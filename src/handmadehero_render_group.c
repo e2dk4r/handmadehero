@@ -988,8 +988,10 @@ TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_grou
       clipRect.minY = tileY * tileHeight;
       clipRect.maxY = clipRect.minY + tileHeight;
 
-      if (clipRect.maxX > (i32)outputTarget->width)
+      if (tileX == tileCountX - 1)
         clipRect.maxX = (i32)outputTarget->width;
+      if (tileY == tileCountY - 1)
+        clipRect.maxY = (i32)outputTarget->height;
 
       u32 workIndex = workCount;
       struct tile_render_work *work = workArray + workIndex;
