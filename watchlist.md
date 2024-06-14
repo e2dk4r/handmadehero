@@ -421,7 +421,7 @@
 - [x] Handmade Hero Day 126 - Circular FIFO Work Queue
       https://www.youtube.com/watch?v=0jfDwujUY4Y
 
-- [ ] Handmade Hero Day 127 - Aligning Rendering Memory
+- [x] Handmade Hero Day 127 - Aligning Rendering Memory
       https://www.youtube.com/watch?v=blcNbU70I9o
 
 - [ ] Handmade Hero Day 128 - Push-time Transforms
