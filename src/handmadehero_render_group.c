@@ -973,7 +973,6 @@ TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_grou
   struct tile_render_work workArray[tileCountX * tileCountY];
   u32 workCount = 0;
 
-  // TODO(e2dk4r): make sure to allocate enough space for rounding?
   assert(((uptr)outputTarget->memory & (4 * BITMAP_BYTES_PER_PIXEL - 1)) == 0 &&
          "must be aligned to 4 pixels (4x4 bytes)");
   i32 tileWidth = (i32)outputTarget->width / tileCountX;
