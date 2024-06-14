@@ -1228,7 +1228,7 @@ main(int argc, char *argv[])
 #error "resolution is invalid"
 #endif
   };
-  state.backbuffer.stride = state.backbuffer.width * BITMAP_BYTES_PER_PIXEL;
+  state.backbuffer.stride = ALIGN16(state.backbuffer.width * BITMAP_BYTES_PER_PIXEL);
 
   /* game: mem allocation */
   struct game_memory *game_memory = &state.game_memory;
