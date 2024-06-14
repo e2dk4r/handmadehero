@@ -696,6 +696,11 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #if HANDMADEHERO_INTERNAL
   DEBUG_GLOBAL_MEMORY = memory;
 #endif
+  assert(memory->highPriorityQueue && "platform layer NOT provided high priority queue implementation");
+  assert(memory->PlatformWorkQueueAddEntry && "platform layer NOT implemented PlatformWorkQueueAddEntry");
+  PlatformWorkQueueAddEntry = memory->PlatformWorkQueueAddEntry;
+  assert(memory->PlatformWorkQueueCompleteAllWork && "platform layer NOT implemented PlatformWorkQueueCompleteAllWork");
+  PlatformWorkQueueCompleteAllWork = memory->PlatformWorkQueueCompleteAllWork;
 
   BEGIN_TIMER_BLOCK(GameUpdateAndRender);
 
@@ -709,13 +714,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * INITIALIZATION
    ****************************************************************/
   if (!memory->initialized) {
-    assert(memory->highPriorityQueue && "platform layer NOT provided high priority queue implementation");
-    assert(memory->PlatformWorkQueueAddEntry && "platform layer NOT implemented PlatformWorkQueueAddEntry");
-    PlatformWorkQueueAddEntry = memory->PlatformWorkQueueAddEntry;
-    assert(memory->PlatformWorkQueueCompleteAllWork &&
-           "platform layer NOT implemented PlatformWorkQueueCompleteAllWork");
-    PlatformWorkQueueCompleteAllWork = memory->PlatformWorkQueueCompleteAllWork;
-
     void *data = memory->permanentStorage + sizeof(*state);
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
     MemoryArenaInit(&state->worldArena, data, size);
