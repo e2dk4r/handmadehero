@@ -941,7 +941,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     /* cache composited ground drawing */
     // TODO(e2dk4r): pick a real value here
-    transientState->groundBufferCount = 64; // 128;
+    transientState->groundBufferCount = 256; // 128;
     transientState->groundBuffers = MemoryArenaPush(
         &transientState->transientArena, sizeof(*transientState->groundBuffers) * transientState->groundBufferCount);
     for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
