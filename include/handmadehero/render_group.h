@@ -71,13 +71,13 @@ struct render_group_entry_clear {
 
 struct render_group_entry_bitmap {
   struct bitmap *bitmap;
-  struct render_entity_basis basis;
+  struct v2 position;
   struct v2 size;
   f32 alpha;
 };
 
 struct render_group_entry_rectangle {
-  struct render_entity_basis basis;
+  struct v2 position;
   struct v4 color;
   struct v2 dim;
 };
@@ -95,22 +95,24 @@ struct render_group_entry_coordinate_system {
   struct environment_map *bottom;
 };
 
-struct render_group_camera {
+struct render_transform {
   // How much far person sitting across from monitor in meters
   f32 focalLength;
-  f32 cameraDistanceAboveTarget;
-};
-
-struct render_group {
-  struct render_group_camera gameCamera;
-  struct render_group_camera renderCamera;
+  f32 distanceAboveTarget;
 
   // NOTE(e2dk4r): Translates world meters into pixels on monitor
   f32 metersToPixels;
-  struct v2 monitorHalfDimInMeters;
+  struct v2 screenCenter;
 
-  struct render_basis *defaultBasis;
+  struct v3 offsetP;
+  f32 scale;
+};
+
+struct render_group {
   f32 alpha;
+
+  struct v2 monitorHalfDimInMeters;
+  struct render_transform transform;
 
   u64 pushBufferTotal;
   u64 pushBufferSize;
@@ -158,7 +160,7 @@ TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_grou
 void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2i clipRect, b32 even);
 
-struct render_group_entry_coordinate_system *
+void
 CoordinateSystem(struct render_group *renderGroup, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                  struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
                  struct environment_map *middle, struct environment_map *bottom);

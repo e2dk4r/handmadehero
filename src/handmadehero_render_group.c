@@ -8,44 +8,40 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, u32 resolutionPixel
 {
   struct render_group *renderGroup = MemoryArenaPush(arena, sizeof(*renderGroup));
 
-  renderGroup->defaultBasis = MemoryArenaPush(arena, sizeof(*renderGroup->defaultBasis));
-  renderGroup->defaultBasis->position = v3(0.0f, 0.0f, 0.0f);
-
-  renderGroup->alpha = 1.0f;
-
   renderGroup->pushBufferSize = 0;
   renderGroup->pushBufferTotal = pushBufferTotal;
   renderGroup->pushBufferBase = MemoryArenaPush(arena, renderGroup->pushBufferTotal);
 
-  renderGroup->gameCamera.focalLength = 0.6f;
-  renderGroup->gameCamera.cameraDistanceAboveTarget = 9.0f;
+  renderGroup->alpha = 1.0f;
 
-  // NOTE(e2dk4r): Horizontal measurement of monitor in meters
-  f32 widthOfMonitor = 0.625f; // 25" in meters
-  renderGroup->metersToPixels = (f32)resolutionPixelsX * widthOfMonitor;
-
-  f32 pixelsToMeters = 1.0f / renderGroup->metersToPixels;
+  f32 widthOfMonitor = 0.635f; // 25" in meters
+  f32 metersToPixels = (f32)resolutionPixelsX * widthOfMonitor;
+  f32 pixelsToMeters = 1.0f / metersToPixels;
   renderGroup->monitorHalfDimInMeters =
       v2((f32)resolutionPixelsX * pixelsToMeters * 0.5f, (f32)resolutionPixelsY * pixelsToMeters * 0.5f);
 
-  renderGroup->renderCamera = renderGroup->gameCamera;
-  // renderGroup->renderCamera.cameraDistanceAboveTarget = 50.0f;
+  // Default transform
+  renderGroup->transform.focalLength = 0.6f;
+  renderGroup->transform.distanceAboveTarget = 9.0f;
+  renderGroup->transform.metersToPixels = metersToPixels;
+  renderGroup->transform.offsetP = v3(0.0f, 0.0f, 0.0f);
+  renderGroup->transform.scale = 1.0f;
+  renderGroup->transform.screenCenter = v2((f32)resolutionPixelsX * 0.5f, (f32)resolutionPixelsY * 0.5f);
 
   return renderGroup;
 }
 
 internal inline struct v2
-Unproject(struct render_group *renderGroup, f32 atDistanceFromCamera)
+Unproject(struct render_group *renderGroup, struct v2 projectedXY, f32 atDistanceFromCamera)
 {
-  struct v2 worldXY =
-      v2_mul(renderGroup->monitorHalfDimInMeters, (atDistanceFromCamera / renderGroup->gameCamera.focalLength));
+  struct v2 worldXY = v2_mul(projectedXY, (atDistanceFromCamera / renderGroup->transform.focalLength));
   return worldXY;
 }
 
 inline struct rect2
 GetCameraRectangleAtDistance(struct render_group *renderGroup, f32 distanceFromCamera)
 {
-  struct v2 rawXY = Unproject(renderGroup, distanceFromCamera);
+  struct v2 rawXY = Unproject(renderGroup, renderGroup->monitorHalfDimInMeters, distanceFromCamera);
 
   struct rect2 result = Rect2CenterHalfDim(v2(0.0f, 0.0f), rawXY);
 
@@ -55,7 +51,42 @@ GetCameraRectangleAtDistance(struct render_group *renderGroup, f32 distanceFromC
 inline struct rect2
 GetCameraRectangleAtTarget(struct render_group *renderGroup)
 {
-  struct rect2 result = GetCameraRectangleAtDistance(renderGroup, renderGroup->gameCamera.cameraDistanceAboveTarget);
+  struct rect2 result = GetCameraRectangleAtDistance(renderGroup, renderGroup->transform.distanceAboveTarget);
+  return result;
+}
+
+struct render_entity_basis_p_result {
+  u8 valid : 1;
+  struct v2 p;
+  f32 scale;
+};
+
+internal struct render_entity_basis_p_result
+GetRenderEntityBasisP(struct render_transform *transform, struct v3 originalPosition)
+{
+  struct render_entity_basis_p_result result = {};
+
+  struct v3 position = v3_add(originalPosition, transform->offsetP);
+
+  f32 distanceAboveTarget = transform->distanceAboveTarget;
+#if 0
+  // TODO(e2dk4r): how do we want to control the debug camera?
+  distanceAboveTarget += 30.0f;
+#endif
+
+  f32 distanceToPZ = distanceAboveTarget - position.z;
+  f32 nearClipPlane = 0.2f;
+
+  struct v3 rawXY = v2_to_v3(position.xy, 1.0f);
+
+  if (distanceToPZ <= nearClipPlane)
+    return result;
+
+  struct v3 projectedXY = v3_mul(v3_mul(rawXY, transform->focalLength), 1.0f / distanceToPZ);
+  result.p = v2_add(transform->screenCenter, v2_mul(projectedXY.xy, transform->metersToPixels));
+  result.scale = projectedXY.z * transform->metersToPixels;
+  result.valid = 1;
+
   return result;
 }
 
@@ -88,36 +119,47 @@ PushClearEntry(struct render_group *renderGroup, struct v4 color)
 internal inline void
 PushBitmapEntry(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height, f32 alpha)
 {
+  struct v2 size = v2(height * bitmap->widthOverHeight, height);
+  struct v2 alignPixel = v2_hadamard(bitmap->alignPercentage, size);
+  struct v3 position = v3_sub(offset, v2_to_v3(alignPixel, 0.0f));
+
+  struct render_entity_basis_p_result basis = GetRenderEntityBasisP(&renderGroup->transform, position);
+  if (!basis.valid || basis.scale <= 0.0f)
+    return;
+
   struct render_group_entry_bitmap *entry =
       PushRenderEntry(renderGroup, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_BITMAP);
   entry->bitmap = bitmap;
-  entry->basis.basis = renderGroup->defaultBasis;
-
-  entry->basis.offset = offset;
-  entry->size = v2(height * bitmap->widthOverHeight, height);
-
-  struct v2 alignPixel = v2_hadamard(bitmap->alignPercentage, entry->size);
-  v2_sub_ref(&entry->basis.offset.xy, alignPixel);
-
+  entry->size = v2_mul(size, basis.scale);
+  entry->position = basis.p;
   entry->alpha = alpha;
 }
 
 internal inline void
 PushRectangleEntry(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color)
 {
-  struct render_group_entry_rectangle *entry =
-      PushRenderEntry(renderGroup, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
-  entry->basis.basis = renderGroup->defaultBasis;
-  entry->basis.offset = v3_sub(offset, v2_to_v3(v2_mul(dim, 0.5f), 0.0f));
-  entry->dim = dim;
-  entry->color = color;
+  struct v3 position = v3_sub(offset, v2_to_v3(v2_mul(dim, 0.5f), 0.0f));
+  struct render_entity_basis_p_result basis = GetRenderEntityBasisP(&renderGroup->transform, position);
+  if (!basis.valid || basis.scale <= 0.0f)
+    return;
+
+  struct render_group_entry_rectangle *rect =
+      PushRenderEntry(renderGroup, sizeof(*rect), RENDER_GROUP_ENTRY_TYPE_RECTANGLE);
+  rect->position = basis.p;
+  rect->dim = v2_mul(dim, basis.scale);
+  rect->color = color;
 }
 
-struct render_group_entry_coordinate_system *
+inline void
 CoordinateSystem(struct render_group *renderGroup, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                  struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
                  struct environment_map *middle, struct environment_map *bottom)
 {
+#if 0
+  struct render_entity_basis_p_result basis = GetRenderEntityBasisP(&renderGroup->transform);
+  if (!basis.valid || basis.scale <= 0.0f)
+    return;
+
   struct render_group_entry_coordinate_system *entry =
       PushRenderEntry(renderGroup, sizeof(*entry), RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM);
   entry->origin = origin;
@@ -129,7 +171,7 @@ CoordinateSystem(struct render_group *renderGroup, struct v2 origin, struct v2 x
   entry->top = top;
   entry->middle = middle;
   entry->bottom = bottom;
-  return entry;
+#endif
 }
 
 void
@@ -153,13 +195,14 @@ BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct 
 inline void
 Rect(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color)
 {
+  color.a *= renderGroup->alpha;
   PushRectangleEntry(renderGroup, offset, dim, color);
 }
 
 inline void
 RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color)
 {
-#if 0
+#if 1
   f32 thickness = 0.1f;
 
   // NOTE(e2dk4r): top and bottom
@@ -918,36 +961,6 @@ DrawBitmap(struct bitmap *buffer, struct bitmap *bitmap, struct v2 pos, f32 cAlp
   }
 }
 
-struct render_entity_basis_p_result {
-  u8 valid : 1;
-  struct v2 p;
-  f32 scale;
-};
-
-internal struct render_entity_basis_p_result
-GetRenderEntityBasisP(struct render_entity_basis *entityBasis, struct render_group *renderGroup, struct v2 screenDim)
-{
-  struct render_entity_basis_p_result result = {};
-
-  struct v2 screenCenter = v2_mul(screenDim, 0.5f);
-  struct v3 entityBasePosition = entityBasis->basis->position;
-
-  f32 distanceToPZ = renderGroup->renderCamera.cameraDistanceAboveTarget - entityBasePosition.z;
-  f32 nearClipPlane = 0.2f;
-
-  struct v3 rawXY = v2_to_v3(v2_add(entityBasePosition.xy, entityBasis->offset.xy), 1.0f);
-
-  if (distanceToPZ <= nearClipPlane)
-    return result;
-
-  struct v3 projectedXY = v3_mul(v3_mul(rawXY, renderGroup->renderCamera.focalLength), 1.0f / distanceToPZ);
-  result.p = v2_add(screenCenter, v2_mul(projectedXY.xy, renderGroup->metersToPixels));
-  result.scale = projectedXY.z * renderGroup->metersToPixels;
-  result.valid = 1;
-
-  return result;
-}
-
 struct tile_render_work {
   struct render_group *renderGroup;
   struct bitmap *outputTarget;
@@ -1027,9 +1040,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, s
 {
   BEGIN_TIMER_BLOCK(DrawRenderGroup);
 
-  struct v2 screenDim = v2u(outputTarget->width, outputTarget->height);
-
-  f32 pixelsToMeters = 1.0f / renderGroup->metersToPixels;
+  f32 pixelsToMeters = 1.0f / renderGroup->transform.metersToPixels;
 
   for (u32 pushBufferIndex = 0; pushBufferIndex < renderGroup->pushBufferSize;) {
     struct render_group_entry *header = renderGroup->pushBufferBase + pushBufferIndex;
@@ -1040,6 +1051,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, s
       struct render_group_entry_clear *entry = data;
       pushBufferIndex += sizeof(*entry);
 
+      struct v2 screenDim = v2u(outputTarget->width, outputTarget->height);
       DrawRectangle(outputTarget, v2(0.0f, 0.0f), screenDim, entry->color, clipRect, even);
     }
 
@@ -1049,16 +1061,11 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, s
 
       assert(entry->bitmap);
 
-      struct render_entity_basis_p_result basis = GetRenderEntityBasisP(&entry->basis, renderGroup, screenDim);
-      if (!basis.valid || basis.scale <= 0.0f)
-        continue;
-
 #if 0
       DrawBitmap(outputTarget, entry->bitmap, basis.p, entry->alpha);
 #else
-      DrawRectangleQuickly(outputTarget, basis.p, v2_mul(v2(entry->size.x, 0), basis.scale),
-                           v2_mul(v2(0, entry->size.y), basis.scale), v4(1.0f, 1.0f, 1.0f, entry->alpha), entry->bitmap,
-                           pixelsToMeters, clipRect, even);
+      DrawRectangleQuickly(outputTarget, entry->position, v2(entry->size.x, 0), v2(0, entry->size.y),
+                           v4(1.0f, 1.0f, 1.0f, entry->alpha), entry->bitmap, pixelsToMeters, clipRect, even);
 #endif
     }
 
@@ -1066,11 +1073,7 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, s
       struct render_group_entry_rectangle *entry = data;
       pushBufferIndex += sizeof(*entry);
 
-      struct render_entity_basis_p_result basis = GetRenderEntityBasisP(&entry->basis, renderGroup, screenDim);
-      if (!basis.valid || basis.scale <= 0.0f)
-        continue;
-      DrawRectangle(outputTarget, basis.p, v2_add(basis.p, v2_mul(entry->dim, basis.scale)), entry->color, clipRect,
-                    even);
+      DrawRectangle(outputTarget, entry->position, v2_add(entry->position, entry->dim), entry->color, clipRect, even);
     }
 
     else if (header->type & RENDER_GROUP_ENTRY_TYPE_COORDINATE_SYSTEM) {

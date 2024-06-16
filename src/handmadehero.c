@@ -1091,20 +1091,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct bitmap *bitmap = &groundBuffer->bitmap;
     bitmap->alignPercentage = v2(0.5f, 0.5f);
 
-    struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
-    basis->position = positionRelativeToCamera;
-    renderGroup->defaultBasis = basis;
-
     struct v2 groundDim = world->chunkDimInMeters.xy;
-    Bitmap(renderGroup, bitmap, v3(0.0f, 0.0f, 0.0f), groundDim.y);
+    Bitmap(renderGroup, bitmap, positionRelativeToCamera, groundDim.y);
 #if 0
-    RectOutline(renderGroup, v3(0.0f, 0.0f, 0.0f), groundDim, COLOR_GRAY_500);
+    RectOutline(renderGroup, positionRelativeToCamera, groundDim, COLOR_GRAY_500);
 #endif
   }
-
-  struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
-  basis->position = v3(0.0f, 0.0f, 0.0f);
-  renderGroup->defaultBasis = basis;
 
   /* fill ground buffer chunks */
   {
@@ -1175,10 +1167,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     if (!entity->updatable)
       continue;
-
-    struct render_basis *basis = MemoryArenaPush(&transientState->transientArena, sizeof(*basis));
-    basis->position = entity->position;
-    renderGroup->defaultBasis = basis;
 
     // TODO(e2dk4r): probably indicates we want to seperate update and render for entities
     struct v3 cameraRelativeToGround = v3_sub(entity->position, cameraRelativeToSim);
@@ -1280,6 +1268,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         CollisionRuleRemove(state, sword->storageIndex);
       }
     }
+
+    renderGroup->transform.offsetP = entity->position;
 
     /*****************************************************************
      * Post-physics entity work (rendering)
@@ -1411,7 +1401,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #else
   struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
 #endif
-  struct render_group_entry_coordinate_system *c = CoordinateSystem(
+  CoordinateSystem(
       renderGroup, v2_add(v2_add(origin, disp), v2_add(v2_mul(xAxis, -0.5f), v2_mul(yAxis, -0.5f))), xAxis, yAxis,
       color, &state->testDiffuse, &state->testNormal, transientState->envMaps + ENV_MAP_TOP,
       transientState->envMaps + ENV_MAP_MIDDLE, transientState->envMaps + ENV_MAP_BOTTOM);
