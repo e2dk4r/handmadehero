@@ -967,6 +967,15 @@ inline void
 TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_group *renderGroup,
                      struct bitmap *outputTarget)
 {
+  /* TODO(e2dk4r):
+   *
+   *   - make sure that tiles are cache-aligned
+   *   - get hyperthreads synced so they do interleaved lines?
+   *   - how big should the tiles be for performance?
+   *   - ballpark the memory bandwidth for DrawRectangleQuickly
+   *   - Re-test some of our instruction choices
+   *
+   */
   i32 tileCountX = 4;
   i32 tileCountY = 4;
 
