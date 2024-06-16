@@ -1163,7 +1163,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   struct v3 cameraRelativeToSim = WorldPositionSub(world, &state->cameraPosition, &simRegionOrigin);
 
-  /* render entities */
   for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
     struct entity *entity = simRegion->entities + entityIndex;
     assert(entity);
@@ -1201,8 +1200,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         renderGroup->alpha = 0.0f;
     }
 
+    /*****************************************************************
+     * Pre-physics entity work
+     *****************************************************************/
     if (entity->type & ENTITY_TYPE_HERO) {
-      /* update */
       for (u8 controllerIndex = 0; controllerIndex < ARRAY_COUNT(state->controlledHeroes); controllerIndex++) {
         struct controlled_hero *conHero = state->controlledHeroes + controllerIndex;
         if (conHero->entityIndex != entity->storageIndex)
@@ -1230,27 +1231,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
           }
         }
       }
-
-      /* render */
-      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
-
-      // TODO(e2dk4r): this is incorrect, should be computed after update!
-      f32 shadowAlpha = 1.0f - entity->position.z;
-      if (shadowAlpha < 0.0f)
-        shadowAlpha = 0.0f;
-
-      HitPoints(renderGroup, entity);
-
-      f32 heroHeightC = 2.5f;
-      f32 heroHeight = heroHeightC * 1.2f;
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), heroHeightC * 1.0f, shadowAlpha);
-      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), heroHeight);
-      Bitmap(renderGroup, &bitmap->cape, v3(0.0f, 0.0f, 0.0f), heroHeight);
-      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.0f), heroHeight);
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
-      /* update */
       struct entity *familiar = entity;
       struct entity *closestHero = 0;
       /* 10m maximum search radius */
@@ -1283,29 +1266,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       entity->tBob += dt;
       if (entity->tBob > 2.0f * PI32)
         entity->tBob -= 2.0f * PI32;
-
-      /* render */
-      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
-
-      f32 bobSin = Sin(2.0f * entity->tBob);
-      f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
-
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 2.5f, shadowAlpha);
-      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.25f * bobSin), 2.5f);
-    }
-
-    else if (entity->type & ENTITY_TYPE_MONSTER) {
-      /* render */
-      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
-      f32 alpha = 1.0f;
-
-      HitPoints(renderGroup, entity);
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 4.5f, alpha);
-      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), 4.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
-      /* update */
       struct entity *sword = entity;
       struct v3 oldPosition = sword->position;
       EntityMove(state, simRegion, entity, dt, &SwordMoveSpec, v3(0, 0, 0));
@@ -1316,8 +1279,48 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         EntityAddFlag(sword, ENTITY_FLAG_NONSPACIAL);
         CollisionRuleRemove(state, sword->storageIndex);
       }
+    }
 
-      /* render */
+    /*****************************************************************
+     * Post-physics entity work (rendering)
+     *****************************************************************/
+    if (entity->type & ENTITY_TYPE_HERO) {
+      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
+
+      f32 shadowAlpha = 1.0f - entity->position.z;
+      if (shadowAlpha < 0.0f)
+        shadowAlpha = 0.0f;
+
+      HitPoints(renderGroup, entity);
+
+      f32 heroHeightC = 2.5f;
+      f32 heroHeight = heroHeightC * 1.2f;
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), heroHeightC * 1.0f, shadowAlpha);
+      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), heroHeight);
+      Bitmap(renderGroup, &bitmap->cape, v3(0.0f, 0.0f, 0.0f), heroHeight);
+      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.0f), heroHeight);
+    }
+
+    else if (entity->type & ENTITY_TYPE_FAMILIAR) {
+      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
+
+      f32 bobSin = Sin(2.0f * entity->tBob);
+      f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
+
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 2.5f, shadowAlpha);
+      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.25f * bobSin), 2.5f);
+    }
+
+    else if (entity->type & ENTITY_TYPE_MONSTER) {
+      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
+      f32 alpha = 1.0f;
+
+      HitPoints(renderGroup, entity);
+      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 4.5f, alpha);
+      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), 4.5f);
+    }
+
+    else if (entity->type & ENTITY_TYPE_SWORD) {
       BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 0.5f, 1.0f);
       Bitmap(renderGroup, &state->textureSword, v3(0.0f, 0.0f, 0.0f), 0.5f);
     }
