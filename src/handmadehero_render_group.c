@@ -66,7 +66,9 @@ GetRenderEntityBasisP(struct render_transform *transform, struct v3 originalPosi
 {
   struct render_entity_basis_p_result result = {};
 
-  struct v3 position = v3_add(originalPosition, transform->offsetP);
+  struct v3 position = v3_add(v2_to_v3(originalPosition.xy, 0.0f), transform->offsetP);
+
+  f32 offsetZ = 0.0f;
 
   f32 distanceAboveTarget = transform->distanceAboveTarget;
 #if 0
@@ -83,8 +85,9 @@ GetRenderEntityBasisP(struct render_transform *transform, struct v3 originalPosi
     return result;
 
   struct v3 projectedXY = v3_mul(v3_mul(rawXY, transform->focalLength), 1.0f / distanceToPZ);
-  result.p = v2_add(transform->screenCenter, v2_mul(projectedXY.xy, transform->metersToPixels));
   result.scale = projectedXY.z * transform->metersToPixels;
+  result.p = v2_add(v2_add(transform->screenCenter, v2_mul(projectedXY.xy, transform->metersToPixels)),
+                    v2(0.0f, offsetZ * result.scale));
   result.valid = 1;
 
   return result;
