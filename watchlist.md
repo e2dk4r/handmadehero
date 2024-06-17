@@ -424,7 +424,7 @@
 - [x] Handmade Hero Day 127 - Aligning Rendering Memory
       https://www.youtube.com/watch?v=blcNbU70I9o
 
-- [ ] Handmade Hero Day 128 - Push-time Transforms
+- [x] Handmade Hero Day 128 - Push-time Transforms
       https://www.youtube.com/watch?v=8L21Tyh53BQ
 
 - [ ] Handmade Hero Day 129 - Adding Orthographic Projection
