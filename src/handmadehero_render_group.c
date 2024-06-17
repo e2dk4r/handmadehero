@@ -195,7 +195,6 @@ BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct 
 inline void
 Rect(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color)
 {
-  color.a *= renderGroup->alpha;
   PushRectangleEntry(renderGroup, offset, dim, color);
 }
 
