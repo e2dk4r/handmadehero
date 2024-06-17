@@ -629,7 +629,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
   groundBuffer->position = *chunkPosition;
 
-#if 0
+#if 1
   for (i32 chunkOffsetY = -1; chunkOffsetY <= 1; chunkOffsetY++) {
     for (i32 chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
       u32 chunkX = chunkPosition->chunkX + (u32)chunkOffsetX;
@@ -1093,7 +1093,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     struct v2 groundDim = world->chunkDimInMeters.xy;
     Bitmap(renderGroup, bitmap, positionRelativeToCamera, groundDim.y);
-#if 0
+#if 1
     RectOutline(renderGroup, positionRelativeToCamera, groundDim, COLOR_GRAY_500);
 #endif
   }
