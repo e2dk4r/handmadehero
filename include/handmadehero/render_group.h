@@ -73,7 +73,7 @@ struct render_group_entry_bitmap {
   struct bitmap *bitmap;
   struct v2 position;
   struct v2 size;
-  f32 alpha;
+  struct v4 color;
 };
 
 struct render_group_entry_rectangle {
@@ -150,7 +150,7 @@ void
 Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height);
 
 void
-BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height, f32 alpha);
+BitmapWithColor(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height, struct v4 color);
 
 void
 Rect(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);

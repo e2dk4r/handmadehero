@@ -148,7 +148,7 @@ PushClearEntry(struct render_group *renderGroup, struct v4 color)
 }
 
 internal inline void
-PushBitmapEntry(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height, f32 alpha)
+PushBitmapEntry(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height, struct v4 color)
 {
   struct v2 size = v2(height * bitmap->widthOverHeight, height);
   struct v2 alignPixel = v2_hadamard(bitmap->alignPercentage, size);
@@ -163,7 +163,7 @@ PushBitmapEntry(struct render_group *renderGroup, struct bitmap *bitmap, struct 
   entry->bitmap = bitmap;
   entry->size = v2_mul(size, basis.scale);
   entry->position = basis.p;
-  entry->alpha = alpha;
+  entry->color = color;
 }
 
 internal inline void
@@ -214,13 +214,14 @@ Clear(struct render_group *renderGroup, struct v4 color)
 inline void
 Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, height, renderGroup->alpha * 1.0f);
+  PushBitmapEntry(renderGroup, bitmap, offset, height, v4(1.0f, 1.0f, 1.0f, renderGroup->alpha * 1.0f));
 }
 
 inline void
-BitmapWithAlpha(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height, f32 alpha)
+BitmapWithColor(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height, struct v4 color)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, height, renderGroup->alpha * alpha);
+  color.a *= renderGroup->alpha;
+  PushBitmapEntry(renderGroup, bitmap, offset, height, color);
 }
 
 inline void
@@ -1094,8 +1095,8 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, s
 #if 0
       DrawBitmap(outputTarget, entry->bitmap, basis.p, entry->alpha);
 #else
-      DrawRectangleQuickly(outputTarget, entry->position, v2(entry->size.x, 0), v2(0, entry->size.y),
-                           v4(1.0f, 1.0f, 1.0f, entry->alpha), entry->bitmap, pixelsToMeters, clipRect, even);
+      DrawRectangleQuickly(outputTarget, entry->position, v2(entry->size.x, 0), v2(0, entry->size.y), entry->color,
+                           entry->bitmap, pixelsToMeters, clipRect, even);
 #endif
     }
 

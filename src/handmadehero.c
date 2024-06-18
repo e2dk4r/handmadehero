@@ -1282,7 +1282,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       f32 heroHeightC = 2.5f;
       f32 heroHeight = heroHeightC * 1.2f;
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), heroHeightC * 1.0f, shadowAlpha);
+      BitmapWithColor(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), heroHeightC * 1.0f,
+                      v4(1.0f, 1.0f, 1.0f, shadowAlpha));
       Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), heroHeight);
       Bitmap(renderGroup, &bitmap->cape, v3(0.0f, 0.0f, 0.0f), heroHeight);
       Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.0f), heroHeight);
@@ -1294,7 +1295,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 bobSin = Sin(2.0f * entity->tBob);
       f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 2.5f, shadowAlpha);
+      BitmapWithColor(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 2.5f,
+                      v4(1.0f, 1.0f, 1.0f, shadowAlpha));
       Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.25f * bobSin), 2.5f);
     }
 
@@ -1303,12 +1305,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 alpha = 1.0f;
 
       HitPoints(renderGroup, entity);
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 4.5f, alpha);
+      BitmapWithColor(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 4.5f, v4(1.0f, 1.0f, 1.0f, alpha));
       Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), 4.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
-      BitmapWithAlpha(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 0.5f, 1.0f);
+      BitmapWithColor(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 0.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
       Bitmap(renderGroup, &state->textureSword, v3(0.0f, 0.0f, 0.0f), 0.5f);
     }
 
