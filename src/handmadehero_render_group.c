@@ -4,7 +4,7 @@
 #include <x86intrin.h>
 
 struct render_group *
-RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, u32 resolutionPixelsX, u32 resolutionPixelsY)
+RenderGroup(struct memory_arena *arena, u64 pushBufferTotal)
 {
   struct render_group *renderGroup = MemoryArenaPush(arena, sizeof(*renderGroup));
 
@@ -14,21 +14,43 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, u32 resolutionPixel
 
   renderGroup->alpha = 1.0f;
 
-  f32 widthOfMonitor = 0.635f; // 25" in meters
-  f32 metersToPixels = (f32)resolutionPixelsX * widthOfMonitor;
-  f32 pixelsToMeters = 1.0f / metersToPixels;
-  renderGroup->monitorHalfDimInMeters =
-      v2((f32)resolutionPixelsX * pixelsToMeters * 0.5f, (f32)resolutionPixelsY * pixelsToMeters * 0.5f);
-
   // Default transform
-  renderGroup->transform.focalLength = 0.6f;
-  renderGroup->transform.distanceAboveTarget = 9.0f;
-  renderGroup->transform.metersToPixels = metersToPixels;
   renderGroup->transform.offsetP = v3(0.0f, 0.0f, 0.0f);
   renderGroup->transform.scale = 1.0f;
-  renderGroup->transform.screenCenter = v2((f32)resolutionPixelsX * 0.5f, (f32)resolutionPixelsY * 0.5f);
 
   return renderGroup;
+}
+
+void
+RenderGroupPerspective(struct render_group *renderGroup, u32 pixelWidth, u32 pixelHeight)
+{
+  f32 widthOfMonitor = 0.635f; // 25" in meters
+  f32 metersToPixels = (f32)pixelWidth * widthOfMonitor;
+  f32 pixelsToMeters = 1.0f / metersToPixels;
+  renderGroup->monitorHalfDimInMeters =
+      v2((f32)pixelWidth * pixelsToMeters * 0.5f, (f32)pixelHeight * pixelsToMeters * 0.5f);
+
+  struct render_transform *transform = &renderGroup->transform;
+  transform->focalLength = 0.6f;
+  transform->distanceAboveTarget = 9.0f;
+  transform->metersToPixels = metersToPixels;
+  transform->screenCenter = v2((f32)pixelWidth * 0.5f, (f32)pixelHeight * 0.5f);
+  transform->isOrthographic = 0;
+}
+
+void
+RenderGroupOrthographic(struct render_group *renderGroup, u32 pixelWidth, u32 pixelHeight, f32 metersToPixels)
+{
+  f32 pixelsToMeters = 1.0f / metersToPixels;
+  renderGroup->monitorHalfDimInMeters =
+      v2((f32)pixelWidth * pixelsToMeters * 0.5f, (f32)pixelHeight * pixelsToMeters * 0.5f);
+
+  struct render_transform *transform = &renderGroup->transform;
+  transform->focalLength = 1.0f;
+  transform->distanceAboveTarget = 1.0f;
+  transform->metersToPixels = metersToPixels;
+  transform->screenCenter = v2((f32)pixelWidth * 0.5f, (f32)pixelHeight * 0.5f);
+  transform->isOrthographic = 1;
 }
 
 internal inline struct v2
@@ -68,27 +90,33 @@ GetRenderEntityBasisP(struct render_transform *transform, struct v3 originalPosi
 
   struct v3 position = v3_add(v2_to_v3(originalPosition.xy, 0.0f), transform->offsetP);
 
-  f32 offsetZ = 0.0f;
+  if (transform->isOrthographic) {
+    result.p = v2_add(transform->screenCenter, v2_mul(position.xy, transform->metersToPixels));
+    result.scale = transform->metersToPixels;
+    result.valid = 1;
+  } else {
+    f32 offsetZ = 0.0f;
 
-  f32 distanceAboveTarget = transform->distanceAboveTarget;
+    f32 distanceAboveTarget = transform->distanceAboveTarget;
 #if 0
   // TODO(e2dk4r): how do we want to control the debug camera?
   distanceAboveTarget += 30.0f;
 #endif
 
-  f32 distanceToPZ = distanceAboveTarget - position.z;
-  f32 nearClipPlane = 0.2f;
+    f32 distanceToPZ = distanceAboveTarget - position.z;
+    f32 nearClipPlane = 0.2f;
 
-  struct v3 rawXY = v2_to_v3(position.xy, 1.0f);
+    struct v3 rawXY = v2_to_v3(position.xy, 1.0f);
 
-  if (distanceToPZ <= nearClipPlane)
-    return result;
+    if (distanceToPZ <= nearClipPlane)
+      return result;
 
-  struct v3 projectedXY = v3_mul(v3_mul(rawXY, transform->focalLength), 1.0f / distanceToPZ);
-  result.scale = projectedXY.z * transform->metersToPixels;
-  result.p = v2_add(v2_add(transform->screenCenter, v2_mul(projectedXY.xy, transform->metersToPixels)),
-                    v2(0.0f, offsetZ * result.scale));
-  result.valid = 1;
+    struct v3 projectedXY = v3_mul(v3_mul(rawXY, transform->focalLength), 1.0f / distanceToPZ);
+    result.scale = projectedXY.z * transform->metersToPixels;
+    result.p = v2_add(v2_add(transform->screenCenter, v2_mul(projectedXY.xy, transform->metersToPixels)),
+                      v2(0.0f, offsetZ * result.scale));
+    result.valid = 1;
+  }
 
   return result;
 }

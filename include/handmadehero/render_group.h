@@ -96,6 +96,8 @@ struct render_group_entry_coordinate_system {
 };
 
 struct render_transform {
+  b32 isOrthographic : 1;
+
   // How much far person sitting across from monitor in meters
   f32 focalLength;
   f32 distanceAboveTarget;
@@ -125,8 +127,15 @@ sRGB255toLinear1(struct v4 color);
 struct v4
 Linear1tosRGB255(struct v4 color);
 
+// You need to set Perspective or Orthographic
 struct render_group *
-RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, u32 resolutionPixelsX, u32 resolutionPixelsY);
+RenderGroup(struct memory_arena *arena, u64 pushBufferTotal);
+
+void
+RenderGroupPerspective(struct render_group *renderGroup, u32 pixelWidth, u32 pixelHeight);
+
+void
+RenderGroupOrthographic(struct render_group *renderGroup, u32 pixelWidth, u32 pixelHeight, f32 metersToPixels);
 
 struct rect2
 GetCameraRectangleAtDistance(struct render_group *renderGroup, f32 distanceFromCamera);

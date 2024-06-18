@@ -613,23 +613,21 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
                 struct world_position *chunkPosition)
 {
   struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
+  groundBuffer->position = *chunkPosition;
+
   struct bitmap *buffer = &groundBuffer->bitmap;
-  // TODO(e2dk4r): Pushbuffer size?
-  // TODO(e2dk4r): Need to be able to set an orthographic display mode
-  struct render_group *renderGroup =
-      RenderGroup(&transientState->transientArena, 1 * MEGABYTES, buffer->width, buffer->height);
-  Clear(renderGroup, COLOR_FUCHSIA_900);
 
   f32 width = state->world->chunkDimInMeters.x;
   f32 height = state->world->chunkDimInMeters.y;
+  assert(width == height && "warping not allowed");
   struct v2 halfDim = v2_mul(state->world->chunkDimInMeters.xy, 0.5f);
 
-  // TODO(e2dk4r): Once we switch orthographic STOP doing this
-  v2_mul_ref(&halfDim, 2.0f);
+  // TODO(e2dk4r): Pushbuffer size?
+  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 1 * MEGABYTES);
+  RenderGroupOrthographic(renderGroup, buffer->width, buffer->height, (f32)buffer->width / width);
 
-  groundBuffer->position = *chunkPosition;
+  Clear(renderGroup, COLOR_FUCHSIA_900);
 
-#if 1
   for (i32 chunkOffsetY = -1; chunkOffsetY <= 1; chunkOffsetY++) {
     for (i32 chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
       u32 chunkX = chunkPosition->chunkX + (u32)chunkOffsetX;
@@ -639,7 +637,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       u32 seed = 139 * chunkX + 593 * chunkY + 329 * chunkZ;
       struct random_series series = RandomSeed(seed);
 
-      struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * width);
+      struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * height);
 
       for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
         struct bitmap *stamp = 0;
@@ -651,7 +649,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
         struct v2 position = center;
         v2_add_ref(&position, v2_hadamard(halfDim, v2(RandomUnit(&series), RandomUnit(&series))));
 
-        Bitmap(renderGroup, stamp, v2_to_v3(position, 0.0f), 4.0f);
+        Bitmap(renderGroup, stamp, v2_to_v3(position, 0.0f), 2.0f);
       }
     }
   }
@@ -665,7 +663,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       u32 seed = 139 * chunkX + 593 * chunkY + 329 * chunkZ;
       struct random_series series = RandomSeed(seed);
 
-      struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * width);
+      struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * height);
 
       for (u32 tuftIndex = 0; tuftIndex < 30; tuftIndex++) {
         struct bitmap *tuft = state->textureTuft + RandomChoice(&series, ARRAY_COUNT(state->textureTuft));
@@ -674,11 +672,10 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
         struct v2 position = center;
         v2_add_ref(&position, v2_hadamard(halfDim, v2(RandomUnit(&series), RandomUnit(&series))));
 
-        Bitmap(renderGroup, tuft, v2_to_v3(position, 0.0f), 0.4f);
+        Bitmap(renderGroup, tuft, v2_to_v3(position, 0.0f), 0.1f);
       }
     }
   }
-#endif
 
   TiledDrawRenderGroup(transientState->renderQueue, renderGroup, buffer);
   EndTemporaryMemory(&renderMemory);
@@ -1063,8 +1060,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   };
 
   struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
-  struct render_group *renderGroup =
-      RenderGroup(&transientState->transientArena, 4 * MEGABYTES, drawBuffer.width, drawBuffer.height);
+  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 4 * MEGABYTES);
+  RenderGroupPerspective(renderGroup, drawBuffer.width, drawBuffer.height);
 
 /* drawing background */
 #if 0
@@ -1093,7 +1090,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     struct v2 groundDim = world->chunkDimInMeters.xy;
     Bitmap(renderGroup, bitmap, positionRelativeToCamera, groundDim.y);
-#if 1
+#if 0
     RectOutline(renderGroup, positionRelativeToCamera, groundDim, COLOR_GRAY_500);
 #endif
   }
