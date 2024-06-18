@@ -1095,8 +1095,10 @@ DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, s
 #if 0
       DrawBitmap(outputTarget, entry->bitmap, basis.p, entry->alpha);
 #else
-      DrawRectangleQuickly(outputTarget, entry->position, v2(entry->size.x, 0), v2(0, entry->size.y), entry->color,
-                           entry->bitmap, pixelsToMeters, clipRect, even);
+      struct v2 xAxis = v2(1.0f, 0.0f);
+      struct v2 yAxis = v2_perp(xAxis);
+      DrawRectangleQuickly(outputTarget, entry->position, v2_mul(xAxis, entry->size.x), v2_mul(yAxis, entry->size.y),
+                           entry->color, entry->bitmap, pixelsToMeters, clipRect, even);
 #endif
     }
 
