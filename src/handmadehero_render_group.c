@@ -763,8 +763,8 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       v = mmClamp01(v);
 
       __m128i writeMask = (u >= 0.0f) & (u < 1.0f) & (v >= 0.0f) & (v < 1.0f);
-      if (!_mm_movemask_epi8(writeMask))
-        continue;
+      // if (!_mm_movemask_epi8(writeMask))
+      //   continue;
       writeMask &= clipMask;
 
       // TODO(e2dk4r): Formalize texture boundaries!
