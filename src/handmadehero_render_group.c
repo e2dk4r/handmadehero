@@ -698,7 +698,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
 
   if (fillRect.maxX & 3) {
     endClipMask = endClipMasks[fillRect.maxX & 3];
-    fillRect.maxX = fillRect.maxX & ~3;
+    fillRect.maxX = (fillRect.maxX & ~3) + 4;
   }
 
   u8 *row = buffer->memory + fillRect.minY * buffer->stride + fillRect.minX * BITMAP_BYTES_PER_PIXEL;
