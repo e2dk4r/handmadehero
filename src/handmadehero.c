@@ -637,6 +637,10 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       u32 seed = 139 * chunkX + 593 * chunkY + 329 * chunkZ;
       struct random_series series = RandomSeed(seed);
 
+      struct v4 color = COLOR_RED_500;
+      if (chunkX % 2 == chunkY % 2)
+        color = COLOR_BLUE_500;
+
       struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * height);
 
       for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
@@ -649,7 +653,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
         struct v2 position = center;
         v2_add_ref(&position, v2_hadamard(halfDim, v2(RandomUnit(&series), RandomUnit(&series))));
 
-        Bitmap(renderGroup, stamp, v2_to_v3(position, 0.0f), 2.0f);
+        BitmapWithColor(renderGroup, stamp, v2_to_v3(position, 0.0f), 2.0f, color);
       }
     }
   }
