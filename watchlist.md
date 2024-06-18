@@ -427,7 +427,7 @@
 - [x] Handmade Hero Day 128 - Push-time Transforms
       https://www.youtube.com/watch?v=8L21Tyh53BQ
 
-- [ ] Handmade Hero Day 129 - Adding Orthographic Projection
+- [x] Handmade Hero Day 129 - Adding Orthographic Projection
       https://www.youtube.com/watch?v=8DX-DPsXvy4
 
 - [ ] Handmade Hero Day 130 - Seamless Bilinear Tiling
