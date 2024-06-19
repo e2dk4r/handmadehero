@@ -1026,20 +1026,13 @@ libevdev_is_joystick(struct libevdev *evdev)
 #define ALIGNED_TO_CACHE_LINE __attribute__((aligned(64)))
 
 struct linux_work_queue {
-  sem_t *semaphore;
+  sem_t semaphore;
   u32 completeGoal;
   ALIGNED_TO_CACHE_LINE volatile u32 completeCount;
   ALIGNED_TO_CACHE_LINE volatile u32 writeIndex;
   ALIGNED_TO_CACHE_LINE volatile u32 readIndex;
   struct platform_work_queue_entry entries[256];
 };
-
-struct linux_thread_info {
-  u32 logicalThreadIndex;
-  struct linux_work_queue *queue;
-};
-
-typedef void (*pfnLinuxWorkQueueCallback)(struct linux_work_queue *queue, void *data);
 
 #define COMPILER_PROGRAM_ORDER __asm__ volatile("" ::: "memory")
 
@@ -1066,7 +1059,7 @@ LinuxWorkQueueDoNextQueueEntry(struct linux_work_queue *queue)
 }
 
 internal inline void
-LinuxWorkQueueAddEntry(struct linux_work_queue *queue, pfnLinuxWorkQueueCallback callback, void *data)
+LinuxWorkQueueAddEntry(struct linux_work_queue *queue, pfnPlatformWorkQueueCallback callback, void *data)
 {
   // TODO(e2dk4r): switch to __atomic_compare_exchange_n eventually so that any thread can add
   COMPILER_PROGRAM_ORDER;
@@ -1085,7 +1078,7 @@ LinuxWorkQueueAddEntry(struct linux_work_queue *queue, pfnLinuxWorkQueueCallback
 
   queue->completeGoal++;
   __atomic_store_n(&queue->writeIndex, nextEntryToWrite, __ATOMIC_RELEASE);
-  sem_post(queue->semaphore);
+  sem_post(&queue->semaphore);
 }
 
 internal inline void
@@ -1102,12 +1095,34 @@ LinuxWorkQueueCompleteAllWork(struct linux_work_queue *queue)
 internal void *
 thread_start(void *arg)
 {
-  struct linux_thread_info *threadInfo = arg;
+  struct linux_work_queue *queue = arg;
 
   while (1) {
-    if (LinuxWorkQueueDoNextQueueEntry(threadInfo->queue) == 0) {
-      sem_wait(threadInfo->queue->semaphore);
+    if (LinuxWorkQueueDoNextQueueEntry(queue) == 0) {
+      sem_wait(&queue->semaphore);
     }
+  }
+
+  return 0;
+}
+
+internal i32
+LinuxWorkQueueInit(struct linux_work_queue *queue, u32 threadCount)
+{
+  queue->completeGoal = 0;
+  queue->completeCount = 0;
+
+  queue->writeIndex = 0;
+  queue->readIndex = 0;
+
+  if (sem_init(&queue->semaphore, 0, 0))
+    return 1;
+
+  for (u32 threadIndex = 0; threadIndex < threadCount; threadIndex++) {
+    pthread_t threadId;
+    if (pthread_create(&threadId, 0, thread_start, queue))
+      return 2;
+    pthread_detach(threadId);
   }
 
   return 0;
@@ -1116,25 +1131,9 @@ thread_start(void *arg)
 int
 main(int argc, char *argv[])
 {
-  struct linux_thread_info threadInfos[7] = {};
-  struct linux_work_queue queue = {};
-  sem_t semaphore;
-  sem_init(&semaphore, 0, 0);
-
-  queue.semaphore = &semaphore;
-
-  debugf("main thread #%u\n", pthread_self());
-  for (u32 threadIndex = 0; threadIndex < ARRAY_COUNT(threadInfos); threadIndex++) {
-    struct linux_thread_info *threadInfo = threadInfos + threadIndex;
-    threadInfo->logicalThreadIndex = threadIndex;
-    threadInfo->queue = &queue;
-
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_t threadId;
-    pthread_create(&threadId, &attr, thread_start, threadInfo);
-    pthread_detach(threadId);
-  }
+  struct linux_work_queue highPriorityQueue;
+  if (LinuxWorkQueueInit(&highPriorityQueue, 7))
+    return HANDMADEHERO_ERROR_THREAD_INIT;
 
   int error_code = 0;
   struct linux_state state = {
@@ -1215,7 +1214,7 @@ main(int argc, char *argv[])
   game_memory->PlatformWriteEntireFile = PlatformWriteEntireFile;
   game_memory->PlatformFreeMemory = PlatformFreeMemory;
 #endif
-  game_memory->highPriorityQueue = (struct platform_work_queue *)&queue;
+  game_memory->highPriorityQueue = (struct platform_work_queue *)&highPriorityQueue;
   game_memory->PlatformWorkQueueAddEntry = (pfnPlatformWorkQueueAddEntry)LinuxWorkQueueAddEntry;
   game_memory->PlatformWorkQueueCompleteAllWork = (pfnPlatformWorkQueueCompleteAllWork)LinuxWorkQueueCompleteAllWork;
 
