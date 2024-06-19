@@ -655,6 +655,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   struct v2 NyAxis = v2_mul(yAxis, xAxisLength / yAxisLength);
   f32 NzScale = 0.5f * (xAxisLength + yAxisLength);
 
+  __m128 half = _mm_set1_ps(0.5f);
   // TODO(e2dk4r): IMPORTANT: REMOVE THIS ONCE WE HAVE REAL ROW LOADING
   // i32 widthMax = (i32)buffer->width - 3;
   // i32 heightMax = (i32)buffer->height - 3;
@@ -767,9 +768,11 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       //   continue;
       writeMask &= clipMask;
 
-      // TODO(e2dk4r): Formalize texture boundaries!
-      __m128 tX = u * (f32)(texture->width - 2);
-      __m128 tY = v * (f32)(texture->height - 2);
+      // Bias texture coordinates to start on the boundry
+      // between the 0,0 and 1,1 pixels.
+      __m128 bias = half;
+      __m128 tX = (u * (f32)(texture->width - 2)) + bias;
+      __m128 tY = (v * (f32)(texture->height - 2)) + bias;
 
       __m128i texelX = _mm_cvttps_epi32(tX);
       __m128i texelY = _mm_cvttps_epi32(tY);

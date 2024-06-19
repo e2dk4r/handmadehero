@@ -624,7 +624,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
   // TODO(e2dk4r): Pushbuffer size?
   struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 1 * MEGABYTES);
-  RenderGroupOrthographic(renderGroup, buffer->width, buffer->height, (f32)buffer->width / width);
+  RenderGroupOrthographic(renderGroup, buffer->width, buffer->height, (f32)(buffer->width - 2) / width);
 
   Clear(renderGroup, COLOR_FUCHSIA_900);
 
