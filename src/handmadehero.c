@@ -362,6 +362,7 @@ FamiliarAdd(struct game_state *state, u32 absTileX, u32 absTileY, u32 absTileZ)
   struct stored_entity *stored = addResult.stored;
   struct entity *entity = &stored->sim;
 
+  EntityAddFlag(entity, ENTITY_FLAG_COLLIDE);
   entity->flags = 0;
 
   return addResult.index;
