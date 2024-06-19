@@ -143,6 +143,7 @@ struct game_memory {
   void *transientStorage;
 
   struct platform_work_queue *highPriorityQueue;
+  struct platform_work_queue *lowPriorityQueue;
 
   pfnPlatformWorkQueueAddEntry PlatformWorkQueueAddEntry;
   pfnPlatformWorkQueueCompleteAllWork PlatformWorkQueueCompleteAllWork;

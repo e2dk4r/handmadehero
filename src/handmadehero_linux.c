@@ -1132,7 +1132,11 @@ int
 main(int argc, char *argv[])
 {
   struct linux_work_queue highPriorityQueue;
-  if (LinuxWorkQueueInit(&highPriorityQueue, 7))
+  if (LinuxWorkQueueInit(&highPriorityQueue, 6))
+    return HANDMADEHERO_ERROR_THREAD_INIT;
+
+  struct linux_work_queue lowPriorityQueue;
+  if (LinuxWorkQueueInit(&lowPriorityQueue, 2))
     return HANDMADEHERO_ERROR_THREAD_INIT;
 
   int error_code = 0;
@@ -1215,6 +1219,7 @@ main(int argc, char *argv[])
   game_memory->PlatformFreeMemory = PlatformFreeMemory;
 #endif
   game_memory->highPriorityQueue = (struct platform_work_queue *)&highPriorityQueue;
+  game_memory->lowPriorityQueue = (struct platform_work_queue *)&lowPriorityQueue;
   game_memory->PlatformWorkQueueAddEntry = (pfnPlatformWorkQueueAddEntry)LinuxWorkQueueAddEntry;
   game_memory->PlatformWorkQueueCompleteAllWork = (pfnPlatformWorkQueueCompleteAllWork)LinuxWorkQueueCompleteAllWork;
 
