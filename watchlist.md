@@ -430,7 +430,7 @@
 - [x] Handmade Hero Day 129 - Adding Orthographic Projection
       https://www.youtube.com/watch?v=8DX-DPsXvy4
 
-- [ ] Handmade Hero Day 130 - Seamless Bilinear Tiling
+- [x] Handmade Hero Day 130 - Seamless Bilinear Tiling
       https://www.youtube.com/watch?v=odlnqAsclFo
 
 - [ ] Handmade Hero Day 131 - Asynchronous Ground Chunk Composition
