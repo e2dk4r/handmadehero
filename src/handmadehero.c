@@ -686,7 +686,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
     }
   }
 
-  TiledDrawRenderGroup(transientState->renderQueue, renderGroup, buffer);
+  TiledDrawRenderGroup(transientState->highPriorityQueue, renderGroup, buffer);
   EndTemporaryMemory(&renderMemory);
 }
 
@@ -943,7 +943,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     memory_arena_size_t size = memory->transientStorageSize - sizeof(*transientState);
     MemoryArenaInit(&transientState->transientArena, data, size);
 
-    transientState->renderQueue = memory->highPriorityQueue;
+    transientState->highPriorityQueue = memory->highPriorityQueue;
+    transientState->lowPriorityQueue = memory->lowPriorityQueue;
 
     /* cache composited ground drawing */
     // TODO(e2dk4r): pick a real value here
@@ -1430,7 +1431,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 #endif
 
-  TiledDrawRenderGroup(transientState->renderQueue, renderGroup, &drawBuffer);
+  TiledDrawRenderGroup(transientState->highPriorityQueue, renderGroup, &drawBuffer);
 
   EndSimRegion(simRegion, state);
   EndTemporaryMemory(&simRegionMemory);
