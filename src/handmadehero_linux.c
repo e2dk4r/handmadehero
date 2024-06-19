@@ -1099,13 +1099,6 @@ LinuxWorkQueueCompleteAllWork(struct linux_work_queue *queue)
   queue->completeCount = 0;
 }
 
-internal void
-LinuxStringCallback(struct linux_work_queue *queue, void *data)
-{
-  assert(data);
-  debugf("thread #%u: %s\n", pthread_self(), data);
-}
-
 internal void *
 thread_start(void *arg)
 {
@@ -1142,30 +1135,6 @@ main(int argc, char *argv[])
     pthread_create(&threadId, &attr, thread_start, threadInfo);
     pthread_detach(threadId);
   }
-
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a0");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a1");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a2");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a3");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a4");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a5");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a6");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a7");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a8");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "work a9");
-
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C0");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C1");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C2");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C3");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C4");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C5");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C6");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C7");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C8");
-  LinuxWorkQueueAddEntry(&queue, LinuxStringCallback, "second work C9");
-
-  LinuxWorkQueueCompleteAllWork(&queue);
 
   int error_code = 0;
   struct linux_state state = {
