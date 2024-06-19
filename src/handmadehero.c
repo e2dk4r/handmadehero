@@ -637,9 +637,13 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       u32 seed = 139 * chunkX + 593 * chunkY + 329 * chunkZ;
       struct random_series series = RandomSeed(seed);
 
+#if 0
       struct v4 color = COLOR_RED_500;
       if (chunkX % 2 == chunkY % 2)
         color = COLOR_BLUE_500;
+#else
+      struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
+#endif
 
       struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * height);
 
