@@ -944,7 +944,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     MemoryArenaInit(&transientState->transientArena, data, size);
 
     transientState->highPriorityQueue = memory->highPriorityQueue;
-    transientState->lowPriorityQueue = memory->lowPriorityQueue;
+    // transientState->lowPriorityQueue = memory->lowPriorityQueue;
 
     /* cache composited ground drawing */
     // TODO(e2dk4r): pick a real value here

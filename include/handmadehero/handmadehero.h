@@ -97,7 +97,7 @@ struct transient_state {
   struct ground_buffer *groundBuffers;
 
   struct platform_work_queue *highPriorityQueue;
-  struct platform_work_queue *lowPriorityQueue;
+  // struct platform_work_queue *lowPriorityQueue;
 
   u32 envMapWidth;
   u32 envMapHeight;
