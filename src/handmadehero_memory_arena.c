@@ -1,4 +1,5 @@
 #include <handmadehero/assert.h>
+#include <handmadehero/math.h>
 #include <handmadehero/memory_arena.h>
 
 inline void
@@ -12,9 +13,20 @@ MemoryArenaInit(struct memory_arena *mem, void *data, memory_arena_size_t size)
 inline void *
 MemoryArenaPush(struct memory_arena *mem, memory_arena_size_t size)
 {
-  assert(mem->used + size <= mem->size && "arena capacity exceeded");
+  return MemoryArenaPushAlignment(mem, size, 4);
+}
 
-  void *data = mem->data + mem->used;
+inline void *
+MemoryArenaPushAlignment(struct memory_arena *mem, memory_arena_size_t size, memory_arena_size_t alignment)
+{
+  assert(1 << FindLeastSignificantBitSet((i32)alignment) == alignment && "alignment must be power of 2");
+  memory_arena_size_t dataPointer = (memory_arena_size_t)mem->data + mem->used;
+  memory_arena_size_t alignmentMask = alignment - 1;
+  memory_arena_size_t alignmentOffset = dataPointer & alignmentMask;
+  size += alignmentOffset;
+
+  assert(mem->used + size <= mem->size && "arena capacity exceeded");
+  void *data = (void *)(dataPointer + alignmentOffset);
   mem->used += size;
 
   return data;

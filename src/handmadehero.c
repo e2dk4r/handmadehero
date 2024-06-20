@@ -442,7 +442,7 @@ MakeEmptyBitmap(struct memory_arena *arena, u32 width, u32 height)
       .width = width,
       .height = height,
       .stride = (i32)width * BITMAP_BYTES_PER_PIXEL,
-      .memory = MemoryArenaPush(arena, totalBitmapSize),
+      .memory = MemoryArenaPushAlignment(arena, totalBitmapSize, 16),
       .alignPercentage = v2(0.5f, 0.5f),
       .widthOverHeight = (f32)width / (f32)height,
   };
@@ -944,7 +944,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     MemoryArenaInit(&transientState->transientArena, data, size);
 
     transientState->highPriorityQueue = memory->highPriorityQueue;
-    // transientState->lowPriorityQueue = memory->lowPriorityQueue;
+    transientState->lowPriorityQueue = memory->lowPriorityQueue;
 
     /* cache composited ground drawing */
     // TODO(e2dk4r): pick a real value here

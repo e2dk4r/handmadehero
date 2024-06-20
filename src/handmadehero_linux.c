@@ -1322,7 +1322,7 @@ main(int argc, char *argv[])
     goto wl_exit;
   }
 
-  state.backbuffer.memory = MemoryArenaPush(&state.wayland_arena, (size_t)backbuffer_size);
+  state.backbuffer.memory = MemoryArenaPushAlignment(&state.wayland_arena, (size_t)backbuffer_size, 16);
   state.backbuffer.memory =
       mmap(state.backbuffer.memory, (size_t)backbuffer_size, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
   if (state.backbuffer.memory == MAP_FAILED) {
