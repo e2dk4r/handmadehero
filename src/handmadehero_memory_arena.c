@@ -19,7 +19,8 @@ MemoryArenaPush(struct memory_arena *mem, memory_arena_size_t size)
 inline void *
 MemoryArenaPushAlignment(struct memory_arena *mem, memory_arena_size_t size, memory_arena_size_t alignment)
 {
-  assert(1 << FindLeastSignificantBitSet((i32)alignment) == alignment && "alignment must be power of 2");
+  assert((memory_arena_size_t)(1 << FindLeastSignificantBitSet((i32)alignment)) == alignment &&
+         "alignment must be power of 2");
   memory_arena_size_t dataPointer = (memory_arena_size_t)mem->data + mem->used;
   memory_arena_size_t alignmentMask = alignment - 1;
   memory_arena_size_t alignmentOffset = dataPointer & alignmentMask;
