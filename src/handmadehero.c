@@ -609,11 +609,54 @@ IsGroundBufferEmpty(struct ground_buffer *groundBuffer)
   return !WorldPositionIsValid(&groundBuffer->position);
 }
 
+internal struct task_with_memory *
+BeginTaskWithMemory(struct transient_state *transientState)
+{
+  struct task_with_memory *foundTask = 0;
+  for (u32 taskIndex = 0; taskIndex < ARRAY_COUNT(transientState->tasks); taskIndex++) {
+    struct task_with_memory *task = transientState->tasks + taskIndex;
+
+    if (!task->isUsed) {
+      foundTask = task;
+      foundTask->memoryFlush = BeginTemporaryMemory(&foundTask->arena);
+      foundTask->isUsed = 1;
+      break;
+    }
+  }
+
+  return foundTask;
+}
+
+internal void
+EndTaskWithMemory(struct task_with_memory *task)
+{
+  EndTemporaryMemory(&task->memoryFlush);
+  task->isUsed = 0;
+}
+
+struct fill_ground_chunk_work {
+  struct task_with_memory *task;
+  struct render_group *renderGroup;
+  struct bitmap *buffer;
+};
+
+internal void
+DoFillGroundChunkWork(struct platform_work_queue *queue, void *data)
+{
+  struct fill_ground_chunk_work *work = data;
+  DrawRenderGroup(work->renderGroup, work->buffer);
+  EndTaskWithMemory(work->task);
+}
+
 internal void
 FillGroundChunk(struct transient_state *transientState, struct game_state *state, struct ground_buffer *groundBuffer,
                 struct world_position *chunkPosition)
 {
-  struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
+  struct task_with_memory *task = BeginTaskWithMemory(transientState);
+  if (!task)
+    return;
+  struct fill_ground_chunk_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
+
   groundBuffer->position = *chunkPosition;
 
   struct bitmap *buffer = &groundBuffer->bitmap;
@@ -624,7 +667,8 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
   struct v2 halfDim = v2_mul(state->world->chunkDimInMeters.xy, 0.5f);
 
   // TODO(e2dk4r): Pushbuffer size?
-  struct render_group *renderGroup = RenderGroup(&transientState->transientArena, 1 * MEGABYTES);
+  struct render_group *renderGroup =
+      RenderGroup(&task->arena, MemoryArenaGetRemainingSize(&task->arena) - sizeof(*renderGroup));
   RenderGroupOrthographic(renderGroup, buffer->width, buffer->height, (f32)(buffer->width - 2) / width);
 
   Clear(renderGroup, COLOR_FUCHSIA_900);
@@ -686,8 +730,10 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
     }
   }
 
-  TiledDrawRenderGroup(transientState->highPriorityQueue, renderGroup, buffer);
-  EndTemporaryMemory(&renderMemory);
+  work->task = task;
+  work->renderGroup = renderGroup;
+  work->buffer = &groundBuffer->bitmap;
+  PlatformWorkQueueAddEntry(transientState->lowPriorityQueue, DoFillGroundChunkWork, work);
 }
 
 #if HANDMADEHERO_INTERNAL
@@ -942,6 +988,13 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     void *data = memory->transientStorage + sizeof(*transientState);
     memory_arena_size_t size = memory->transientStorageSize - sizeof(*transientState);
     MemoryArenaInit(&transientState->transientArena, data, size);
+
+    for (u32 taskIndex = 0; taskIndex < ARRAY_COUNT(transientState->tasks); taskIndex++) {
+      struct task_with_memory *task = transientState->tasks + taskIndex;
+
+      task->isUsed = 0;
+      MemorySubArenaInit(&task->arena, &transientState->transientArena, 1 * MEGABYTES);
+    }
 
     transientState->highPriorityQueue = memory->highPriorityQueue;
     transientState->lowPriorityQueue = memory->lowPriorityQueue;

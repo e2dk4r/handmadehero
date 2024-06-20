@@ -35,6 +35,16 @@ void *
 MemoryArenaPush(struct memory_arena *mem, memory_arena_size_t size);
 void *
 MemoryArenaPushAlignment(struct memory_arena *mem, memory_arena_size_t size, memory_arena_size_t alignment);
+memory_arena_size_t
+MemoryArenaGetRemainingSize(struct memory_arena *mem);
+memory_arena_size_t
+MemoryArenaGetRemainingSizeAlignment(struct memory_arena *mem, memory_arena_size_t alignment);
+
+void
+MemorySubArenaInit(struct memory_arena *mem, struct memory_arena *masterArena, memory_arena_size_t size);
+void
+MemorySubArenaInitAlignment(struct memory_arena *mem, struct memory_arena *masterArena, memory_arena_size_t size,
+                            memory_arena_size_t alignment);
 
 void *
 MemoryChunkPush(struct memory_chunk *chunk);

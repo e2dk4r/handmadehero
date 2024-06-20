@@ -61,6 +61,12 @@ FindLeastSignificantBitSet(i32 value)
   return __builtin_ffs(value) - 1;
 }
 
+internal inline b32
+IsPowerOfTwo(i32 value)
+{
+  return (1 << FindLeastSignificantBitSet(value)) == value;
+}
+
 internal inline f32
 Square(f32 value)
 {

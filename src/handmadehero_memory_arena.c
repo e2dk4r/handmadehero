@@ -10,6 +10,16 @@ MemoryArenaInit(struct memory_arena *mem, void *data, memory_arena_size_t size)
   mem->data = data;
 }
 
+internal inline memory_arena_size_t
+GetAlignmentOffset(struct memory_arena *mem, memory_arena_size_t alignment)
+{
+  assert(IsPowerOfTwo((i32)alignment) && "alignment must be power of 2");
+  memory_arena_size_t alignmentMask = alignment - 1;
+  memory_arena_size_t dataPointer = ((memory_arena_size_t)mem->data + mem->used);
+  memory_arena_size_t alignmentOffset = dataPointer & alignmentMask;
+  return alignmentOffset;
+}
+
 inline void *
 MemoryArenaPush(struct memory_arena *mem, memory_arena_size_t size)
 {
@@ -19,18 +29,48 @@ MemoryArenaPush(struct memory_arena *mem, memory_arena_size_t size)
 inline void *
 MemoryArenaPushAlignment(struct memory_arena *mem, memory_arena_size_t size, memory_arena_size_t alignment)
 {
-  assert((memory_arena_size_t)(1 << FindLeastSignificantBitSet((i32)alignment)) == alignment &&
-         "alignment must be power of 2");
-  memory_arena_size_t dataPointer = (memory_arena_size_t)mem->data + mem->used;
-  memory_arena_size_t alignmentMask = alignment - 1;
-  memory_arena_size_t alignmentOffset = dataPointer & alignmentMask;
+  memory_arena_size_t alignmentOffset = GetAlignmentOffset(mem, alignment);
   size += alignmentOffset;
 
   assert(mem->used + size <= mem->size && "arena capacity exceeded");
-  void *data = (void *)(dataPointer + alignmentOffset);
+  void *data = mem->data + mem->used + alignmentOffset;
   mem->used += size;
 
+  assert(((memory_arena_size_t)data & (alignment - 1)) == 0 && "something went very wrong. cannot get memory aligned");
+
   return data;
+}
+
+inline memory_arena_size_t
+MemoryArenaGetRemainingSize(struct memory_arena *mem)
+{
+  return MemoryArenaGetRemainingSizeAlignment(mem, 4);
+}
+
+inline memory_arena_size_t
+MemoryArenaGetRemainingSizeAlignment(struct memory_arena *mem, memory_arena_size_t alignment)
+{
+  memory_arena_size_t remainingSize = mem->size - (mem->used + GetAlignmentOffset(mem, alignment));
+
+  return remainingSize;
+}
+
+inline void
+MemorySubArenaInit(struct memory_arena *sub, struct memory_arena *masterArena, memory_arena_size_t size)
+{
+  MemorySubArenaInitAlignment(sub, masterArena, size, 4);
+}
+
+inline void
+MemorySubArenaInitAlignment(struct memory_arena *sub, struct memory_arena *masterArena, memory_arena_size_t size,
+                            memory_arena_size_t alignment)
+{
+  sub->used = 0;
+  sub->size = size;
+  sub->data = MemoryArenaPushAlignment(masterArena, size, alignment);
+#if HANDMADEHERO_DEBUG
+  sub->tempCount = 0;
+#endif
 }
 
 inline void *

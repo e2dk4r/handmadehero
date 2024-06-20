@@ -3,6 +3,10 @@
 #include <handmadehero/render_group.h>
 #include <x86intrin.h>
 
+internal inline void
+DrawRenderGroupInterleaved(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2i clipRect,
+                           b32 even);
+
 struct render_group *
 RenderGroup(struct memory_arena *arena, u64 pushBufferTotal)
 {
@@ -1006,8 +1010,8 @@ DoTiledRenderWork(struct platform_work_queue *queue, void *data)
 {
   struct tile_render_work *work = data;
 
-  DrawRenderGroup(work->renderGroup, work->outputTarget, work->clipRect, 0);
-  DrawRenderGroup(work->renderGroup, work->outputTarget, work->clipRect, 1);
+  DrawRenderGroupInterleaved(work->renderGroup, work->outputTarget, work->clipRect, 0);
+  DrawRenderGroupInterleaved(work->renderGroup, work->outputTarget, work->clipRect, 1);
 }
 
 inline void
@@ -1069,8 +1073,21 @@ TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_grou
   PlatformWorkQueueCompleteAllWork(renderQueue);
 }
 
-inline void
-DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2i clipRect, b32 even)
+void
+DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
+{
+  struct rect2i clipRect = {
+      .maxX = (i32)outputTarget->width,
+      .maxY = (i32)outputTarget->height,
+  };
+
+  DrawRenderGroupInterleaved(renderGroup, outputTarget, clipRect, 0);
+  DrawRenderGroupInterleaved(renderGroup, outputTarget, clipRect, 1);
+}
+
+internal inline void
+DrawRenderGroupInterleaved(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2i clipRect,
+                           b32 even)
 {
   BEGIN_TIMER_BLOCK(DrawRenderGroup);
 

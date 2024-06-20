@@ -167,7 +167,7 @@ TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_grou
                      struct bitmap *outputTarget);
 
 void
-DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2i clipRect, b32 even);
+DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget);
 
 void
 CoordinateSystem(struct render_group *renderGroup, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,

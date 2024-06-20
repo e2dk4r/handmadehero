@@ -88,10 +88,17 @@ struct game_state {
   struct bitmap testNormal;
 };
 
+struct task_with_memory {
+  b32 isUsed : 1;
+  struct memory_arena arena;
+  struct memory_temp memoryFlush;
+};
+
 struct transient_state {
   u8 initialized : 1;
 
   struct memory_arena transientArena;
+  struct task_with_memory tasks[4];
 
   u32 groundBufferCount;
   struct ground_buffer *groundBuffers;
