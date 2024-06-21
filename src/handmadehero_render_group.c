@@ -735,6 +735,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
     fillRect.maxX = (fillRect.maxX & ~3) + 4;
   }
 
+  assert(((uptr)buffer->memory & 15) == 0 && "memory needs to aligned to 16");
   u8 *row = buffer->memory + fillRect.minY * buffer->stride + fillRect.minX * BITMAP_BYTES_PER_PIXEL;
   i32 rowAdvance = buffer->stride * 2;
 
