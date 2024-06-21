@@ -748,14 +748,31 @@ LoadBmpNew(struct memory_arena *arena, pfnPlatformReadEntireFile PlatformReadEnt
   return newBitmap;
 }
 
-internal void
-LoadAssets(struct memory_arena *arena, struct game_assets *assets, pfnPlatformReadEntireFile PlatformReadEntireFile)
+inline void
+AssetLoad(struct game_assets *assets, enum game_asset_id assetId)
 {
-  assets->textures[GAI_Background] = LoadBmpNew(arena, PlatformReadEntireFile, "test/test_background.bmp", 0, 0);
-  assets->textures[GAI_Shadow] = LoadBmpNew(arena, PlatformReadEntireFile, "test/test_hero_shadow.bmp", 72, 182);
-  assets->textures[GAI_Tree] = LoadBmpNew(arena, PlatformReadEntireFile, "test2/tree00.bmp", 40, 80);
-  assets->textures[GAI_Sword] = LoadBmpNew(arena, PlatformReadEntireFile, "test2/rock03.bmp", 29, 10);
-  assets->textures[GAI_Stairwell] = LoadBmpNew(arena, PlatformReadEntireFile, "test2/rock02.bmp", 0, 0);
+  struct memory_arena *arena = &assets->arena;
+  pfnPlatformReadEntireFile PlatformReadEntireFile = assets->PlatformReadEntireFile;
+
+  switch (assetId) {
+  case GAI_Background: {
+    assets->textures[GAI_Background] = LoadBmpNew(arena, PlatformReadEntireFile, "test/test_background.bmp", 0, 0);
+  }; break;
+  case GAI_Shadow: {
+    assets->textures[GAI_Shadow] = LoadBmpNew(arena, PlatformReadEntireFile, "test/test_hero_shadow.bmp", 72, 182);
+  }; break;
+  case GAI_Tree: {
+    assets->textures[GAI_Tree] = LoadBmpNew(arena, PlatformReadEntireFile, "test2/tree00.bmp", 40, 80);
+  }; break;
+  case GAI_Sword: {
+    assets->textures[GAI_Sword] = LoadBmpNew(arena, PlatformReadEntireFile, "test2/rock03.bmp", 29, 10);
+  }; break;
+  case GAI_Stairwell: {
+    assets->textures[GAI_Stairwell] = LoadBmpNew(arena, PlatformReadEntireFile, "test2/rock02.bmp", 0, 0);
+  }; break;
+  default:
+    break;
+  }
 }
 
 #if HANDMADEHERO_INTERNAL
@@ -1014,50 +1031,43 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     transientState->envMaps[ENV_MAP_MIDDLE].z = 0.0f;
     transientState->envMaps[ENV_MAP_TOP].z = 2.0f;
 
+    struct game_assets *assets = &transientState->assets;
+    MemorySubArenaInit(&assets->arena, &transientState->transientArena, 64 * MEGABYTES);
+    assets->PlatformReadEntireFile = memory->PlatformReadEntireFile;
+
     /* load grass */
-    transientState->assets.textureGrass[0] =
-        LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass00.bmp");
-    transientState->assets.textureGrass[1] =
-        LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass01.bmp");
+    assets->textureGrass[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass00.bmp");
+    assets->textureGrass[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass01.bmp");
 
-    transientState->assets.textureTuft[0] =
-        LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft00.bmp");
-    transientState->assets.textureTuft[1] =
-        LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft01.bmp");
-    transientState->assets.textureTuft[2] =
-        LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft02.bmp");
+    assets->textureTuft[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft00.bmp");
+    assets->textureTuft[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft01.bmp");
+    assets->textureTuft[2] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft02.bmp");
 
-    transientState->assets.textureGround[0] =
-        LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground00.bmp");
-    transientState->assets.textureGround[1] =
-        LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground01.bmp");
-    transientState->assets.textureGround[2] =
-        LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground02.bmp");
-    transientState->assets.textureGround[3] =
-        LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground03.bmp");
+    assets->textureGround[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground00.bmp");
+    assets->textureGround[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground01.bmp");
+    assets->textureGround[2] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground02.bmp");
+    assets->textureGround[3] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground03.bmp");
 
     /* load hero bitmaps */
-    struct bitmap_hero *bitmapHero = &transientState->assets.textureHero[BITMAP_HERO_FRONT];
+    struct bitmap_hero *bitmapHero = &assets->textureHero[BITMAP_HERO_FRONT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_head.bmp", 72, 182);
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_torso.bmp", 72, 182);
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_cape.bmp", 72, 182);
 
-    bitmapHero = &transientState->assets.textureHero[BITMAP_HERO_BACK];
+    bitmapHero = &assets->textureHero[BITMAP_HERO_BACK];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_head.bmp", 72, 182);
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_torso.bmp", 72, 182);
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_cape.bmp", 72, 182);
 
-    bitmapHero = &transientState->assets.textureHero[BITMAP_HERO_LEFT];
+    bitmapHero = &assets->textureHero[BITMAP_HERO_LEFT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_head.bmp", 72, 182);
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_torso.bmp", 72, 182);
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_cape.bmp", 72, 182);
 
-    bitmapHero = &transientState->assets.textureHero[BITMAP_HERO_RIGHT];
+    bitmapHero = &assets->textureHero[BITMAP_HERO_RIGHT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_head.bmp", 72, 182);
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_torso.bmp", 72, 182);
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_cape.bmp", 72, 182);
-
-    LoadAssets(&transientState->transientArena, &transientState->assets, memory->PlatformReadEntireFile);
 
     transientState->initialized = 1;
   }

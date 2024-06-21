@@ -52,6 +52,9 @@ struct bitmap_hero {
 };
 
 struct game_assets {
+  struct memory_arena arena;
+  pfnPlatformReadEntireFile PlatformReadEntireFile;
+
   struct bitmap *textures[GAI_COUNT];
 
   // array'd assets
@@ -68,12 +71,15 @@ struct game_assets {
 };
 
 internal inline struct bitmap *
-TextureGet(struct game_assets *assets, enum game_asset_id id)
+AssetTextureGet(struct game_assets *assets, enum game_asset_id id)
 {
   if (id > GAI_COUNT)
     return 0;
   return *(assets->textures + id);
 }
+
+void
+AssetLoad(struct game_assets *assets, enum game_asset_id assetId);
 
 struct game_state {
   struct memory_arena worldArena;
