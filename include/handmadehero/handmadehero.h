@@ -7,12 +7,6 @@
 #include "sim_region.h"
 #include "world.h"
 
-struct bitmap_hero {
-  struct bitmap head;
-  struct bitmap torso;
-  struct bitmap cape;
-};
-
 struct stored_entity {
   struct world_position position;
   struct entity sim;
@@ -41,6 +35,32 @@ struct ground_buffer {
   struct bitmap bitmap;
 };
 
+struct bitmap_hero {
+  struct bitmap head;
+  struct bitmap torso;
+  struct bitmap cape;
+};
+
+struct game_assets {
+  struct bitmap textureBackground;
+  struct bitmap textureShadow;
+  struct bitmap textureTree;
+  struct bitmap textureSword;
+  struct bitmap textureStairwell;
+
+  // array'd assets
+  struct bitmap textureGrass[2];
+  struct bitmap textureGround[4];
+  struct bitmap textureTuft[3];
+
+  // structures assets
+#define BITMAP_HERO_FRONT 3
+#define BITMAP_HERO_BACK 1
+#define BITMAP_HERO_LEFT 2
+#define BITMAP_HERO_RIGHT 0
+  struct bitmap_hero textureHero[4];
+};
+
 struct game_state {
   struct memory_arena worldArena;
   struct world *world;
@@ -66,22 +86,7 @@ struct game_state {
 
   f32 floorHeight;
 
-  struct bitmap textureGrass[2];
-  struct bitmap textureGround[4];
-  struct bitmap textureTuft[3];
-
-  struct bitmap textureBackground;
-  struct bitmap textureShadow;
-  struct bitmap textureTree;
-  struct bitmap textureSword;
-  struct bitmap textureStairwell;
-
-#define BITMAP_HERO_FRONT 3
-#define BITMAP_HERO_BACK 1
-#define BITMAP_HERO_LEFT 2
-#define BITMAP_HERO_RIGHT 0
-  struct bitmap_hero textureHero[4];
-
+  struct game_assets assets;
   f32 time;
 
   struct bitmap testDiffuse;

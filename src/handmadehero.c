@@ -695,9 +695,9 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
         struct bitmap *stamp = 0;
         if (RandomChoice(&series, 2))
-          stamp = state->textureGrass + RandomChoice(&series, ARRAY_COUNT(state->textureGrass));
+          stamp = state->assets.textureGrass + RandomChoice(&series, ARRAY_COUNT(state->assets.textureGrass));
         else
-          stamp = state->textureGround + RandomChoice(&series, ARRAY_COUNT(state->textureGround));
+          stamp = state->assets.textureGround + RandomChoice(&series, ARRAY_COUNT(state->assets.textureGround));
 
         struct v2 position = center;
         v2_add_ref(&position, v2_hadamard(halfDim, v2(RandomUnit(&series), RandomUnit(&series))));
@@ -719,7 +719,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * height);
 
       for (u32 tuftIndex = 0; tuftIndex < 30; tuftIndex++) {
-        struct bitmap *tuft = state->textureTuft + RandomChoice(&series, ARRAY_COUNT(state->textureTuft));
+        struct bitmap *tuft = state->assets.textureTuft + RandomChoice(&series, ARRAY_COUNT(state->assets.textureTuft));
         struct v2 tuftCenter = v2_mul(v2u(tuft->width, tuft->height), 0.5f);
 
         struct v2 position = center;
@@ -805,47 +805,47 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
                                                                               0.9f * tileDepthInMeters));
 
     /* load grass */
-    state->textureGrass[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass00.bmp");
-    state->textureGrass[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass01.bmp");
+    state->assets.textureGrass[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass00.bmp");
+    state->assets.textureGrass[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass01.bmp");
 
-    state->textureTuft[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft00.bmp");
-    state->textureTuft[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft01.bmp");
-    state->textureTuft[2] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft02.bmp");
+    state->assets.textureTuft[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft00.bmp");
+    state->assets.textureTuft[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft01.bmp");
+    state->assets.textureTuft[2] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft02.bmp");
 
-    state->textureGround[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground00.bmp");
-    state->textureGround[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground01.bmp");
-    state->textureGround[2] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground02.bmp");
-    state->textureGround[3] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground03.bmp");
+    state->assets.textureGround[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground00.bmp");
+    state->assets.textureGround[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground01.bmp");
+    state->assets.textureGround[2] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground02.bmp");
+    state->assets.textureGround[3] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground03.bmp");
 
     /* load background */
-    state->textureBackground = LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp", 0, 0);
+    state->assets.textureBackground = LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp", 0, 0);
 
     /* load shadow */
-    state->textureShadow = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_shadow.bmp", 72, 182);
+    state->assets.textureShadow = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_shadow.bmp", 72, 182);
 
-    state->textureTree = LoadBmp(memory->PlatformReadEntireFile, "test2/tree00.bmp", 40, 80);
+    state->assets.textureTree = LoadBmp(memory->PlatformReadEntireFile, "test2/tree00.bmp", 40, 80);
 
-    state->textureSword = LoadBmp(memory->PlatformReadEntireFile, "test2/rock03.bmp", 29, 10);
+    state->assets.textureSword = LoadBmp(memory->PlatformReadEntireFile, "test2/rock03.bmp", 29, 10);
 
-    state->textureStairwell = LoadBmp(memory->PlatformReadEntireFile, "test2/rock02.bmp", 0, 0);
+    state->assets.textureStairwell = LoadBmp(memory->PlatformReadEntireFile, "test2/rock02.bmp", 0, 0);
 
     /* load hero bitmaps */
-    struct bitmap_hero *bitmapHero = &state->textureHero[BITMAP_HERO_FRONT];
+    struct bitmap_hero *bitmapHero = &state->assets.textureHero[BITMAP_HERO_FRONT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_head.bmp", 72, 182);
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_torso.bmp", 72, 182);
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_cape.bmp", 72, 182);
 
-    bitmapHero = &state->textureHero[BITMAP_HERO_BACK];
+    bitmapHero = &state->assets.textureHero[BITMAP_HERO_BACK];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_head.bmp", 72, 182);
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_torso.bmp", 72, 182);
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_cape.bmp", 72, 182);
 
-    bitmapHero = &state->textureHero[BITMAP_HERO_LEFT];
+    bitmapHero = &state->assets.textureHero[BITMAP_HERO_LEFT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_head.bmp", 72, 182);
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_torso.bmp", 72, 182);
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_cape.bmp", 72, 182);
 
-    bitmapHero = &state->textureHero[BITMAP_HERO_RIGHT];
+    bitmapHero = &state->assets.textureHero[BITMAP_HERO_RIGHT];
     bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_head.bmp", 72, 182);
     bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_torso.bmp", 72, 182);
     bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_cape.bmp", 72, 182);
@@ -1336,7 +1336,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
      * Post-physics entity work (rendering)
      *****************************************************************/
     if (entity->type & ENTITY_TYPE_HERO) {
-      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
+      struct bitmap_hero *bitmap = &state->assets.textureHero[entity->facingDirection];
 
       f32 shadowAlpha = 1.0f - entity->position.z;
       if (shadowAlpha < 0.0f)
@@ -1346,7 +1346,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       f32 heroHeightC = 2.5f;
       f32 heroHeight = heroHeightC * 1.2f;
-      BitmapWithColor(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), heroHeightC * 1.0f,
+      BitmapWithColor(renderGroup, &state->assets.textureShadow, v3(0.0f, 0.0f, 0.0f), heroHeightC * 1.0f,
                       v4(1.0f, 1.0f, 1.0f, shadowAlpha));
       Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), heroHeight);
       Bitmap(renderGroup, &bitmap->cape, v3(0.0f, 0.0f, 0.0f), heroHeight);
@@ -1354,33 +1354,35 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
-      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
+      struct bitmap_hero *bitmap = &state->assets.textureHero[entity->facingDirection];
 
       f32 bobSin = Sin(2.0f * entity->tBob);
       f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      BitmapWithColor(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 2.5f,
+      BitmapWithColor(renderGroup, &state->assets.textureShadow, v3(0.0f, 0.0f, 0.0f), 2.5f,
                       v4(1.0f, 1.0f, 1.0f, shadowAlpha));
       Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.25f * bobSin), 2.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_MONSTER) {
-      struct bitmap_hero *bitmap = &state->textureHero[entity->facingDirection];
+      struct bitmap_hero *bitmap = &state->assets.textureHero[entity->facingDirection];
       f32 alpha = 1.0f;
 
       HitPoints(renderGroup, entity);
-      BitmapWithColor(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 4.5f, v4(1.0f, 1.0f, 1.0f, alpha));
+      BitmapWithColor(renderGroup, &state->assets.textureShadow, v3(0.0f, 0.0f, 0.0f), 4.5f,
+                      v4(1.0f, 1.0f, 1.0f, alpha));
       Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), 4.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
-      BitmapWithColor(renderGroup, &state->textureShadow, v3(0.0f, 0.0f, 0.0f), 0.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
-      Bitmap(renderGroup, &state->textureSword, v3(0.0f, 0.0f, 0.0f), 0.5f);
+      BitmapWithColor(renderGroup, &state->assets.textureShadow, v3(0.0f, 0.0f, 0.0f), 0.5f,
+                      v4(1.0f, 1.0f, 1.0f, 1.0f));
+      Bitmap(renderGroup, &state->assets.textureSword, v3(0.0f, 0.0f, 0.0f), 0.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      Bitmap(renderGroup, &state->textureTree, v3(0.0f, 0.0f, 0.0f), 2.5f);
+      Bitmap(renderGroup, &state->assets.textureTree, v3(0.0f, 0.0f, 0.0f), 2.5f);
 #else
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {
