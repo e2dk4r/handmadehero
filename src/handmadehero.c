@@ -739,40 +739,80 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
   PlatformWorkQueueAddEntry(transientState->lowPriorityQueue, DoFillGroundChunkWork, work);
 }
 
-internal struct bitmap *
-LoadBmpNew(struct memory_arena *arena, pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 alignX,
-           u32 alignY)
+struct asset_load_work {
+  struct task_with_memory *task;
+  struct game_assets *assets;
+  struct bitmap *bitmap;
+  enum game_asset_id assetId;
+  char *filename;
+  u32 alignX;
+  u32 alignY;
+};
+
+internal void
+DoAssetLoadWork(struct platform_work_queue *queue, void *data)
 {
-  struct bitmap *newBitmap = MemoryArenaPush(arena, sizeof(*newBitmap));
-  *newBitmap = LoadBmp(PlatformReadEntireFile, filename, alignX, alignY);
-  return newBitmap;
+  struct asset_load_work *work = data;
+
+  *work->bitmap = LoadBmp(work->assets->PlatformReadEntireFile, work->filename, work->alignX, work->alignY);
+
+  // TODO(e2dk4r): fence!
+  work->assets->textures[work->assetId] = work->bitmap;
+
+  EndTaskWithMemory(work->task);
 }
 
 inline void
 AssetLoad(struct game_assets *assets, enum game_asset_id assetId)
 {
-  struct memory_arena *arena = &assets->arena;
-  pfnPlatformReadEntireFile PlatformReadEntireFile = assets->PlatformReadEntireFile;
+  struct task_with_memory *task = BeginTaskWithMemory(assets->transientState);
+  if (!task)
+    return;
 
+  struct asset_load_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
+  work->task = task;
+  work->assets = assets;
+  work->assetId = assetId;
+  work->bitmap = MemoryArenaPush(&assets->arena, sizeof(*work->bitmap));
+
+  b32 isValid = 1;
   switch (assetId) {
-  case GAI_Background: {
-    assets->textures[GAI_Background] = LoadBmpNew(arena, PlatformReadEntireFile, "test/test_background.bmp", 0, 0);
-  }; break;
-  case GAI_Shadow: {
-    assets->textures[GAI_Shadow] = LoadBmpNew(arena, PlatformReadEntireFile, "test/test_hero_shadow.bmp", 72, 182);
-  }; break;
-  case GAI_Tree: {
-    assets->textures[GAI_Tree] = LoadBmpNew(arena, PlatformReadEntireFile, "test2/tree00.bmp", 40, 80);
-  }; break;
-  case GAI_Sword: {
-    assets->textures[GAI_Sword] = LoadBmpNew(arena, PlatformReadEntireFile, "test2/rock03.bmp", 29, 10);
-  }; break;
-  case GAI_Stairwell: {
-    assets->textures[GAI_Stairwell] = LoadBmpNew(arena, PlatformReadEntireFile, "test2/rock02.bmp", 0, 0);
-  }; break;
+  case GAI_Background:
+    work->filename = "test/test_background.bmp";
+    work->alignX = 0;
+    work->alignY = 0;
+    break;
+  case GAI_Shadow:
+    work->filename = "test/test_hero_shadow.bmp";
+    work->alignX = 72;
+    work->alignY = 182;
+    break;
+  case GAI_Tree:
+    work->filename = "test2/tree00.bmp";
+    work->alignX = 40;
+    work->alignY = 80;
+    break;
+  case GAI_Sword:
+    work->filename = "test2/rock03.bmp";
+    work->alignX = 29;
+    work->alignY = 10;
+    break;
+  case GAI_Stairwell:
+    work->filename = "test2/rock02.bmp";
+    work->alignX = 0;
+    work->alignY = 0;
+    break;
   default:
+    isValid = 0;
     break;
   }
+
+  if (!isValid) {
+    EndTaskWithMemory(task);
+    return;
+  }
+
+  PlatformWorkQueueAddEntry(assets->transientState->lowPriorityQueue, DoAssetLoadWork, work);
 }
 
 #if HANDMADEHERO_INTERNAL
@@ -1034,6 +1074,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct game_assets *assets = &transientState->assets;
     MemorySubArenaInit(&assets->arena, &transientState->transientArena, 64 * MEGABYTES);
     assets->PlatformReadEntireFile = memory->PlatformReadEntireFile;
+    assets->transientState = transientState;
 
     /* load grass */
     assets->textureGrass[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass00.bmp");

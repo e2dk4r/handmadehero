@@ -52,6 +52,9 @@ struct bitmap_hero {
 };
 
 struct game_assets {
+  // TODO(e2dk4r): copy of known, not ideal because
+  // we want AssetLoad to called from anywhere
+  struct transient_state *transientState;
   struct memory_arena arena;
   pfnPlatformReadEntireFile PlatformReadEntireFile;
 
