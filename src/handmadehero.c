@@ -749,6 +749,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   DEBUG_GLOBAL_MEMORY = memory;
 #endif
   assert(memory->highPriorityQueue && "platform layer NOT provided high priority queue implementation");
+  assert(memory->lowPriorityQueue && "platform layer NOT provided low priority queue implementation");
   assert(memory->PlatformWorkQueueAddEntry && "platform layer NOT implemented PlatformWorkQueueAddEntry");
   PlatformWorkQueueAddEntry = memory->PlatformWorkQueueAddEntry;
   assert(memory->PlatformWorkQueueCompleteAllWork && "platform layer NOT implemented PlatformWorkQueueCompleteAllWork");
