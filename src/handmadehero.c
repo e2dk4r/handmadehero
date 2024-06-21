@@ -818,16 +818,18 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     state->assets.textureGround[3] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground03.bmp");
 
     /* load background */
-    state->assets.textureBackground = LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp", 0, 0);
+    *TextureGet(&state->assets, GAI_Background) =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_background.bmp", 0, 0);
 
     /* load shadow */
-    state->assets.textureShadow = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_shadow.bmp", 72, 182);
+    *TextureGet(&state->assets, GAI_Shadow) =
+        LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_shadow.bmp", 72, 182);
 
-    state->assets.textureTree = LoadBmp(memory->PlatformReadEntireFile, "test2/tree00.bmp", 40, 80);
+    *TextureGet(&state->assets, GAI_Tree) = LoadBmp(memory->PlatformReadEntireFile, "test2/tree00.bmp", 40, 80);
 
-    state->assets.textureSword = LoadBmp(memory->PlatformReadEntireFile, "test2/rock03.bmp", 29, 10);
+    *TextureGet(&state->assets, GAI_Sword) = LoadBmp(memory->PlatformReadEntireFile, "test2/rock03.bmp", 29, 10);
 
-    state->assets.textureStairwell = LoadBmp(memory->PlatformReadEntireFile, "test2/rock02.bmp", 0, 0);
+    *TextureGet(&state->assets, GAI_Stairwell) = LoadBmp(memory->PlatformReadEntireFile, "test2/rock02.bmp", 0, 0);
 
     /* load hero bitmaps */
     struct bitmap_hero *bitmapHero = &state->assets.textureHero[BITMAP_HERO_FRONT];
@@ -1346,7 +1348,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       f32 heroHeightC = 2.5f;
       f32 heroHeight = heroHeightC * 1.2f;
-      BitmapWithColor(renderGroup, &state->assets.textureShadow, v3(0.0f, 0.0f, 0.0f), heroHeightC * 1.0f,
+      BitmapWithColor(renderGroup, TextureGet(&state->assets, GAI_Shadow), v3(0.0f, 0.0f, 0.0f), heroHeightC * 1.0f,
                       v4(1.0f, 1.0f, 1.0f, shadowAlpha));
       Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), heroHeight);
       Bitmap(renderGroup, &bitmap->cape, v3(0.0f, 0.0f, 0.0f), heroHeight);
@@ -1359,7 +1361,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 bobSin = Sin(2.0f * entity->tBob);
       f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      BitmapWithColor(renderGroup, &state->assets.textureShadow, v3(0.0f, 0.0f, 0.0f), 2.5f,
+      BitmapWithColor(renderGroup, TextureGet(&state->assets, GAI_Shadow), v3(0.0f, 0.0f, 0.0f), 2.5f,
                       v4(1.0f, 1.0f, 1.0f, shadowAlpha));
       Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.25f * bobSin), 2.5f);
     }
@@ -1369,20 +1371,20 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 alpha = 1.0f;
 
       HitPoints(renderGroup, entity);
-      BitmapWithColor(renderGroup, &state->assets.textureShadow, v3(0.0f, 0.0f, 0.0f), 4.5f,
+      BitmapWithColor(renderGroup, TextureGet(&state->assets, GAI_Shadow), v3(0.0f, 0.0f, 0.0f), 4.5f,
                       v4(1.0f, 1.0f, 1.0f, alpha));
       Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), 4.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
-      BitmapWithColor(renderGroup, &state->assets.textureShadow, v3(0.0f, 0.0f, 0.0f), 0.5f,
+      BitmapWithColor(renderGroup, TextureGet(&state->assets, GAI_Shadow), v3(0.0f, 0.0f, 0.0f), 0.5f,
                       v4(1.0f, 1.0f, 1.0f, 1.0f));
-      Bitmap(renderGroup, &state->assets.textureSword, v3(0.0f, 0.0f, 0.0f), 0.5f);
+      Bitmap(renderGroup, TextureGet(&state->assets, GAI_Sword), v3(0.0f, 0.0f, 0.0f), 0.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      Bitmap(renderGroup, &state->assets.textureTree, v3(0.0f, 0.0f, 0.0f), 2.5f);
+      Bitmap(renderGroup, TextureGet(&state->assets, GAI_Tree), v3(0.0f, 0.0f, 0.0f), 2.5f);
 #else
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {

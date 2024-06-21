@@ -35,6 +35,16 @@ struct ground_buffer {
   struct bitmap bitmap;
 };
 
+enum game_asset_id {
+  GAI_Background,
+  GAI_Shadow,
+  GAI_Tree,
+  GAI_Sword,
+  GAI_Stairwell,
+
+  GAI_COUNT
+};
+
 struct bitmap_hero {
   struct bitmap head;
   struct bitmap torso;
@@ -42,11 +52,7 @@ struct bitmap_hero {
 };
 
 struct game_assets {
-  struct bitmap textureBackground;
-  struct bitmap textureShadow;
-  struct bitmap textureTree;
-  struct bitmap textureSword;
-  struct bitmap textureStairwell;
+  struct bitmap textures[GAI_COUNT];
 
   // array'd assets
   struct bitmap textureGrass[2];
@@ -60,6 +66,14 @@ struct game_assets {
 #define BITMAP_HERO_RIGHT 0
   struct bitmap_hero textureHero[4];
 };
+
+internal inline struct bitmap *
+TextureGet(struct game_assets *assets, enum game_asset_id id)
+{
+  if (id > GAI_COUNT)
+    return 0;
+  return assets->textures + id;
+}
 
 struct game_state {
   struct memory_arena worldArena;
