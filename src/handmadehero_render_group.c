@@ -8,9 +8,11 @@ DrawRenderGroupInterleaved(struct render_group *renderGroup, struct bitmap *outp
                            b32 even);
 
 struct render_group *
-RenderGroup(struct memory_arena *arena, u64 pushBufferTotal)
+RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets *assets)
 {
   struct render_group *renderGroup = MemoryArenaPush(arena, sizeof(*renderGroup));
+
+  renderGroup->assets = assets;
 
   renderGroup->pushBufferSize = 0;
   renderGroup->pushBufferTotal = pushBufferTotal;
@@ -213,6 +215,15 @@ void
 Clear(struct render_group *renderGroup, struct v4 color)
 {
   PushClearEntry(renderGroup, color);
+}
+
+inline void
+BitmapAsset(struct render_group *renderGroup, enum game_asset_id assetId, struct v3 offset, f32 height, struct v4 color)
+{
+  struct bitmap *bitmap = TextureGet(renderGroup->assets, assetId);
+  if (!bitmap)
+    return;
+  BitmapWithColor(renderGroup, bitmap, offset, height, color);
 }
 
 inline void

@@ -28,6 +28,8 @@
 #include "platform.h"
 #include "types.h"
 
+enum game_asset_id;
+
 #define BITMAP_BYTES_PER_PIXEL 4
 struct bitmap {
   struct v2 alignPercentage;
@@ -119,6 +121,7 @@ struct render_group {
   u64 pushBufferTotal;
   u64 pushBufferSize;
   void *pushBufferBase;
+  struct game_assets *assets;
 };
 
 struct v4
@@ -129,7 +132,7 @@ Linear1tosRGB255(struct v4 color);
 
 // You need to set Perspective or Orthographic
 struct render_group *
-RenderGroup(struct memory_arena *arena, u64 pushBufferTotal);
+RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets *assets);
 
 void
 RenderGroupPerspective(struct render_group *renderGroup, u32 pixelWidth, u32 pixelHeight);
@@ -151,6 +154,10 @@ Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset
 
 void
 BitmapWithColor(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height, struct v4 color);
+
+void
+BitmapAsset(struct render_group *renderGroup, enum game_asset_id assetId, struct v3 offset, f32 height,
+            struct v4 color);
 
 void
 Rect(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);

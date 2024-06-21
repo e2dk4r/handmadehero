@@ -52,7 +52,7 @@ struct bitmap_hero {
 };
 
 struct game_assets {
-  struct bitmap textures[GAI_COUNT];
+  struct bitmap *textures[GAI_COUNT];
 
   // array'd assets
   struct bitmap textureGrass[2];
@@ -72,7 +72,7 @@ TextureGet(struct game_assets *assets, enum game_asset_id id)
 {
   if (id > GAI_COUNT)
     return 0;
-  return assets->textures + id;
+  return *(assets->textures + id);
 }
 
 struct game_state {
@@ -100,7 +100,6 @@ struct game_state {
 
   f32 floorHeight;
 
-  struct game_assets assets;
   f32 time;
 
   struct bitmap testDiffuse;
@@ -132,6 +131,8 @@ struct transient_state {
 #define ENV_MAP_MIDDLE 1
 #define ENV_MAP_TOP 2
   struct environment_map envMaps[3];
+
+  struct game_assets assets;
 };
 
 void
