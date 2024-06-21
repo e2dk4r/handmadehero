@@ -218,7 +218,7 @@ Clear(struct render_group *renderGroup, struct v4 color)
 inline void
 Bitmap(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height)
 {
-  PushBitmapEntry(renderGroup, bitmap, offset, height, v4(1.0f, 1.0f, 1.0f, renderGroup->alpha * 1.0f));
+  BitmapWithColor(renderGroup, bitmap, offset, height, v4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 inline void
