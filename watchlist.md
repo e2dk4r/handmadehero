@@ -436,7 +436,7 @@
 - [x] Handmade Hero Day 131 - Asynchronous Ground Chunk Composition
       https://www.youtube.com/watch?v=6blXhvPIz5g
 
-- [ ] Handmade Hero Day 132 - Asset Streaming
+- [x] Handmade Hero Day 132 - Asset Streaming
       https://www.youtube.com/watch?v=qyHM36RQxAI
 
 - [ ] Handmade Hero Day 133 - Preliminary Asset Structuring
