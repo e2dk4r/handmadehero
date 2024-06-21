@@ -103,8 +103,8 @@ GetRenderEntityBasisP(struct render_transform *transform, struct v3 originalPosi
 
     f32 distanceAboveTarget = transform->distanceAboveTarget;
 #if 0
-  // TODO(e2dk4r): how do we want to control the debug camera?
-  distanceAboveTarget += 30.0f;
+    // TODO(e2dk4r): how do we want to control the debug camera?
+    distanceAboveTarget += 50.0f;
 #endif
 
     f32 distanceToPZ = distanceAboveTarget - position.z;
