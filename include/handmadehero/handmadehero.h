@@ -63,6 +63,24 @@ struct asset_slot {
   struct bitmap *bitmap;
 };
 
+struct asset_tag {
+  u32 id;
+  f32 value;
+};
+
+struct asset_bitmap_info {
+  struct v2 alignPercentage;
+  f32 widthOverHeight;
+
+  u32 width;
+  u32 height;
+  i32 stride;
+  void *memory;
+
+  u32 tagFirstIndex;
+  u32 tagLastIndex;
+};
+
 struct game_assets {
   // TODO(e2dk4r): copy of known, not ideal because
   // we want AssetLoad to called from anywhere
