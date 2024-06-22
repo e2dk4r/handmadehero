@@ -752,6 +752,7 @@ struct asset_load_work {
   char *filename;
   u32 alignX;
   u32 alignY;
+  enum asset_state finalState;
 };
 
 internal void
@@ -764,7 +765,7 @@ DoAssetLoadWork(struct platform_work_queue *queue, void *data)
   // TODO(e2dk4r): fence!
   struct asset_slot *slot = work->assets->slots + work->assetId;
   slot->bitmap = work->bitmap;
-  AtomicStore(&slot->state, ASSET_STATE_LOADED);
+  AtomicStore(&slot->state, work->finalState);
 
   EndTaskWithMemory(work->task);
 }
@@ -789,6 +790,7 @@ AssetLoad(struct game_assets *assets, enum game_asset_id assetId)
     work->assets = assets;
     work->assetId = assetId;
     work->bitmap = MemoryArenaPush(&assets->arena, sizeof(*work->bitmap));
+    work->finalState = ASSET_STATE_LOADED;
 
     b32 isValid = 1;
     switch (assetId) {

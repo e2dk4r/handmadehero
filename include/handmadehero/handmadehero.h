@@ -55,6 +55,7 @@ enum asset_state {
   ASSET_STATE_UNLOADED,
   ASSET_STATE_QUEUED,
   ASSET_STATE_LOADED,
+  ASSET_STATE_LOCKED,
 };
 
 struct asset_slot {
