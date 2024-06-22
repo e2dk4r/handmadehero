@@ -51,6 +51,17 @@ struct bitmap_hero {
   struct bitmap cape;
 };
 
+enum asset_state {
+  ASSET_STATE_UNLOADED,
+  ASSET_STATE_QUEUED,
+  ASSET_STATE_LOADED,
+};
+
+struct asset_slot {
+  enum asset_state state;
+  struct bitmap *bitmap;
+};
+
 struct game_assets {
   // TODO(e2dk4r): copy of known, not ideal because
   // we want AssetLoad to called from anywhere
@@ -58,7 +69,7 @@ struct game_assets {
   struct memory_arena arena;
   pfnPlatformReadEntireFile PlatformReadEntireFile;
 
-  struct bitmap *textures[GAI_COUNT];
+  struct asset_slot slots[GAI_COUNT];
 
   // array'd assets
   struct bitmap textureGrass[2];
@@ -74,11 +85,13 @@ struct game_assets {
 };
 
 internal inline struct bitmap *
-AssetTextureGet(struct game_assets *assets, enum game_asset_id id)
+AssetTextureGet(struct game_assets *assets, enum game_asset_id assetId)
 {
-  if (id > GAI_COUNT)
+  if (assetId >= GAI_COUNT)
     return 0;
-  return *(assets->textures + id);
+
+  struct asset_slot *slot = assets->slots + assetId;
+  return slot->bitmap;
 }
 
 void

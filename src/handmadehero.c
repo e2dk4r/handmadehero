@@ -1,4 +1,5 @@
 #include <handmadehero/assert.h>
+#include <handmadehero/atomic.h>
 #include <handmadehero/color.h>
 #include <handmadehero/entity.h>
 #include <handmadehero/handmadehero.h>
@@ -757,7 +758,9 @@ DoAssetLoadWork(struct platform_work_queue *queue, void *data)
   *work->bitmap = LoadBmp(work->assets->PlatformReadEntireFile, work->filename, work->alignX, work->alignY);
 
   // TODO(e2dk4r): fence!
-  work->assets->textures[work->assetId] = work->bitmap;
+  struct asset_slot *slot = work->assets->slots + work->assetId;
+  slot->bitmap = work->bitmap;
+  AtomicStore(&slot->state, ASSET_STATE_LOADED);
 
   EndTaskWithMemory(work->task);
 }
@@ -765,54 +768,67 @@ DoAssetLoadWork(struct platform_work_queue *queue, void *data)
 inline void
 AssetLoad(struct game_assets *assets, enum game_asset_id assetId)
 {
-  struct task_with_memory *task = BeginTaskWithMemory(assets->transientState);
-  if (!task)
-    return;
+  assert(assetId < GAI_COUNT && "invalid asset id");
+  struct asset_slot *slot = assets->slots + assetId;
+  enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
+  if (AtomicCompareExchange(&slot->state, &expectedAssetState, ASSET_STATE_QUEUED)) {
+    // asset now queued
+    struct task_with_memory *task = BeginTaskWithMemory(assets->transientState);
+    if (!task) {
+      // memory cannot obtained, revert back
+      AtomicStore(&slot->state, ASSET_STATE_UNLOADED);
+      return;
+    }
 
-  struct asset_load_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
-  work->task = task;
-  work->assets = assets;
-  work->assetId = assetId;
-  work->bitmap = MemoryArenaPush(&assets->arena, sizeof(*work->bitmap));
+    struct asset_load_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
+    work->task = task;
+    work->assets = assets;
+    work->assetId = assetId;
+    work->bitmap = MemoryArenaPush(&assets->arena, sizeof(*work->bitmap));
 
-  b32 isValid = 1;
-  switch (assetId) {
-  case GAI_Background:
-    work->filename = "test/test_background.bmp";
-    work->alignX = 0;
-    work->alignY = 0;
-    break;
-  case GAI_Shadow:
-    work->filename = "test/test_hero_shadow.bmp";
-    work->alignX = 72;
-    work->alignY = 182;
-    break;
-  case GAI_Tree:
-    work->filename = "test2/tree00.bmp";
-    work->alignX = 40;
-    work->alignY = 80;
-    break;
-  case GAI_Sword:
-    work->filename = "test2/rock03.bmp";
-    work->alignX = 29;
-    work->alignY = 10;
-    break;
-  case GAI_Stairwell:
-    work->filename = "test2/rock02.bmp";
-    work->alignX = 0;
-    work->alignY = 0;
-    break;
-  default:
-    isValid = 0;
-    break;
+    b32 isValid = 1;
+    switch (assetId) {
+    case GAI_Background:
+      work->filename = "test/test_background.bmp";
+      work->alignX = 0;
+      work->alignY = 0;
+      break;
+    case GAI_Shadow:
+      work->filename = "test/test_hero_shadow.bmp";
+      work->alignX = 72;
+      work->alignY = 182;
+      break;
+    case GAI_Tree:
+      work->filename = "test2/tree00.bmp";
+      work->alignX = 40;
+      work->alignY = 80;
+      break;
+    case GAI_Sword:
+      work->filename = "test2/rock03.bmp";
+      work->alignX = 29;
+      work->alignY = 10;
+      break;
+    case GAI_Stairwell:
+      work->filename = "test2/rock02.bmp";
+      work->alignX = 0;
+      work->alignY = 0;
+      break;
+    default:
+      assert(0 && "do not know how to handle asset id");
+      isValid = 0;
+      break;
+    }
+
+    if (!isValid) {
+      // unknown asset id, revert back
+      AtomicStore(&slot->state, ASSET_STATE_UNLOADED);
+      EndTaskWithMemory(task);
+      return;
+    }
+
+    PlatformWorkQueueAddEntry(assets->transientState->lowPriorityQueue, DoAssetLoadWork, work);
   }
-
-  if (!isValid) {
-    EndTaskWithMemory(task);
-    return;
-  }
-
-  PlatformWorkQueueAddEntry(assets->transientState->lowPriorityQueue, DoAssetLoadWork, work);
+  // else some other thread beat us to it
 }
 
 #if HANDMADEHERO_INTERNAL
