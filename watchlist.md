@@ -439,7 +439,7 @@
 - [x] Handmade Hero Day 132 - Asset Streaming
       https://www.youtube.com/watch?v=qyHM36RQxAI
 
-- [ ] Handmade Hero Day 133 - Preliminary Asset Structuring
+- [x] Handmade Hero Day 133 - Preliminary Asset Structuring
       https://www.youtube.com/watch?v=u0LjxqHmvkk
 
 - [ ] Handmade Hero Day 134 - Mapping Assets to Bitmaps
