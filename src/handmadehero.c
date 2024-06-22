@@ -734,6 +734,10 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
     }
   }
 
+  if (!RenderGroupIsAllResourcesPreset(renderGroup))
+    // do not blit, until all resources loaded into memory
+    return;
+
   work->task = task;
   work->renderGroup = renderGroup;
   work->buffer = &groundBuffer->bitmap;

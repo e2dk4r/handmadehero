@@ -122,6 +122,8 @@ struct render_group {
   u64 pushBufferSize;
   void *pushBufferBase;
   struct game_assets *assets;
+
+  u32 missingResourceCount;
 };
 
 struct v4
@@ -180,5 +182,8 @@ void
 CoordinateSystem(struct render_group *renderGroup, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                  struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
                  struct environment_map *middle, struct environment_map *bottom);
+
+b32
+RenderGroupIsAllResourcesPreset(struct render_group *renderGroup);
 
 #endif /* HANDMADEHERO_RENDER_GROUP */

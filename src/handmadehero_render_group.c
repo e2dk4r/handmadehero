@@ -14,6 +14,8 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets 
 
   renderGroup->assets = assets;
 
+  renderGroup->missingResourceCount = 0;
+
   renderGroup->pushBufferSize = 0;
   renderGroup->pushBufferTotal = pushBufferTotal;
   renderGroup->pushBufferBase = MemoryArenaPush(arena, renderGroup->pushBufferTotal);
@@ -25,6 +27,12 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets 
   renderGroup->transform.scale = 1.0f;
 
   return renderGroup;
+}
+
+inline b32
+RenderGroupIsAllResourcesPreset(struct render_group *renderGroup)
+{
+  return renderGroup->missingResourceCount == 0;
 }
 
 void
@@ -225,6 +233,7 @@ BitmapAsset(struct render_group *renderGroup, enum game_asset_id assetId, struct
     BitmapWithColor(renderGroup, bitmap, offset, height, color);
   } else {
     AssetLoad(renderGroup->assets, assetId);
+    renderGroup->missingResourceCount += 1;
   }
 }
 
