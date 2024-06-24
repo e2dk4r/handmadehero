@@ -1,6 +1,7 @@
 #ifndef HANDMADEHERO_H
 #define HANDMADEHERO_H
 
+#include "asset.h"
 #include "memory_arena.h"
 #include "platform.h"
 #include "render_group.h"
@@ -34,87 +35,6 @@ struct ground_buffer {
   struct world_position position;
   struct bitmap bitmap;
 };
-
-enum game_asset_id {
-  GAI_Background,
-  GAI_Shadow,
-  GAI_Tree,
-  GAI_Sword,
-  GAI_Stairwell,
-
-  GAI_COUNT
-};
-
-struct bitmap_hero {
-  struct bitmap head;
-  struct bitmap torso;
-  struct bitmap cape;
-};
-
-enum asset_state {
-  ASSET_STATE_UNLOADED,
-  ASSET_STATE_QUEUED,
-  ASSET_STATE_LOADED,
-  ASSET_STATE_LOCKED,
-};
-
-struct asset_slot {
-  enum asset_state state;
-  struct bitmap *bitmap;
-};
-
-struct asset_tag {
-  u32 id;
-  f32 value;
-};
-
-struct asset_bitmap_info {
-  struct v2 alignPercentage;
-  f32 widthOverHeight;
-
-  u32 width;
-  u32 height;
-  i32 stride;
-  void *memory;
-
-  u32 tagFirstIndex;
-  u32 tagLastIndex;
-};
-
-struct game_assets {
-  // TODO(e2dk4r): copy of known, not ideal because
-  // we want AssetLoad to called from anywhere
-  struct transient_state *transientState;
-  struct memory_arena arena;
-  pfnPlatformReadEntireFile PlatformReadEntireFile;
-
-  struct asset_slot slots[GAI_COUNT];
-
-  // array'd assets
-  struct bitmap textureGrass[2];
-  struct bitmap textureGround[4];
-  struct bitmap textureTuft[3];
-
-  // structures assets
-#define BITMAP_HERO_FRONT 3
-#define BITMAP_HERO_BACK 1
-#define BITMAP_HERO_LEFT 2
-#define BITMAP_HERO_RIGHT 0
-  struct bitmap_hero textureHero[4];
-};
-
-internal inline struct bitmap *
-AssetTextureGet(struct game_assets *assets, enum game_asset_id assetId)
-{
-  if (assetId >= GAI_COUNT)
-    return 0;
-
-  struct asset_slot *slot = assets->slots + assetId;
-  return slot->bitmap;
-}
-
-void
-AssetLoad(struct game_assets *assets, enum game_asset_id assetId);
 
 struct game_state {
   struct memory_arena worldArena;
@@ -165,6 +85,8 @@ struct transient_state {
   struct platform_work_queue *highPriorityQueue;
   struct platform_work_queue *lowPriorityQueue;
 
+  struct game_assets *assets;
+
   u32 envMapWidth;
   u32 envMapHeight;
   // NOTE(e2dk4r): 0 is bottom, 1 is middle, 2 is top
@@ -172,8 +94,6 @@ struct transient_state {
 #define ENV_MAP_MIDDLE 1
 #define ENV_MAP_TOP 2
   struct environment_map envMaps[3];
-
-  struct game_assets assets;
 };
 
 void
@@ -189,5 +109,11 @@ CollisionRuleGet(struct game_state *state, u32 storageIndexA);
 
 void
 CollisionRuleAdd(struct game_state *state, u32 storageIndexA, u32 storageIndexB, u8 shouldCollide);
+
+struct task_with_memory *
+BeginTaskWithMemory(struct transient_state *transientState);
+
+void
+EndTaskWithMemory(struct task_with_memory *task);
 
 #endif /* HANDMADEHERO_H */

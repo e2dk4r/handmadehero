@@ -226,13 +226,13 @@ Clear(struct render_group *renderGroup, struct v4 color)
 }
 
 inline void
-BitmapAsset(struct render_group *renderGroup, enum game_asset_id assetId, struct v3 offset, f32 height, struct v4 color)
+BitmapAsset(struct render_group *renderGroup, struct bitmap_id id, struct v3 offset, f32 height, struct v4 color)
 {
-  struct bitmap *bitmap = AssetTextureGet(renderGroup->assets, assetId);
+  struct bitmap *bitmap = AssetBitmapGet(renderGroup->assets, id);
   if (bitmap) {
     BitmapWithColor(renderGroup, bitmap, offset, height, color);
   } else {
-    AssetLoad(renderGroup->assets, assetId);
+    AssetBitmapLoad(renderGroup->assets, id);
     renderGroup->missingResourceCount += 1;
   }
 }

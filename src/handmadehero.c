@@ -29,116 +29,6 @@ comptime struct move_spec SwordMoveSpec = {
     .drag = 0.0f,
 };
 
-#define BITMAP_COMPRESSION_RGB 0
-#define BITMAP_COMPRESSION_BITFIELDS 3
-struct __attribute__((packed)) bitmap_header {
-  u16 fileType;
-  u32 fileSize;
-  u16 reserved1;
-  u16 reserved2;
-  u32 bitmapOffset;
-  u32 size;
-  i32 width;
-  i32 height;
-  u16 planes;
-  u16 bitsPerPixel;
-  u32 compression;
-  u32 imageSize;
-  u32 horzResolution;
-  u32 vertResolution;
-  u32 colorsPalette;
-  u32 colorsImportant;
-};
-
-struct __attribute__((packed)) bitmap_header_compressed {
-  struct bitmap_header header;
-  u32 redMask;
-  u32 greenMask;
-  u32 blueMask;
-};
-
-internal struct bitmap
-LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 alignX, u32 alignY)
-{
-  struct bitmap result = {0};
-
-  struct read_file_result readResult = PlatformReadEntireFile(filename);
-  if (readResult.size == 0) {
-    return result;
-  }
-
-  struct bitmap_header *header = readResult.data;
-  u8 *pixels = readResult.data + header->bitmapOffset;
-
-  if (header->compression == BITMAP_COMPRESSION_BITFIELDS) {
-    struct bitmap_header_compressed *cHeader = (struct bitmap_header_compressed *)header;
-
-    i32 redShift = FindLeastSignificantBitSet((i32)cHeader->redMask);
-    i32 greenShift = FindLeastSignificantBitSet((i32)cHeader->greenMask);
-    i32 blueShift = FindLeastSignificantBitSet((i32)cHeader->blueMask);
-    assert(redShift != greenShift);
-
-    u32 alphaMask = ~(cHeader->redMask | cHeader->greenMask | cHeader->blueMask);
-    i32 alphaShift = FindLeastSignificantBitSet((i32)alphaMask);
-
-    u32 *srcDest = (u32 *)pixels;
-    for (i32 y = 0; y < header->height; y++) {
-      for (i32 x = 0; x < header->width; x++) {
-
-        u32 value = *srcDest;
-
-        // extract pixel from file
-        struct v4 texel = v4((f32)((value >> redShift) & 0xff), (f32)((value >> greenShift) & 0xff),
-                             (f32)((value >> blueShift) & 0xff), (f32)((value >> alphaShift) & 0xff));
-        texel = sRGB255toLinear1(texel);
-
-        /*
-         * Store channels values pre-multiplied with alpha.
-         */
-        v3_mul_ref(&texel.rgb, texel.a);
-
-        texel = Linear1tosRGB255(texel);
-        *srcDest = (u32)(texel.a + 0.5f) << 0x18 | (u32)(texel.r + 0.5f) << 0x10 | (u32)(texel.g + 0.5f) << 0x08 |
-                   (u32)(texel.b + 0.5f) << 0x00;
-
-        srcDest++;
-      }
-    }
-  }
-
-  result.width = (u32)header->width;
-  if (header->width < 0)
-    result.width = (u32)-header->width;
-
-  result.height = (u32)header->height;
-  if (header->height < 0)
-    result.height = (u32)-header->height;
-
-  assert(result.width != 0);
-  assert(result.height != 0);
-  result.alignPercentage =
-      v2((f32)alignX / (f32)result.width, (f32)((result.height - 1) - alignY) / (f32)result.height);
-  result.widthOverHeight = (f32)result.width / (f32)result.height;
-
-  result.stride = (i32)result.width * BITMAP_BYTES_PER_PIXEL;
-  result.memory = pixels;
-
-  if (header->height < 0) {
-    result.memory = pixels + (i32)(result.height - 1) * result.stride;
-    result.stride = -result.stride;
-  }
-
-  return result;
-}
-
-internal struct bitmap
-LoadBmpWithCenterAlignment(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
-{
-  struct bitmap bitmap = LoadBmp(PlatformReadEntireFile, filename, 0, 0);
-  bitmap.alignPercentage = v2(0.5f, 0.5f);
-  return bitmap;
-}
-
 inline struct stored_entity *
 StoredEntityGet(struct game_state *state, u32 index)
 {
@@ -610,7 +500,7 @@ IsGroundBufferEmpty(struct ground_buffer *groundBuffer)
   return !WorldPositionIsValid(&groundBuffer->position);
 }
 
-internal struct task_with_memory *
+struct task_with_memory *
 BeginTaskWithMemory(struct transient_state *transientState)
 {
   struct task_with_memory *foundTask = 0;
@@ -628,7 +518,7 @@ BeginTaskWithMemory(struct transient_state *transientState)
   return foundTask;
 }
 
-internal void
+void
 EndTaskWithMemory(struct task_with_memory *task)
 {
   EndTemporaryMemory(&task->memoryFlush);
@@ -658,7 +548,8 @@ PickBest(struct asset_bitmap_info *infos, u32 infoCount, struct asset_tag *tags,
     struct asset_bitmap_info *info = infos + infoIndex;
 
     f32 totalWeightedDiff = 0.0f;
-    for (u32 tagIndex = info->tagFirstIndex; tagIndex <= info->tagLastIndex; tagIndex++) {
+    // for (u32 tagIndex = info->tagFirstIndex; tagIndex <= info->tagLastIndex; tagIndex++) {
+    for (u32 tagIndex = 0; tagIndex <= 10; tagIndex++) {
       struct asset_tag *tag = tags + tagIndex;
 
       f32 diff = matchVector[tag->id] * tag->value;
@@ -696,7 +587,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
   // TODO(e2dk4r): Pushbuffer size?
   struct render_group *renderGroup = RenderGroup(
-      &task->arena, MemoryArenaGetRemainingSize(&task->arena) - sizeof(*renderGroup), &transientState->assets);
+      &task->arena, MemoryArenaGetRemainingSize(&task->arena) - sizeof(*renderGroup), transientState->assets);
   RenderGroupOrthographic(renderGroup, buffer->width, buffer->height, (f32)(buffer->width - 2) / width);
 
   Clear(renderGroup, COLOR_FUCHSIA_900);
@@ -723,11 +614,11 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
         struct bitmap *stamp = 0;
         if (RandomChoice(&series, 2))
-          stamp = transientState->assets.textureGrass +
-                  RandomChoice(&series, ARRAY_COUNT(transientState->assets.textureGrass));
+          stamp = transientState->assets->textureGrass +
+                  RandomChoice(&series, ARRAY_COUNT(transientState->assets->textureGrass));
         else
-          stamp = transientState->assets.textureGround +
-                  RandomChoice(&series, ARRAY_COUNT(transientState->assets.textureGround));
+          stamp = transientState->assets->textureGround +
+                  RandomChoice(&series, ARRAY_COUNT(transientState->assets->textureGround));
 
         struct v2 position = center;
         v2_add_ref(&position, v2_hadamard(halfDim, v2(RandomUnit(&series), RandomUnit(&series))));
@@ -749,8 +640,8 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * height);
 
       for (u32 tuftIndex = 0; tuftIndex < 30; tuftIndex++) {
-        struct bitmap *tuft =
-            transientState->assets.textureTuft + RandomChoice(&series, ARRAY_COUNT(transientState->assets.textureTuft));
+        struct bitmap *tuft = transientState->assets->textureTuft +
+                              RandomChoice(&series, ARRAY_COUNT(transientState->assets->textureTuft));
         struct v2 tuftCenter = v2_mul(v2u(tuft->width, tuft->height), 0.5f);
 
         struct v2 position = center;
@@ -769,99 +660,6 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
   work->renderGroup = renderGroup;
   work->buffer = &groundBuffer->bitmap;
   PlatformWorkQueueAddEntry(transientState->lowPriorityQueue, DoFillGroundChunkWork, work);
-}
-
-struct asset_load_work {
-  struct task_with_memory *task;
-  struct game_assets *assets;
-  struct bitmap *bitmap;
-  enum game_asset_id assetId;
-  char *filename;
-  u32 alignX;
-  u32 alignY;
-  enum asset_state finalState;
-};
-
-internal void
-DoAssetLoadWork(struct platform_work_queue *queue, void *data)
-{
-  struct asset_load_work *work = data;
-
-  *work->bitmap = LoadBmp(work->assets->PlatformReadEntireFile, work->filename, work->alignX, work->alignY);
-
-  // TODO(e2dk4r): fence!
-  struct asset_slot *slot = work->assets->slots + work->assetId;
-  slot->bitmap = work->bitmap;
-  AtomicStore(&slot->state, work->finalState);
-
-  EndTaskWithMemory(work->task);
-}
-
-inline void
-AssetLoad(struct game_assets *assets, enum game_asset_id assetId)
-{
-  assert(assetId < GAI_COUNT && "invalid asset id");
-  struct asset_slot *slot = assets->slots + assetId;
-  enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
-  if (AtomicCompareExchange(&slot->state, &expectedAssetState, ASSET_STATE_QUEUED)) {
-    // asset now queued
-    struct task_with_memory *task = BeginTaskWithMemory(assets->transientState);
-    if (!task) {
-      // memory cannot obtained, revert back
-      AtomicStore(&slot->state, ASSET_STATE_UNLOADED);
-      return;
-    }
-
-    struct asset_load_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
-    work->task = task;
-    work->assets = assets;
-    work->assetId = assetId;
-    work->bitmap = MemoryArenaPush(&assets->arena, sizeof(*work->bitmap));
-    work->finalState = ASSET_STATE_LOADED;
-
-    b32 isValid = 1;
-    switch (assetId) {
-    case GAI_Background:
-      work->filename = "test/test_background.bmp";
-      work->alignX = 0;
-      work->alignY = 0;
-      break;
-    case GAI_Shadow:
-      work->filename = "test/test_hero_shadow.bmp";
-      work->alignX = 72;
-      work->alignY = 182;
-      break;
-    case GAI_Tree:
-      work->filename = "test2/tree00.bmp";
-      work->alignX = 40;
-      work->alignY = 80;
-      break;
-    case GAI_Sword:
-      work->filename = "test2/rock03.bmp";
-      work->alignX = 29;
-      work->alignY = 10;
-      break;
-    case GAI_Stairwell:
-      work->filename = "test2/rock02.bmp";
-      work->alignX = 0;
-      work->alignY = 0;
-      break;
-    default:
-      assert(0 && "do not know how to handle asset id");
-      isValid = 0;
-      break;
-    }
-
-    if (!isValid) {
-      // unknown asset id, revert back
-      AtomicStore(&slot->state, ASSET_STATE_UNLOADED);
-      EndTaskWithMemory(task);
-      return;
-    }
-
-    PlatformWorkQueueAddEntry(assets->transientState->lowPriorityQueue, DoAssetLoadWork, work);
-  }
-  // else some other thread beat us to it
 }
 
 #if HANDMADEHERO_INTERNAL
@@ -1120,44 +918,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     transientState->envMaps[ENV_MAP_MIDDLE].z = 0.0f;
     transientState->envMaps[ENV_MAP_TOP].z = 2.0f;
 
-    struct game_assets *assets = &transientState->assets;
-    MemorySubArenaInit(&assets->arena, &transientState->transientArena, 64 * MEGABYTES);
-    assets->PlatformReadEntireFile = memory->PlatformReadEntireFile;
-    assets->transientState = transientState;
-
-    /* load grass */
-    assets->textureGrass[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass00.bmp");
-    assets->textureGrass[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/grass01.bmp");
-
-    assets->textureTuft[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft00.bmp");
-    assets->textureTuft[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft01.bmp");
-    assets->textureTuft[2] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/tuft02.bmp");
-
-    assets->textureGround[0] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground00.bmp");
-    assets->textureGround[1] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground01.bmp");
-    assets->textureGround[2] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground02.bmp");
-    assets->textureGround[3] = LoadBmpWithCenterAlignment(memory->PlatformReadEntireFile, "test2/ground03.bmp");
-
-    /* load hero bitmaps */
-    struct bitmap_hero *bitmapHero = &assets->textureHero[BITMAP_HERO_FRONT];
-    bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_head.bmp", 72, 182);
-    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_torso.bmp", 72, 182);
-    bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_front_cape.bmp", 72, 182);
-
-    bitmapHero = &assets->textureHero[BITMAP_HERO_BACK];
-    bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_head.bmp", 72, 182);
-    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_torso.bmp", 72, 182);
-    bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_back_cape.bmp", 72, 182);
-
-    bitmapHero = &assets->textureHero[BITMAP_HERO_LEFT];
-    bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_head.bmp", 72, 182);
-    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_torso.bmp", 72, 182);
-    bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_left_cape.bmp", 72, 182);
-
-    bitmapHero = &assets->textureHero[BITMAP_HERO_RIGHT];
-    bitmapHero->head = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_head.bmp", 72, 182);
-    bitmapHero->torso = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_torso.bmp", 72, 182);
-    bitmapHero->cape = LoadBmp(memory->PlatformReadEntireFile, "test/test_hero_right_cape.bmp", 72, 182);
+    transientState->assets = GameAssetsAllocate(&transientState->transientArena, 64 * MEGABYTES, transientState,
+                                                memory->PlatformReadEntireFile);
 
     transientState->initialized = 1;
   }
@@ -1246,7 +1008,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
   struct render_group *renderGroup =
-      RenderGroup(&transientState->transientArena, 4 * MEGABYTES, &transientState->assets);
+      RenderGroup(&transientState->transientArena, 4 * MEGABYTES, transientState->assets);
   RenderGroupPerspective(renderGroup, drawBuffer.width, drawBuffer.height);
 
 /* drawing background */
@@ -1458,7 +1220,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
      * Post-physics entity work (rendering)
      *****************************************************************/
     if (entity->type & ENTITY_TYPE_HERO) {
-      struct bitmap_hero *bitmap = &transientState->assets.textureHero[entity->facingDirection];
+      struct bitmap_hero *bitmap = &transientState->assets->textureHero[entity->facingDirection];
 
       f32 shadowAlpha = 1.0f - entity->position.z;
       if (shadowAlpha < 0.0f)
@@ -1468,39 +1230,45 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       f32 heroHeightC = 2.5f;
       f32 heroHeight = heroHeightC * 1.2f;
-      BitmapAsset(renderGroup, GAI_Shadow, v3(0.0f, 0.0f, 0.0f), heroHeightC * 1.0f, v4(1.0f, 1.0f, 1.0f, shadowAlpha));
+      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
+                  heroHeightC * 1.0f, v4(1.0f, 1.0f, 1.0f, shadowAlpha));
       Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), heroHeight);
       Bitmap(renderGroup, &bitmap->cape, v3(0.0f, 0.0f, 0.0f), heroHeight);
       Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.0f), heroHeight);
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
-      struct bitmap_hero *bitmap = &transientState->assets.textureHero[entity->facingDirection];
+      struct bitmap_hero *bitmap = &transientState->assets->textureHero[entity->facingDirection];
 
       f32 bobSin = Sin(2.0f * entity->tBob);
       f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      BitmapAsset(renderGroup, GAI_Shadow, v3(0.0f, 0.0f, 0.0f), 2.5f, v4(1.0f, 1.0f, 1.0f, shadowAlpha));
+      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
+                  2.5f, v4(1.0f, 1.0f, 1.0f, shadowAlpha));
       Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.25f * bobSin), 2.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_MONSTER) {
-      struct bitmap_hero *bitmap = &transientState->assets.textureHero[entity->facingDirection];
+      struct bitmap_hero *bitmap = &transientState->assets->textureHero[entity->facingDirection];
       f32 alpha = 1.0f;
 
       HitPoints(renderGroup, entity);
-      BitmapAsset(renderGroup, GAI_Shadow, v3(0.0f, 0.0f, 0.0f), 4.5f, v4(1.0f, 1.0f, 1.0f, alpha));
+      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
+                  4.5f, v4(1.0f, 1.0f, 1.0f, alpha));
       Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), 4.5f);
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
-      BitmapAsset(renderGroup, GAI_Shadow, v3(0.0f, 0.0f, 0.0f), 0.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
-      BitmapAsset(renderGroup, GAI_Sword, v3(0.0f, 0.0f, 0.0f), 0.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
+      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
+                  0.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
+      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SWORD), v3(0.0f, 0.0f, 0.0f),
+                  0.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      BitmapAsset(renderGroup, GAI_Tree, v3(0.0f, 0.0f, 0.0f), 2.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
+      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_TREE), v3(0.0f, 0.0f, 0.0f),
+                  2.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
 #else
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {

@@ -28,7 +28,8 @@
 #include "platform.h"
 #include "types.h"
 
-enum game_asset_id;
+enum asset_type_id;
+struct bitmap_id;
 
 #define BITMAP_BYTES_PER_PIXEL 4
 struct bitmap {
@@ -158,8 +159,7 @@ void
 BitmapWithColor(struct render_group *renderGroup, struct bitmap *bitmap, struct v3 offset, f32 height, struct v4 color);
 
 void
-BitmapAsset(struct render_group *renderGroup, enum game_asset_id assetId, struct v3 offset, f32 height,
-            struct v4 color);
+BitmapAsset(struct render_group *renderGroup, struct bitmap_id id, struct v3 offset, f32 height, struct v4 color);
 
 void
 Rect(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);
