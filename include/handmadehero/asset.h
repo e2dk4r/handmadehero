@@ -27,6 +27,8 @@ enum asset_tag_id {
 };
 
 enum asset_type_id {
+  ASSET_TYPE_NONE,
+
   ASSET_TYPE_BACKGROUND,
   ASSET_TYPE_SHADOW,
   ASSET_TYPE_TREE,
@@ -43,15 +45,14 @@ struct asset_tag {
 };
 
 struct asset {
-  u32 tagFirstIndex;
-  u32 tagLastIndex;
+  u32 tagIndexFirst;
+  u32 tagIndexOnePastLast;
   u32 slotId;
 };
 
 struct asset_type {
-  u32 count;
-  u32 tagFirstIndex;
-  u32 tagLastIndex;
+  u32 assetIndexFirst;
+  u32 assetIndexOnePastLast;
 };
 
 struct asset_bitmap_info {
@@ -84,6 +85,12 @@ struct game_assets {
 
   u32 audioCount;
   struct asset_slot *audios;
+
+  u32 tagCount;
+  struct asset_tag *tags;
+
+  u32 assetCount;
+  struct asset *assets;
 
   struct asset_type assetTypes[ASSET_TYPE_COUNT];
 

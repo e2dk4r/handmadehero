@@ -6,6 +6,9 @@
 inline struct bitmap *
 AssetBitmapGet(struct game_assets *assets, struct bitmap_id id)
 {
+  if (id.value == 0)
+    return 0;
+
   struct asset_slot *slot = assets->bitmaps + id.value;
   return slot->bitmap;
 }
@@ -136,6 +139,23 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->audioCount = 1;
   assets->audios = MemoryArenaPush(arena, sizeof(*assets->audios) * assets->audioCount);
 
+  assets->tagCount = 0;
+  assets->tags = 0;
+
+  assets->assetCount = assets->bitmapCount;
+  assets->assets = MemoryArenaPush(arena, sizeof(*assets->assets) * assets->assetCount);
+
+  for (u32 assetTypeId = 0; assetTypeId < ASSET_TYPE_COUNT; assetTypeId++) {
+    struct asset_type *type = assets->assetTypes + assetTypeId;
+    type->assetIndexFirst = assetTypeId;
+    type->assetIndexOnePastLast = assetTypeId + (assetTypeId != ASSET_TYPE_NONE);
+
+    struct asset *asset = assets->assets + type->assetIndexFirst;
+    asset->tagIndexFirst = 0;
+    asset->tagIndexOnePastLast = 0;
+    asset->slotId = type->assetIndexFirst;
+  }
+
   /* load grass */
   assets->textureGrass[0] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/grass00.bmp");
   assets->textureGrass[1] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/grass01.bmp");
@@ -176,8 +196,18 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
 struct bitmap_id
 AssetBitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId)
 {
-  // TODO(e2dk4r): actually implement
-  return (struct bitmap_id){typeId};
+  struct bitmap_id result = {};
+  if (typeId == ASSET_TYPE_NONE)
+    return result;
+
+  struct asset_type *type = assets->assetTypes + typeId;
+  if (type->assetIndexFirst == type->assetIndexOnePastLast)
+    return result;
+
+  struct asset *asset = assets->assets + type->assetIndexFirst;
+  result.value = asset->slotId;
+
+  return result;
 }
 
 struct asset_load_bitmap_work {
@@ -209,6 +239,9 @@ DoAssetLoadBitmapWork(struct platform_work_queue *queue, void *data)
 inline void
 AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id)
 {
+  if (id.value == 0)
+    return;
+
   struct asset_slot *slot = assets->bitmaps + id.value;
   enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
   if (AtomicCompareExchange(&slot->state, &expectedAssetState, ASSET_STATE_QUEUED)) {
