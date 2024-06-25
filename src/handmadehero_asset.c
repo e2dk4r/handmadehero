@@ -277,11 +277,6 @@ AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id)
       work->alignX = 29;
       work->alignY = 10;
       break;
-    case ASSET_TYPE_STAIRWELL:
-      work->filename = "test2/rock02.bmp";
-      work->alignX = 0;
-      work->alignY = 0;
-      break;
     default:
       assert(0 && "do not know how to handle asset id");
       isValid = 0;
