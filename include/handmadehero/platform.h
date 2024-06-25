@@ -134,8 +134,6 @@ struct platform_work_queue_entry {
 };
 
 struct game_memory {
-  u8 initialized : 1;
-
   u64 permanentStorageSize;
   void *permanentStorage;
 

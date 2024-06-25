@@ -692,7 +692,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   /****************************************************************
    * INITIALIZATION
    ****************************************************************/
-  if (!memory->initialized) {
+  if (!state->isInitialized) {
     void *data = memory->permanentStorage + sizeof(*state);
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
     MemoryArenaInit(&state->worldArena, data, size);
@@ -854,7 +854,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         ChunkPositionFromTilePosition(state->world, initialCameraX, initialCameraY, initialCameraZ);
     state->cameraPosition = initialCameraPosition;
 
-    memory->initialized = 1;
+    state->isInitialized = 1;
   }
 
   struct world *world = state->world;

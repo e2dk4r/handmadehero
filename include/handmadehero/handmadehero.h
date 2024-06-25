@@ -37,6 +37,8 @@ struct ground_buffer {
 };
 
 struct game_state {
+  b32 isInitialized : 1;
+
   struct memory_arena worldArena;
   struct world *world;
 
