@@ -42,7 +42,7 @@ struct __attribute__((packed)) bitmap_header_compressed {
 };
 
 internal struct bitmap
-LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 alignX, u32 alignY)
+LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, struct v2 alignPercentage)
 {
   struct bitmap result = {0};
 
@@ -100,8 +100,7 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 al
 
   assert(result.width != 0);
   assert(result.height != 0);
-  result.alignPercentage =
-      v2((f32)alignX / (f32)result.width, (f32)((result.height - 1) - alignY) / (f32)result.height);
+  result.alignPercentage = alignPercentage;
   result.widthOverHeight = (f32)result.width / (f32)result.height;
 
   result.stride = (i32)result.width * BITMAP_BYTES_PER_PIXEL;
@@ -113,14 +112,6 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 al
   }
 
   return result;
-}
-
-internal struct bitmap
-LoadBmpWithCenterAlignment(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
-{
-  struct bitmap bitmap = LoadBmp(PlatformReadEntireFile, filename, 0, 0);
-  bitmap.alignPercentage = v2(0.5f, 0.5f);
-  return bitmap;
 }
 
 inline struct game_assets *
@@ -157,38 +148,38 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   }
 
   /* load grass */
-  assets->textureGrass[0] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/grass00.bmp");
-  assets->textureGrass[1] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/grass01.bmp");
+  assets->textureGrass[0] = LoadBmp(PlatformReadEntireFile, "test2/grass00.bmp", v2(0.5f, 0.5f));
+  assets->textureGrass[1] = LoadBmp(PlatformReadEntireFile, "test2/grass01.bmp", v2(0.5f, 0.5f));
 
-  assets->textureTuft[0] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/tuft00.bmp");
-  assets->textureTuft[1] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/tuft01.bmp");
-  assets->textureTuft[2] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/tuft02.bmp");
+  assets->textureTuft[0] = LoadBmp(PlatformReadEntireFile, "test2/tuft00.bmp", v2(0.5f, 0.5f));
+  assets->textureTuft[1] = LoadBmp(PlatformReadEntireFile, "test2/tuft01.bmp", v2(0.5f, 0.5f));
+  assets->textureTuft[2] = LoadBmp(PlatformReadEntireFile, "test2/tuft02.bmp", v2(0.5f, 0.5f));
 
-  assets->textureGround[0] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/ground00.bmp");
-  assets->textureGround[1] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/ground01.bmp");
-  assets->textureGround[2] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/ground02.bmp");
-  assets->textureGround[3] = LoadBmpWithCenterAlignment(PlatformReadEntireFile, "test2/ground03.bmp");
+  assets->textureGround[0] = LoadBmp(PlatformReadEntireFile, "test2/ground00.bmp", v2(0.5f, 0.5f));
+  assets->textureGround[1] = LoadBmp(PlatformReadEntireFile, "test2/ground01.bmp", v2(0.5f, 0.5f));
+  assets->textureGround[2] = LoadBmp(PlatformReadEntireFile, "test2/ground02.bmp", v2(0.5f, 0.5f));
+  assets->textureGround[3] = LoadBmp(PlatformReadEntireFile, "test2/ground03.bmp", v2(0.5f, 0.5f));
 
   /* load hero bitmaps */
   struct bitmap_hero *bitmapHero = &assets->textureHero[BITMAP_HERO_FRONT];
-  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_front_head.bmp", 72, 182);
-  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_front_torso.bmp", 72, 182);
-  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_front_cape.bmp", 72, 182);
+  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_front_head.bmp", v2(0.5f, 0.156682029f));
+  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_front_torso.bmp", v2(0.5f, 0.156682029f));
+  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_front_cape.bmp", v2(0.5f, 0.156682029f));
 
   bitmapHero = &assets->textureHero[BITMAP_HERO_BACK];
-  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_back_head.bmp", 72, 182);
-  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_back_torso.bmp", 72, 182);
-  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_back_cape.bmp", 72, 182);
+  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_back_head.bmp", v2(0.5f, 0.156682029f));
+  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_back_torso.bmp", v2(0.5f, 0.156682029f));
+  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_back_cape.bmp", v2(0.5f, 0.156682029f));
 
   bitmapHero = &assets->textureHero[BITMAP_HERO_LEFT];
-  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_left_head.bmp", 72, 182);
-  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_left_torso.bmp", 72, 182);
-  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_left_cape.bmp", 72, 182);
+  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_left_head.bmp", v2(0.5f, 0.156682029f));
+  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_left_torso.bmp", v2(0.5f, 0.156682029f));
+  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_left_cape.bmp", v2(0.5f, 0.156682029f));
 
   bitmapHero = &assets->textureHero[BITMAP_HERO_RIGHT];
-  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_right_head.bmp", 72, 182);
-  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_right_torso.bmp", 72, 182);
-  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_right_cape.bmp", 72, 182);
+  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_right_head.bmp", v2(0.5f, 0.156682029f));
+  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_right_torso.bmp", v2(0.5f, 0.156682029f));
+  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_right_cape.bmp", v2(0.5f, 0.156682029f));
 
   return assets;
 }
@@ -216,8 +207,7 @@ struct asset_load_bitmap_work {
   struct bitmap *bitmap;
   struct bitmap_id bitmapId;
   char *filename;
-  u32 alignX;
-  u32 alignY;
+  struct v2 alignPercentage;
   enum asset_state finalState;
 };
 
@@ -226,7 +216,7 @@ DoAssetLoadBitmapWork(struct platform_work_queue *queue, void *data)
 {
   struct asset_load_bitmap_work *work = data;
 
-  *work->bitmap = LoadBmp(work->assets->PlatformReadEntireFile, work->filename, work->alignX, work->alignY);
+  *work->bitmap = LoadBmp(work->assets->PlatformReadEntireFile, work->filename, work->alignPercentage);
 
   // TODO(e2dk4r): fence!
   struct asset_slot *slot = work->assets->bitmaps + work->bitmapId.value;
@@ -258,24 +248,22 @@ AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id)
     work->assets = assets;
     work->bitmapId = id;
     work->bitmap = MemoryArenaPush(&assets->arena, sizeof(*work->bitmap));
+    work->alignPercentage = v2(0.5f, 0.5f);
     work->finalState = ASSET_STATE_LOADED;
 
     b32 isValid = 1;
     switch (id.value) {
     case ASSET_TYPE_SHADOW:
       work->filename = "test/test_hero_shadow.bmp";
-      work->alignX = 72;
-      work->alignY = 182;
+      work->alignPercentage = v2(0.5f, 0.156682029f);
       break;
     case ASSET_TYPE_TREE:
       work->filename = "test2/tree00.bmp";
-      work->alignX = 40;
-      work->alignY = 80;
+      work->alignPercentage = v2(0.493827164f, 0.295652181f);
       break;
     case ASSET_TYPE_SWORD:
       work->filename = "test2/rock03.bmp";
-      work->alignX = 29;
-      work->alignY = 10;
+      work->alignPercentage = v2(0.5f, 0.65625f);
       break;
     default:
       assert(0 && "do not know how to handle asset id");
