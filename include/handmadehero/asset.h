@@ -29,7 +29,6 @@ enum asset_tag_id {
 enum asset_type_id {
   ASSET_TYPE_NONE,
 
-  ASSET_TYPE_BACKGROUND,
   ASSET_TYPE_SHADOW,
   ASSET_TYPE_TREE,
   ASSET_TYPE_SWORD,

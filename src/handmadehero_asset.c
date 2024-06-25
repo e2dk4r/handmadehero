@@ -262,11 +262,6 @@ AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id)
 
     b32 isValid = 1;
     switch (id.value) {
-    case ASSET_TYPE_BACKGROUND:
-      work->filename = "test/test_background.bmp";
-      work->alignX = 0;
-      work->alignY = 0;
-      break;
     case ASSET_TYPE_SHADOW:
       work->filename = "test/test_hero_shadow.bmp";
       work->alignX = 72;
