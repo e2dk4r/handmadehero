@@ -442,7 +442,7 @@
 - [x] Handmade Hero Day 133 - Preliminary Asset Structuring
       https://www.youtube.com/watch?v=u0LjxqHmvkk
 
-- [ ] Handmade Hero Day 134 - Mapping Assets to Bitmaps
+- [x] Handmade Hero Day 134 - Mapping Assets to Bitmaps
       https://www.youtube.com/watch?v=AdscwVnyaQw
 
 - [ ] Handmade Hero Day 135 - Typed Asset Arrays
