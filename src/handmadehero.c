@@ -612,18 +612,16 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * height);
 
       for (u32 grassIndex = 0; grassIndex < 100; grassIndex++) {
-        struct bitmap *stamp = 0;
+        struct bitmap_id stamp;
         if (RandomChoice(&series, 2))
-          stamp = transientState->assets->textureGrass +
-                  RandomChoice(&series, ARRAY_COUNT(transientState->assets->textureGrass));
+          stamp = RandomAsset(&series, transientState->assets, ASSET_TYPE_GRASS);
         else
-          stamp = transientState->assets->textureGround +
-                  RandomChoice(&series, ARRAY_COUNT(transientState->assets->textureGround));
+          stamp = RandomAsset(&series, transientState->assets, ASSET_TYPE_GROUND);
 
         struct v2 position = center;
         v2_add_ref(&position, v2_hadamard(halfDim, v2(RandomUnit(&series), RandomUnit(&series))));
 
-        BitmapWithColor(renderGroup, stamp, v2_to_v3(position, 0.0f), 2.0f, color);
+        BitmapAsset(renderGroup, stamp, v2_to_v3(position, 0.0f), 2.0f, color);
       }
     }
   }
@@ -640,14 +638,12 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
       struct v2 center = v2((f32)chunkOffsetX * width, (f32)chunkOffsetY * height);
 
       for (u32 tuftIndex = 0; tuftIndex < 30; tuftIndex++) {
-        struct bitmap *tuft = transientState->assets->textureTuft +
-                              RandomChoice(&series, ARRAY_COUNT(transientState->assets->textureTuft));
-        struct v2 tuftCenter = v2_mul(v2u(tuft->width, tuft->height), 0.5f);
+        struct bitmap_id tuft = RandomAsset(&series, transientState->assets, ASSET_TYPE_TUFT);
 
         struct v2 position = center;
         v2_add_ref(&position, v2_hadamard(halfDim, v2(RandomUnit(&series), RandomUnit(&series))));
 
-        Bitmap(renderGroup, tuft, v2_to_v3(position, 0.0f), 0.1f);
+        BitmapAsset(renderGroup, tuft, v2_to_v3(position, 0.0f), 0.1f, v4(1.0f, 1.0f, 1.0f, 1.0f));
       }
     }
   }

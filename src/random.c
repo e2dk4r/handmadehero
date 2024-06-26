@@ -495,3 +495,15 @@ RandomBetweenI32(struct random_series *series, i32 min, i32 max)
   assert(value >= min && value <= max);
   return value;
 }
+
+struct bitmap_id
+RandomAsset(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId)
+{
+  struct asset_type *type = assets->assetTypes + typeId;
+  u32 min = type->assetIndexFirst;
+  u32 max = type->assetIndexOnePastLast; // exclusive
+  u32 count = max - min;
+  struct asset *asset = assets->assets + min + RandomChoice(series, count);
+  struct bitmap_id result = {asset->slotId};
+  return result;
+}

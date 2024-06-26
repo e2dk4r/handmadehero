@@ -114,6 +114,52 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, struct
   return result;
 }
 
+internal struct bitmap_id
+BitmapInfoAdd(struct game_assets *assets, char *filename, struct v2 alignPercentage)
+{
+  struct bitmap_id id = {assets->DEBUGUsedBitmapInfoCount};
+  assets->DEBUGUsedBitmapInfoCount++;
+
+  struct asset_bitmap_info *info = assets->bitmapInfos + id.value;
+  info->filename = filename;
+  info->alignPercentage = alignPercentage;
+
+  return id;
+}
+
+internal void
+BeginAsset(struct game_assets *assets, enum asset_type_id assetTypeId)
+{
+  assert(assets->DEBUGAssetType == 0 && "another already in progress, one at a time");
+  assets->DEBUGAssetType = assets->assetTypes + assetTypeId;
+
+  struct asset_type *type = assets->DEBUGAssetType;
+  type->assetIndexFirst = assets->DEBUGUsedAssetCount;
+  type->assetIndexOnePastLast = type->assetIndexFirst;
+}
+
+internal void
+AddBitmapAsset(struct game_assets *assets, char *filename, struct v2 alignPercentage)
+{
+  assert(assets->DEBUGAssetType && "cannot finish something that is not started");
+
+  struct asset_type *type = assets->DEBUGAssetType;
+  struct asset *asset = assets->assets + type->assetIndexOnePastLast;
+  type->assetIndexOnePastLast++;
+
+  asset->tagIndexFirst = 0;
+  asset->tagIndexOnePastLast = 0;
+  asset->slotId = BitmapInfoAdd(assets, filename, alignPercentage).value;
+}
+
+internal void
+EndAsset(struct game_assets *assets)
+{
+  assert(assets->DEBUGAssetType && "cannot finish something that is not started");
+  assets->DEBUGUsedAssetCount = assets->DEBUGAssetType->assetIndexOnePastLast;
+  assets->DEBUGAssetType = 0;
+}
+
 inline struct game_assets *
 GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState,
                    pfnPlatformReadEntireFile PlatformReadEntireFile)
@@ -124,8 +170,9 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->PlatformReadEntireFile = PlatformReadEntireFile;
   assets->transientState = transientState;
 
-  assets->bitmapCount = ASSET_TYPE_COUNT;
+  assets->bitmapCount = 256 * ASSET_TYPE_COUNT;
   assets->bitmaps = MemoryArenaPush(arena, sizeof(*assets->bitmaps) * assets->bitmapCount);
+  assets->bitmapInfos = MemoryArenaPush(arena, sizeof(*assets->bitmapInfos) * assets->bitmapCount);
 
   assets->audioCount = 1;
   assets->audios = MemoryArenaPush(arena, sizeof(*assets->audios) * assets->audioCount);
@@ -136,29 +183,38 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->assetCount = assets->bitmapCount;
   assets->assets = MemoryArenaPush(arena, sizeof(*assets->assets) * assets->assetCount);
 
-  for (u32 assetTypeId = 0; assetTypeId < ASSET_TYPE_COUNT; assetTypeId++) {
-    struct asset_type *type = assets->assetTypes + assetTypeId;
-    type->assetIndexFirst = assetTypeId;
-    type->assetIndexOnePastLast = assetTypeId + (assetTypeId != ASSET_TYPE_NONE);
+  assets->DEBUGUsedBitmapInfoCount = 1;
+  assets->DEBUGUsedAssetCount = 1;
 
-    struct asset *asset = assets->assets + type->assetIndexFirst;
-    asset->tagIndexFirst = 0;
-    asset->tagIndexOnePastLast = 0;
-    asset->slotId = type->assetIndexFirst;
-  }
+  BeginAsset(assets, ASSET_TYPE_SHADOW);
+  AddBitmapAsset(assets, "test/test_hero_shadow.bmp", v2(0.5f, 0.156682029f));
+  EndAsset(assets);
 
-  /* load grass */
-  assets->textureGrass[0] = LoadBmp(PlatformReadEntireFile, "test2/grass00.bmp", v2(0.5f, 0.5f));
-  assets->textureGrass[1] = LoadBmp(PlatformReadEntireFile, "test2/grass01.bmp", v2(0.5f, 0.5f));
+  BeginAsset(assets, ASSET_TYPE_TREE);
+  AddBitmapAsset(assets, "test2/tree00.bmp", v2(0.493827164f, 0.295652181f));
+  EndAsset(assets);
 
-  assets->textureTuft[0] = LoadBmp(PlatformReadEntireFile, "test2/tuft00.bmp", v2(0.5f, 0.5f));
-  assets->textureTuft[1] = LoadBmp(PlatformReadEntireFile, "test2/tuft01.bmp", v2(0.5f, 0.5f));
-  assets->textureTuft[2] = LoadBmp(PlatformReadEntireFile, "test2/tuft02.bmp", v2(0.5f, 0.5f));
+  BeginAsset(assets, ASSET_TYPE_SWORD);
+  AddBitmapAsset(assets, "test2/rock03.bmp", v2(0.5f, 0.65625f));
+  EndAsset(assets);
 
-  assets->textureGround[0] = LoadBmp(PlatformReadEntireFile, "test2/ground00.bmp", v2(0.5f, 0.5f));
-  assets->textureGround[1] = LoadBmp(PlatformReadEntireFile, "test2/ground01.bmp", v2(0.5f, 0.5f));
-  assets->textureGround[2] = LoadBmp(PlatformReadEntireFile, "test2/ground02.bmp", v2(0.5f, 0.5f));
-  assets->textureGround[3] = LoadBmp(PlatformReadEntireFile, "test2/ground03.bmp", v2(0.5f, 0.5f));
+  BeginAsset(assets, ASSET_TYPE_GRASS);
+  AddBitmapAsset(assets, "test2/grass00.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/grass01.bmp", v2(0.5f, 0.5f));
+  EndAsset(assets);
+
+  BeginAsset(assets, ASSET_TYPE_GROUND);
+  AddBitmapAsset(assets, "test2/ground00.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/ground01.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/ground02.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/ground03.bmp", v2(0.5f, 0.5f));
+  EndAsset(assets);
+
+  BeginAsset(assets, ASSET_TYPE_TUFT);
+  AddBitmapAsset(assets, "test2/tuft00.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/tuft01.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/tuft02.bmp", v2(0.5f, 0.5f));
+  EndAsset(assets);
 
   /* load hero bitmaps */
   struct bitmap_hero *bitmapHero = &assets->textureHero[BITMAP_HERO_FRONT];
@@ -206,8 +262,6 @@ struct asset_load_bitmap_work {
   struct game_assets *assets;
   struct bitmap *bitmap;
   struct bitmap_id bitmapId;
-  char *filename;
-  struct v2 alignPercentage;
   enum asset_state finalState;
 };
 
@@ -216,7 +270,8 @@ DoAssetLoadBitmapWork(struct platform_work_queue *queue, void *data)
 {
   struct asset_load_bitmap_work *work = data;
 
-  *work->bitmap = LoadBmp(work->assets->PlatformReadEntireFile, work->filename, work->alignPercentage);
+  struct asset_bitmap_info *info = work->assets->bitmapInfos + work->bitmapId.value;
+  *work->bitmap = LoadBmp(work->assets->PlatformReadEntireFile, info->filename, info->alignPercentage);
 
   // TODO(e2dk4r): fence!
   struct asset_slot *slot = work->assets->bitmaps + work->bitmapId.value;
@@ -233,6 +288,9 @@ AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id)
     return;
 
   struct asset_slot *slot = assets->bitmaps + id.value;
+  struct asset_bitmap_info *info = assets->bitmapInfos + id.value;
+  assert(info->filename && "asset not setup properly");
+
   enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
   if (AtomicCompareExchange(&slot->state, &expectedAssetState, ASSET_STATE_QUEUED)) {
     // asset now queued
@@ -248,35 +306,7 @@ AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id)
     work->assets = assets;
     work->bitmapId = id;
     work->bitmap = MemoryArenaPush(&assets->arena, sizeof(*work->bitmap));
-    work->alignPercentage = v2(0.5f, 0.5f);
     work->finalState = ASSET_STATE_LOADED;
-
-    b32 isValid = 1;
-    switch (id.value) {
-    case ASSET_TYPE_SHADOW:
-      work->filename = "test/test_hero_shadow.bmp";
-      work->alignPercentage = v2(0.5f, 0.156682029f);
-      break;
-    case ASSET_TYPE_TREE:
-      work->filename = "test2/tree00.bmp";
-      work->alignPercentage = v2(0.493827164f, 0.295652181f);
-      break;
-    case ASSET_TYPE_SWORD:
-      work->filename = "test2/rock03.bmp";
-      work->alignPercentage = v2(0.5f, 0.65625f);
-      break;
-    default:
-      assert(0 && "do not know how to handle asset id");
-      isValid = 0;
-      break;
-    }
-
-    if (!isValid) {
-      // unknown asset id, revert back
-      AtomicStore(&slot->state, ASSET_STATE_UNLOADED);
-      EndTaskWithMemory(task);
-      return;
-    }
 
     PlatformWorkQueueAddEntry(assets->transientState->lowPriorityQueue, DoAssetLoadBitmapWork, work);
   }

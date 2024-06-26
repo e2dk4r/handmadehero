@@ -34,4 +34,8 @@ RandomBetween(struct random_series *series, f32 min, f32 max);
 i32
 RandomBetweenI32(struct random_series *series, i32 min, i32 max);
 
+#include "asset.h"
+struct bitmap_id
+RandomAsset(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId);
+
 #endif /* HANDMADEHERO_RANDOM_H */

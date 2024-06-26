@@ -33,6 +33,9 @@ enum asset_type_id {
   ASSET_TYPE_TREE,
   ASSET_TYPE_SWORD,
   ASSET_TYPE_ROCK,
+  ASSET_TYPE_GRASS,
+  ASSET_TYPE_GROUND,
+  ASSET_TYPE_TUFT,
 
   ASSET_TYPE_COUNT
 };
@@ -54,10 +57,8 @@ struct asset_type {
 };
 
 struct asset_bitmap_info {
+  char *filename;
   struct v2 alignPercentage;
-  f32 widthOverHeight;
-  u32 width;
-  u32 height;
 };
 
 struct asset_group {
@@ -80,6 +81,7 @@ struct game_assets {
 
   u32 bitmapCount;
   struct asset_slot *bitmaps;
+  struct asset_bitmap_info *bitmapInfos;
 
   u32 audioCount;
   struct asset_slot *audios;
@@ -92,17 +94,17 @@ struct game_assets {
 
   struct asset_type assetTypes[ASSET_TYPE_COUNT];
 
-  // array'd assets
-  struct bitmap textureGrass[2];
-  struct bitmap textureGround[4];
-  struct bitmap textureTuft[3];
-
   // structures assets
 #define BITMAP_HERO_FRONT 3
 #define BITMAP_HERO_BACK 1
 #define BITMAP_HERO_LEFT 2
 #define BITMAP_HERO_RIGHT 0
   struct bitmap_hero textureHero[4];
+
+  // TODO(e2dk4r): remove this once we actually load a asset pack file
+  u32 DEBUGUsedBitmapInfoCount;
+  u32 DEBUGUsedAssetCount;
+  struct asset_type *DEBUGAssetType;
 };
 
 struct bitmap_id {
