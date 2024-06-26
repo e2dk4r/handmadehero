@@ -576,8 +576,6 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
     return;
   struct fill_ground_chunk_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
 
-  groundBuffer->position = *chunkPosition;
-
   struct bitmap *buffer = &groundBuffer->bitmap;
 
   f32 width = state->world->chunkDimInMeters.x;
@@ -648,9 +646,13 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
     }
   }
 
-  if (!RenderGroupIsAllResourcesPreset(renderGroup))
+  if (!RenderGroupIsAllResourcesPreset(renderGroup)) {
     // do not blit, until all resources loaded into memory
+    EndTaskWithMemory(task);
     return;
+  }
+
+  groundBuffer->position = *chunkPosition;
 
   work->task = task;
   work->renderGroup = renderGroup;
