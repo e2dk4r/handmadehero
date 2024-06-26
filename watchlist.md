@@ -445,7 +445,7 @@
 - [x] Handmade Hero Day 134 - Mapping Assets to Bitmaps
       https://www.youtube.com/watch?v=AdscwVnyaQw
 
-- [ ] Handmade Hero Day 135 - Typed Asset Arrays
+- [x] Handmade Hero Day 135 - Typed Asset Arrays
       https://www.youtube.com/watch?v=meU5RI3J1wc
 
 - [ ] Handmade Hero Day 136 - Tag-based Asset Retrieval
