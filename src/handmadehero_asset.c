@@ -129,8 +129,13 @@ BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct ass
     for (u32 tagIndex = asset->tagIndexFirst; tagIndex < asset->tagIndexOnePastLast; tagIndex++) {
       struct asset_tag *tag = assets->tags + tagIndex;
 
-      f32 diff = matchVector->e[tag->id] - tag->value;
-      f32 weightedDiff = weightVector->e[tag->id] * Absolute(diff);
+      f32 a = matchVector->e[tag->id];
+      f32 b = tag->value;
+      f32 d0 = Absolute(a - b);
+      f32 d1 = Absolute(a - assets->tagRanges[tag->id] * SignOf(a) - b);
+      f32 diff = Minimum(d0, d1);
+
+      f32 weightedDiff = weightVector->e[tag->id] * diff;
 
       totalWeightedDiff += weightedDiff;
     }
@@ -228,6 +233,11 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
 
   assets->tagCount = 1024 * ASSET_TYPE_COUNT;
   assets->tags = MemoryArenaPush(arena, sizeof(*assets->tags) * assets->tagCount);
+
+  for (u32 tagType = 0; tagType < ASSET_TAG_COUNT; tagType++) {
+    assets->tagRanges[tagType] = 1000000.0f;
+  }
+  assets->tagRanges[ASSET_TAG_FACING_DIRECTION] = TAU32;
 
   assets->assetCount = assets->bitmapCount;
   assets->assets = MemoryArenaPush(arena, sizeof(*assets->assets) * assets->assetCount);

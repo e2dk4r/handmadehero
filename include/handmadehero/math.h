@@ -85,11 +85,10 @@ SquareRoot(f32 value)
 {
   return __builtin_sqrtf(value);
 }
-internal inline i32
-SignOf(i32 value)
-{
-  return value >= 0 ? 1 : -1;
-}
+
+// [-1, 1]
+// (0 < value) - (value < 0)
+#define SignOf(value) (((__typeof__(value))0 < value) - (value < (__typeof__(value))0))
 
 internal inline f32
 Sin(f32 value)

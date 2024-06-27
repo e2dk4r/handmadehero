@@ -696,7 +696,6 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
   if (entity->dPosition.x == 0.0f && entity->dPosition.y == 0.0f) {
     // same facing direction
   } else {
-    // BUG(e2dk4r): periodic angle
     entity->facingDirection = ATan2(entity->dPosition.y, entity->dPosition.x);
   }
 }

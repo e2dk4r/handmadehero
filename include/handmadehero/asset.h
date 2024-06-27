@@ -50,7 +50,7 @@ struct asset_vector {
 };
 
 struct asset_tag {
-  u32 id;
+  enum asset_tag_id id;
   f32 value;
 };
 
@@ -91,6 +91,7 @@ struct game_assets {
 
   u32 tagCount;
   struct asset_tag *tags;
+  f32 tagRanges[ASSET_TYPE_COUNT];
 
   u32 assetCount;
   struct asset *assets;
