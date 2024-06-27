@@ -1217,9 +1217,15 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     /*****************************************************************
      * Post-physics entity work (rendering)
      *****************************************************************/
+    struct hero_bitmap_ids heroBitmapIds = {};
+    struct asset_vector matchVector = {};
+    matchVector.e[ASSET_TAG_FACING_DIRECTION] = (f32)entity->facingDirection;
+    struct asset_vector weightVector = {};
+    weightVector.e[ASSET_TAG_FACING_DIRECTION] = 1.0f;
+    heroBitmapIds.head = BestMatchAsset(transientState->assets, ASSET_TYPE_HEAD, &matchVector, &weightVector);
+    heroBitmapIds.torso = BestMatchAsset(transientState->assets, ASSET_TYPE_TORSO, &matchVector, &weightVector);
+    heroBitmapIds.cape = BestMatchAsset(transientState->assets, ASSET_TYPE_CAPE, &matchVector, &weightVector);
     if (entity->type & ENTITY_TYPE_HERO) {
-      struct bitmap_hero *bitmap = &transientState->assets->textureHero[entity->facingDirection];
-
       f32 shadowAlpha = 1.0f - entity->position.z;
       if (shadowAlpha < 0.0f)
         shadowAlpha = 0.0f;
@@ -1230,30 +1236,27 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 heroHeight = heroHeightC * 1.2f;
       BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
                   heroHeightC * 1.0f, v4(1.0f, 1.0f, 1.0f, shadowAlpha));
-      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), heroHeight);
-      Bitmap(renderGroup, &bitmap->cape, v3(0.0f, 0.0f, 0.0f), heroHeight);
-      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.0f), heroHeight);
+      BitmapAsset(renderGroup, heroBitmapIds.torso, v3(0.0f, 0.0f, 0.0f), heroHeight, v4(1.0f, 1.0f, 1.0f, 1.0f));
+      BitmapAsset(renderGroup, heroBitmapIds.cape, v3(0.0f, 0.0f, 0.0f), heroHeight, v4(1.0f, 1.0f, 1.0f, 1.0f));
+      BitmapAsset(renderGroup, heroBitmapIds.head, v3(0.0f, 0.0f, 0.0f), heroHeight, v4(1.0f, 1.0f, 1.0f, 1.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_FAMILIAR) {
-      struct bitmap_hero *bitmap = &transientState->assets->textureHero[entity->facingDirection];
-
       f32 bobSin = Sin(2.0f * entity->tBob);
       f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
 
       BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
                   2.5f, v4(1.0f, 1.0f, 1.0f, shadowAlpha));
-      Bitmap(renderGroup, &bitmap->head, v3(0.0f, 0.0f, 0.25f * bobSin), 2.5f);
+      BitmapAsset(renderGroup, heroBitmapIds.head, v3(0.0f, 0.0f, 0.25f * bobSin), 2.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_MONSTER) {
-      struct bitmap_hero *bitmap = &transientState->assets->textureHero[entity->facingDirection];
       f32 alpha = 1.0f;
 
       HitPoints(renderGroup, entity);
       BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
                   4.5f, v4(1.0f, 1.0f, 1.0f, alpha));
-      Bitmap(renderGroup, &bitmap->torso, v3(0.0f, 0.0f, 0.0f), 4.5f);
+      BitmapAsset(renderGroup, heroBitmapIds.torso, v3(0.0f, 0.0f, 0.0f), 4.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {

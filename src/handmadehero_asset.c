@@ -114,6 +114,36 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, struct
   return result;
 }
 
+struct bitmap_id
+BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
+               struct asset_vector *weightVector)
+{
+  struct bitmap_id result = {};
+
+  f32 bestDiff = F32_MAX;
+  struct asset_type *type = assets->assetTypes + typeId;
+  for (u32 assetIndex = type->assetIndexFirst; assetIndex < type->assetIndexOnePastLast; assetIndex++) {
+    struct asset *asset = assets->assets + assetIndex;
+
+    f32 totalWeightedDiff = 0.0f;
+    for (u32 tagIndex = asset->tagIndexFirst; tagIndex < asset->tagIndexOnePastLast; tagIndex++) {
+      struct asset_tag *tag = assets->tags + tagIndex;
+
+      f32 diff = matchVector->e[tag->id] - tag->value;
+      f32 weightedDiff = weightVector->e[tag->id] * Absolute(diff);
+
+      totalWeightedDiff += weightedDiff;
+    }
+
+    if (bestDiff > totalWeightedDiff) {
+      bestDiff = totalWeightedDiff;
+      result.value = asset->slotId;
+    }
+  }
+
+  return result;
+}
+
 internal struct bitmap_id
 BitmapInfoAdd(struct game_assets *assets, char *filename, struct v2 alignPercentage)
 {
@@ -141,15 +171,33 @@ BeginAssetType(struct game_assets *assets, enum asset_type_id assetTypeId)
 internal void
 AddBitmapAsset(struct game_assets *assets, char *filename, struct v2 alignPercentage)
 {
-  assert(assets->DEBUGAssetType && "cannot finish something that is not started");
+  assert(assets->DEBUGAssetType && "you must call BeginAssetType()");
+  assert(assets->DEBUGAssetType->assetIndexOnePastLast < assets->assetCount && "asset count exceeded");
 
   struct asset_type *type = assets->DEBUGAssetType;
-  struct asset *asset = assets->assets + type->assetIndexOnePastLast;
+  assets->DEBUGAsset = assets->assets + type->assetIndexOnePastLast;
   type->assetIndexOnePastLast++;
 
-  asset->tagIndexFirst = 0;
-  asset->tagIndexOnePastLast = 0;
+  struct asset *asset = assets->DEBUGAsset;
+  asset->tagIndexFirst = assets->DEBUGUsedTagCount;
+  asset->tagIndexOnePastLast = asset->tagIndexFirst;
   asset->slotId = BitmapInfoAdd(assets, filename, alignPercentage).value;
+}
+
+internal void
+AddAssetTag(struct game_assets *assets, enum asset_tag_id tagId, f32 value)
+{
+  assert(assets->DEBUGAsset && "you must call one of Add...Asset()");
+  assert(assets->DEBUGAsset->tagIndexOnePastLast < assets->tagCount && "tag count exceeded");
+
+  struct asset *asset = assets->DEBUGAsset;
+  struct asset_tag *tag = assets->tags + assets->DEBUGUsedTagCount;
+  asset->tagIndexOnePastLast++;
+
+  tag->id = tagId;
+  tag->value = value;
+
+  assets->DEBUGUsedTagCount++;
 }
 
 internal void
@@ -158,6 +206,7 @@ EndAssetType(struct game_assets *assets)
   assert(assets->DEBUGAssetType && "cannot finish something that is not started");
   assets->DEBUGUsedAssetCount = assets->DEBUGAssetType->assetIndexOnePastLast;
   assets->DEBUGAssetType = 0;
+  assets->DEBUGAsset = 0;
 }
 
 inline struct game_assets *
@@ -177,14 +226,15 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->audioCount = 1;
   assets->audios = MemoryArenaPush(arena, sizeof(*assets->audios) * assets->audioCount);
 
-  assets->tagCount = 0;
-  assets->tags = 0;
+  assets->tagCount = 1024 * ASSET_TYPE_COUNT;
+  assets->tags = MemoryArenaPush(arena, sizeof(*assets->tags) * assets->tagCount);
 
   assets->assetCount = assets->bitmapCount;
   assets->assets = MemoryArenaPush(arena, sizeof(*assets->assets) * assets->assetCount);
 
   assets->DEBUGUsedBitmapInfoCount = 1;
   assets->DEBUGUsedAssetCount = 1;
+  assets->DEBUGUsedTagCount = 1;
 
   BeginAssetType(assets, ASSET_TYPE_SHADOW);
   AddBitmapAsset(assets, "test/test_hero_shadow.bmp", v2(0.5f, 0.156682029f));
@@ -216,26 +266,53 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   AddBitmapAsset(assets, "test2/tuft02.bmp", v2(0.5f, 0.5f));
   EndAssetType(assets);
 
-  /* load hero bitmaps */
-  struct bitmap_hero *bitmapHero = &assets->textureHero[BITMAP_HERO_FRONT];
-  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_front_head.bmp", v2(0.5f, 0.156682029f));
-  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_front_torso.bmp", v2(0.5f, 0.156682029f));
-  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_front_cape.bmp", v2(0.5f, 0.156682029f));
+  BeginAssetType(assets, ASSET_TYPE_HEAD);
 
-  bitmapHero = &assets->textureHero[BITMAP_HERO_BACK];
-  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_back_head.bmp", v2(0.5f, 0.156682029f));
-  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_back_torso.bmp", v2(0.5f, 0.156682029f));
-  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_back_cape.bmp", v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_right_head.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 0.0f);
 
-  bitmapHero = &assets->textureHero[BITMAP_HERO_LEFT];
-  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_left_head.bmp", v2(0.5f, 0.156682029f));
-  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_left_torso.bmp", v2(0.5f, 0.156682029f));
-  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_left_cape.bmp", v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_back_head.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 1.0f);
 
-  bitmapHero = &assets->textureHero[BITMAP_HERO_RIGHT];
-  bitmapHero->head = LoadBmp(PlatformReadEntireFile, "test/test_hero_right_head.bmp", v2(0.5f, 0.156682029f));
-  bitmapHero->torso = LoadBmp(PlatformReadEntireFile, "test/test_hero_right_torso.bmp", v2(0.5f, 0.156682029f));
-  bitmapHero->cape = LoadBmp(PlatformReadEntireFile, "test/test_hero_right_cape.bmp", v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_left_head.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 2.0f);
+
+  AddBitmapAsset(assets, "test/test_hero_front_head.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 3.0f);
+
+  EndAssetType(assets);
+
+  BeginAssetType(assets, ASSET_TYPE_TORSO);
+
+  AddBitmapAsset(assets, "test/test_hero_right_torso.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 0.0f);
+
+  AddBitmapAsset(assets, "test/test_hero_back_torso.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 1.0f);
+
+  AddBitmapAsset(assets, "test/test_hero_left_torso.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 2.0f);
+
+  AddBitmapAsset(assets, "test/test_hero_front_torso.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 3.0f);
+
+  EndAssetType(assets);
+
+  BeginAssetType(assets, ASSET_TYPE_CAPE);
+
+  AddBitmapAsset(assets, "test/test_hero_right_cape.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 0.0f);
+
+  AddBitmapAsset(assets, "test/test_hero_back_cape.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 1.0f);
+
+  AddBitmapAsset(assets, "test/test_hero_left_cape.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 2.0f);
+
+  AddBitmapAsset(assets, "test/test_hero_front_cape.bmp", v2(0.5f, 0.156682029f));
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 3.0f);
+
+  EndAssetType(assets);
 
   return assets;
 }

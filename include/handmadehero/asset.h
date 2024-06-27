@@ -22,6 +22,7 @@ struct asset_slot {
 enum asset_tag_id {
   ASSET_TAG_SMOOTHNESS,
   ASSET_TAG_FLATNESS,
+  ASSET_TAG_FACING_DIRECTION, // angle in radians clockwise
 
   ASSET_TAG_COUNT
 };
@@ -37,7 +38,15 @@ enum asset_type_id {
   ASSET_TYPE_GROUND,
   ASSET_TYPE_TUFT,
 
+  ASSET_TYPE_HEAD,
+  ASSET_TYPE_TORSO,
+  ASSET_TYPE_CAPE,
+
   ASSET_TYPE_COUNT
+};
+
+struct asset_vector {
+  f32 e[ASSET_TAG_COUNT];
 };
 
 struct asset_tag {
@@ -66,12 +75,6 @@ struct asset_group {
   u32 tagLastIndex;
 };
 
-struct bitmap_hero {
-  struct bitmap head;
-  struct bitmap torso;
-  struct bitmap cape;
-};
-
 struct game_assets {
   // TODO(e2dk4r): copy of known, not ideal because
   // we want AssetLoad to called from anywhere
@@ -94,17 +97,17 @@ struct game_assets {
 
   struct asset_type assetTypes[ASSET_TYPE_COUNT];
 
-  // structures assets
 #define BITMAP_HERO_FRONT 3
 #define BITMAP_HERO_BACK 1
 #define BITMAP_HERO_LEFT 2
 #define BITMAP_HERO_RIGHT 0
-  struct bitmap_hero textureHero[4];
 
   // TODO(e2dk4r): remove this once we actually load a asset pack file
   u32 DEBUGUsedBitmapInfoCount;
   u32 DEBUGUsedAssetCount;
+  u32 DEBUGUsedTagCount;
   struct asset_type *DEBUGAssetType;
+  struct asset *DEBUGAsset;
 };
 
 struct bitmap_id {
@@ -130,5 +133,9 @@ AssetBitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
 
 void
 AssetAudioLoad(struct game_assets *assets, struct audio_id id);
+
+struct bitmap_id
+BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
+               struct asset_vector *weightVector);
 
 #endif /* HANDMADEHERO_ASSET_H */
