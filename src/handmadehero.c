@@ -1219,7 +1219,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
      *****************************************************************/
     struct hero_bitmap_ids heroBitmapIds = {};
     struct asset_vector matchVector = {};
-    matchVector.e[ASSET_TAG_FACING_DIRECTION] = (f32)entity->facingDirection;
+    matchVector.e[ASSET_TAG_FACING_DIRECTION] = entity->facingDirection;
     struct asset_vector weightVector = {};
     weightVector.e[ASSET_TAG_FACING_DIRECTION] = 1.0f;
     heroBitmapIds.head = BestMatchAsset(transientState->assets, ASSET_TYPE_HEAD, &matchVector, &weightVector);

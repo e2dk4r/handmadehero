@@ -76,7 +76,7 @@ struct entity {
   struct entity_reference sword;
   f32 distanceRemaining;
 
-  u8 facingDirection;
+  f32 facingDirection;
   f32 tBob;
 
   f32 walkableHeight;

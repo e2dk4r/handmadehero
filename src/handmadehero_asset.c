@@ -266,51 +266,56 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   AddBitmapAsset(assets, "test2/tuft02.bmp", v2(0.5f, 0.5f));
   EndAssetType(assets);
 
+  f32 angleRight = 0.0f * PI32;
+  f32 angleBack = 0.5f * PI32;
+  f32 angleLeft = 1.0f * PI32;
+  f32 angleFront = 1.5f * PI32;
+
   BeginAssetType(assets, ASSET_TYPE_HEAD);
 
   AddBitmapAsset(assets, "test/test_hero_right_head.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 0.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleRight);
 
   AddBitmapAsset(assets, "test/test_hero_back_head.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 1.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleBack);
 
   AddBitmapAsset(assets, "test/test_hero_left_head.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 2.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleLeft);
 
   AddBitmapAsset(assets, "test/test_hero_front_head.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 3.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleFront);
 
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_TORSO);
 
   AddBitmapAsset(assets, "test/test_hero_right_torso.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 0.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleRight);
 
   AddBitmapAsset(assets, "test/test_hero_back_torso.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 1.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleBack);
 
   AddBitmapAsset(assets, "test/test_hero_left_torso.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 2.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleLeft);
 
   AddBitmapAsset(assets, "test/test_hero_front_torso.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 3.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleFront);
 
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_CAPE);
 
   AddBitmapAsset(assets, "test/test_hero_right_cape.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 0.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleRight);
 
   AddBitmapAsset(assets, "test/test_hero_back_cape.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 1.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleBack);
 
   AddBitmapAsset(assets, "test/test_hero_left_cape.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 2.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleLeft);
 
   AddBitmapAsset(assets, "test/test_hero_front_cape.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, 3.0f);
+  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleFront);
 
   EndAssetType(assets);
 

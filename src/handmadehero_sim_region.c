@@ -693,17 +693,10 @@ EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity
    *****************************************************************/
   /* use player velocity to face the direction */
 
-  if (entity->dPosition.x == 0.0f && entity->dPosition.y == 0.0f)
-    ;
-  else if (Absolute(entity->dPosition.x) > Absolute(entity->dPosition.y)) {
-    if (entity->dPosition.x < 0)
-      entity->facingDirection = BITMAP_HERO_LEFT;
-    else
-      entity->facingDirection = BITMAP_HERO_RIGHT;
+  if (entity->dPosition.x == 0.0f && entity->dPosition.y == 0.0f) {
+    // same facing direction
   } else {
-    if (entity->dPosition.y > 0)
-      entity->facingDirection = BITMAP_HERO_BACK;
-    else
-      entity->facingDirection = BITMAP_HERO_FRONT;
+    // BUG(e2dk4r): periodic angle
+    entity->facingDirection = ATan2(entity->dPosition.y, entity->dPosition.x);
   }
 }

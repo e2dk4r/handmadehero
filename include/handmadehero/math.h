@@ -102,6 +102,12 @@ Cos(f32 value)
   return __builtin_cosf(value);
 }
 
+internal inline f32
+ATan2(f32 y, f32 x)
+{
+  return __builtin_atan2f(y, x);
+}
+
 /* linear blend
  *    .       .
  *    A       B
