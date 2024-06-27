@@ -266,10 +266,10 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   AddBitmapAsset(assets, "test2/tuft02.bmp", v2(0.5f, 0.5f));
   EndAssetType(assets);
 
-  f32 angleRight = 0.0f * PI32;
-  f32 angleBack = 0.5f * PI32;
-  f32 angleLeft = 1.0f * PI32;
-  f32 angleFront = 1.5f * PI32;
+  f32 angleRight = 0.00f * TAU32;
+  f32 angleBack = 0.25f * TAU32;
+  f32 angleLeft = 0.50f * TAU32;
+  f32 angleFront = 0.75f * TAU32;
 
   BeginAssetType(assets, ASSET_TYPE_HEAD);
 

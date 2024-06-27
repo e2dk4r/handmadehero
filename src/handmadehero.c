@@ -1195,8 +1195,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       EntityMove(state, simRegion, entity, dt, &FamiliarMoveSpec, ddPosition);
 
       entity->tBob += dt;
-      if (entity->tBob > 2.0f * PI32)
-        entity->tBob -= 2.0f * PI32;
+      if (entity->tBob > TAU32)
+        entity->tBob -= TAU32;
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {

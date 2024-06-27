@@ -5,6 +5,7 @@
 #include "types.h"
 
 comptime f32 PI32 = 3.14159274101257324f;
+comptime f32 TAU32 = 6.28318530717958647692f;
 
 internal inline f32
 Minimum(f32 a, f32 b)
