@@ -128,7 +128,7 @@ BitmapInfoAdd(struct game_assets *assets, char *filename, struct v2 alignPercent
 }
 
 internal void
-BeginAsset(struct game_assets *assets, enum asset_type_id assetTypeId)
+BeginAssetType(struct game_assets *assets, enum asset_type_id assetTypeId)
 {
   assert(assets->DEBUGAssetType == 0 && "another already in progress, one at a time");
   assets->DEBUGAssetType = assets->assetTypes + assetTypeId;
@@ -153,7 +153,7 @@ AddBitmapAsset(struct game_assets *assets, char *filename, struct v2 alignPercen
 }
 
 internal void
-EndAsset(struct game_assets *assets)
+EndAssetType(struct game_assets *assets)
 {
   assert(assets->DEBUGAssetType && "cannot finish something that is not started");
   assets->DEBUGUsedAssetCount = assets->DEBUGAssetType->assetIndexOnePastLast;
@@ -186,35 +186,35 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->DEBUGUsedBitmapInfoCount = 1;
   assets->DEBUGUsedAssetCount = 1;
 
-  BeginAsset(assets, ASSET_TYPE_SHADOW);
+  BeginAssetType(assets, ASSET_TYPE_SHADOW);
   AddBitmapAsset(assets, "test/test_hero_shadow.bmp", v2(0.5f, 0.156682029f));
-  EndAsset(assets);
+  EndAssetType(assets);
 
-  BeginAsset(assets, ASSET_TYPE_TREE);
+  BeginAssetType(assets, ASSET_TYPE_TREE);
   AddBitmapAsset(assets, "test2/tree00.bmp", v2(0.493827164f, 0.295652181f));
-  EndAsset(assets);
+  EndAssetType(assets);
 
-  BeginAsset(assets, ASSET_TYPE_SWORD);
+  BeginAssetType(assets, ASSET_TYPE_SWORD);
   AddBitmapAsset(assets, "test2/rock03.bmp", v2(0.5f, 0.65625f));
-  EndAsset(assets);
+  EndAssetType(assets);
 
-  BeginAsset(assets, ASSET_TYPE_GRASS);
+  BeginAssetType(assets, ASSET_TYPE_GRASS);
   AddBitmapAsset(assets, "test2/grass00.bmp", v2(0.5f, 0.5f));
   AddBitmapAsset(assets, "test2/grass01.bmp", v2(0.5f, 0.5f));
-  EndAsset(assets);
+  EndAssetType(assets);
 
-  BeginAsset(assets, ASSET_TYPE_GROUND);
+  BeginAssetType(assets, ASSET_TYPE_GROUND);
   AddBitmapAsset(assets, "test2/ground00.bmp", v2(0.5f, 0.5f));
   AddBitmapAsset(assets, "test2/ground01.bmp", v2(0.5f, 0.5f));
   AddBitmapAsset(assets, "test2/ground02.bmp", v2(0.5f, 0.5f));
   AddBitmapAsset(assets, "test2/ground03.bmp", v2(0.5f, 0.5f));
-  EndAsset(assets);
+  EndAssetType(assets);
 
-  BeginAsset(assets, ASSET_TYPE_TUFT);
+  BeginAssetType(assets, ASSET_TYPE_TUFT);
   AddBitmapAsset(assets, "test2/tuft00.bmp", v2(0.5f, 0.5f));
   AddBitmapAsset(assets, "test2/tuft01.bmp", v2(0.5f, 0.5f));
   AddBitmapAsset(assets, "test2/tuft02.bmp", v2(0.5f, 0.5f));
-  EndAsset(assets);
+  EndAssetType(assets);
 
   /* load hero bitmaps */
   struct bitmap_hero *bitmapHero = &assets->textureHero[BITMAP_HERO_FRONT];
