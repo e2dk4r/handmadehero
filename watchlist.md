@@ -448,7 +448,7 @@
 - [x] Handmade Hero Day 135 - Typed Asset Arrays
       https://www.youtube.com/watch?v=meU5RI3J1wc
 
-- [ ] Handmade Hero Day 136 - Tag-based Asset Retrieval
+- [x] Handmade Hero Day 136 - Tag-based Asset Retrieval
       https://www.youtube.com/watch?v=7g79J2aMTUM
 
 - [ ] Handmade Hero Day 137 - Matching Periodic Tags
