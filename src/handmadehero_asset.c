@@ -411,12 +411,10 @@ struct wave_header {
   u32 waveId;
 } __attribute__((packed));
 
-#define WAVE_CHUNKID_CODE(a, b, c, d) ((u32)(a << 0x00) | (u32)(b << 0x08) | (u32)(c << 0x10) | (u32)(d << 0x18))
-
 enum {
-  WAVE_CHUNKID_FMT = WAVE_CHUNKID_CODE('f', 'm', 't', ' '),
-  WAVE_CHUNKID_RIFF = WAVE_CHUNKID_CODE('R', 'I', 'F', 'F'),
-  WAVE_CHUNKID_WAVE = WAVE_CHUNKID_CODE('W', 'A', 'V', 'E'),
+  WAVE_CHUNKID_FMT = READ32LE("fmt "),
+  WAVE_CHUNKID_RIFF = READ32LE("RIFF"),
+  WAVE_CHUNKID_WAVE = READ32LE("WAVE"),
 };
 
 struct wave_chunk {

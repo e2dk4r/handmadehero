@@ -43,4 +43,8 @@ typedef u32 b32;
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof(array[0]))
 #define ALIGN16(value) (((value) + 15) & (__typeof__(value))~15)
 
+// from https://justine.lol/endian.html
+#define READ32LE(S)                                                                                                    \
+  ((u32)(255 & (S)[3]) << 030 | (u32)(255 & (S)[2]) << 020 | (u32)(255 & (S)[1]) << 010 | (u32)(255 & (S)[0]) << 000)
+
 #endif /* HANDMADEHERO_TYPES_H */
