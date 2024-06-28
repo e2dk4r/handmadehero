@@ -88,7 +88,7 @@ SquareRoot(f32 value)
 
 // [-1, 1]
 // (0 < value) - (value < 0)
-#define SignOf(value) (((__typeof__(value))0 < value) - (value < (__typeof__(value))0))
+#define SignOf(value) ((__typeof__(value))(((__typeof__(value))0 < value) - (value < (__typeof__(value))0)))
 
 internal inline f32
 Sin(f32 value)
