@@ -405,8 +405,110 @@ AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id)
   // else some other thread beat us to it
 }
 
-void
-AssetAudioLoad(struct game_assets *assets, struct audio_id id)
+struct wave_header {
+  u32 riffId;
+  u32 size;
+  u32 waveId;
+} __attribute__((packed));
+
+#define WAVE_CHUNKID_CODE(a, b, c, d) ((u32)(a << 0x00) | (u32)(b << 0x08) | (u32)(c << 0x10) | (u32)(d << 0x18))
+
+enum {
+  WAVE_CHUNKID_FMT = WAVE_CHUNKID_CODE('f', 'm', 't', ' '),
+  WAVE_CHUNKID_RIFF = WAVE_CHUNKID_CODE('R', 'I', 'F', 'F'),
+  WAVE_CHUNKID_WAVE = WAVE_CHUNKID_CODE('W', 'A', 'V', 'E'),
+};
+
+struct wave_chunk {
+  u32 id;
+  u32 size;
+} __attribute__((packed));
+
+struct wave_fmt {
+  u16 formatTag;
+  u16 nChannels;
+  u32 nSamplesPerSec;
+  u32 nAvgBytesPerSec;
+  u16 nBlockAlign;
+  u16 bitsPerSample;
+  u16 cbSize;
+  u16 validBitsPerSample;
+  u32 channelMask;
+  u8 subformat[16];
+} __attribute__((packed));
+
+#define WAVE_FORMAT_PCM 0x0001
+
+internal struct audio
+LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
 {
-  // TODO(e2dk4r): implement loading audio
+  struct audio result = {};
+
+  struct read_file_result readResult = PlatformReadEntireFile(filename);
+  if (readResult.size == 0) {
+    return result;
+  }
+
+  struct wave_header *header = readResult.data;
+  assert(header->riffId == WAVE_CHUNKID_RIFF && header->waveId == WAVE_CHUNKID_WAVE);
+
+  // TODO(e2dk4r): read wav file
+
+  return result;
+}
+
+struct load_audio_work {
+  struct task_with_memory *task;
+  struct game_assets *assets;
+  struct audio *audio;
+  struct audio_id audioId;
+  enum asset_state finalState;
+};
+
+internal void
+DoLoadAudioWork(struct platform_work_queue *queue, void *data)
+{
+  struct load_audio_work *work = data;
+
+  struct audio_info *info = work->assets->audioInfos + work->audioId.value;
+  *work->audio = LoadWav(work->assets->PlatformReadEntireFile, info->filename);
+
+  // TODO(e2dk4r): fence!
+  struct asset_slot *slot = work->assets->audios + work->audioId.value;
+  slot->audio = work->audio;
+  AtomicStore(&slot->state, work->finalState);
+
+  EndTaskWithMemory(work->task);
+}
+
+void
+AudioLoad(struct game_assets *assets, struct audio_id id)
+{
+  if (id.value == 0)
+    return;
+
+  struct asset_slot *slot = assets->audios + id.value;
+  struct audio_info *info = assets->audioInfos + id.value;
+  assert(info->filename && "asset not setup properly");
+
+  enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
+  if (AtomicCompareExchange(&slot->state, &expectedAssetState, ASSET_STATE_QUEUED)) {
+    // asset now queued
+    struct task_with_memory *task = BeginTaskWithMemory(assets->transientState);
+    if (!task) {
+      // memory cannot obtained, revert back
+      AtomicStore(&slot->state, ASSET_STATE_UNLOADED);
+      return;
+    }
+
+    struct load_audio_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
+    work->task = task;
+    work->assets = assets;
+    work->audioId = id;
+    work->audio = MemoryArenaPush(&assets->arena, sizeof(*work->audio));
+    work->finalState = ASSET_STATE_LOADED;
+
+    PlatformWorkQueueAddEntry(assets->transientState->lowPriorityQueue, DoLoadAudioWork, work);
+  }
+  // else some other thread beat us to it
 }

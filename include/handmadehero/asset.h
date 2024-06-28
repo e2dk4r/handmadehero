@@ -7,6 +7,11 @@
 #include "render_group.h"
 #include "types.h"
 
+struct audio {
+  u32 sampleCount;
+  void *memory;
+};
+
 enum asset_state {
   ASSET_STATE_UNLOADED,
   ASSET_STATE_QUEUED,
@@ -16,7 +21,10 @@ enum asset_state {
 
 struct asset_slot {
   enum asset_state state;
-  struct bitmap *bitmap;
+  union {
+    struct bitmap *bitmap;
+    struct audio *audio;
+  };
 };
 
 enum asset_tag_id {
@@ -70,6 +78,10 @@ struct asset_bitmap_info {
   struct v2 alignPercentage;
 };
 
+struct audio_info {
+  char *filename;
+};
+
 struct asset_group {
   u32 tagFirstIndex;
   u32 tagLastIndex;
@@ -88,6 +100,7 @@ struct game_assets {
 
   u32 audioCount;
   struct asset_slot *audios;
+  struct audio_info *audioInfos;
 
   u32 tagCount;
   struct asset_tag *tags;
@@ -133,7 +146,7 @@ struct bitmap_id
 AssetBitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
 
 void
-AssetAudioLoad(struct game_assets *assets, struct audio_id id);
+AudioLoad(struct game_assets *assets, struct audio_id id);
 
 struct bitmap_id
 BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
