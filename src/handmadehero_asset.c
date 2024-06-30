@@ -407,7 +407,7 @@ AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id)
 
 struct wave_header {
   u32 riffId;
-  u32 size;
+  u32 fileSize;
   u32 waveId;
 } __attribute__((packed));
 
@@ -426,21 +426,52 @@ struct wave_chunk {
 } __attribute__((packed));
 
 struct wave_fmt {
-  u16 formatTag;
-  u16 nChannels;
-  u32 nSamplesPerSec;
-  u32 nAvgBytesPerSec;
-  u16 nBlockAlign;
+  u16 audioFormat;
+  u16 numChannels;
+  u32 sampleRate;
+  u32 byteRate;
+  u16 blockAlign;
   u16 bitsPerSample;
-  u16 cbSize;
-  u16 validBitsPerSample;
-  u32 channelMask;
-  u8 subformat[16];
 } __attribute__((packed));
 
 #define WAVE_FORMAT_PCM 0x0001
 
-internal struct audio
+struct wave_chunk_iterator {
+  struct wave_chunk *chunk;
+  void *eof;
+};
+
+internal struct wave_chunk_iterator
+WaveChunkParse(struct wave_header *header)
+{
+  struct wave_chunk_iterator iterator = {};
+  iterator.chunk = (void *)header + sizeof(*header);
+  iterator.eof = (void *)header + sizeof(struct wave_chunk) + header->fileSize;
+  return iterator;
+}
+
+internal void *
+WaveChunkData(struct wave_chunk *chunk)
+{
+  return (void *)chunk + sizeof(*chunk);
+}
+
+internal b32
+IsWaveChunkValid(struct wave_chunk_iterator iterator)
+{
+  return (void *)iterator.chunk != (void *)iterator.eof;
+}
+
+internal struct wave_chunk_iterator
+WaveChunkNext(struct wave_chunk_iterator prev)
+{
+  struct wave_chunk_iterator iterator = {};
+  iterator.chunk = (void *)prev.chunk + sizeof(*prev.chunk) + prev.chunk->size;
+  iterator.eof = prev.eof;
+  return iterator;
+}
+
+struct audio
 LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
 {
   struct audio result = {};
@@ -451,9 +482,62 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
   }
 
   struct wave_header *header = readResult.data;
-  assert(header->riffId == WAVE_CHUNKID_RIFF && header->waveId == WAVE_CHUNKID_WAVE);
+  assert(header->riffId == WAVE_CHUNKID_RIFF);
+  assert(header->waveId == WAVE_CHUNKID_WAVE);
 
-  // TODO(e2dk4r): read wav file
+  struct wave_fmt *fmt = 0;
+  u16 *sampleData = 0;
+  u32 sampleDataSize = 0;
+  for (struct wave_chunk_iterator iterator = WaveChunkParse(header); IsWaveChunkValid(iterator);
+       iterator = WaveChunkNext(iterator)) {
+    if (iterator.chunk->id != WAVE_CHUNKID_FMT)
+      continue;
+
+    fmt = WaveChunkData(iterator.chunk);
+    assert(fmt->audioFormat == WAVE_FORMAT_PCM);
+    assert(fmt->sampleRate == 48000);
+    assert(fmt->bitsPerSample == 16);
+    assert(fmt->blockAlign == sizeof(u16) * fmt->numChannels);
+
+    iterator = WaveChunkNext(iterator);
+    assert(iterator.chunk->id == WAVE_CHUNKID_DATA && "malformed file");
+    sampleData = (u16 *)WaveChunkData(iterator.chunk);
+    sampleDataSize = iterator.chunk->size;
+
+    break;
+  }
+
+  assert(fmt && sampleData);
+
+  result.channelCount = fmt->numChannels;
+  result.sampleCount = sampleDataSize / fmt->numChannels * sizeof(u16);
+  switch (fmt->numChannels) {
+  case 1:
+    result.samples[0] = sampleData;
+    result.samples[1] = 0;
+    break;
+
+  case 2:
+    result.samples[0] = sampleData;
+    result.samples[1] = sampleData + result.sampleCount;
+
+    for (u32 sampleIndex = 0; sampleIndex < result.sampleCount; sampleIndex++) {
+      sampleData[sampleIndex * 2 + 0] = (u16)sampleIndex;
+      sampleData[sampleIndex * 2 + 1] = (u16)sampleIndex;
+    }
+
+    for (u32 sampleIndex = 0; sampleIndex < result.sampleCount; sampleIndex++) {
+      u16 source = sampleData[sampleIndex * 2];
+      sampleData[sampleIndex * 2] = sampleData[sampleIndex];
+      sampleData[sampleIndex] = source;
+    }
+
+    // TODO(e2dk4r): load right channels
+    break;
+
+  default:
+    assert(0 && "Unsupported number of channels");
+  }
 
   return result;
 }

@@ -8,8 +8,9 @@
 #include "types.h"
 
 struct audio {
+  u32 channelCount;
   u32 sampleCount;
-  void *memory;
+  u16 *samples[2];
 };
 
 enum asset_state {
@@ -151,5 +152,8 @@ AudioLoad(struct game_assets *assets, struct audio_id id);
 struct bitmap_id
 BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
                struct asset_vector *weightVector);
+
+struct audio
+LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename);
 
 #endif /* HANDMADEHERO_ASSET_H */

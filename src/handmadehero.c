@@ -691,6 +691,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * INITIALIZATION
    ****************************************************************/
   if (!state->isInitialized) {
+    LoadWav(memory->PlatformReadEntireFile, "test3/bloop_00.wav");
+
     void *data = memory->permanentStorage + sizeof(*state);
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
     MemoryArenaInit(&state->worldArena, data, size);
