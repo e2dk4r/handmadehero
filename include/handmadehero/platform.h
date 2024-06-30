@@ -155,4 +155,9 @@ struct game_memory {
 #endif
 };
 
+void
+GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer);
+typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_input *input,
+                                       struct game_backbuffer *backbuffer);
+
 #endif /* HANDMADEHERO_PLATFORM_H */

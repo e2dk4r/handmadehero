@@ -104,11 +104,6 @@ struct transient_state {
   struct environment_map envMaps[3];
 };
 
-void
-GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer);
-typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_input *input,
-                                       struct game_backbuffer *backbuffer);
-
 struct stored_entity *
 StoredEntityGet(struct game_state *state, u32 index);
 
