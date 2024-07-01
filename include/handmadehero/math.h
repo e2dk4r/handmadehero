@@ -7,17 +7,11 @@
 comptime f32 PI32 = 3.14159274101257324f;
 comptime f32 TAU32 = 6.28318530717958647692f;
 
-internal inline f32
-Minimum(f32 a, f32 b)
-{
-  return (a < b) ? a : b;
-}
+// (a < b) ? a : b
+#define Minimum(a, b) ((a < b) ? a : b)
 
-internal inline f32
-Maximum(f32 a, f32 b)
-{
-  return (a > b) ? a : b;
-}
+// (a > b) ? a : b
+#define Maximum(a, b) ((a < b) ? a : b)
 
 internal inline b32
 InRange(f32 min, f32 max, f32 value)

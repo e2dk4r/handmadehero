@@ -10,7 +10,7 @@
 struct audio {
   u32 channelCount;
   u32 sampleCount;
-  u16 *samples[2];
+  i16 *samples[2];
 };
 
 enum asset_state {

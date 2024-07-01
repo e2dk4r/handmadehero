@@ -667,6 +667,26 @@ pfnPlatformWorkQueueAddEntry PlatformWorkQueueAddEntry;
 pfnPlatformWorkQueueCompleteAllWork PlatformWorkQueueCompleteAllWork;
 
 void
+GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffer)
+{
+  struct game_state *state = memory->permanentStorage;
+
+  struct audio *audio = &state->testAudio;
+  if (audio->sampleCount == 0)
+    return;
+
+  i16 *sampleOut = audioBuffer->samples;
+  for (u32 sampleIndex = 0; sampleIndex < audioBuffer->sampleCount; sampleIndex++) {
+    i16 sampleValue = audio->samples[0][(state->testAudioSampleIndex + sampleIndex) % audio->sampleCount];
+
+    *sampleOut++ = sampleValue;
+    *sampleOut++ = sampleValue;
+  }
+
+  state->testAudioSampleIndex += audioBuffer->sampleCount;
+}
+
+void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer)
 {
 #if HANDMADEHERO_INTERNAL
@@ -691,7 +711,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * INITIALIZATION
    ****************************************************************/
   if (!state->isInitialized) {
-    LoadWav(memory->PlatformReadEntireFile, "test3/bloop_00.wav");
+    state->testAudio = LoadWav(memory->PlatformReadEntireFile, "test3/music_test.wav");
 
     void *data = memory->permanentStorage + sizeof(*state);
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);

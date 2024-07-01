@@ -486,7 +486,7 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
   assert(header->waveId == WAVE_CHUNKID_WAVE);
 
   struct wave_fmt *fmt = 0;
-  u16 *sampleData = 0;
+  i16 *sampleData = 0;
   u32 sampleDataSize = 0;
   for (struct wave_chunk_iterator iterator = WaveChunkParse(header); IsWaveChunkValid(iterator);
        iterator = WaveChunkNext(iterator)) {
@@ -501,7 +501,7 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
 
     iterator = WaveChunkNext(iterator);
     assert(iterator.chunk->id == WAVE_CHUNKID_DATA && "malformed file");
-    sampleData = (u16 *)WaveChunkData(iterator.chunk);
+    sampleData = (i16 *)WaveChunkData(iterator.chunk);
     sampleDataSize = iterator.chunk->size;
 
     break;
@@ -510,7 +510,7 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
   assert(fmt && sampleData);
 
   result.channelCount = fmt->numChannels;
-  result.sampleCount = sampleDataSize / fmt->numChannels * sizeof(u16);
+  result.sampleCount = sampleDataSize / (fmt->numChannels * sizeof(u16));
   switch (fmt->numChannels) {
   case 1:
     result.samples[0] = sampleData;
@@ -521,13 +521,15 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
     result.samples[0] = sampleData;
     result.samples[1] = sampleData + result.sampleCount;
 
+#if 0
     for (u32 sampleIndex = 0; sampleIndex < result.sampleCount; sampleIndex++) {
-      sampleData[sampleIndex * 2 + 0] = (u16)sampleIndex;
-      sampleData[sampleIndex * 2 + 1] = (u16)sampleIndex;
+      sampleData[sampleIndex * 2 + 0] = (i16)sampleIndex;
+      sampleData[sampleIndex * 2 + 1] = (i16)sampleIndex;
     }
+#endif
 
     for (u32 sampleIndex = 0; sampleIndex < result.sampleCount; sampleIndex++) {
-      u16 source = sampleData[sampleIndex * 2];
+      i16 source = sampleData[sampleIndex * 2];
       sampleData[sampleIndex * 2] = sampleData[sampleIndex];
       sampleData[sampleIndex] = source;
     }

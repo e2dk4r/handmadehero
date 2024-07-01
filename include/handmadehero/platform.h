@@ -160,4 +160,14 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_input *input,
                                        struct game_backbuffer *backbuffer);
 
+struct game_audio_buffer {
+  u32 sampleRate;
+  u32 sampleCount;
+  i16 *samples;
+};
+
+void
+GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *buffer);
+typedef void (*pfnGameOutputAudio)(struct game_memory *memory, struct game_audio_buffer *buffer);
+
 #endif /* HANDMADEHERO_PLATFORM_H */

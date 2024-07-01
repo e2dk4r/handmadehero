@@ -73,6 +73,9 @@ struct game_state {
 
   struct bitmap testDiffuse;
   struct bitmap testNormal;
+
+  struct audio testAudio;
+  u32 testAudioSampleIndex;
 };
 
 struct task_with_memory {

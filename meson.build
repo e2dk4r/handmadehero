@@ -58,6 +58,7 @@ liburing = dependency('liburing')
 vulkan = dependency('vulkan')
 libm = cc.find_library('m')
 libpthread = cc.find_library('pthread')
+libpipewire = dependency('libpipewire-0.3')
 
 subdir('protocol')
 
@@ -118,5 +119,6 @@ executable(
     vulkan,
     libm,
     libpthread,
+    libpipewire,
   ]
 )

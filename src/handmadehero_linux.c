@@ -2,14 +2,22 @@
 #define _XOPEN_SOURCE 700
 
 /* system */
+#pragma GCC diagnostic push
+
+// caused by: #include <pipewire/pipewire.h>
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <libevdev/libevdev.h>
 #include <liburing.h>
 #include <linux/input.h>
+#include <pipewire/pipewire.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <spa/param/audio/format-utils.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +39,8 @@
 #include "presentation-time-client-protocol.h"
 #include "viewporter-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
+
+#pragma GCC diagnostic pop
 
 /* handmadehero */
 #include <handmadehero/assert.h>
@@ -156,6 +166,7 @@ struct game_code {
   void *module;
 
   pfnGameUpdateAndRender GameUpdateAndRender;
+  pfnGameOutputAudio GameOutputAudio;
 };
 
 internal u8
@@ -190,6 +201,9 @@ ReloadGameCode(struct game_code *lib)
   lib->GameUpdateAndRender = dlsym(lib->module, "GameUpdateAndRender");
   assert(lib->GameUpdateAndRender != 0 && "wrong module format");
 
+  lib->GameOutputAudio = dlsym(lib->module, "GameOutputAudio");
+  assert(lib->GameOutputAudio != 0 && "wrong module format");
+
   // update module time
   lib->time = sb.st_mtime;
   debugf("[ReloadGameCode] reloaded @%d\n", lib->time);
@@ -202,6 +216,7 @@ ReloadGameCode(struct game_code *lib)
  * structures
  *****************************************************************/
 struct linux_state {
+  /* WAYLAND */
   struct wl_compositor *wl_compositor;
   struct wl_shm *wl_shm;
   struct wl_seat *wl_seat;
@@ -220,6 +235,10 @@ struct linux_state {
   struct xkb_context *xkb_context;
   struct xkb_keymap *xkb_keymap;
   struct xkb_state *xkb_state;
+
+  /* PIPEWIRE */
+  struct pw_thread_loop *pw_thread_loop;
+  struct pw_stream *pw_stream;
 
   struct game_input gameInputs[2];
   struct game_input *input;
@@ -349,6 +368,64 @@ begin:
 }
 
 #endif
+
+/*****************************************************************
+ * pipewire events
+ *****************************************************************/
+comptime u32 SAMPLE_RATE = 44100;
+comptime u32 SAMPLE_CHANNELS = 2;
+
+internal void
+pw_stream_process(void *data)
+{
+  struct linux_state *state = data;
+#if HANDMADEHERO_DEBUG
+  // from game layer
+  pfnGameOutputAudio GameOutputAudio = state->lib.GameOutputAudio;
+#endif
+
+  // Obtain a buffer to write into.
+  struct pw_buffer *pwBuffer = pw_stream_dequeue_buffer(state->pw_stream);
+  if (!pwBuffer) {
+    debug("[pw_stream_events::process] out of buffers\n");
+    return;
+  }
+
+  // Get pointers in buffer memory to write to.
+  struct spa_buffer *spaBuffer = pwBuffer->buffer;
+  i16 *samples = spaBuffer->datas[0].data;
+  if (!samples) {
+    debug("[pw_stream_events::process] empty sample\n");
+    return;
+  }
+
+  u32 stride = sizeof(u16) * SAMPLE_CHANNELS;
+  u32 sampleCount = spaBuffer->datas[0].maxsize / stride;
+  if (pwBuffer->requested) {
+    sampleCount = Minimum((u32)pwBuffer->requested, sampleCount);
+  }
+
+  // Write data into buffer.
+  struct game_audio_buffer gameAudioBuffer = {
+      .sampleRate = SAMPLE_RATE,
+      .sampleCount = sampleCount,
+      .samples = samples,
+  };
+  GameOutputAudio(&state->game_memory, &gameAudioBuffer);
+
+  // Adjust buffer with number of written bytes, offset, stride.
+  spaBuffer->datas[0].chunk->offset = 0;
+  spaBuffer->datas[0].chunk->stride = (i32)stride;
+  spaBuffer->datas[0].chunk->size = sampleCount * stride;
+
+  // Queue the buffer for playback.
+  pw_stream_queue_buffer(state->pw_stream, pwBuffer);
+}
+
+comptime struct pw_stream_events pw_stream_events = {
+    PW_VERSION_STREAM_EVENTS,
+    .process = pw_stream_process,
+};
 
 /*****************************************************************
  * input handling
@@ -1256,6 +1333,45 @@ main(int argc, char *argv[])
     game_memory->permanentStorage += used;
     game_memory->permanentStorageSize -= used;
   }
+
+  /* pipewire */
+  pw_init(0, 0);
+  state.pw_thread_loop = pw_thread_loop_new("audio", 0);
+  if (!state.pw_thread_loop) {
+    error_code = HANDMADEHERO_ERROR_PIPEWIRE;
+    goto xkb_context_exit;
+  }
+
+  state.pw_stream = pw_stream_new_simple(
+      pw_thread_loop_get_loop(state.pw_thread_loop), "handmadehero",
+      pw_properties_new(PW_KEY_MEDIA_TYPE, "Audio", PW_KEY_MEDIA_CATEGORY, "Playback", PW_KEY_MEDIA_ROLE, "Game", NULL),
+      &pw_stream_events, &state);
+  if (!state.pw_stream) {
+    error_code = HANDMADEHERO_ERROR_PIPEWIRE;
+    goto xkb_context_exit;
+  }
+
+  {
+    // setup the format of the stream
+    const struct spa_pod *params[1];
+    u8 buffer[1024];
+    struct spa_pod_builder builder = SPA_POD_BUILDER_INIT(buffer, sizeof(buffer));
+    params[0] = spa_format_audio_raw_build(
+        &builder, SPA_PARAM_EnumFormat,
+        &SPA_AUDIO_INFO_RAW_INIT(.format = SPA_AUDIO_FORMAT_S16, .channels = SAMPLE_CHANNELS, .rate = SAMPLE_RATE, ));
+
+    // Now we're ready to connect the stream
+    int failed = pw_stream_connect(state.pw_stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
+                                   PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
+                                   params, 1);
+    if (failed) {
+      error_code = HANDMADEHERO_ERROR_PIPEWIRE;
+      goto xkb_context_exit;
+    }
+  }
+
+  // start audio thread
+  pw_thread_loop_start(state.pw_thread_loop);
 
   /* wayland */
   struct wl_display *wl_display = wl_display_connect(0);
