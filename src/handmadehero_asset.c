@@ -510,7 +510,7 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
   assert(fmt && sampleData);
 
   result.channelCount = fmt->numChannels;
-  result.sampleCount = sampleDataSize / (fmt->numChannels * sizeof(u16));
+  result.sampleCount = sampleDataSize / (u32)(fmt->numChannels * sizeof(u16));
   switch (fmt->numChannels) {
   case 1:
     result.samples[0] = sampleData;
