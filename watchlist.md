@@ -454,7 +454,7 @@
 - [x] Handmade Hero Day 137 - Matching Periodic Tags
       https://www.youtube.com/watch?v=gVOuBzVC20g
 
-- [ ] Handmade Hero Day 138 - Loading WAV Files
+- [x] Handmade Hero Day 138 - Loading WAV Files
       https://www.youtube.com/watch?v=RSxUBaoomy0
 
 - [ ] Handmade Hero Day 139 - Introduction to Sound Mixing
