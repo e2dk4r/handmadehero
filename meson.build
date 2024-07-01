@@ -55,7 +55,6 @@ wayland_protocols = dependency('wayland-protocols', native: true)
 xkbcommon = dependency('xkbcommon')
 libevdev = dependency('libevdev')
 liburing = dependency('liburing')
-vulkan = dependency('vulkan')
 libm = cc.find_library('m')
 libpthread = cc.find_library('pthread')
 libpipewire = dependency('libpipewire-0.3')
@@ -116,7 +115,6 @@ executable(
     xkbcommon,
     libevdev,
     liburing,
-    vulkan,
     libm,
     libpthread,
     libpipewire,
