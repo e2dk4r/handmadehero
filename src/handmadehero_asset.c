@@ -465,7 +465,7 @@ IsWaveChunkValid(struct wave_chunk_iterator iterator)
 internal struct wave_chunk_iterator
 WaveChunkNext(struct wave_chunk_iterator iterator)
 {
-  iterator.chunk = (void *)iterator.chunk + sizeof(*iterator.chunk) + iterator.chunk->size;
+  iterator.chunk = (void *)iterator.chunk + sizeof(*iterator.chunk) + ALIGN(iterator.chunk->size, 2);
   return iterator;
 }
 
