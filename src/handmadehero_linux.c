@@ -7,6 +7,7 @@
 // caused by: #include <pipewire/pipewire.h>
 #pragma GCC diagnostic ignored "-Wconversion"
 #pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wfloat-conversion"
 
 #include <dirent.h>
 #include <errno.h>
