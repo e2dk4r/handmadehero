@@ -402,9 +402,11 @@ pw_stream_process(void *data)
 
   u32 stride = sizeof(u16) * SAMPLE_CHANNELS;
   u32 sampleCount = spaBuffer->datas[0].maxsize / stride;
+#if PW_CHECK_VERSION(0, 3, 49)
   if (pwBuffer->requested) {
     sampleCount = Minimum((u32)pwBuffer->requested, sampleCount);
   }
+#endif
 
   // Write data into buffer.
   struct game_audio_buffer gameAudioBuffer = {
