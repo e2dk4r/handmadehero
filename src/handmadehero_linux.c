@@ -1618,7 +1618,7 @@ main(int argc, char *argv[])
     }
 
     /* on inotify events */
-    if (op->type & OP_INOTIFY_WATCH) {
+    else if (op->type & OP_INOTIFY_WATCH) {
       wl_display_cancel_read(wl_display);
 
       /* on inotify watch error, finish the program */
