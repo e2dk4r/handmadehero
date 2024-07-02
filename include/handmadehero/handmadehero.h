@@ -42,9 +42,17 @@ struct hero_bitmap_ids {
   struct bitmap_id cape;
 };
 
+struct playing_audio {
+  struct audio_id id;
+  f32 volume[2];
+  u32 samplesPlayed;
+  struct playing_audio *next;
+};
+
 struct game_state {
   b32 isInitialized : 1;
 
+  struct memory_arena metaArena;
   struct memory_arena worldArena;
   struct world *world;
 
@@ -74,8 +82,8 @@ struct game_state {
   struct bitmap testDiffuse;
   struct bitmap testNormal;
 
-  struct audio testAudio;
-  u32 testAudioSampleIndex;
+  struct playing_audio *firstPlayingAudio;
+  struct playing_audio *firstFreePlayingAudio;
 };
 
 struct task_with_memory {
@@ -85,7 +93,7 @@ struct task_with_memory {
 };
 
 struct transient_state {
-  u8 initialized : 1;
+  b32 isInitialized : 1;
 
   struct memory_arena transientArena;
   struct task_with_memory tasks[4];

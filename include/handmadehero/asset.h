@@ -4,6 +4,7 @@
 #include "math.h"
 #include "memory_arena.h"
 #include "platform.h"
+#include "random.h"
 #include "render_group.h"
 #include "types.h"
 
@@ -39,6 +40,7 @@ enum asset_tag_id {
 enum asset_type_id {
   ASSET_TYPE_NONE,
 
+  /* ================ BITMAPS ================ */
   ASSET_TYPE_SHADOW,
   ASSET_TYPE_TREE,
   ASSET_TYPE_SWORD,
@@ -50,6 +52,14 @@ enum asset_type_id {
   ASSET_TYPE_HEAD,
   ASSET_TYPE_TORSO,
   ASSET_TYPE_CAPE,
+
+  /* ================ AUDIOS ================ */
+  ASSET_TYPE_BLOOP,
+  ASSET_TYPE_CRACK,
+  ASSET_TYPE_DROP,
+  ASSET_TYPE_GLIDE,
+  ASSET_TYPE_MUSIC,
+  ASSET_TYPE_PUHP,
 
   ASSET_TYPE_COUNT
 };
@@ -119,6 +129,7 @@ struct game_assets {
 
   // TODO(e2dk4r): remove this once we actually load a asset pack file
   u32 DEBUGUsedBitmapInfoCount;
+  u32 DEBUGUsedAudioInfoCount;
   u32 DEBUGUsedAssetCount;
   u32 DEBUGUsedTagCount;
   struct asset_type *DEBUGAssetType;
@@ -146,14 +157,27 @@ AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id);
 struct bitmap_id
 AssetBitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
 
+struct bitmap_id
+RandomBitmap(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId);
+
 void
 AudioLoad(struct game_assets *assets, struct audio_id id);
 
 struct bitmap_id
-BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
+BestMatchBitmap(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
+                struct asset_vector *weightVector);
+
+struct audio_id
+BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
                struct asset_vector *weightVector);
 
-struct audio
-LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename);
+struct audio *
+AudioGet(struct game_assets *assets, struct audio_id id);
+
+struct audio_id
+AudioGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
+
+struct audio_id
+RandomAudio(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId);
 
 #endif /* HANDMADEHERO_ASSET_H */

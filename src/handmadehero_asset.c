@@ -3,6 +3,18 @@
 #include <handmadehero/atomic.h>
 #include <handmadehero/handmadehero.h> // BeginTaskWithMemory, EndTaskWithMemory
 
+internal b32
+IsAssetTypeIdBitmap(enum asset_type_id typeId)
+{
+  return typeId >= ASSET_TYPE_SHADOW && typeId <= ASSET_TYPE_CAPE;
+}
+
+internal b32
+IsAssetTypeIdAudio(enum asset_type_id typeId)
+{
+  return typeId >= ASSET_TYPE_BLOOP && typeId <= ASSET_TYPE_PUHP;
+}
+
 inline struct bitmap *
 AssetBitmapGet(struct game_assets *assets, struct bitmap_id id)
 {
@@ -114,11 +126,11 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, struct
   return result;
 }
 
-struct bitmap_id
+internal u32
 BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
                struct asset_vector *weightVector)
 {
-  struct bitmap_id result = {};
+  u32 result = 0;
 
   f32 bestDiff = F32_MAX;
   struct asset_type *type = assets->assetTypes + typeId;
@@ -142,10 +154,28 @@ BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct ass
 
     if (bestDiff > totalWeightedDiff) {
       bestDiff = totalWeightedDiff;
-      result.value = asset->slotId;
+      result = asset->slotId;
     }
   }
 
+  return result;
+}
+
+struct bitmap_id
+BestMatchBitmap(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
+                struct asset_vector *weightVector)
+{
+  assert(IsAssetTypeIdBitmap(typeId));
+  struct bitmap_id result = {BestMatchAsset(assets, typeId, matchVector, weightVector)};
+  return result;
+}
+
+struct audio_id
+BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
+               struct asset_vector *weightVector)
+{
+  assert(IsAssetTypeIdAudio(typeId));
+  struct audio_id result = {BestMatchAsset(assets, typeId, matchVector, weightVector)};
   return result;
 }
 
@@ -158,6 +188,18 @@ BitmapInfoAdd(struct game_assets *assets, char *filename, struct v2 alignPercent
   struct asset_bitmap_info *info = assets->bitmapInfos + id.value;
   info->filename = filename;
   info->alignPercentage = alignPercentage;
+
+  return id;
+}
+
+internal struct bitmap_id
+AudioInfoAdd(struct game_assets *assets, char *filename)
+{
+  struct bitmap_id id = {assets->DEBUGUsedAudioInfoCount};
+  assets->DEBUGUsedAudioInfoCount++;
+
+  struct audio_info *info = assets->audioInfos + id.value;
+  info->filename = filename;
 
   return id;
 }
@@ -187,6 +229,22 @@ AddBitmapAsset(struct game_assets *assets, char *filename, struct v2 alignPercen
   asset->tagIndexFirst = assets->DEBUGUsedTagCount;
   asset->tagIndexOnePastLast = asset->tagIndexFirst;
   asset->slotId = BitmapInfoAdd(assets, filename, alignPercentage).value;
+}
+
+internal void
+AddAudioAsset(struct game_assets *assets, char *filename)
+{
+  assert(assets->DEBUGAssetType && "you must call BeginAssetType()");
+  assert(assets->DEBUGAssetType->assetIndexOnePastLast < assets->assetCount && "asset count exceeded");
+
+  struct asset_type *type = assets->DEBUGAssetType;
+  assets->DEBUGAsset = assets->assets + type->assetIndexOnePastLast;
+  type->assetIndexOnePastLast++;
+
+  struct asset *asset = assets->DEBUGAsset;
+  asset->tagIndexFirst = assets->DEBUGUsedTagCount;
+  asset->tagIndexOnePastLast = asset->tagIndexFirst;
+  asset->slotId = AudioInfoAdd(assets, filename).value;
 }
 
 internal void
@@ -228,8 +286,9 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->bitmaps = MemoryArenaPush(arena, sizeof(*assets->bitmaps) * assets->bitmapCount);
   assets->bitmapInfos = MemoryArenaPush(arena, sizeof(*assets->bitmapInfos) * assets->bitmapCount);
 
-  assets->audioCount = 1;
+  assets->audioCount = 256 * ASSET_TYPE_COUNT;
   assets->audios = MemoryArenaPush(arena, sizeof(*assets->audios) * assets->audioCount);
+  assets->audioInfos = MemoryArenaPush(arena, sizeof(*assets->audioInfos) * assets->audioCount);
 
   assets->tagCount = 1024 * ASSET_TYPE_COUNT;
   assets->tags = MemoryArenaPush(arena, sizeof(*assets->tags) * assets->tagCount);
@@ -329,23 +388,91 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
 
   EndAssetType(assets);
 
+  // audios
+  BeginAssetType(assets, ASSET_TYPE_BLOOP);
+  AddAudioAsset(assets, "test3/bloop_00.wav");
+  AddAudioAsset(assets, "test3/bloop_01.wav");
+  AddAudioAsset(assets, "test3/bloop_02.wav");
+  AddAudioAsset(assets, "test3/bloop_03.wav");
+  AddAudioAsset(assets, "test3/bloop_04.wav");
+  EndAssetType(assets);
+
+  BeginAssetType(assets, ASSET_TYPE_CRACK);
+  AddAudioAsset(assets, "test3/crack_00.wav");
+  EndAssetType(assets);
+
+  BeginAssetType(assets, ASSET_TYPE_DROP);
+  AddAudioAsset(assets, "test3/drop_00.wav");
+  EndAssetType(assets);
+
+  BeginAssetType(assets, ASSET_TYPE_GLIDE);
+  AddAudioAsset(assets, "test3/glide_00.wav");
+  EndAssetType(assets);
+
+  BeginAssetType(assets, ASSET_TYPE_MUSIC);
+  AddAudioAsset(assets, "test3/music_test.wav");
+  EndAssetType(assets);
+
+  BeginAssetType(assets, ASSET_TYPE_PUHP);
+  AddAudioAsset(assets, "test3/puhp_00.wav");
+  AddAudioAsset(assets, "test3/puhp_01.wav");
+  EndAssetType(assets);
+
   return assets;
+}
+
+u32
+AssetGetFirstId(struct game_assets *assets, enum asset_type_id typeId)
+{
+  struct asset_type *type = assets->assetTypes + typeId;
+  if (type->assetIndexFirst == type->assetIndexOnePastLast)
+    return 0;
+
+  struct asset *asset = assets->assets + type->assetIndexFirst;
+  return asset->slotId;
 }
 
 struct bitmap_id
 AssetBitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId)
 {
-  struct bitmap_id result = {};
-  if (typeId == ASSET_TYPE_NONE)
-    return result;
+  assert(IsAssetTypeIdBitmap(typeId));
+  struct bitmap_id result = {AssetGetFirstId(assets, typeId)};
+  return result;
+}
 
+struct audio_id
+AudioGetFirstId(struct game_assets *assets, enum asset_type_id typeId)
+{
+  assert(IsAssetTypeIdAudio(typeId));
+  struct audio_id result = {AssetGetFirstId(assets, typeId)};
+  return result;
+}
+
+internal u32
+RandomAsset(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId)
+{
   struct asset_type *type = assets->assetTypes + typeId;
-  if (type->assetIndexFirst == type->assetIndexOnePastLast)
-    return result;
+  u32 min = type->assetIndexFirst;
+  u32 max = type->assetIndexOnePastLast; // exclusive
+  u32 count = max - min;
+  assert(count != 0 && "no bitmap asset added to this asset type");
+  struct asset *asset = assets->assets + min + RandomChoice(series, count);
+  return asset->slotId;
+}
 
-  struct asset *asset = assets->assets + type->assetIndexFirst;
-  result.value = asset->slotId;
+struct bitmap_id
+RandomBitmap(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId)
+{
+  assert(IsAssetTypeIdBitmap(typeId));
+  struct bitmap_id result = {RandomAsset(series, assets, typeId)};
+  return result;
+}
 
+struct audio_id
+RandomAudio(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId)
+{
+  assert(IsAssetTypeIdAudio(typeId));
+  struct audio_id result = {RandomAsset(series, assets, typeId)};
   return result;
 }
 
@@ -469,7 +596,7 @@ WaveChunkNext(struct wave_chunk_iterator iterator)
   return iterator;
 }
 
-struct audio
+internal struct audio
 LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
 {
   struct audio result = {};
@@ -596,4 +723,14 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
     PlatformWorkQueueAddEntry(assets->transientState->lowPriorityQueue, DoLoadAudioWork, work);
   }
   // else some other thread beat us to it
+}
+
+inline struct audio *
+AudioGet(struct game_assets *assets, struct audio_id id)
+{
+  if (id.value == 0)
+    return 0;
+
+  struct asset_slot *slot = assets->audios + id.value;
+  return slot->audio;
 }
