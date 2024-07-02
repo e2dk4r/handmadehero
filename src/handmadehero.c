@@ -666,6 +666,26 @@ struct game_memory *DEBUG_GLOBAL_MEMORY;
 pfnPlatformWorkQueueAddEntry PlatformWorkQueueAddEntry;
 pfnPlatformWorkQueueCompleteAllWork PlatformWorkQueueCompleteAllWork;
 
+internal struct playing_audio *
+PlayAudio(struct game_state *state, struct audio_id id)
+{
+  if (!state->firstFreePlayingAudio) {
+    state->firstFreePlayingAudio = MemoryArenaPush(&state->worldArena, sizeof(*state->firstPlayingAudio));
+    state->firstFreePlayingAudio->next = 0;
+  }
+
+  struct playing_audio *playingAudio = state->firstFreePlayingAudio;
+
+  playingAudio->volume[0] = 1.0f;
+  playingAudio->volume[1] = 1.0f;
+  playingAudio->id = id;
+
+  playingAudio->next = state->firstPlayingAudio;
+  state->firstPlayingAudio = playingAudio;
+
+  return playingAudio;
+}
+
 void
 GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffer)
 {
@@ -1000,11 +1020,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     transientState->assets = GameAssetsAllocate(&transientState->transientArena, 64 * MEGABYTES, transientState,
                                                 memory->PlatformReadEntireFile);
 
-    state->firstPlayingAudio = MemoryArenaPush(&state->worldArena, sizeof(*state->firstPlayingAudio));
-    state->firstPlayingAudio->volume[0] = 1.0f;
-    state->firstPlayingAudio->volume[1] = 1.0f;
-    state->firstPlayingAudio->id = AudioGetFirstId(transientState->assets, ASSET_TYPE_MUSIC);
-    state->firstPlayingAudio->next = 0;
+    PlayAudio(state, AudioGetFirstId(transientState->assets, ASSET_TYPE_MUSIC));
 
     transientState->isInitialized = 1;
   }
