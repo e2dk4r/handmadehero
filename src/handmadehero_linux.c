@@ -373,7 +373,7 @@ begin:
 /*****************************************************************
  * pipewire events
  *****************************************************************/
-comptime u32 SAMPLE_RATE = 44100;
+comptime u32 SAMPLE_RATE = 48000;
 comptime u32 SAMPLE_CHANNELS = 2;
 
 internal void
