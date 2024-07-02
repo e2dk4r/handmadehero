@@ -7,6 +7,7 @@ project(
     'c_std=c99',
     'warning_level=2',
     'werror=true',
+    'optimization=3',
   ],
 )
 
@@ -23,7 +24,6 @@ add_project_arguments(
 
 add_project_arguments(
   cc.get_supported_arguments([
-    '-O3',
     '-march=x86-64-v3',
     '-funroll-loops',
     '-fomit-frame-pointer',
