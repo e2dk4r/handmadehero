@@ -1321,7 +1321,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
       f32 heroHeightC = 2.5f;
       f32 heroHeight = heroHeightC * 1.2f;
-      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
+      BitmapAsset(renderGroup, BitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
                   heroHeightC * 1.0f, v4(1.0f, 1.0f, 1.0f, shadowAlpha));
       BitmapAsset(renderGroup, heroBitmapIds.torso, v3(0.0f, 0.0f, 0.0f), heroHeight, v4(1.0f, 1.0f, 1.0f, 1.0f));
       BitmapAsset(renderGroup, heroBitmapIds.cape, v3(0.0f, 0.0f, 0.0f), heroHeight, v4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -1332,8 +1332,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 bobSin = Sin(2.0f * entity->tBob);
       f32 shadowAlpha = (0.5f * 1.0f) - (0.2f * bobSin);
 
-      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
-                  2.5f, v4(1.0f, 1.0f, 1.0f, shadowAlpha));
+      BitmapAsset(renderGroup, BitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f), 2.5f,
+                  v4(1.0f, 1.0f, 1.0f, shadowAlpha));
       BitmapAsset(renderGroup, heroBitmapIds.head, v3(0.0f, 0.0f, 0.25f * bobSin), 2.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
     }
 
@@ -1341,22 +1341,22 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       f32 alpha = 1.0f;
 
       HitPoints(renderGroup, entity);
-      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
-                  4.5f, v4(1.0f, 1.0f, 1.0f, alpha));
+      BitmapAsset(renderGroup, BitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f), 4.5f,
+                  v4(1.0f, 1.0f, 1.0f, alpha));
       BitmapAsset(renderGroup, heroBitmapIds.torso, v3(0.0f, 0.0f, 0.0f), 4.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_SWORD) {
-      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f),
-                  0.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
-      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_SWORD), v3(0.0f, 0.0f, 0.0f),
-                  0.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
+      BitmapAsset(renderGroup, BitmapGetFirstId(transientState->assets, ASSET_TYPE_SHADOW), v3(0.0f, 0.0f, 0.0f), 0.5f,
+                  v4(1.0f, 1.0f, 1.0f, 1.0f));
+      BitmapAsset(renderGroup, BitmapGetFirstId(transientState->assets, ASSET_TYPE_SWORD), v3(0.0f, 0.0f, 0.0f), 0.5f,
+                  v4(1.0f, 1.0f, 1.0f, 1.0f));
     }
 
     else if (entity->type & ENTITY_TYPE_WALL) {
 #if 1
-      BitmapAsset(renderGroup, AssetBitmapGetFirstId(transientState->assets, ASSET_TYPE_TREE), v3(0.0f, 0.0f, 0.0f),
-                  2.5f, v4(1.0f, 1.0f, 1.0f, 1.0f));
+      BitmapAsset(renderGroup, BitmapGetFirstId(transientState->assets, ASSET_TYPE_TREE), v3(0.0f, 0.0f, 0.0f), 2.5f,
+                  v4(1.0f, 1.0f, 1.0f, 1.0f));
 #else
       for (u32 entityVolumeIndex = 0; entity->collision && entityVolumeIndex < entity->collision->volumeCount;
            entityVolumeIndex++) {

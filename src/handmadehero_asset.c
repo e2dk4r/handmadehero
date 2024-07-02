@@ -16,7 +16,7 @@ IsAssetTypeIdAudio(enum asset_type_id typeId)
 }
 
 inline struct bitmap *
-AssetBitmapGet(struct game_assets *assets, struct bitmap_id id)
+BitmapGet(struct game_assets *assets, struct bitmap_id id)
 {
   if (id.value == 0)
     return 0;
@@ -433,7 +433,7 @@ AssetGetFirstId(struct game_assets *assets, enum asset_type_id typeId)
 }
 
 struct bitmap_id
-AssetBitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId)
+BitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId)
 {
   assert(IsAssetTypeIdBitmap(typeId));
   struct bitmap_id result = {AssetGetFirstId(assets, typeId)};
@@ -501,7 +501,7 @@ DoAssetLoadBitmapWork(struct platform_work_queue *queue, void *data)
 }
 
 inline void
-AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id)
+BitmapLoad(struct game_assets *assets, struct bitmap_id id)
 {
   if (id.value == 0)
     return;

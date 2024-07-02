@@ -144,32 +144,28 @@ struct audio_id {
   u32 value;
 };
 
-struct bitmap *
-AssetBitmapGet(struct game_assets *assets, struct bitmap_id id);
-
 struct game_assets *
 GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState,
                    pfnPlatformReadEntireFile PlatformReadEntireFile);
 
 void
-AssetBitmapLoad(struct game_assets *assets, struct bitmap_id id);
+BitmapLoad(struct game_assets *assets, struct bitmap_id id);
+
+struct bitmap *
+BitmapGet(struct game_assets *assets, struct bitmap_id id);
 
 struct bitmap_id
-AssetBitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
+BitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
+
+struct bitmap_id
+BestMatchBitmap(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
+                struct asset_vector *weightVector);
 
 struct bitmap_id
 RandomBitmap(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId);
 
 void
 AudioLoad(struct game_assets *assets, struct audio_id id);
-
-struct bitmap_id
-BestMatchBitmap(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
-                struct asset_vector *weightVector);
-
-struct audio_id
-BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
-               struct asset_vector *weightVector);
 
 struct audio *
 AudioGet(struct game_assets *assets, struct audio_id id);
@@ -179,5 +175,9 @@ AudioGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
 
 struct audio_id
 RandomAudio(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId);
+
+struct audio_id
+BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
+               struct asset_vector *weightVector);
 
 #endif /* HANDMADEHERO_ASSET_H */
