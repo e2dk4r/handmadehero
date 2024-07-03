@@ -21,6 +21,7 @@ BitmapGet(struct game_assets *assets, struct bitmap_id id)
   if (id.value == 0)
     return 0;
 
+  assert(id.value <= assets->bitmapCount);
   struct asset_slot *slot = assets->bitmaps + id.value;
   return slot->bitmap;
 }
@@ -200,6 +201,7 @@ AudioInfoAdd(struct game_assets *assets, char *filename)
 
   struct audio_info *info = assets->audioInfos + id.value;
   info->filename = filename;
+  info->nextIdToPlay.value = 0;
 
   return id;
 }
@@ -532,6 +534,12 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
   // else some other thread beat us to it
 }
 
+inline void
+BitmapPrefetch(struct game_assets *assets, struct bitmap_id id)
+{
+  BitmapLoad(assets, id);
+}
+
 struct wave_header {
   u32 riffId;
   u32 fileSize;
@@ -693,7 +701,7 @@ DoLoadAudioWork(struct platform_work_queue *queue, void *data)
   EndTaskWithMemory(work->task);
 }
 
-void
+inline void
 AudioLoad(struct game_assets *assets, struct audio_id id)
 {
   if (id.value == 0)
@@ -725,12 +733,30 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
   // else some other thread beat us to it
 }
 
+inline void
+AudioPrefetch(struct game_assets *assets, struct audio_id id)
+{
+  AudioLoad(assets, id);
+}
+
 inline struct audio *
 AudioGet(struct game_assets *assets, struct audio_id id)
 {
   if (id.value == 0)
     return 0;
 
+  assert(id.value <= assets->audioCount);
   struct asset_slot *slot = assets->audios + id.value;
   return slot->audio;
+}
+
+inline struct audio_info *
+AudioInfoGet(struct game_assets *assets, struct audio_id id)
+{
+  if (id.value == 0)
+    return 0;
+
+  assert(id.value <= assets->DEBUGUsedAudioInfoCount);
+  struct audio_info *info = assets->audioInfos + id.value;
+  return info;
 }

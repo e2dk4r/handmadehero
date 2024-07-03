@@ -720,6 +720,9 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
 
     struct audio *loadedAudio = AudioGet(assets, playingAudio->id);
     if (loadedAudio) {
+      struct audio_info *info = AudioInfoGet(assets, playingAudio->id);
+      AudioPrefetch(assets, info->nextIdToPlay);
+
       // TODO(e2dk4r): handle stereo
       f32 *dest0 = mixerChannel0;
       f32 *dest1 = mixerChannel1;
@@ -742,7 +745,14 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
       playingAudio->samplesPlayed += samplesToMix;
 
       isWritten = 1;
-      isAudioFinished = playingAudio->samplesPlayed == loadedAudio->sampleCount;
+      if (playingAudio->samplesPlayed == loadedAudio->sampleCount) {
+        if (info->nextIdToPlay.value) {
+          playingAudio->id = info->nextIdToPlay;
+          playingAudio->samplesPlayed = 0;
+        } else {
+          isAudioFinished = 1;
+        }
+      }
     } else {
       // audio is not in cache
       AudioLoad(assets, playingAudio->id);

@@ -8,6 +8,14 @@
 #include "render_group.h"
 #include "types.h"
 
+struct bitmap_id {
+  u32 value;
+};
+
+struct audio_id {
+  u32 value;
+};
+
 struct audio {
   u32 channelCount;
   u32 sampleCount;
@@ -91,6 +99,7 @@ struct bitmap_info {
 
 struct audio_info {
   char *filename;
+  struct audio_id nextIdToPlay;
 };
 
 struct asset_group {
@@ -136,20 +145,15 @@ struct game_assets {
   struct asset *DEBUGAsset;
 };
 
-struct bitmap_id {
-  u32 value;
-};
-
-struct audio_id {
-  u32 value;
-};
-
 struct game_assets *
 GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState,
                    pfnPlatformReadEntireFile PlatformReadEntireFile);
 
 void
 BitmapLoad(struct game_assets *assets, struct bitmap_id id);
+
+void
+BitmapPrefetch(struct game_assets *assets, struct bitmap_id id);
 
 struct bitmap *
 BitmapGet(struct game_assets *assets, struct bitmap_id id);
@@ -167,6 +171,9 @@ RandomBitmap(struct random_series *series, struct game_assets *assets, enum asse
 void
 AudioLoad(struct game_assets *assets, struct audio_id id);
 
+void
+AudioPrefetch(struct game_assets *assets, struct audio_id id);
+
 struct audio *
 AudioGet(struct game_assets *assets, struct audio_id id);
 
@@ -179,5 +186,8 @@ RandomAudio(struct random_series *series, struct game_assets *assets, enum asset
 struct audio_id
 BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
                struct asset_vector *weightVector);
+
+struct audio_info *
+AudioInfoGet(struct game_assets *assets, struct audio_id id);
 
 #endif /* HANDMADEHERO_ASSET_H */
