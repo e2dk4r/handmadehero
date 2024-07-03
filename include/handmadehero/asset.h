@@ -84,7 +84,7 @@ struct asset_type {
   u32 assetIndexOnePastLast;
 };
 
-struct asset_bitmap_info {
+struct bitmap_info {
   char *filename;
   struct v2 alignPercentage;
 };
@@ -107,7 +107,7 @@ struct game_assets {
 
   u32 bitmapCount;
   struct asset_slot *bitmaps;
-  struct asset_bitmap_info *bitmapInfos;
+  struct bitmap_info *bitmapInfos;
 
   u32 audioCount;
   struct asset_slot *audios;

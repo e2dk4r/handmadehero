@@ -185,7 +185,7 @@ BitmapInfoAdd(struct game_assets *assets, char *filename, struct v2 alignPercent
   struct bitmap_id id = {assets->DEBUGUsedBitmapInfoCount};
   assets->DEBUGUsedBitmapInfoCount++;
 
-  struct asset_bitmap_info *info = assets->bitmapInfos + id.value;
+  struct bitmap_info *info = assets->bitmapInfos + id.value;
   info->filename = filename;
   info->alignPercentage = alignPercentage;
 
@@ -489,7 +489,7 @@ DoAssetLoadBitmapWork(struct platform_work_queue *queue, void *data)
 {
   struct asset_load_bitmap_work *work = data;
 
-  struct asset_bitmap_info *info = work->assets->bitmapInfos + work->bitmapId.value;
+  struct bitmap_info *info = work->assets->bitmapInfos + work->bitmapId.value;
   *work->bitmap = LoadBmp(work->assets->PlatformReadEntireFile, info->filename, info->alignPercentage);
 
   // TODO(e2dk4r): fence!
@@ -507,7 +507,7 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     return;
 
   struct asset_slot *slot = assets->bitmaps + id.value;
-  struct asset_bitmap_info *info = assets->bitmapInfos + id.value;
+  struct bitmap_info *info = assets->bitmapInfos + id.value;
   assert(info->filename && "asset not setup properly");
 
   enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;

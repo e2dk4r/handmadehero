@@ -540,12 +540,12 @@ DoFillGroundChunkWork(struct platform_work_queue *queue, void *data)
 }
 
 internal u32
-PickBest(struct asset_bitmap_info *infos, u32 infoCount, struct asset_tag *tags, f32 *matchVector, f32 *weightVector)
+PickBest(struct bitmap_info *infos, u32 infoCount, struct asset_tag *tags, f32 *matchVector, f32 *weightVector)
 {
   f32 bestDiff = F32_MAX;
   u32 bestIndex = 0;
   for (u32 infoIndex = 0; infoIndex < infoCount; infoIndex++) {
-    struct asset_bitmap_info *info = infos + infoIndex;
+    struct bitmap_info *info = infos + infoIndex;
 
     f32 totalWeightedDiff = 0.0f;
     // for (u32 tagIndex = info->tagFirstIndex; tagIndex <= info->tagLastIndex; tagIndex++) {
