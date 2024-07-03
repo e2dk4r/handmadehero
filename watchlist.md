@@ -460,7 +460,7 @@
 - [x] Handmade Hero Day 139 - Introduction to Sound Mixing
       https://www.youtube.com/watch?v=8KvWx4hzdUs
 
-- [ ] Handmade Hero Day 140 - Implementing a Sound Mixer
+- [x] Handmade Hero Day 140 - Implementing a Sound Mixer
       https://www.youtube.com/watch?v=UuqcgQxpfO8
 
 - [ ] Handmade Hero Day 141 - Streaming Large Audio in Chunks
