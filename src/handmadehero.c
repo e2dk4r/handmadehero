@@ -804,7 +804,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
     MemoryArenaInit(&state->worldArena, data, size);
 
-    MemorySubArenaInit(&state->metaArena, &state->worldArena, 64 * MEGABYTES);
+    MemorySubArenaInit(&state->metaArena, &state->worldArena, 4 * MEGABYTES);
 
     /* world creation */
     struct world *world = MemoryArenaPush(&state->worldArena, sizeof(*world));
