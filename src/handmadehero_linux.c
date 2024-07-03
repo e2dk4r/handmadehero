@@ -165,6 +165,7 @@ struct game_code {
   char path[255];
   time_t time;
   void *module;
+  volatile u32 isReloading;
 
   pfnGameUpdateAndRender GameUpdateAndRender;
   pfnGameOutputAudio GameOutputAudio;
@@ -184,6 +185,8 @@ ReloadGameCode(struct game_code *lib)
   if (sb.st_mtime == lib->time) {
     return 0;
   }
+
+  __atomic_store_n(&lib->isReloading, 1, __ATOMIC_RELEASE);
 
   // unload shared lib
   if (lib->module) {
@@ -208,6 +211,9 @@ ReloadGameCode(struct game_code *lib)
   // update module time
   lib->time = sb.st_mtime;
   debugf("[ReloadGameCode] reloaded @%d\n", lib->time);
+
+  __atomic_store_n(&lib->isReloading, 0, __ATOMIC_RELEASE);
+
   return 1;
 }
 
@@ -381,6 +387,9 @@ pw_stream_process(void *data)
 {
   struct linux_state *state = data;
 #if HANDMADEHERO_DEBUG
+  while (state->lib.isReloading)
+    ; // spin lock
+
   // from game layer
   pfnGameOutputAudio GameOutputAudio = state->lib.GameOutputAudio;
 #endif
