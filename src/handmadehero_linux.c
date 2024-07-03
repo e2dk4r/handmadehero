@@ -414,12 +414,14 @@ pw_stream_process(void *data)
       .sampleCount = sampleCount,
       .samples = samples,
   };
-  GameOutputAudio(&state->game_memory, &gameAudioBuffer);
+  b32 isWritten = GameOutputAudio(&state->game_memory, &gameAudioBuffer);
 
   // Adjust buffer with number of written bytes, offset, stride.
-  spaBuffer->datas[0].chunk->offset = 0;
-  spaBuffer->datas[0].chunk->stride = (i32)stride;
-  spaBuffer->datas[0].chunk->size = sampleCount * stride;
+  if (isWritten) {
+    spaBuffer->datas[0].chunk->offset = 0;
+    spaBuffer->datas[0].chunk->stride = (i32)stride;
+    spaBuffer->datas[0].chunk->size = sampleCount * stride;
+  }
 
   // Queue the buffer for playback.
   pw_stream_queue_buffer(state->pw_stream, pwBuffer);

@@ -166,8 +166,8 @@ struct game_audio_buffer {
   i16 *samples;
 };
 
-void
+b32
 GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *buffer);
-typedef void (*pfnGameOutputAudio)(struct game_memory *memory, struct game_audio_buffer *buffer);
+typedef b32 (*pfnGameOutputAudio)(struct game_memory *memory, struct game_audio_buffer *buffer);
 
 #endif /* HANDMADEHERO_PLATFORM_H */

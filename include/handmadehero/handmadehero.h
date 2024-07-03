@@ -82,6 +82,7 @@ struct game_state {
   struct bitmap testDiffuse;
   struct bitmap testNormal;
 
+  struct random_series generalEntropy;
   struct playing_audio *firstPlayingAudio;
   struct playing_audio *firstFreePlayingAudio;
 };

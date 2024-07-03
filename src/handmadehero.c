@@ -675,7 +675,9 @@ PlayAudio(struct game_state *state, struct audio_id id)
   }
 
   struct playing_audio *playingAudio = state->firstFreePlayingAudio;
+  state->firstFreePlayingAudio = playingAudio->next;
 
+  playingAudio->samplesPlayed = 0;
   playingAudio->volume[0] = 1.0f;
   playingAudio->volume[1] = 1.0f;
   playingAudio->id = id;
@@ -686,13 +688,14 @@ PlayAudio(struct game_state *state, struct audio_id id)
   return playingAudio;
 }
 
-void
+b32
 GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffer)
 {
   struct game_state *state = memory->permanentStorage;
   struct transient_state *transientState = memory->transientStorage;
+  b32 isWritten = 0;
   if (!state->isInitialized || !transientState->isInitialized)
-    return;
+    return isWritten;
   struct game_assets *assets = transientState->assets;
 
   struct memory_temp mixerMemory = BeginTemporaryMemory(&state->metaArena);
@@ -711,47 +714,51 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
   }
 
   // sum all audios to mixer channels
-  for (struct playing_audio *playingAudio = state->firstPlayingAudio; playingAudio;) {
-    struct playing_audio *nextPlayingAudio = playingAudio->next;
+  for (struct playing_audio **playingAudioPtr = &state->firstPlayingAudio; *playingAudioPtr;) {
+    struct playing_audio *playingAudio = *playingAudioPtr;
+    b32 isAudioFinished = 0;
 
     struct audio *loadedAudio = AudioGet(assets, playingAudio->id);
-    if (!loadedAudio) {
+    if (loadedAudio) {
+      // TODO(e2dk4r): handle stereo
+      f32 *dest0 = mixerChannel0;
+      f32 *dest1 = mixerChannel1;
+
+      f32 volume0 = playingAudio->volume[0];
+      f32 volume1 = playingAudio->volume[1];
+
+      u32 samplesToMix = audioBuffer->sampleCount;
+      u32 samplesRemainingInAudio = loadedAudio->sampleCount - playingAudio->samplesPlayed;
+      if (samplesToMix > samplesRemainingInAudio) {
+        samplesToMix = samplesRemainingInAudio;
+      }
+
+      for (u32 sampleIndex = playingAudio->samplesPlayed; sampleIndex < playingAudio->samplesPlayed + samplesToMix;
+           sampleIndex++) {
+        f32 sampleValue = (f32)loadedAudio->samples[0][sampleIndex];
+        *dest0++ += volume0 * sampleValue;
+        *dest1++ += volume1 * sampleValue;
+      }
+      playingAudio->samplesPlayed += samplesToMix;
+
+      isWritten = 1;
+      isAudioFinished = playingAudio->samplesPlayed == loadedAudio->sampleCount;
+    } else {
       // audio is not in cache
       AudioLoad(assets, playingAudio->id);
-      continue;
     }
 
-    // TODO(e2dk4r): handle stereo
-    f32 *dest0 = mixerChannel0;
-    f32 *dest1 = mixerChannel1;
-
-    f32 volume0 = playingAudio->volume[0];
-    f32 volume1 = playingAudio->volume[1];
-
-    u32 samplesToMix = audioBuffer->sampleCount;
-    u32 samplesRemainingInAudio = loadedAudio->sampleCount - playingAudio->samplesPlayed;
-    if (samplesToMix > samplesRemainingInAudio) {
-      samplesToMix = samplesRemainingInAudio;
-    }
-
-    for (u32 sampleIndex = playingAudio->samplesPlayed; sampleIndex < playingAudio->samplesPlayed + samplesToMix;
-         sampleIndex++) {
-      f32 sampleValue = (f32)loadedAudio->samples[0][(sampleIndex) % loadedAudio->sampleCount];
-      *dest0++ += volume0 * sampleValue;
-      *dest1++ += volume1 * sampleValue;
-    }
-
-    playingAudio->samplesPlayed += samplesToMix;
-    if (playingAudio->samplesPlayed == loadedAudio->sampleCount) {
+    if (isAudioFinished) {
+      *playingAudioPtr = playingAudio->next;
       playingAudio->next = state->firstFreePlayingAudio;
       state->firstFreePlayingAudio = playingAudio;
+    } else {
+      playingAudioPtr = &playingAudio->next;
     }
-
-    playingAudio = nextPlayingAudio;
   }
 
   // convert to 16-bit
-  {
+  if (isWritten) {
     f32 *source0 = mixerChannel0;
     f32 *source1 = mixerChannel1;
 
@@ -763,6 +770,7 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
   }
 
   EndTemporaryMemory(&mixerMemory);
+  return isWritten;
 }
 
 void
@@ -790,11 +798,13 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * INITIALIZATION
    ****************************************************************/
   if (!state->isInitialized) {
+    state->generalEntropy = RandomSeed(1234);
+
     void *data = memory->permanentStorage + sizeof(*state);
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
     MemoryArenaInit(&state->worldArena, data, size);
 
-    MemorySubArenaInit(&state->metaArena, &state->worldArena, 5 * MEGABYTES);
+    MemorySubArenaInit(&state->metaArena, &state->worldArena, 64 * MEGABYTES);
 
     /* world creation */
     struct world *world = MemoryArenaPush(&state->worldArena, sizeof(*world));
@@ -1262,6 +1272,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
             sword->position = entity->position;
             sword->distanceRemaining = 5.0f;
             sword->dPosition.xy = v2_mul(dSword, 5.0f);
+
+            PlayAudio(state, RandomAudio(&state->generalEntropy, transientState->assets, ASSET_TYPE_BLOOP));
           }
         }
       }
