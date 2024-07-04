@@ -18,6 +18,8 @@ struct audio_state {
   struct memory_arena *permanentArena;
   struct playing_audio *firstPlayingAudio;
   struct playing_audio *firstFreePlayingAudio;
+
+  struct v2 masterVolume;
 };
 
 void

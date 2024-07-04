@@ -7,6 +7,7 @@ AudioStateInit(struct audio_state *audioState, struct memory_arena *permanentAre
   audioState->permanentArena = permanentArena;
   audioState->firstPlayingAudio = 0;
   audioState->firstFreePlayingAudio = 0;
+  audioState->masterVolume = v2(1.0f, 1.0f);
 }
 
 b32
@@ -72,8 +73,8 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         for (u32 sampleIndex = playingAudio->samplesPlayed; sampleIndex < playingAudio->samplesPlayed + samplesToMix;
              sampleIndex++) {
           f32 sampleValue = (f32)loadedAudio->samples[0][sampleIndex];
-          *dest0++ += volume.e[0] * sampleValue;
-          *dest1++ += volume.e[1] * sampleValue;
+          *dest0++ += (audioState->masterVolume.e[0] * volume.e[0]) * sampleValue;
+          *dest1++ += (audioState->masterVolume.e[0] * volume.e[1]) * sampleValue;
 
           v2_add_ref(&volume, dVolume);
         }
