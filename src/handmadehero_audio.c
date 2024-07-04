@@ -1,15 +1,23 @@
 #include <handmadehero/audio.h>
-#include <handmadehero/handmadehero.h>
+#include <handmadehero/memory_arena.h>
+
+void
+AudioStateInit(struct game_audio_state *audioState, struct memory_arena *permanentArena)
+{
+  audioState->permanentArena = permanentArena;
+  audioState->firstPlayingAudio = 0;
+  audioState->firstFreePlayingAudio = 0;
+}
 
 b32
 OutputPlayingAudios(struct game_audio_state *audioState, struct game_audio_buffer *audioBuffer,
-                    struct game_assets *assets, struct memory_arena *metaArena)
+                    struct game_assets *assets)
 {
   b32 isWritten = 0;
-  struct memory_temp mixerMemory = BeginTemporaryMemory(metaArena);
+  struct memory_temp mixerMemory = BeginTemporaryMemory(audioState->permanentArena);
 
-  f32 *mixerChannel0 = MemoryArenaPush(metaArena, sizeof(*mixerChannel0) * audioBuffer->sampleCount);
-  f32 *mixerChannel1 = MemoryArenaPush(metaArena, sizeof(*mixerChannel1) * audioBuffer->sampleCount);
+  f32 *mixerChannel0 = MemoryArenaPush(audioState->permanentArena, sizeof(*mixerChannel0) * audioBuffer->sampleCount);
+  f32 *mixerChannel1 = MemoryArenaPush(audioState->permanentArena, sizeof(*mixerChannel1) * audioBuffer->sampleCount);
 
   // clear out mixer channels
   {
@@ -98,4 +106,27 @@ OutputPlayingAudios(struct game_audio_state *audioState, struct game_audio_buffe
 
   EndTemporaryMemory(&mixerMemory);
   return isWritten;
+}
+
+struct playing_audio *
+PlayAudio(struct game_audio_state *audioState, struct audio_id id)
+{
+  if (!audioState->firstFreePlayingAudio) {
+    audioState->firstFreePlayingAudio =
+        MemoryArenaPush(audioState->permanentArena, sizeof(*audioState->firstPlayingAudio));
+    audioState->firstFreePlayingAudio->next = 0;
+  }
+
+  struct playing_audio *playingAudio = audioState->firstFreePlayingAudio;
+  audioState->firstFreePlayingAudio = playingAudio->next;
+
+  playingAudio->samplesPlayed = 0;
+  playingAudio->volume[0] = 1.0f;
+  playingAudio->volume[1] = 1.0f;
+  playingAudio->id = id;
+
+  playingAudio->next = audioState->firstPlayingAudio;
+  audioState->firstPlayingAudio = playingAudio;
+
+  return playingAudio;
 }

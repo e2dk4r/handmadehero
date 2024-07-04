@@ -666,29 +666,6 @@ struct game_memory *DEBUG_GLOBAL_MEMORY;
 pfnPlatformWorkQueueAddEntry PlatformWorkQueueAddEntry;
 pfnPlatformWorkQueueCompleteAllWork PlatformWorkQueueCompleteAllWork;
 
-internal struct playing_audio *
-PlayAudio(struct game_state *state, struct audio_id id)
-{
-  struct game_audio_state *audioState = &state->audioState;
-  if (!audioState->firstFreePlayingAudio) {
-    audioState->firstFreePlayingAudio = MemoryArenaPush(&state->worldArena, sizeof(*audioState->firstPlayingAudio));
-    audioState->firstFreePlayingAudio->next = 0;
-  }
-
-  struct playing_audio *playingAudio = audioState->firstFreePlayingAudio;
-  audioState->firstFreePlayingAudio = playingAudio->next;
-
-  playingAudio->samplesPlayed = 0;
-  playingAudio->volume[0] = 1.0f;
-  playingAudio->volume[1] = 1.0f;
-  playingAudio->id = id;
-
-  playingAudio->next = audioState->firstPlayingAudio;
-  audioState->firstPlayingAudio = playingAudio;
-
-  return playingAudio;
-}
-
 b32
 GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffer)
 {
@@ -700,7 +677,7 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
   if (audioBuffer->sampleCount == 0)
     return isWritten;
 
-  isWritten = OutputPlayingAudios(&state->audioState, audioBuffer, transientState->assets, &state->metaArena);
+  isWritten = OutputPlayingAudios(&state->audioState, audioBuffer, transientState->assets);
 
   return isWritten;
 }
@@ -736,7 +713,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
     MemoryArenaInit(&state->worldArena, data, size);
 
-    MemorySubArenaInit(&state->metaArena, &state->worldArena, 4 * MEGABYTES);
+    MemorySubArenaInit(&state->metaArena, &state->worldArena, 2 * MEGABYTES);
+    AudioStateInit(&state->audioState, &state->metaArena);
 
     /* world creation */
     struct world *world = MemoryArenaPush(&state->worldArena, sizeof(*world));
@@ -962,7 +940,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     transientState->assets = GameAssetsAllocate(&transientState->transientArena, 64 * MEGABYTES, transientState,
                                                 memory->PlatformReadEntireFile);
 
-    PlayAudio(state, AudioGetFirstId(transientState->assets, ASSET_TYPE_MUSIC));
+    PlayAudio(&state->audioState, AudioGetFirstId(transientState->assets, ASSET_TYPE_MUSIC));
 
     transientState->isInitialized = 1;
   }
@@ -1205,7 +1183,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
             sword->distanceRemaining = 5.0f;
             sword->dPosition.xy = v2_mul(dSword, 5.0f);
 
-            PlayAudio(state, RandomAudio(&state->generalEntropy, transientState->assets, ASSET_TYPE_BLOOP));
+            PlayAudio(&state->audioState,
+                      RandomAudio(&state->generalEntropy, transientState->assets, ASSET_TYPE_BLOOP));
           }
         }
       }
