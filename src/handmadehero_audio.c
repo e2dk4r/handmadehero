@@ -2,7 +2,7 @@
 #include <handmadehero/memory_arena.h>
 
 void
-AudioStateInit(struct game_audio_state *audioState, struct memory_arena *permanentArena)
+AudioStateInit(struct audio_state *audioState, struct memory_arena *permanentArena)
 {
   audioState->permanentArena = permanentArena;
   audioState->firstPlayingAudio = 0;
@@ -10,8 +10,7 @@ AudioStateInit(struct game_audio_state *audioState, struct memory_arena *permane
 }
 
 b32
-OutputPlayingAudios(struct game_audio_state *audioState, struct game_audio_buffer *audioBuffer,
-                    struct game_assets *assets)
+OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *audioBuffer, struct game_assets *assets)
 {
   b32 isWritten = 0;
   struct memory_temp mixerMemory = BeginTemporaryMemory(audioState->permanentArena);
@@ -109,7 +108,7 @@ OutputPlayingAudios(struct game_audio_state *audioState, struct game_audio_buffe
 }
 
 struct playing_audio *
-PlayAudio(struct game_audio_state *audioState, struct audio_id id)
+PlayAudio(struct audio_state *audioState, struct audio_id id)
 {
   if (!audioState->firstFreePlayingAudio) {
     audioState->firstFreePlayingAudio =

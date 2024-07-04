@@ -77,7 +77,7 @@ struct game_state {
   struct bitmap testNormal;
 
   struct random_series generalEntropy;
-  struct game_audio_state audioState;
+  struct audio_state audioState;
 };
 
 struct task_with_memory {
