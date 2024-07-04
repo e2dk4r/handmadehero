@@ -20,7 +20,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
   f32 secondsPerSample = 1.0f / (f32)audioBuffer->sampleRate;
 
-  u32 outputChannelCount = 2;
+  enum { outputChannelCount = 2 };
 
   // clear out mixer channels
   {
