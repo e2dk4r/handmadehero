@@ -466,7 +466,7 @@
 - [x] Handmade Hero Day 141 - Streaming Large Audio in Chunks
       https://www.youtube.com/watch?v=Yvv9nVqGC5w
 
-- [ ] Handmade Hero Day 142 - Per-sample Volume Interpolation
+- [x] Handmade Hero Day 142 - Per-sample Volume Interpolation
       https://www.youtube.com/watch?v=XxReVrByBYw
 
 - [ ] Handmade Hero Day 143 - Pitch Shifting in the Mixer
