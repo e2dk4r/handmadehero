@@ -101,8 +101,6 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
             isAudioFinished = 1;
             break;
           }
-        } else {
-          assert(totalSamplesToMix == 0);
         }
       } else {
         // audio is not in cache
