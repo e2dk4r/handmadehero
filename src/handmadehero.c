@@ -746,7 +746,7 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
 
       isWritten = 1;
       if (playingAudio->samplesPlayed == loadedAudio->sampleCount) {
-        if (info->nextIdToPlay.value) {
+        if (IsAudioIdValid(info->nextIdToPlay)) {
           playingAudio->id = info->nextIdToPlay;
           playingAudio->samplesPlayed = 0;
         } else {

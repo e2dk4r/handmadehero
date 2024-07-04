@@ -760,3 +760,9 @@ AudioInfoGet(struct game_assets *assets, struct audio_id id)
   struct audio_info *info = assets->audioInfos + id.value;
   return info;
 }
+
+inline b32
+IsAudioIdValid(struct audio_id id)
+{
+  return id.value != 0;
+}

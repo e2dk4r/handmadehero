@@ -190,4 +190,7 @@ BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct ass
 struct audio_info *
 AudioInfoGet(struct game_assets *assets, struct audio_id id);
 
+b32
+IsAudioIdValid(struct audio_id id);
+
 #endif /* HANDMADEHERO_ASSET_H */
