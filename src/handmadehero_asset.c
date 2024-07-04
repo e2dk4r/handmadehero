@@ -35,8 +35,8 @@ struct __attribute__((packed)) bitmap_header {
   u16 reserved2;
   u32 bitmapOffset;
   u32 size;
-  i32 width;
-  i32 height;
+  s32 width;
+  s32 height;
   u16 planes;
   u16 bitsPerPixel;
   u32 compression;
@@ -70,17 +70,17 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, struct
   if (header->compression == BITMAP_COMPRESSION_BITFIELDS) {
     struct bitmap_header_compressed *cHeader = (struct bitmap_header_compressed *)header;
 
-    i32 redShift = FindLeastSignificantBitSet((i32)cHeader->redMask);
-    i32 greenShift = FindLeastSignificantBitSet((i32)cHeader->greenMask);
-    i32 blueShift = FindLeastSignificantBitSet((i32)cHeader->blueMask);
+    s32 redShift = FindLeastSignificantBitSet((s32)cHeader->redMask);
+    s32 greenShift = FindLeastSignificantBitSet((s32)cHeader->greenMask);
+    s32 blueShift = FindLeastSignificantBitSet((s32)cHeader->blueMask);
     assert(redShift != greenShift);
 
     u32 alphaMask = ~(cHeader->redMask | cHeader->greenMask | cHeader->blueMask);
-    i32 alphaShift = FindLeastSignificantBitSet((i32)alphaMask);
+    s32 alphaShift = FindLeastSignificantBitSet((s32)alphaMask);
 
     u32 *srcDest = (u32 *)pixels;
-    for (i32 y = 0; y < header->height; y++) {
-      for (i32 x = 0; x < header->width; x++) {
+    for (s32 y = 0; y < header->height; y++) {
+      for (s32 x = 0; x < header->width; x++) {
 
         u32 value = *srcDest;
 
@@ -116,11 +116,11 @@ LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, struct
   result.alignPercentage = alignPercentage;
   result.widthOverHeight = (f32)result.width / (f32)result.height;
 
-  result.stride = (i32)result.width * BITMAP_BYTES_PER_PIXEL;
+  result.stride = (s32)result.width * BITMAP_BYTES_PER_PIXEL;
   result.memory = pixels;
 
   if (header->height < 0) {
-    result.memory = pixels + (i32)(result.height - 1) * result.stride;
+    result.memory = pixels + (s32)(result.height - 1) * result.stride;
     result.stride = -result.stride;
   }
 
@@ -620,7 +620,7 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
   assert(header->waveId == WAVE_CHUNKID_WAVE);
 
   struct wave_fmt *fmt = 0;
-  i16 *sampleData = 0;
+  s16 *sampleData = 0;
   u32 sampleDataSize = 0;
   for (struct wave_chunk_iterator iterator = WaveChunkParse(header); IsWaveChunkValid(iterator);
        iterator = WaveChunkNext(iterator)) {
@@ -635,7 +635,7 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
 
     iterator = WaveChunkNext(iterator);
     assert(iterator.chunk->id == WAVE_CHUNKID_DATA && "malformed file");
-    sampleData = (i16 *)WaveChunkData(iterator.chunk);
+    sampleData = (s16 *)WaveChunkData(iterator.chunk);
     sampleDataSize = iterator.chunk->size;
 
     break;
@@ -657,13 +657,13 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
 
 #if 0
     for (u32 sampleIndex = 0; sampleIndex < result.sampleCount; sampleIndex++) {
-      sampleData[sampleIndex * 2 + 0] = (i16)sampleIndex;
-      sampleData[sampleIndex * 2 + 1] = (i16)sampleIndex;
+      sampleData[sampleIndex * 2 + 0] = (s16)sampleIndex;
+      sampleData[sampleIndex * 2 + 1] = (s16)sampleIndex;
     }
 #endif
 
     for (u32 sampleIndex = 0; sampleIndex < result.sampleCount; sampleIndex++) {
-      i16 source = sampleData[sampleIndex * 2];
+      s16 source = sampleData[sampleIndex * 2];
       sampleData[sampleIndex * 2] = sampleData[sampleIndex];
       sampleData[sampleIndex] = source;
     }

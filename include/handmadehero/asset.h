@@ -19,7 +19,7 @@ struct audio_id {
 struct audio {
   u32 channelCount;
   u32 sampleCount;
-  i16 *samples[2];
+  s16 *samples[2];
 };
 
 enum asset_state {

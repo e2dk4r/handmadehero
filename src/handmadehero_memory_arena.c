@@ -13,7 +13,7 @@ MemoryArenaInit(struct memory_arena *mem, void *data, memory_arena_size_t size)
 internal inline memory_arena_size_t
 GetAlignmentOffset(struct memory_arena *mem, memory_arena_size_t alignment)
 {
-  assert(IsPowerOfTwo((i32)alignment) && "alignment must be power of 2");
+  assert(IsPowerOfTwo((s32)alignment) && "alignment must be power of 2");
   memory_arena_size_t alignmentMask = alignment - 1;
   memory_arena_size_t dataPointer = ((memory_arena_size_t)mem->data + mem->used);
   memory_arena_size_t alignmentOffset = dataPointer & alignmentMask;

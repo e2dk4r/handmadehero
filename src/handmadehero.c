@@ -332,7 +332,7 @@ MakeEmptyBitmap(struct memory_arena *arena, u32 width, u32 height)
   struct bitmap bitmap = {
       .width = width,
       .height = height,
-      .stride = (i32)width * BITMAP_BYTES_PER_PIXEL,
+      .stride = (s32)width * BITMAP_BYTES_PER_PIXEL,
       .memory = MemoryArenaPushAlignment(arena, totalBitmapSize, 16),
       .alignPercentage = v2(0.5f, 0.5f),
       .widthOverHeight = (f32)width / (f32)height,
@@ -590,8 +590,8 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
   Clear(renderGroup, COLOR_FUCHSIA_900);
 
-  for (i32 chunkOffsetY = -1; chunkOffsetY <= 1; chunkOffsetY++) {
-    for (i32 chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
+  for (s32 chunkOffsetY = -1; chunkOffsetY <= 1; chunkOffsetY++) {
+    for (s32 chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
       u32 chunkX = chunkPosition->chunkX + (u32)chunkOffsetX;
       u32 chunkY = chunkPosition->chunkY + (u32)chunkOffsetY;
       u32 chunkZ = chunkPosition->chunkZ;
@@ -624,8 +624,8 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
     }
   }
 
-  for (i32 chunkOffsetY = -1; chunkOffsetY <= 1; chunkOffsetY++) {
-    for (i32 chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
+  for (s32 chunkOffsetY = -1; chunkOffsetY <= 1; chunkOffsetY++) {
+    for (s32 chunkOffsetX = -1; chunkOffsetX <= 1; chunkOffsetX++) {
       u32 chunkX = chunkPosition->chunkX + (u32)chunkOffsetX;
       u32 chunkY = chunkPosition->chunkY + (u32)chunkOffsetY;
       u32 chunkZ = chunkPosition->chunkZ;
@@ -772,10 +772,10 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
     f32 *source0 = mixerChannel0;
     f32 *source1 = mixerChannel1;
 
-    i16 *sampleOut = audioBuffer->samples;
+    s16 *sampleOut = audioBuffer->samples;
     for (u32 sampleIndex = 0; sampleIndex < audioBuffer->sampleCount; sampleIndex++) {
-      *sampleOut++ = (i16)(*source0++ + 0.5f);
-      *sampleOut++ = (i16)(*source1++ + 0.5f);
+      *sampleOut++ = (s16)(*source0++ + 0.5f);
+      *sampleOut++ = (s16)(*source1++ + 0.5f);
     }
   }
 
@@ -952,8 +952,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     u32 initialCameraZ = screenBaseZ;
 
     for (u32 monsterIndex = 0; monsterIndex < 1; monsterIndex++) {
-      i32 monsterOffsetX = RandomBetweenI32(&series, -7, 7);
-      i32 monsterOffsetY = RandomBetweenI32(&series, 1, 3);
+      s32 monsterOffsetX = RandomBetweens32(&series, -7, 7);
+      s32 monsterOffsetY = RandomBetweens32(&series, 1, 3);
 
       u32 monsterX = initialCameraX + (u32)monsterOffsetX;
       u32 monsterY = initialCameraY + (u32)monsterOffsetY;
@@ -961,8 +961,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     }
 
     for (u32 familiarIndex = 0; familiarIndex < 1; familiarIndex++) {
-      i32 familiarOffsetX = RandomBetweenI32(&series, -7, 7);
-      i32 familiarOffsetY = RandomBetweenI32(&series, -3, -1);
+      s32 familiarOffsetX = RandomBetweens32(&series, -7, 7);
+      s32 familiarOffsetY = RandomBetweens32(&series, -3, -1);
 
       u32 familiarX = initialCameraX + (u32)familiarOffsetX;
       u32 familiarY = initialCameraY + (u32)familiarOffsetY;
@@ -1123,7 +1123,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct bitmap drawBuffer = {
       .width = backbuffer->width,
       .height = backbuffer->height,
-      .stride = (i32)backbuffer->stride,
+      .stride = (s32)backbuffer->stride,
       .memory = backbuffer->memory,
   };
 

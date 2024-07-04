@@ -20,10 +20,10 @@ InRange(f32 min, f32 max, f32 value)
   return value >= min && value <= max;
 }
 
-internal inline i32
-roundf32toi32(f32 value)
+internal inline s32
+roundf32tos32(f32 value)
 {
-  return (i32)__builtin_round(value);
+  return (s32)__builtin_round(value);
 }
 
 internal inline u32
@@ -32,32 +32,32 @@ roundf32tou32(f32 value)
   return (u32)__builtin_round(value);
 }
 
-internal inline i32
-truncatef32toi32(f32 value)
+internal inline s32
+truncatef32tos32(f32 value)
 {
-  return (i32)value;
+  return (s32)value;
 }
 
-internal inline i32
+internal inline s32
 Floor(f32 value)
 {
-  return (i32)__builtin_floor(value);
+  return (s32)__builtin_floor(value);
 }
 
-internal inline i32
+internal inline s32
 Ceil(f32 value)
 {
-  return (i32)__builtin_ceilf(value);
+  return (s32)__builtin_ceilf(value);
 }
 
-internal inline i32
-FindLeastSignificantBitSet(i32 value)
+internal inline s32
+FindLeastSignificantBitSet(s32 value)
 {
   return __builtin_ffs(value) - 1;
 }
 
 internal inline b32
-IsPowerOfTwo(i32 value)
+IsPowerOfTwo(s32 value)
 {
   return (1 << FindLeastSignificantBitSet(value)) == value;
 }
@@ -224,7 +224,7 @@ v2(f32 x, f32 y)
 }
 
 internal inline struct v2
-v2i(i32 x, i32 y)
+v2s(s32 x, s32 y)
 {
   return v2((f32)x, (f32)y);
 }
@@ -232,7 +232,7 @@ v2i(i32 x, i32 y)
 internal inline struct v2
 v2u(u32 x, u32 y)
 {
-  assert(x <= I32_MAX && y <= I32_MAX);
+  assert(x <= S32_MAX && y <= S32_MAX);
   return v2((f32)x, (f32)y);
 }
 
@@ -745,15 +745,15 @@ GetBarycentric(struct rect a, struct v3 p)
   return result;
 }
 
-struct rect2i {
-  i32 minX, minY;
-  i32 maxX, maxY;
+struct rect2s {
+  s32 minX, minY;
+  s32 maxX, maxY;
 };
 
-internal inline struct rect2i
-Rect2iIntersect(struct rect2i a, struct rect2i b)
+internal inline struct rect2s
+Rect2sIntersect(struct rect2s a, struct rect2s b)
 {
-  struct rect2i result;
+  struct rect2s result;
 
   result.minX = (a.minX < b.minX) ? b.minX : a.minX;
   result.minY = (a.minY < b.minY) ? b.minY : a.minY;
@@ -763,10 +763,10 @@ Rect2iIntersect(struct rect2i a, struct rect2i b)
   return result;
 }
 
-internal inline struct rect2i
-Rect2iUnion(struct rect2i a, struct rect2i b)
+internal inline struct rect2s
+Rect2sUnion(struct rect2s a, struct rect2s b)
 {
-  struct rect2i result;
+  struct rect2s result;
 
   result.minX = (a.minX < b.minX) ? a.minX : b.minX;
   result.minY = (a.minY < b.minY) ? a.minY : b.minY;
@@ -777,11 +777,11 @@ Rect2iUnion(struct rect2i a, struct rect2i b)
 }
 
 internal inline u32
-Rect2iArea(struct rect2i a)
+Rect2sArea(struct rect2s a)
 {
-  i32 width = (a.maxX - a.minX);
-  i32 height = (a.maxY - a.minY);
-  i32 area = width * height;
+  s32 width = (a.maxX - a.minX);
+  s32 height = (a.maxY - a.minY);
+  s32 area = width * height;
   if (width < 0 || height < 0)
     area = 0;
 
@@ -789,16 +789,16 @@ Rect2iArea(struct rect2i a)
 }
 
 internal inline b32
-HasRect2iArea(struct rect2i a)
+HasRect2sArea(struct rect2s a)
 {
   b32 result = (a.minX < a.maxX) && (a.minY < a.maxY);
   return result;
 }
 
-internal inline struct rect2i
-Rect2iInvertedInfinity(void)
+internal inline struct rect2s
+Rect2sInvertedInfinity(void)
 {
-  struct rect2i result = {I32_MAX, I32_MAX, I32_MIN, I32_MIN};
+  struct rect2s result = {S32_MAX, S32_MAX, I32_MIN, I32_MIN};
   return result;
 }
 

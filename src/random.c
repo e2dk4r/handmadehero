@@ -486,12 +486,12 @@ RandomBetween(struct random_series *series, f32 min, f32 max)
 }
 
 // [min, max]
-i32
-RandomBetweenI32(struct random_series *series, i32 min, i32 max)
+s32
+RandomBetweens32(struct random_series *series, s32 min, s32 max)
 {
   assert(min < max);
   u32 range = (u32)(max + 1 - min);
-  i32 value = min + (i32)(RandomNumber(series) % range);
+  s32 value = min + (s32)(RandomNumber(series) % range);
   assert(value >= min && value <= max);
   return value;
 }

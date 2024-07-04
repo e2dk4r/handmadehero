@@ -163,7 +163,7 @@ typedef void (*pfnGameUpdateAndRender)(struct game_memory *memory, struct game_i
 struct game_audio_buffer {
   u32 sampleRate;
   u32 sampleCount;
-  i16 *samples;
+  s16 *samples;
 };
 
 b32

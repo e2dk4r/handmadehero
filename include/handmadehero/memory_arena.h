@@ -14,7 +14,7 @@ struct memory_arena {
   void *data;
 
 #if HANDMADEHERO_DEBUG
-  i32 tempCount;
+  s32 tempCount;
 #endif
 };
 

@@ -38,7 +38,7 @@ struct bitmap {
 
   u32 width;
   u32 height;
-  i32 stride;
+  s32 stride;
   void *memory;
 };
 
@@ -168,7 +168,7 @@ void
 RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);
 
 void
-DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color, struct rect2i clipRect,
+DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color, struct rect2s clipRect,
               b32 even);
 
 void

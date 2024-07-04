@@ -403,7 +403,7 @@ pw_stream_process(void *data)
 
   // Get pointers in buffer memory to write to.
   struct spa_buffer *spaBuffer = pwBuffer->buffer;
-  i16 *samples = spaBuffer->datas[0].data;
+  s16 *samples = spaBuffer->datas[0].data;
   if (!samples) {
     debug("[pw_stream_events::process] empty sample\n");
     return;
@@ -428,7 +428,7 @@ pw_stream_process(void *data)
   // Adjust buffer with number of written bytes, offset, stride.
   if (isWritten) {
     spaBuffer->datas[0].chunk->offset = 0;
-    spaBuffer->datas[0].chunk->stride = (i32)stride;
+    spaBuffer->datas[0].chunk->stride = (s32)stride;
     spaBuffer->datas[0].chunk->size = sampleCount * stride;
   }
 
@@ -446,7 +446,7 @@ comptime struct pw_stream_events pw_stream_events = {
  *****************************************************************/
 
 internal void
-joystick_key(struct linux_state *state, u16 type, u16 code, i32 value)
+joystick_key(struct linux_state *state, u16 type, u16 code, s32 value)
 {
   struct game_controller_input *controller = GetController(state->input, 1);
 
@@ -483,8 +483,8 @@ joystick_key(struct linux_state *state, u16 type, u16 code, i32 value)
     /* normalize stick x movement */
     comptime f32 MAX_LEFT = 32768.0f;
     comptime f32 MAX_RIGHT = 32767.0f;
-    comptime i32 MIN_LEFT = -129;
-    comptime i32 MIN_RIGHT = 128;
+    comptime s32 MIN_LEFT = -129;
+    comptime s32 MIN_RIGHT = 128;
   case ABS_X: {
     f32 max = value < 0 ? MAX_LEFT : MAX_RIGHT;
     if (value >= MIN_LEFT && value <= MIN_RIGHT)
@@ -521,7 +521,7 @@ joystick_key(struct linux_state *state, u16 type, u16 code, i32 value)
 }
 
 internal void
-wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 format, i32 fd, u32 size)
+wl_keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard, u32 format, s32 fd, u32 size)
 {
   struct linux_state *state = data;
   debugf("[wl_keyboard::keymap] format: %d fd: %d size: %d\n", format, fd, size);
@@ -661,7 +661,7 @@ wl_keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard, u32 serial, u
 }
 
 internal void
-wl_keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard, i32 rate, i32 delay)
+wl_keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard, s32 rate, s32 delay)
 {
   // struct my_state *state = data;
   debugf("[wl_keyboard::repeat_info] rate: %d delay: %d\n", rate, delay);
@@ -782,7 +782,7 @@ comptime struct wl_seat_listener wl_seat_listener = {
 /*****************************************************************
  * shared memory
  *****************************************************************/
-internal i32
+internal s32
 create_shared_memory(off_t size)
 {
   int fd;
@@ -890,7 +890,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
     GameUpdateAndRender(&state->game_memory, newInput, backbuffer);
     HandleCycleCounters(&state->game_memory);
     wl_surface_attach(state->wl_surface, state->wl_buffer, 0, 0);
-    wl_surface_damage_buffer(state->wl_surface, 0, 0, (i32)backbuffer->width, (i32)backbuffer->height);
+    wl_surface_damage_buffer(state->wl_surface, 0, 0, (s32)backbuffer->width, (s32)backbuffer->height);
 
     state->last_ust = ust;
 
@@ -958,7 +958,7 @@ comptime struct xdg_wm_base_listener xdg_wm_base_listener = {
  *****************************************************************/
 
 internal void
-xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, i32 screen_width, i32 screen_height,
+xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 screen_width, s32 screen_height,
                        struct wl_array *states)
 {
   debugf("[xdg_toplevel::configure] screen width: %d height: %d\n", screen_width, screen_height);
@@ -1197,7 +1197,7 @@ thread_start(void *arg)
   return 0;
 }
 
-internal i32
+internal s32
 LinuxWorkQueueInit(struct linux_work_queue *queue, u32 threadCount)
 {
   queue->completeGoal = 0;
@@ -1443,7 +1443,7 @@ main(int argc, char *argv[])
   /* wayland: create buffer */
   u32 backbuffer_multiplier = 1;
   u32 backbuffer_size = state.backbuffer.height * state.backbuffer.stride * backbuffer_multiplier;
-  i32 shm_fd = create_shared_memory(backbuffer_size);
+  s32 shm_fd = create_shared_memory(backbuffer_size);
   if (shm_fd == 0) {
     comptime char msg[] = "error: cannot create shared memory!\n";
     comptime u64 msgLength = sizeof(msg) - 1;
@@ -1463,14 +1463,14 @@ main(int argc, char *argv[])
     goto shm_exit;
   }
 
-  struct wl_shm_pool *pool = wl_shm_create_pool(state.wl_shm, shm_fd, (i32)backbuffer_size);
+  struct wl_shm_pool *pool = wl_shm_create_pool(state.wl_shm, shm_fd, (s32)backbuffer_size);
   if (!pool) {
     wl_shm_pool_destroy(pool);
     error_code = HANDMADEHERO_ERROR_WAYLAND_SHM_POOL;
     goto shm_exit;
   }
-  state.wl_buffer = wl_shm_pool_create_buffer(pool, 0, (i32)state.backbuffer.width, (i32)state.backbuffer.height,
-                                              (i32)state.backbuffer.stride, WL_SHM_FORMAT_XRGB8888);
+  state.wl_buffer = wl_shm_pool_create_buffer(pool, 0, (s32)state.backbuffer.width, (s32)state.backbuffer.height,
+                                              (s32)state.backbuffer.stride, WL_SHM_FORMAT_XRGB8888);
   if (!state.wl_buffer) {
     wl_shm_pool_destroy(pool);
     error_code = HANDMADEHERO_ERROR_WAYLAND_SHM_POOL;

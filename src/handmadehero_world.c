@@ -112,7 +112,7 @@ WorldPositionCalculateAxis(f32 chunkDim, u32 *chunk, f32 *chunkRel)
    * you come back on other.
    */
 
-  i32 offset = roundf32toi32(*chunkRel / chunkDim);
+  s32 offset = roundf32tos32(*chunkRel / chunkDim);
   *chunk += (u32)offset;
   *chunkRel -= (f32)offset * chunkDim;
 
