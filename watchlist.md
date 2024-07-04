@@ -463,7 +463,7 @@
 - [x] Handmade Hero Day 140 - Implementing a Sound Mixer
       https://www.youtube.com/watch?v=UuqcgQxpfO8
 
-- [ ] Handmade Hero Day 141 - Streaming Large Audio in Chunks
+- [x] Handmade Hero Day 141 - Streaming Large Audio in Chunks
       https://www.youtube.com/watch?v=Yvv9nVqGC5w
 
 - [ ] Handmade Hero Day 142 - Per-sample Volume Interpolation
