@@ -504,19 +504,19 @@ joystick_key(struct linux_state *state, u16 type, u16 code, s32 value)
     controller->stickAverageY = -y;
   } break;
 
-  case BTN_NORTH: {
+  case BTN_Y: {
     controller->actionUp.pressed = (u8)(value & 0x1);
   } break;
 
-  case BTN_SOUTH: {
+  case BTN_A: {
     controller->actionDown.pressed = (u8)(value & 0x1);
   } break;
 
-  case BTN_WEST: {
+  case BTN_X: {
     controller->actionLeft.pressed = (u8)(value & 0x1);
   } break;
 
-  case BTN_EAST: {
+  case BTN_B: {
     controller->actionRight.pressed = (u8)(value & 0x1);
   } break;
   }
