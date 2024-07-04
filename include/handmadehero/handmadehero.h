@@ -78,6 +78,7 @@ struct game_state {
 
   struct random_series generalEntropy;
   struct audio_state audioState;
+  struct playing_audio *music;
 };
 
 struct task_with_memory {

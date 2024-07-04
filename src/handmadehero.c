@@ -940,7 +940,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     transientState->assets = GameAssetsAllocate(&transientState->transientArena, 64 * MEGABYTES, transientState,
                                                 memory->PlatformReadEntireFile);
 
-    PlayAudio(&state->audioState, AudioGetFirstId(transientState->assets, ASSET_TYPE_MUSIC));
+    state->music = PlayAudio(&state->audioState, AudioGetFirstId(transientState->assets, ASSET_TYPE_MUSIC));
 
     transientState->isInitialized = 1;
   }
@@ -1008,12 +1008,16 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     conHero->dSword = (struct v2){};
     if (controller->actionUp.pressed) {
       conHero->dSword = v2(0.0f, 1.0f);
+      ChangeVolume(&state->audioState, state->music, 10, v2(1.0f, 1.0f));
     } else if (controller->actionDown.pressed) {
       conHero->dSword = v2(0.0f, -1.0f);
+      ChangeVolume(&state->audioState, state->music, 10, v2(0.0f, 0.0f));
     } else if (controller->actionLeft.pressed) {
       conHero->dSword = v2(-1.0f, 0.0f);
+      ChangeVolume(&state->audioState, state->music, 5, v2(1.0f, 0.0f));
     } else if (controller->actionRight.pressed) {
       conHero->dSword = v2(1.0f, 0.0f);
+      ChangeVolume(&state->audioState, state->music, 5, v2(0.0f, 1.0f));
     }
   }
 
