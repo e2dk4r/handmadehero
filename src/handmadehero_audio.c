@@ -42,12 +42,13 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         struct audio_info *info = AudioInfoGet(assets, playingAudio->id);
         AudioPrefetch(assets, info->nextIdToPlay);
 
-        // TODO(e2dk4r): handle stereo
         f32 volume0 = playingAudio->volume[0];
         f32 volume1 = playingAudio->volume[1];
 
         u32 samplesToMix = totalSamplesToMix;
         u32 samplesRemainingInAudio = loadedAudio->sampleCount - playingAudio->samplesPlayed;
+
+        // TODO(e2dk4r): handle stereo
         if (samplesToMix > samplesRemainingInAudio) {
           samplesToMix = samplesRemainingInAudio;
         }
