@@ -193,10 +193,10 @@ BitmapInfoAdd(struct game_assets *assets, char *filename, struct v2 alignPercent
   return id;
 }
 
-internal struct bitmap_id
+internal struct audio_id
 AudioInfoAdd(struct game_assets *assets, char *filename)
 {
-  struct bitmap_id id = {assets->DEBUGUsedAudioInfoCount};
+  struct audio_id id = {assets->DEBUGUsedAudioInfoCount};
   assets->DEBUGUsedAudioInfoCount++;
 
   struct audio_info *info = assets->audioInfos + id.value;
