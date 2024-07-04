@@ -2,6 +2,7 @@
 #define HANDMADEHERO_H
 
 #include "asset.h"
+#include "audio.h"
 #include "memory_arena.h"
 #include "platform.h"
 #include "render_group.h"
@@ -42,13 +43,6 @@ struct hero_bitmap_ids {
   struct bitmap_id cape;
 };
 
-struct playing_audio {
-  struct audio_id id;
-  f32 volume[2];
-  u32 samplesPlayed;
-  struct playing_audio *next;
-};
-
 struct game_state {
   b32 isInitialized : 1;
 
@@ -83,8 +77,7 @@ struct game_state {
   struct bitmap testNormal;
 
   struct random_series generalEntropy;
-  struct playing_audio *firstPlayingAudio;
-  struct playing_audio *firstFreePlayingAudio;
+  struct game_audio_state audioState;
 };
 
 struct task_with_memory {

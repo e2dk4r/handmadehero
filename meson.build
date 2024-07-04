@@ -81,6 +81,7 @@ platform_src = [
 handmadehero_sources = [
   'src/random.c',
   'src/handmadehero_asset.c',
+  'src/handmadehero_audio.c',
   'src/handmadehero_entity.c',
   'src/handmadehero_render_group.c',
   'src/handmadehero_sim_region.c',
