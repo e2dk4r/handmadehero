@@ -194,13 +194,15 @@ BitmapInfoAdd(struct game_assets *assets, char *filename, struct v2 alignPercent
 }
 
 internal struct audio_id
-AudioInfoAdd(struct game_assets *assets, char *filename)
+AudioInfoAdd(struct game_assets *assets, char *filename, u32 sampleIndex, u32 sampleCount)
 {
   struct audio_id id = {assets->DEBUGUsedAudioInfoCount};
   assets->DEBUGUsedAudioInfoCount++;
 
   struct audio_info *info = assets->audioInfos + id.value;
   info->filename = filename;
+  info->sampleIndex = sampleIndex;
+  info->sampleCount = sampleCount;
   info->nextIdToPlay.value = 0;
 
   return id;
@@ -234,7 +236,7 @@ AddBitmapAsset(struct game_assets *assets, char *filename, struct v2 alignPercen
 }
 
 internal void
-AddAudioAsset(struct game_assets *assets, char *filename)
+AddAudioAssetTrimmed(struct game_assets *assets, char *filename, u32 sampleIndex, u32 sampleCount)
 {
   assert(assets->DEBUGAssetType && "you must call BeginAssetType()");
   assert(assets->DEBUGAssetType->assetIndexOnePastLast < assets->assetCount && "asset count exceeded");
@@ -246,7 +248,13 @@ AddAudioAsset(struct game_assets *assets, char *filename)
   struct asset *asset = assets->DEBUGAsset;
   asset->tagIndexFirst = assets->DEBUGUsedTagCount;
   asset->tagIndexOnePastLast = asset->tagIndexFirst;
-  asset->slotId = AudioInfoAdd(assets, filename).value;
+  asset->slotId = AudioInfoAdd(assets, filename, sampleIndex, sampleCount).value;
+}
+
+internal void
+AddAudioAsset(struct game_assets *assets, char *filename)
+{
+  AddAudioAssetTrimmed(assets, filename, 0, 0);
 }
 
 internal void
@@ -413,7 +421,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_MUSIC);
-  AddAudioAsset(assets, "test3/music_test.wav");
+  AddAudioAssetTrimmed(assets, "test3/music_test.wav", 0, 48000);
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_PUHP);
@@ -606,7 +614,8 @@ WaveChunkNext(struct wave_chunk_iterator iterator)
 }
 
 internal struct audio
-LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
+LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 sectionSampleIndex,
+        u32 sectionSampleCount)
 {
   struct audio result = {};
 
@@ -675,6 +684,14 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename)
     assert(0 && "Unsupported number of channels");
   }
 
+  if (sectionSampleCount != AUDIO_INFO_SAMPLE_COUNT_ALL) {
+    assert(sectionSampleIndex + sectionSampleCount <= result.sampleCount);
+    result.sampleCount = sectionSampleCount;
+    for (u32 channelIndex = 0; channelIndex < result.channelCount; channelIndex++) {
+      result.samples[channelIndex] += sectionSampleIndex;
+    }
+  }
+
   return result;
 }
 
@@ -692,7 +709,7 @@ DoLoadAudioWork(struct platform_work_queue *queue, void *data)
   struct load_audio_work *work = data;
 
   struct audio_info *info = work->assets->audioInfos + work->audioId.value;
-  *work->audio = LoadWav(work->assets->PlatformReadEntireFile, info->filename);
+  *work->audio = LoadWav(work->assets->PlatformReadEntireFile, info->filename, info->sampleIndex, info->sampleCount);
 
   // TODO(e2dk4r): fence!
   struct asset_slot *slot = work->assets->audios + work->audioId.value;

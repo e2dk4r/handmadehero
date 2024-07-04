@@ -430,6 +430,8 @@ pw_stream_process(void *data)
     spaBuffer->datas[0].chunk->offset = 0;
     spaBuffer->datas[0].chunk->stride = (s32)stride;
     spaBuffer->datas[0].chunk->size = sampleCount * stride;
+  } else {
+    spaBuffer->datas[0].chunk->size = 0;
   }
 
   // Queue the buffer for playback.

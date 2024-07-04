@@ -99,8 +99,11 @@ struct bitmap_info {
 
 struct audio_info {
   char *filename;
+  u32 sampleIndex;
+  u32 sampleCount;
   struct audio_id nextIdToPlay;
 };
+#define AUDIO_INFO_SAMPLE_COUNT_ALL 0
 
 struct asset_group {
   u32 tagFirstIndex;
