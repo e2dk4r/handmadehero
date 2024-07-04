@@ -304,6 +304,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->assets = MemoryArenaPush(arena, sizeof(*assets->assets) * assets->assetCount);
 
   assets->DEBUGUsedBitmapInfoCount = 1;
+  assets->DEBUGUsedAudioInfoCount = 1;
   assets->DEBUGUsedAssetCount = 1;
   assets->DEBUGUsedTagCount = 1;
 
