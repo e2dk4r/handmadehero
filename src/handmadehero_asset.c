@@ -424,7 +424,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
 
   BeginAssetType(assets, ASSET_TYPE_MUSIC);
   u32 sampleRate = 48000;
-  u32 chunkSampleCount = 10 * sampleRate;
+  u32 chunkSampleCount = 2 * sampleRate;
   u32 totalSampleCount = 7468095;
   struct asset *lastMusic = 0;
   for (u32 sampleIndex = 0; sampleIndex < totalSampleCount; sampleIndex += chunkSampleCount) {

@@ -696,6 +696,8 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
   b32 isWritten = 0;
   if (!state->isInitialized || !transientState->isInitialized)
     return isWritten;
+  if (audioBuffer->sampleCount == 0)
+    return isWritten;
   struct game_assets *assets = transientState->assets;
 
   struct memory_temp mixerMemory = BeginTemporaryMemory(&state->metaArena);
@@ -718,44 +720,53 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
     struct playing_audio *playingAudio = *playingAudioPtr;
     b32 isAudioFinished = 0;
 
-    struct audio *loadedAudio = AudioGet(assets, playingAudio->id);
-    if (loadedAudio) {
-      struct audio_info *info = AudioInfoGet(assets, playingAudio->id);
-      AudioPrefetch(assets, info->nextIdToPlay);
+    f32 *dest0 = mixerChannel0;
+    f32 *dest1 = mixerChannel1;
+    u32 totalSamplesToMix = audioBuffer->sampleCount;
+    while (totalSamplesToMix && !isAudioFinished) {
+      struct audio *loadedAudio = AudioGet(assets, playingAudio->id);
+      if (loadedAudio) {
+        struct audio_info *info = AudioInfoGet(assets, playingAudio->id);
+        AudioPrefetch(assets, info->nextIdToPlay);
 
-      // TODO(e2dk4r): handle stereo
-      f32 *dest0 = mixerChannel0;
-      f32 *dest1 = mixerChannel1;
+        // TODO(e2dk4r): handle stereo
+        f32 volume0 = playingAudio->volume[0];
+        f32 volume1 = playingAudio->volume[1];
 
-      f32 volume0 = playingAudio->volume[0];
-      f32 volume1 = playingAudio->volume[1];
-
-      u32 samplesToMix = audioBuffer->sampleCount;
-      u32 samplesRemainingInAudio = loadedAudio->sampleCount - playingAudio->samplesPlayed;
-      if (samplesToMix > samplesRemainingInAudio) {
-        samplesToMix = samplesRemainingInAudio;
-      }
-
-      for (u32 sampleIndex = playingAudio->samplesPlayed; sampleIndex < playingAudio->samplesPlayed + samplesToMix;
-           sampleIndex++) {
-        f32 sampleValue = (f32)loadedAudio->samples[0][sampleIndex];
-        *dest0++ += volume0 * sampleValue;
-        *dest1++ += volume1 * sampleValue;
-      }
-      playingAudio->samplesPlayed += samplesToMix;
-
-      isWritten = 1;
-      if (playingAudio->samplesPlayed == loadedAudio->sampleCount) {
-        if (IsAudioIdValid(info->nextIdToPlay)) {
-          playingAudio->id = info->nextIdToPlay;
-          playingAudio->samplesPlayed = 0;
-        } else {
-          isAudioFinished = 1;
+        u32 samplesToMix = totalSamplesToMix;
+        u32 samplesRemainingInAudio = loadedAudio->sampleCount - playingAudio->samplesPlayed;
+        if (samplesToMix > samplesRemainingInAudio) {
+          samplesToMix = samplesRemainingInAudio;
         }
+
+        for (u32 sampleIndex = playingAudio->samplesPlayed; sampleIndex < playingAudio->samplesPlayed + samplesToMix;
+             sampleIndex++) {
+          f32 sampleValue = (f32)loadedAudio->samples[0][sampleIndex];
+          *dest0++ += volume0 * sampleValue;
+          *dest1++ += volume1 * sampleValue;
+        }
+        playingAudio->samplesPlayed += samplesToMix;
+
+        assert(totalSamplesToMix >= samplesToMix);
+        totalSamplesToMix -= samplesToMix;
+
+        isWritten = 1;
+        if (playingAudio->samplesPlayed == loadedAudio->sampleCount) {
+          if (IsAudioIdValid(info->nextIdToPlay)) {
+            playingAudio->id = info->nextIdToPlay;
+            playingAudio->samplesPlayed = 0;
+          } else {
+            isAudioFinished = 1;
+            break;
+          }
+        } else {
+          assert(totalSamplesToMix == 0);
+        }
+      } else {
+        // audio is not in cache
+        AudioLoad(assets, playingAudio->id);
+        break;
       }
-    } else {
-      // audio is not in cache
-      AudioLoad(assets, playingAudio->id);
     }
 
     if (isAudioFinished) {
