@@ -235,7 +235,7 @@ AddBitmapAsset(struct game_assets *assets, char *filename, struct v2 alignPercen
   asset->slotId = BitmapInfoAdd(assets, filename, alignPercentage).value;
 }
 
-internal void
+internal struct asset *
 AddAudioAssetTrimmed(struct game_assets *assets, char *filename, u32 sampleIndex, u32 sampleCount)
 {
   assert(assets->DEBUGAssetType && "you must call BeginAssetType()");
@@ -249,12 +249,14 @@ AddAudioAssetTrimmed(struct game_assets *assets, char *filename, u32 sampleIndex
   asset->tagIndexFirst = assets->DEBUGUsedTagCount;
   asset->tagIndexOnePastLast = asset->tagIndexFirst;
   asset->slotId = AudioInfoAdd(assets, filename, sampleIndex, sampleCount).value;
+
+  return asset;
 }
 
-internal void
+internal struct asset *
 AddAudioAsset(struct game_assets *assets, char *filename)
 {
-  AddAudioAssetTrimmed(assets, filename, 0, 0);
+  return AddAudioAssetTrimmed(assets, filename, 0, 0);
 }
 
 internal void
@@ -421,7 +423,21 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_MUSIC);
-  AddAudioAssetTrimmed(assets, "test3/music_test.wav", 0, 48000);
+  u32 sampleRate = 48000;
+  u32 chunkSampleCount = 10 * sampleRate;
+  u32 totalSampleCount = 7468095;
+  struct asset *lastMusic = 0;
+  for (u32 sampleIndex = 0; sampleIndex < totalSampleCount; sampleIndex += chunkSampleCount) {
+    u32 sampleCount = totalSampleCount - sampleIndex;
+    if (sampleCount > chunkSampleCount) {
+      sampleCount = chunkSampleCount;
+    }
+    struct asset *thisMusic = AddAudioAssetTrimmed(assets, "test3/music_test.wav", sampleIndex, sampleCount);
+    if (lastMusic) {
+      assets->audioInfos[lastMusic->slotId].nextIdToPlay.value = thisMusic->slotId;
+    }
+    lastMusic = thisMusic;
+  }
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_PUHP);
