@@ -156,3 +156,31 @@ MemoryArenaCheck(struct memory_arena *arena)
 {
   assert(arena->tempCount == 0);
 }
+
+internal inline u64
+strlen(char *str)
+{
+  u64 length = 0;
+  while (*str++)
+    length++;
+  return length;
+}
+
+internal void *
+memcpy(void *dest, const void *src, u64 size)
+{
+  while (size--)
+    *(u8 *)dest++ = *(u8 *)src++;
+  return dest;
+}
+
+inline char *
+MemoryArenaPushString(struct memory_arena *mem, char *string)
+{
+  u64 length = strlen(string) + 1;
+  u64 size = ALIGN(length, 4) + 4;
+  char *dest = MemoryArenaPush(mem, size);
+  memcpy(dest, string, size);
+  dest[length] = 0;
+  return dest;
+}

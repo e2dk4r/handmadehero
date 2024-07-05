@@ -65,4 +65,8 @@ EndTemporaryMemory(struct memory_temp *temp);
 void
 MemoryArenaCheck(struct memory_arena *arena);
 
+// Only for debug purposes. str must be zero terminated
+char *
+MemoryArenaPushString(struct memory_arena *mem, char *string);
+
 #endif /* HANDMADEHERO_MEMORY_ARENA_H */
