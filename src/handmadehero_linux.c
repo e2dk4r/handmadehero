@@ -159,12 +159,20 @@ game_memory_allocation(struct game_memory *memory, u64 permanentStorageSize, u64
  * hot game code reloading
  ***************************************************************/
 
+struct linux_work_queue;
+internal inline void
+LinuxWorkQueueCompleteAllWork(struct linux_work_queue *queue);
+
 #if HANDMADEHERO_DEBUG
+
 struct game_code {
   char path[255];
   time_t time;
   void *module;
   volatile u32 isReloading;
+
+  struct linux_work_queue *highPriorityQueue;
+  struct linux_work_queue *lowPriorityQueue;
 
   pfnGameUpdateAndRender GameUpdateAndRender;
   pfnGameOutputAudio GameOutputAudio;
@@ -186,6 +194,8 @@ ReloadGameCode(struct game_code *lib)
   }
 
   __atomic_store_n(&lib->isReloading, 1, __ATOMIC_RELEASE);
+  LinuxWorkQueueCompleteAllWork(lib->highPriorityQueue);
+  LinuxWorkQueueCompleteAllWork(lib->lowPriorityQueue);
 
   // unload shared lib
   if (lib->module) {
@@ -1266,6 +1276,8 @@ main(int argc, char *argv[])
     length += libpath_length;
     assert(length < 255);
   }
+  state.lib.highPriorityQueue = &highPriorityQueue;
+  state.lib.lowPriorityQueue = &lowPriorityQueue;
 
   ReloadGameCode(&state.lib);
 #endif
