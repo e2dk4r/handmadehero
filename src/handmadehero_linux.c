@@ -1213,9 +1213,11 @@ LinuxWorkQueueInit(struct linux_work_queue *queue, u32 threadCount)
 
   for (u32 threadIndex = 0; threadIndex < threadCount; threadIndex++) {
     pthread_t threadId;
-    if (pthread_create(&threadId, 0, thread_start, queue))
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    if (pthread_create(&threadId, &attr, thread_start, queue))
       return 2;
-    pthread_detach(threadId);
   }
 
   return 0;
