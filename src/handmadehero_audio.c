@@ -49,7 +49,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
         struct v2 volume = playingAudio->currentVolume;
         struct v2 dVolume = v2_mul(playingAudio->dCurrentVolume, secondsPerSample);
-        f32 dSample = 1.0f;
+        f32 dSample = playingAudio->dSample;
 
         assert(playingAudio->samplesPlayed >= 0.0f);
 
@@ -168,6 +168,7 @@ PlayAudio(struct audio_state *audioState, struct audio_id id)
   playingAudio->samplesPlayed = 0;
   playingAudio->currentVolume = playingAudio->targetVolume = v2(1.0f, 1.0f);
   playingAudio->dCurrentVolume = v2(0.0f, 0.0f);
+  playingAudio->dSample = 1.0f;
   playingAudio->id = id;
 
   playingAudio->next = audioState->firstPlayingAudio;
@@ -187,4 +188,10 @@ ChangeVolume(struct audio_state *audioState, struct playing_audio *playingAudio,
     playingAudio->dCurrentVolume =
         v2_mul(v2_sub(playingAudio->targetVolume, playingAudio->currentVolume), 1.0f / fadeDurationInSeconds);
   }
+}
+
+void
+ChangePitch(struct audio_state *audioState, struct playing_audio *playingAudio, f32 dSample)
+{
+  playingAudio->dSample = dSample;
 }

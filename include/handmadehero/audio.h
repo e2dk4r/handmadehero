@@ -8,6 +8,7 @@ struct playing_audio {
   struct v2 currentVolume;
   struct v2 dCurrentVolume;
   struct v2 targetVolume;
+  f32 dSample;
 
   struct audio_id id;
   f32 samplesPlayed;
@@ -34,5 +35,8 @@ PlayAudio(struct audio_state *audioState, struct audio_id id);
 void
 ChangeVolume(struct audio_state *audioState, struct playing_audio *playingAudio, f32 fadeDurationInSeconds,
              struct v2 volume);
+
+void
+ChangePitch(struct audio_state *audioState, struct playing_audio *playingAudio, f32 dSample);
 
 #endif /* HANDMADEHERO_AUDIO_H */
