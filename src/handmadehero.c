@@ -946,6 +946,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 
 #if HANDMADEHERO_DEBUG
+  // TODO(e2dk4r): Re-enable this? But make sure we don't touch ones in flight?
   if (0 && input->gameCodeReloaded) {
     for (u32 groundBufferIndex = 0; groundBufferIndex < transientState->groundBufferCount; groundBufferIndex++) {
       struct ground_buffer *groundBuffer = transientState->groundBuffers + groundBufferIndex;
