@@ -263,6 +263,9 @@ struct linux_state {
   struct memory_arena wayland_arena;
   struct memory_arena xkb_arena;
 
+  u32 surfaceWidth;
+  u32 surfaceHeight;
+
 #if HANDMADEHERO_DEBUG
   struct game_code lib;
   u8 recordInputIndex;
@@ -717,6 +720,19 @@ wl_pointer_enter(void *data, struct wl_pointer *wl_pointer, uint32_t serial, str
 {
   /* hide cursor */
   wl_pointer_set_cursor(wl_pointer, serial, 0, 0, 0);
+
+  struct linux_state *state = data;
+  struct game_input *input = state->input;
+  struct game_backbuffer *backbuffer = &state->backbuffer;
+
+  if (state->surfaceWidth == 0 || state->surfaceHeight == 0)
+    return;
+
+  f32 pointerX = (f32)wl_fixed_to_int(surface_x) / (f32)state->surfaceWidth;
+  f32 pointerY = (f32)wl_fixed_to_int(surface_y) / (f32)state->surfaceHeight;
+
+  input->pointerX = (u32)(pointerX * (f32)backbuffer->width);
+  input->pointerY = (u32)(pointerY * (f32)backbuffer->height);
 }
 
 internal void
@@ -727,6 +743,18 @@ wl_pointer_leave(void *data, struct wl_pointer *wl_pointer, uint32_t serial, str
 internal void
 wl_pointer_motion(void *data, struct wl_pointer *wl_pointer, uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y)
 {
+  struct linux_state *state = data;
+  struct game_input *input = state->input;
+  struct game_backbuffer *backbuffer = &state->backbuffer;
+
+  if (state->surfaceWidth == 0 || state->surfaceHeight == 0)
+    return;
+
+  f32 pointerX = (f32)wl_fixed_to_int(surface_x) / (f32)state->surfaceWidth;
+  f32 pointerY = (f32)wl_fixed_to_int(surface_y) / (f32)state->surfaceHeight;
+
+  input->pointerX = (u32)(pointerX * (f32)backbuffer->width);
+  input->pointerY = (u32)(pointerY * (f32)backbuffer->height);
 }
 
 internal void
@@ -973,7 +1001,7 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 screen
                        struct wl_array *states)
 {
   debugf("[xdg_toplevel::configure] screen width: %d height: %d\n", screen_width, screen_height);
-  if (screen_width == 0 || screen_height == 0)
+  if (screen_width <= 0 || screen_height <= 0)
     return;
 
   struct linux_state *state = data;
@@ -1002,6 +1030,9 @@ xdg_toplevel_configure(void *data, struct xdg_toplevel *xdg_toplevel, s32 screen
     wp_viewport_set_destination(state->wp_viewport, screen_width, screen_height);
   }
 #endif
+
+  state->surfaceWidth = (u32)screen_width;
+  state->surfaceHeight = (u32)screen_height;
 
   wl_surface_commit(state->wl_surface);
 }

@@ -99,6 +99,9 @@ struct game_controller_input {
 };
 
 struct game_input {
+  u32 pointerX;
+  u32 pointerY;
+
   /*
    *        |-----|-----|-----|-----|-----|--->
    *  frame 0     1     2     3     4     5

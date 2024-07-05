@@ -959,6 +959,13 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * CONTROLLER INPUT HANDLING
    ****************************************************************/
 
+  {
+    struct v2 musicVolume;
+    musicVolume.e[1] = ((f32)input->pointerX / (f32)backbuffer->width);
+    musicVolume.e[0] = 1.0f - musicVolume.e[1];
+    ChangeVolume(&state->audioState, state->music, 0.01f, musicVolume);
+  }
+
   for (u8 controllerIndex = 0; controllerIndex < ARRAY_COUNT(input->controllers); controllerIndex++) {
     struct game_controller_input *controller = GetController(input, controllerIndex);
     struct controlled_hero *conHero = state->controlledHeroes + controllerIndex;
