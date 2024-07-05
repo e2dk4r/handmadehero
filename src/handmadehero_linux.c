@@ -65,8 +65,7 @@ PlatformReadEntireFile(char *path)
 {
   struct read_file_result result = {};
   int fd = open(path, O_RDONLY);
-  if (fd < 0)
-    return result;
+  assert(fd >= 0);
 
   struct stat stat;
   if (fstat(fd, &stat))
