@@ -77,8 +77,20 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         // TODO(e2dk4r): handle stereo
         f32 samplePosition = playingAudio->samplesPlayed;
         for (u32 loopIndex = 0; loopIndex < samplesToMix; loopIndex++) {
+#if 1
+          // linear interplation
+          s32 sampleIndex = Floor(samplePosition);
+          f32 frac = samplePosition - (f32)sampleIndex;
+
+          f32 sample0 = (f32)loadedAudio->samples[0][sampleIndex];
+          f32 sample1 = (f32)loadedAudio->samples[0][sampleIndex + 1];
+
+          f32 sampleValue = Lerp(sample0, sample1, frac);
+#else
           u32 sampleIndex = roundf32tou32(samplePosition);
           f32 sampleValue = (f32)loadedAudio->samples[0][sampleIndex];
+#endif
+
           *dest0++ += (audioState->masterVolume.e[0] * volume.e[0]) * sampleValue;
           *dest1++ += (audioState->masterVolume.e[0] * volume.e[1]) * sampleValue;
 
