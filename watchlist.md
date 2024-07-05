@@ -469,7 +469,7 @@
 - [x] Handmade Hero Day 142 - Per-sample Volume Interpolation
       https://www.youtube.com/watch?v=XxReVrByBYw
 
-- [ ] Handmade Hero Day 143 - Pitch Shifting in the Mixer
+- [x] Handmade Hero Day 143 - Pitch Shifting in the Mixer
       https://www.youtube.com/watch?v=OOR8A_7JwIY
 
 - [ ] Handmade Hero Day 144 - SSE Mixer Pre and Post Loops
