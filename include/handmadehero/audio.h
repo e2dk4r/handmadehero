@@ -10,7 +10,7 @@ struct playing_audio {
   struct v2 targetVolume;
 
   struct audio_id id;
-  u32 samplesPlayed;
+  f32 samplesPlayed;
   struct playing_audio *next;
 };
 

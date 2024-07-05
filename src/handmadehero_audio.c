@@ -49,9 +49,14 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
         struct v2 volume = playingAudio->currentVolume;
         struct v2 dVolume = v2_mul(playingAudio->dCurrentVolume, secondsPerSample);
+        f32 dSample = 1.0f;
+
+        assert(playingAudio->samplesPlayed >= 0.0f);
 
         u32 samplesToMix = totalSamplesToMix;
-        u32 samplesRemainingInAudio = loadedAudio->sampleCount - playingAudio->samplesPlayed;
+        f32 floatSamplesRemainingInAudio =
+            (f32)(loadedAudio->sampleCount - roundf32tou32(playingAudio->samplesPlayed)) / dSample;
+        u32 samplesRemainingInAudio = roundf32tou32(floatSamplesRemainingInAudio);
 
         if (samplesToMix > samplesRemainingInAudio) {
           samplesToMix = samplesRemainingInAudio;
@@ -70,13 +75,15 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         }
 
         // TODO(e2dk4r): handle stereo
-        for (u32 sampleIndex = playingAudio->samplesPlayed; sampleIndex < playingAudio->samplesPlayed + samplesToMix;
-             sampleIndex++) {
+        f32 samplePosition = playingAudio->samplesPlayed;
+        for (u32 loopIndex = 0; loopIndex < samplesToMix; loopIndex++) {
+          u32 sampleIndex = roundf32tou32(samplePosition);
           f32 sampleValue = (f32)loadedAudio->samples[0][sampleIndex];
           *dest0++ += (audioState->masterVolume.e[0] * volume.e[0]) * sampleValue;
           *dest1++ += (audioState->masterVolume.e[0] * volume.e[1]) * sampleValue;
 
           v2_add_ref(&volume, dVolume);
+          samplePosition += dSample;
         }
 
         playingAudio->currentVolume = volume;
@@ -88,13 +95,13 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
           }
         }
 
-        playingAudio->samplesPlayed += samplesToMix;
+        playingAudio->samplesPlayed = samplePosition;
 
         assert(totalSamplesToMix >= samplesToMix);
         totalSamplesToMix -= samplesToMix;
 
         isWritten = 1;
-        if (playingAudio->samplesPlayed == loadedAudio->sampleCount) {
+        if ((u32)playingAudio->samplesPlayed == loadedAudio->sampleCount) {
           if (IsAudioIdValid(info->nextIdToPlay)) {
             playingAudio->id = info->nextIdToPlay;
             playingAudio->samplesPlayed = 0;
