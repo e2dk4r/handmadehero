@@ -1216,6 +1216,9 @@ LinuxWorkQueueInit(struct linux_work_queue *queue, u32 threadCount)
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    if (pthread_attr_setstacksize(&attr, 1 * MEGABYTES)) {
+      debug("failed to set thread stack size to 1m\n");
+    }
     if (pthread_create(&threadId, &attr, thread_start, queue))
       return 2;
   }
