@@ -158,7 +158,7 @@ MemoryArenaCheck(struct memory_arena *arena)
 }
 
 internal inline u64
-strlen(char *str)
+strlen(const char *str)
 {
   u64 length = 0;
   while (*str++)
