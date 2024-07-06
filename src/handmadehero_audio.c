@@ -1,5 +1,6 @@
 #include <handmadehero/audio.h>
 #include <handmadehero/memory_arena.h>
+#include <x86intrin.h>
 
 void
 AudioStateInit(struct audio_state *audioState, struct memory_arena *permanentArena)
@@ -16,20 +17,26 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
   b32 isWritten = 0;
   struct memory_temp mixerMemory = BeginTemporaryMemory(audioState->permanentArena);
 
-  f32 *mixerChannel0 = MemoryArenaPush(audioState->permanentArena, sizeof(*mixerChannel0) * audioBuffer->sampleCount);
-  f32 *mixerChannel1 = MemoryArenaPush(audioState->permanentArena, sizeof(*mixerChannel1) * audioBuffer->sampleCount);
+  u32 sampleCountAlign4 = ALIGN(audioBuffer->sampleCount, 4);
+  u32 sampleCount4 = sampleCountAlign4 / 4;
+
+  __m128 *mixerChannel0 =
+      MemoryArenaPushAlignment(audioState->permanentArena, sizeof(*mixerChannel0) * sampleCount4, 16);
+  __m128 *mixerChannel1 =
+      MemoryArenaPushAlignment(audioState->permanentArena, sizeof(*mixerChannel1) * sampleCount4, 16);
 
   f32 secondsPerSample = 1.0f / (f32)audioBuffer->sampleRate;
 
   enum { outputChannelCount = 2 };
 
   // clear out mixer channels
+  __m128 zero = _mm_set1_ps(0.0f);
   {
-    f32 *dest0 = mixerChannel0;
-    f32 *dest1 = mixerChannel1;
-    for (u32 sampleIndex = 0; sampleIndex < audioBuffer->sampleCount; sampleIndex++) {
-      *dest0++ = 0.0f;
-      *dest1++ = 0.0f;
+    __m128 *dest0 = mixerChannel0;
+    __m128 *dest1 = mixerChannel1;
+    for (u32 sampleIndex = 0; sampleIndex < sampleCount4; sampleIndex++) {
+      _mm_store_ps((f32 *)dest0++, zero);
+      _mm_store_ps((f32 *)dest1++, zero);
     }
   }
 
@@ -38,8 +45,8 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
     struct playing_audio *playingAudio = *playingAudioPtr;
     b32 isAudioFinished = 0;
 
-    f32 *dest0 = mixerChannel0;
-    f32 *dest1 = mixerChannel1;
+    f32 *dest0 = (f32 *)mixerChannel0;
+    f32 *dest1 = (f32 *)mixerChannel1;
     u32 totalSamplesToMix = audioBuffer->sampleCount;
     while (totalSamplesToMix && !isAudioFinished) {
       struct audio *loadedAudio = AudioGet(assets, playingAudio->id);
@@ -140,13 +147,20 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
   // convert to 16-bit
   if (isWritten) {
-    f32 *source0 = mixerChannel0;
-    f32 *source1 = mixerChannel1;
+    __m128 *source0 = mixerChannel0;
+    __m128 *source1 = mixerChannel1;
 
-    s16 *sampleOut = audioBuffer->samples;
-    for (u32 sampleIndex = 0; sampleIndex < audioBuffer->sampleCount; sampleIndex++) {
-      *sampleOut++ = (s16)(*source0++ + 0.5f);
-      *sampleOut++ = (s16)(*source1++ + 0.5f);
+    __m128i *sampleOut = (__m128i *)audioBuffer->samples;
+    for (u32 sampleIndex = 0; sampleIndex < sampleCount4; sampleIndex++) {
+      __m128i l = _mm_cvtps_epi32(*source0++);
+      __m128i r = _mm_cvtps_epi32(*source1++);
+
+      __m128i lr0 = _mm_unpacklo_epi32(l, r);
+      __m128i lr1 = _mm_unpackhi_epi32(l, r);
+
+      __m128i s01 = _mm_packs_epi32(lr0, lr1);
+
+      *sampleOut++ = s01;
     }
   }
 
