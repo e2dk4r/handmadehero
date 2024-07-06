@@ -472,7 +472,7 @@
 - [x] Handmade Hero Day 143 - Pitch Shifting in the Mixer
       https://www.youtube.com/watch?v=OOR8A_7JwIY
 
-- [ ] Handmade Hero Day 144 - SSE Mixer Pre and Post Loops
+- [x] Handmade Hero Day 144 - SSE Mixer Pre and Post Loops
       https://www.youtube.com/watch?v=l3zbzEYRLJc
 
 - [ ] Handmade Hero Day 145 - SSE Mixer Main Loop
