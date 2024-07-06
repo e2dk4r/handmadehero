@@ -16,7 +16,10 @@ GetAlignmentOffset(struct memory_arena *mem, memory_arena_size_t alignment)
   assert(IsPowerOfTwo((s32)alignment) && "alignment must be power of 2");
   memory_arena_size_t alignmentMask = alignment - 1;
   memory_arena_size_t dataPointer = ((memory_arena_size_t)mem->data + mem->used);
-  memory_arena_size_t alignmentOffset = dataPointer & alignmentMask;
+  memory_arena_size_t alignmentOffset = 0;
+  if (dataPointer & alignmentMask) {
+    alignmentOffset = alignment - (dataPointer & alignmentMask);
+  }
   return alignmentOffset;
 }
 
