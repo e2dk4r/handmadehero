@@ -99,16 +99,25 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         // TODO(e2dk4r): handle stereo
         f32 samplePosition = playingAudio->samplesPlayed;
         for (u32 loopIndex = 0; loopIndex < chunksToMix; loopIndex++) {
-#if 0
-          // linear interplation
-          f32 offsetSamplePosition = samplePosition;
-          u32 sampleIndex = (u32)Floor(offsetSamplePosition);
-          f32 frac = offsetSamplePosition - (f32)sampleIndex;
+#if 1
+          // linear interpolation
+          __m128 samplePos = _mm_setr_ps(samplePosition + 0.0f * dSample, samplePosition + 1.0f * dSample,
+                                         samplePosition + 2.0f * dSample, samplePosition + 3.0f * dSample);
+          __m128i sampleIndex = _mm_cvttps_epi32(samplePos);
+          __m128 frac = _mm_sub_ps(samplePos, _mm_cvtepi32_ps(sampleIndex));
 
-          f32 sample0 = (f32)loadedAudio->samples[0][sampleIndex];
-          f32 sample1 = (f32)loadedAudio->samples[0][sampleIndex + 1];
+#define mi(a, i) *((s32 *)&a + i)
+          __m128 sampleValue0 =
+              _mm_setr_ps(loadedAudio->samples[0][mi(sampleIndex, 0)], loadedAudio->samples[0][mi(sampleIndex, 1)],
+                          loadedAudio->samples[0][mi(sampleIndex, 2)], loadedAudio->samples[0][mi(sampleIndex, 3)]);
 
-          f32 sampleValue = Lerp(sample0, sample1, frac);
+          sampleIndex = _mm_add_epi32(sampleIndex, _mm_set1_epi32(1));
+          __m128 sampleValue1 =
+              _mm_setr_ps(loadedAudio->samples[0][mi(sampleIndex, 0)], loadedAudio->samples[0][mi(sampleIndex, 1)],
+                          loadedAudio->samples[0][mi(sampleIndex, 2)], loadedAudio->samples[0][mi(sampleIndex, 3)]);
+
+#define _mm_lerp(a, b, t) _mm_add_ps(_mm_mul_ps(_mm_sub_ps(_mm_set1_ps(1.0f), t), a), _mm_mul_ps(t, b));
+          __m128 sampleValue = _mm_lerp(sampleValue0, sampleValue1, frac);
 #else
           __m128 sampleValue = _mm_setr_ps(loadedAudio->samples[0][roundf32tou32(samplePosition + 0.0f * dSample)],
                                            loadedAudio->samples[0][roundf32tou32(samplePosition + 1.0f * dSample)],
