@@ -43,6 +43,8 @@ typedef u32 b32;
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof(array[0]))
 
 #define ALIGN(value, alignment) (((value) + (alignment - 1)) & (__typeof__(value))~(alignment - 1))
-#define ALIGN16(value) (((value) + 15) & (__typeof__(value))~15)
+#define ALIGN8(value) ALIGN(value, 8)
+#define ALIGN16(value) ALIGN(value, 16)
+#define IS_ALIGNED(value, alignment) (((value) & (__typeof__(value))(alignment - 1)) == 0)
 
 #endif /* HANDMADEHERO_TYPES_H */

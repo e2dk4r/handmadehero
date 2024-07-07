@@ -17,8 +17,9 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
   b32 isWritten = 0;
   struct memory_temp mixerMemory = BeginTemporaryMemory(audioState->permanentArena);
 
-  u32 sampleCountAlign4 = ALIGN(audioBuffer->sampleCount, 4);
-  u32 sampleCount4 = sampleCountAlign4 / 4;
+  assert(IS_ALIGNED(audioBuffer->sampleCount, 8));
+  u32 sampleCount8 = audioBuffer->sampleCount / 8;
+  u32 sampleCount4 = audioBuffer->sampleCount / 4;
 
   __m128 *mixerChannel0 =
       MemoryArenaPushAlignment(audioState->permanentArena, sizeof(*mixerChannel0) * sampleCount4, 16);
@@ -26,6 +27,9 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
       MemoryArenaPushAlignment(audioState->permanentArena, sizeof(*mixerChannel1) * sampleCount4, 16);
 
   f32 secondsPerSample = 1.0f / (f32)audioBuffer->sampleRate;
+
+  __m128 masterVolume4_0 = _mm_set1_ps(audioState->masterVolume.e[0]);
+  __m128 masterVolume4_1 = _mm_set1_ps(audioState->masterVolume.e[1]);
 
   enum { outputChannelCount = 2 };
 
@@ -45,10 +49,10 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
     struct playing_audio *playingAudio = *playingAudioPtr;
     b32 isAudioFinished = 0;
 
-    f32 *dest0 = (f32 *)mixerChannel0;
-    f32 *dest1 = (f32 *)mixerChannel1;
-    u32 totalSamplesToMix = audioBuffer->sampleCount;
-    while (totalSamplesToMix && !isAudioFinished) {
+    __m128 *dest0 = mixerChannel0;
+    __m128 *dest1 = mixerChannel1;
+    u32 totalSamplesToMix8 = audioBuffer->sampleCount / 8;
+    while (totalSamplesToMix8 && !isAudioFinished) {
       struct audio *loadedAudio = AudioGet(assets, playingAudio->id);
       if (loadedAudio) {
         struct audio_info *info = AudioInfoGet(assets, playingAudio->id);
@@ -56,26 +60,38 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
         struct v2 volume = playingAudio->currentVolume;
         struct v2 dVolume = v2_mul(playingAudio->dCurrentVolume, secondsPerSample);
+        struct v2 dVolume8 = v2_mul(v2_mul(playingAudio->dCurrentVolume, secondsPerSample), 8.0f);
         f32 dSample = playingAudio->dSample;
+        f32 dSample8 = dSample * 8.0f;
+
+        __m128 volume4_0 = _mm_setr_ps(volume.e[0] + 0.0f * dVolume.e[0], volume.e[0] + 1.0f * dVolume.e[0],
+                                       volume.e[0] + 2.0f * dVolume.e[0], volume.e[0] + 3.0f * dVolume.e[0]);
+        __m128 volume4_1 = _mm_setr_ps(volume.e[1] + 0.0f * dVolume.e[1], volume.e[1] + 1.0f * dVolume.e[1],
+                                       volume.e[1] + 2.0f * dVolume.e[1], volume.e[1] + 3.0f * dVolume.e[1]);
+
+        __m128 dVolume4_0 = _mm_set1_ps(dVolume.e[0]);
+        __m128 dVolume4_1 = _mm_set1_ps(dVolume.e[1]);
+        __m128 dVolume84_0 = _mm_set1_ps(dVolume8.e[0]);
+        __m128 dVolume84_1 = _mm_set1_ps(dVolume8.e[1]);
 
         assert(playingAudio->samplesPlayed >= 0.0f);
 
-        u32 samplesToMix = totalSamplesToMix;
-        f32 floatSamplesRemainingInAudio =
-            (f32)(loadedAudio->sampleCount - roundf32tou32(playingAudio->samplesPlayed)) / dSample;
-        u32 samplesRemainingInAudio = roundf32tou32(floatSamplesRemainingInAudio);
+        u32 samplesToMix8 = totalSamplesToMix8;
+        f32 floatSamplesRemainingInAudio8 =
+            (f32)(loadedAudio->sampleCount - roundf32tou32(playingAudio->samplesPlayed)) / dSample8;
+        u32 samplesRemainingInAudio8 = roundf32tou32(floatSamplesRemainingInAudio8);
 
-        if (samplesToMix > samplesRemainingInAudio) {
-          samplesToMix = samplesRemainingInAudio;
+        if (samplesToMix8 > samplesRemainingInAudio8) {
+          samplesToMix8 = samplesRemainingInAudio8;
         }
 
         b32 volumeEnded[outputChannelCount] = {};
         for (u32 channelIndex = 0; channelIndex < outputChannelCount; channelIndex++) {
-          if (dVolume.e[channelIndex] != 0.0f) {
+          if (dVolume8.e[channelIndex] != 0.0f) {
             f32 deltaVolume = playingAudio->targetVolume.e[channelIndex] - volume.e[channelIndex];
-            u32 volumeSampleCount = (u32)((deltaVolume / dVolume.e[channelIndex]) + 0.5f);
-            if (samplesToMix > volumeSampleCount) {
-              samplesToMix = volumeSampleCount;
+            u32 volumeSampleCount8 = (u32)((1.0f / 8.0f) * ((deltaVolume / dVolume8.e[channelIndex]) + 0.5f));
+            if (samplesToMix8 > volumeSampleCount8) {
+              samplesToMix8 = volumeSampleCount8;
               volumeEnded[channelIndex] = 1;
             }
           }
@@ -83,26 +99,52 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
         // TODO(e2dk4r): handle stereo
         f32 samplePosition = playingAudio->samplesPlayed;
-        for (u32 loopIndex = 0; loopIndex < samplesToMix; loopIndex++) {
-#if 1
+        for (u32 loopIndex = 0; loopIndex < samplesToMix8; loopIndex++) {
+#if 0
           // linear interplation
-          s32 sampleIndex = Floor(samplePosition);
-          f32 frac = samplePosition - (f32)sampleIndex;
+          f32 offsetSamplePosition = samplePosition;
+          u32 sampleIndex = (u32)Floor(offsetSamplePosition);
+          f32 frac = offsetSamplePosition - (f32)sampleIndex;
 
           f32 sample0 = (f32)loadedAudio->samples[0][sampleIndex];
           f32 sample1 = (f32)loadedAudio->samples[0][sampleIndex + 1];
 
           f32 sampleValue = Lerp(sample0, sample1, frac);
 #else
-          u32 sampleIndex = roundf32tou32(samplePosition);
-          f32 sampleValue = (f32)loadedAudio->samples[0][sampleIndex];
+          __m128 sampleValue_0 = _mm_setr_ps(loadedAudio->samples[0][roundf32tou32(samplePosition + 0.0f * dSample)],
+                                             loadedAudio->samples[0][roundf32tou32(samplePosition + 1.0f * dSample)],
+                                             loadedAudio->samples[0][roundf32tou32(samplePosition + 2.0f * dSample)],
+                                             loadedAudio->samples[0][roundf32tou32(samplePosition + 3.0f * dSample)]);
+          __m128 sampleValue_1 = _mm_setr_ps(loadedAudio->samples[0][roundf32tou32(samplePosition + 4.0f * dSample)],
+                                             loadedAudio->samples[0][roundf32tou32(samplePosition + 5.0f * dSample)],
+                                             loadedAudio->samples[0][roundf32tou32(samplePosition + 6.0f * dSample)],
+                                             loadedAudio->samples[0][roundf32tou32(samplePosition + 7.0f * dSample)]);
+
 #endif
+          __m128 d0_0 = _mm_load_ps((f32 *)&dest0[0]);
+          __m128 d0_1 = _mm_load_ps((f32 *)&dest0[1]);
+          __m128 d1_0 = _mm_load_ps((f32 *)&dest1[0]);
+          __m128 d1_1 = _mm_load_ps((f32 *)&dest1[1]);
 
-          *dest0++ += (audioState->masterVolume.e[0] * volume.e[0]) * sampleValue;
-          *dest1++ += (audioState->masterVolume.e[0] * volume.e[1]) * sampleValue;
+          d0_0 = _mm_add_ps(d0_0, _mm_mul_ps(_mm_mul_ps(masterVolume4_0, volume4_0), sampleValue_0));
+          d0_1 = _mm_add_ps(d0_1,
+                            _mm_mul_ps(_mm_mul_ps(masterVolume4_0, _mm_add_ps(volume4_0, dVolume4_0)), sampleValue_0));
+          d1_0 = _mm_add_ps(d1_0, _mm_mul_ps(_mm_mul_ps(masterVolume4_1, volume4_1), sampleValue_1));
+          d1_1 = _mm_add_ps(d1_1,
+                            _mm_mul_ps(_mm_mul_ps(masterVolume4_1, _mm_add_ps(volume4_1, dVolume4_1)), sampleValue_1));
 
-          v2_add_ref(&volume, dVolume);
-          samplePosition += dSample;
+          _mm_store_ps((f32 *)&dest0[0], d0_0);
+          _mm_store_ps((f32 *)&dest0[1], d0_1);
+          _mm_store_ps((f32 *)&dest1[0], d1_0);
+          _mm_store_ps((f32 *)&dest1[1], d1_1);
+
+          dest0 += 2;
+          dest1 += 2;
+
+          volume4_0 = _mm_add_ps(volume4_0, dVolume84_0);
+          volume4_1 = _mm_add_ps(volume4_1, dVolume84_1);
+          v2_add_ref(&volume, dVolume8);
+          samplePosition += dSample8;
         }
 
         playingAudio->currentVolume = volume;
@@ -116,11 +158,11 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
         playingAudio->samplesPlayed = samplePosition;
 
-        assert(totalSamplesToMix >= samplesToMix);
-        totalSamplesToMix -= samplesToMix;
+        assert(totalSamplesToMix8 >= samplesToMix8);
+        totalSamplesToMix8 -= samplesToMix8;
 
         isWritten = 1;
-        if ((u32)playingAudio->samplesPlayed == loadedAudio->sampleCount) {
+        if ((u32)playingAudio->samplesPlayed >= loadedAudio->sampleCount) {
           if (IsAudioIdValid(info->nextIdToPlay)) {
             playingAudio->id = info->nextIdToPlay;
             playingAudio->samplesPlayed = 0;

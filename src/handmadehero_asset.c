@@ -670,7 +670,7 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 se
   assert(fmt && sampleData);
 
   result.channelCount = fmt->numChannels;
-  result.sampleCount = sampleDataSize / (u32)(fmt->numChannels * sizeof(u16));
+  u32 sampleCount = sampleDataSize / (u32)(fmt->numChannels * sizeof(u16));
   switch (fmt->numChannels) {
   case 1:
     result.samples[0] = sampleData;
@@ -679,7 +679,7 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 se
 
   case 2:
     result.samples[0] = sampleData;
-    result.samples[1] = sampleData + result.sampleCount;
+    result.samples[1] = sampleData + sampleCount;
 
 #if 0
     for (u32 sampleIndex = 0; sampleIndex < result.sampleCount; sampleIndex++) {
@@ -688,7 +688,7 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 se
     }
 #endif
 
-    for (u32 sampleIndex = 0; sampleIndex < result.sampleCount; sampleIndex++) {
+    for (u32 sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
       s16 source = sampleData[sampleIndex * 2];
       sampleData[sampleIndex * 2] = sampleData[sampleIndex];
       sampleData[sampleIndex] = source;
@@ -701,13 +701,25 @@ LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 se
     assert(0 && "Unsupported number of channels");
   }
 
+  b32 isBufferEnd = 0;
   if (sectionSampleCount != AUDIO_INFO_SAMPLE_COUNT_ALL) {
-    assert(sectionSampleIndex + sectionSampleCount <= result.sampleCount);
-    result.sampleCount = sectionSampleCount;
+    assert(sectionSampleIndex + sectionSampleCount <= sampleCount);
+    isBufferEnd = sectionSampleIndex + sectionSampleCount == sampleCount;
+    sampleCount = sectionSampleCount;
     for (u32 channelIndex = 0; channelIndex < result.channelCount; channelIndex++) {
       result.samples[channelIndex] += sectionSampleIndex;
     }
   }
+
+  if (isBufferEnd) {
+    for (u32 channelIndex = 0; channelIndex < result.channelCount; channelIndex++) {
+      for (u32 sampleIndex = sampleCount; sampleIndex < sampleCount + 8; sampleIndex++) {
+        result.samples[channelIndex][sampleIndex] = 0;
+      }
+    }
+  }
+
+  result.sampleCount = sampleCount;
 
   return result;
 }

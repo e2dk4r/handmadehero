@@ -428,6 +428,7 @@ pw_stream_process(void *data)
     sampleCount = Minimum((u32)pwBuffer->requested, sampleCount);
   }
 #endif
+  sampleCount = ALIGN8(sampleCount);
 
   // Write data into buffer.
   struct game_audio_buffer gameAudioBuffer = {
