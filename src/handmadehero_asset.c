@@ -187,7 +187,7 @@ BitmapInfoAdd(struct game_assets *assets, char *filename, struct v2 alignPercent
   assets->DEBUGUsedBitmapInfoCount++;
 
   struct bitmap_info *info = assets->bitmapInfos + id.value;
-  info->filename = filename;
+  info->filename = MemoryArenaPushString(&assets->arena, filename);
   info->alignPercentage = alignPercentage;
 
   return id;
@@ -200,7 +200,7 @@ AudioInfoAdd(struct game_assets *assets, char *filename, u32 sampleIndex, u32 sa
   assets->DEBUGUsedAudioInfoCount++;
 
   struct audio_info *info = assets->audioInfos + id.value;
-  info->filename = filename;
+  info->filename = MemoryArenaPushString(&assets->arena, filename);
   info->sampleIndex = sampleIndex;
   info->sampleCount = sampleCount;
   info->nextIdToPlay.value = 0;
@@ -319,33 +319,33 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->DEBUGUsedTagCount = 1;
 
   BeginAssetType(assets, ASSET_TYPE_SHADOW);
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_shadow.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_shadow.bmp", v2(0.5f, 0.156682029f));
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_TREE);
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/tree00.bmp"), v2(0.493827164f, 0.295652181f));
+  AddBitmapAsset(assets, "test2/tree00.bmp", v2(0.493827164f, 0.295652181f));
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_SWORD);
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/rock03.bmp"), v2(0.5f, 0.65625f));
+  AddBitmapAsset(assets, "test2/rock03.bmp", v2(0.5f, 0.65625f));
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_GRASS);
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/grass00.bmp"), v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/grass01.bmp"), v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/grass00.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/grass01.bmp", v2(0.5f, 0.5f));
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_GROUND);
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/ground00.bmp"), v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/ground01.bmp"), v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/ground02.bmp"), v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/ground03.bmp"), v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/ground00.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/ground01.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/ground02.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/ground03.bmp", v2(0.5f, 0.5f));
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_TUFT);
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/tuft00.bmp"), v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/tuft01.bmp"), v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test2/tuft02.bmp"), v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/tuft00.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/tuft01.bmp", v2(0.5f, 0.5f));
+  AddBitmapAsset(assets, "test2/tuft02.bmp", v2(0.5f, 0.5f));
   EndAssetType(assets);
 
   f32 angleRight = 0.00f * TAU32;
@@ -355,71 +355,71 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
 
   BeginAssetType(assets, ASSET_TYPE_HEAD);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_right_head.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_right_head.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleRight);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_back_head.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_back_head.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleBack);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_left_head.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_left_head.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleLeft);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_front_head.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_front_head.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleFront);
 
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_TORSO);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_right_torso.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_right_torso.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleRight);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_back_torso.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_back_torso.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleBack);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_left_torso.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_left_torso.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleLeft);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_front_torso.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_front_torso.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleFront);
 
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_CAPE);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_right_cape.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_right_cape.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleRight);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_back_cape.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_back_cape.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleBack);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_left_cape.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_left_cape.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleLeft);
 
-  AddBitmapAsset(assets, MemoryArenaPushString(arena, "test/test_hero_front_cape.bmp"), v2(0.5f, 0.156682029f));
+  AddBitmapAsset(assets, "test/test_hero_front_cape.bmp", v2(0.5f, 0.156682029f));
   AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleFront);
 
   EndAssetType(assets);
 
   // audios
   BeginAssetType(assets, ASSET_TYPE_BLOOP);
-  AddAudioAsset(assets, MemoryArenaPushString(arena, "test3/bloop_00.wav"));
-  AddAudioAsset(assets, MemoryArenaPushString(arena, "test3/bloop_01.wav"));
-  AddAudioAsset(assets, MemoryArenaPushString(arena, "test3/bloop_02.wav"));
-  AddAudioAsset(assets, MemoryArenaPushString(arena, "test3/bloop_03.wav"));
-  AddAudioAsset(assets, MemoryArenaPushString(arena, "test3/bloop_04.wav"));
+  AddAudioAsset(assets, "test3/bloop_00.wav");
+  AddAudioAsset(assets, "test3/bloop_01.wav");
+  AddAudioAsset(assets, "test3/bloop_02.wav");
+  AddAudioAsset(assets, "test3/bloop_03.wav");
+  AddAudioAsset(assets, "test3/bloop_04.wav");
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_CRACK);
-  AddAudioAsset(assets, MemoryArenaPushString(arena, "test3/crack_00.wav"));
+  AddAudioAsset(assets, "test3/crack_00.wav");
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_DROP);
-  AddAudioAsset(assets, MemoryArenaPushString(arena, "test3/drop_00.wav"));
+  AddAudioAsset(assets, "test3/drop_00.wav");
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_GLIDE);
-  AddAudioAsset(assets, MemoryArenaPushString(arena, "test3/glide_00.wav"));
+  AddAudioAsset(assets, "test3/glide_00.wav");
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_MUSIC);
@@ -427,13 +427,12 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   u32 chunkSampleCount = 10 * sampleRate;
   u32 totalSampleCount = 7468095;
   struct asset *lastMusic = 0;
-  char *musicFilename = MemoryArenaPushString(arena, "test3/music_test.wav");
   for (u32 sampleIndex = 0; sampleIndex < totalSampleCount; sampleIndex += chunkSampleCount) {
     u32 sampleCount = totalSampleCount - sampleIndex;
     if (sampleCount > chunkSampleCount) {
       sampleCount = chunkSampleCount;
     }
-    struct asset *thisMusic = AddAudioAssetTrimmed(assets, musicFilename, sampleIndex, sampleCount);
+    struct asset *thisMusic = AddAudioAssetTrimmed(assets, "test3/music_test.wav", sampleIndex, sampleCount);
     if (lastMusic) {
       assets->audioInfos[lastMusic->slotId].nextIdToPlay.value = thisMusic->slotId;
     }
@@ -442,8 +441,8 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   EndAssetType(assets);
 
   BeginAssetType(assets, ASSET_TYPE_PUHP);
-  AddAudioAsset(assets, MemoryArenaPushString(arena, "test3/puhp_00.wav"));
-  AddAudioAsset(assets, MemoryArenaPushString(arena, "test3/puhp_01.wav"));
+  AddAudioAsset(assets, "test3/puhp_00.wav");
+  AddAudioAsset(assets, "test3/puhp_01.wav");
   EndAssetType(assets);
 
   return assets;
