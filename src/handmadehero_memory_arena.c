@@ -181,9 +181,9 @@ inline char *
 MemoryArenaPushString(struct memory_arena *mem, char *string)
 {
   u64 length = strlen(string) + 1;
-  u64 size = ALIGN(length, 4) + 4;
+  u64 size = ALIGN(length, 4);
   char *dest = MemoryArenaPush(mem, size);
-  memcpy(dest, string, size);
+  memcpy(dest, string, length);
   dest[length] = 0;
   return dest;
 }
