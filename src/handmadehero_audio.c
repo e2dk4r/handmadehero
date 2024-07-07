@@ -79,9 +79,10 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         f32 floatChunksRemainingInAudio =
             (f32)(loadedAudio->sampleCount - roundf32tou32(playingAudio->samplesPlayed)) / dSampleChunk;
         u32 chunksRemainingInAudio = roundf32tou32(floatChunksRemainingInAudio);
-
+        b32 inputSamplesEnded = 0;
         if (chunksToMix > chunksRemainingInAudio) {
           chunksToMix = chunksRemainingInAudio;
+          inputSamplesEnded = 1;
         }
 
         b32 volumeEnded[outputChannelCount] = {};
@@ -159,8 +160,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
         isWritten = 1;
 
-        // TODO: this is not an acceptable check for the end!
-        if ((u32)playingAudio->samplesPlayed >= loadedAudio->sampleCount) {
+        if (inputSamplesEnded) {
           if (IsAudioIdValid(info->nextIdToPlay)) {
             playingAudio->id = info->nextIdToPlay;
             playingAudio->samplesPlayed -= (f32)loadedAudio->sampleCount;
