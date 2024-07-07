@@ -427,12 +427,13 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   u32 chunkSampleCount = 10 * sampleRate;
   u32 totalSampleCount = 7468095;
   struct asset *lastMusic = 0;
+  char *musicFilename = MemoryArenaPushString(arena, "test3/music_test.wav");
   for (u32 sampleIndex = 0; sampleIndex < totalSampleCount; sampleIndex += chunkSampleCount) {
     u32 sampleCount = totalSampleCount - sampleIndex;
     if (sampleCount > chunkSampleCount) {
       sampleCount = chunkSampleCount;
     }
-    struct asset *thisMusic = AddAudioAssetTrimmed(assets, "test3/music_test.wav", sampleIndex, sampleCount);
+    struct asset *thisMusic = AddAudioAssetTrimmed(assets, musicFilename, sampleIndex, sampleCount);
     if (lastMusic) {
       assets->audioInfos[lastMusic->slotId].nextIdToPlay.value = thisMusic->slotId;
     }
