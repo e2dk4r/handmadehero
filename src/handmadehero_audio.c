@@ -128,8 +128,8 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
           d0_0 = _mm_add_ps(d0_0, _mm_mul_ps(_mm_mul_ps(masterVolume4_0, volume4_0), sampleValue_0));
           d0_1 = _mm_add_ps(d0_1,
-                            _mm_mul_ps(_mm_mul_ps(masterVolume4_0, _mm_add_ps(volume4_0, dVolume4_0)), sampleValue_0));
-          d1_0 = _mm_add_ps(d1_0, _mm_mul_ps(_mm_mul_ps(masterVolume4_1, volume4_1), sampleValue_1));
+                            _mm_mul_ps(_mm_mul_ps(masterVolume4_0, _mm_add_ps(volume4_0, dVolume4_0)), sampleValue_1));
+          d1_0 = _mm_add_ps(d1_0, _mm_mul_ps(_mm_mul_ps(masterVolume4_1, volume4_1), sampleValue_0));
           d1_1 = _mm_add_ps(d1_1,
                             _mm_mul_ps(_mm_mul_ps(masterVolume4_1, _mm_add_ps(volume4_1, dVolume4_1)), sampleValue_1));
 
