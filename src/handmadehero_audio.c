@@ -165,7 +165,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         if ((u32)playingAudio->samplesPlayed >= loadedAudio->sampleCount) {
           if (IsAudioIdValid(info->nextIdToPlay)) {
             playingAudio->id = info->nextIdToPlay;
-            playingAudio->samplesPlayed = 0;
+            playingAudio->samplesPlayed -= (f32)loadedAudio->sampleCount;
           } else {
             isAudioFinished = 1;
             break;
