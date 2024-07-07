@@ -139,11 +139,11 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
           volume0 = _mm_add_ps(volume0, dVolumeChunk0);
           volume1 = _mm_add_ps(volume1, dVolumeChunk1);
-          v2_add_ref(&volume, dVolumeChunk);
           samplePosition += dSampleChunk;
         }
 
-        playingAudio->currentVolume = volume;
+        playingAudio->currentVolume.e[0] = volume0[0];
+        playingAudio->currentVolume.e[1] = volume1[0];
 
         for (u32 channelIndex = 0; channelIndex < outputChannelCount; channelIndex++) {
           if (volumeEnded[channelIndex]) {
