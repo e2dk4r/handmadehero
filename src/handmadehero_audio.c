@@ -88,7 +88,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         for (u32 channelIndex = 0; channelIndex < outputChannelCount; channelIndex++) {
           if (dVolumeChunk.e[channelIndex] != 0.0f) {
             f32 deltaVolume = playingAudio->targetVolume.e[channelIndex] - volume.e[channelIndex];
-            u32 volumeChunkCount = (u32)((1.0f / 8.0f) * ((deltaVolume / dVolumeChunk.e[channelIndex]) + 0.5f));
+            u32 volumeChunkCount = (u32)((1.0f / 4.0f) * ((deltaVolume / dVolumeChunk.e[channelIndex]) + 0.5f));
             if (chunksToMix > volumeChunkCount) {
               chunksToMix = volumeChunkCount;
               volumeEnded[channelIndex] = 1;
@@ -149,6 +149,8 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         totalChunksToMix -= chunksToMix;
 
         isWritten = 1;
+
+        // TODO: this is not an acceptable check for the end!
         if ((u32)playingAudio->samplesPlayed >= loadedAudio->sampleCount) {
           if (IsAudioIdValid(info->nextIdToPlay)) {
             playingAudio->id = info->nextIdToPlay;
