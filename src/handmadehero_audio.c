@@ -30,6 +30,8 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
   enum { outputChannelCount = 2 };
 
+  BEGIN_TIMER_BLOCK(AudioMixer);
+
   // clear out mixer channels
   __m128 zero = _mm_set1_ps(0.0f);
   {
@@ -213,6 +215,8 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
       *sampleOut++ = s01;
     }
   }
+
+  END_TIMER_BLOCK(AudioMixer);
 
   EndTemporaryMemory(&mixerMemory);
   return isWritten;

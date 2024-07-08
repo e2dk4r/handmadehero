@@ -29,6 +29,7 @@ enum {
   CYCLE_COUNTER_DrawRectangleSlowly,
   CYCLE_COUNTER_ProcessPixel,
   CYCLE_COUNTER_DrawRectangleQuickly,
+  CYCLE_COUNTER_AudioMixer,
   CYCLE_COUNTER_COUNT
 };
 
@@ -42,11 +43,15 @@ rdtsc(void);
 extern struct game_memory *DEBUG_GLOBAL_MEMORY;
 #define BEGIN_TIMER_BLOCK(tag) u64 startCycleCount##tag = rdtsc()
 #define END_TIMER_BLOCK(tag)                                                                                           \
-  DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;                     \
-  DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].hitCount += 1;
+  if (DEBUG_GLOBAL_MEMORY) {                                                                                           \
+    DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;                   \
+    DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].hitCount += 1;                                                  \
+  }
 #define END_TIMER_BLOCK_COUNTED(tag, count)                                                                            \
-  DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;                     \
-  DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].hitCount += (count);
+  if (DEBUG_GLOBAL_MEMORY) {                                                                                           \
+    DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;                   \
+    DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].hitCount += (count);                                            \
+  }
 
 #else
 

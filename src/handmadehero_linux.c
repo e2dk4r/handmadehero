@@ -115,9 +115,8 @@ HandleCycleCounters(struct game_memory *memory)
 #if HANDMADEHERO_INTERNAL
   debugf("CYCLE COUNTS:\n");
 
-  char *counterNameTable[] = {
-      "GameUpdateAndRender", "DrawRenderGroup", "DrawRectangleSlowly", "ProcessPixel", "DrawRectangleQuickly",
-  };
+  char *counterNameTable[] = {"GameUpdateAndRender", "DrawRenderGroup",      "DrawRectangleSlowly",
+                              "ProcessPixel",        "DrawRectangleQuickly", "AudioMixer"};
   static_assert(ARRAY_COUNT(counterNameTable) == CYCLE_COUNTER_COUNT);
 
   for (u32 counterIndex = 0; counterIndex < ARRAY_COUNT(memory->counters); counterIndex++) {
