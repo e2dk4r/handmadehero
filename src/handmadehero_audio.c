@@ -100,8 +100,11 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         }
 
         // TODO(e2dk4r): handle stereo
-        f32 samplePosition = playingAudio->samplesPlayed;
+        f32 beginSamplePosition = playingAudio->samplesPlayed;
+        f32 endSamplePosition = playingAudio->samplesPlayed + ((f32)chunksToMix * dSampleChunk);
+        f32 loopIndexC = (endSamplePosition - beginSamplePosition) / (f32)chunksToMix;
         for (u32 loopIndex = 0; loopIndex < chunksToMix; loopIndex++) {
+          f32 samplePosition = beginSamplePosition + loopIndexC * (f32)loopIndex;
 #if 1
           // linear interpolation
           __m128 samplePos = _mm_setr_ps(samplePosition + 0.0f * dSample, samplePosition + 1.0f * dSample,
@@ -152,7 +155,6 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
           volume0 = _mm_add_ps(volume0, dVolumeChunk0);
           volume1 = _mm_add_ps(volume1, dVolumeChunk1);
-          samplePosition += dSampleChunk;
         }
 
         playingAudio->currentVolume.e[0] = volume0[0];
@@ -165,7 +167,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
           }
         }
 
-        playingAudio->samplesPlayed = samplePosition;
+        playingAudio->samplesPlayed = endSamplePosition;
 
         assert(totalChunksToMix >= chunksToMix);
         totalChunksToMix -= chunksToMix;
@@ -175,6 +177,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         if (inputSamplesEnded) {
           if (IsAudioIdValid(info->nextIdToPlay)) {
             playingAudio->id = info->nextIdToPlay;
+            assert(playingAudio->samplesPlayed >= (f32)loadedAudio->sampleCount);
             playingAudio->samplesPlayed -= (f32)loadedAudio->sampleCount;
           } else {
             isAudioFinished = 1;
