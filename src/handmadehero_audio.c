@@ -107,15 +107,25 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
           __m128i sampleIndex = _mm_cvttps_epi32(samplePos);
           __m128 frac = _mm_sub_ps(samplePos, _mm_cvtepi32_ps(sampleIndex));
 
-#define mi(a, i) *((s32 *)&a + i)
-          __m128 sampleValue0 =
-              _mm_setr_ps(loadedAudio->samples[0][mi(sampleIndex, 0)], loadedAudio->samples[0][mi(sampleIndex, 1)],
-                          loadedAudio->samples[0][mi(sampleIndex, 2)], loadedAudio->samples[0][mi(sampleIndex, 3)]);
+          union m128i {
+            __m128i value;
+            struct {
+              s32 a;
+              s32 b;
+              s32 c;
+              s32 d;
+            };
+          };
+          __m128 sampleValue0 = _mm_setr_ps(loadedAudio->samples[0][((union m128i)sampleIndex).a],
+                                            loadedAudio->samples[0][((union m128i)sampleIndex).b],
+                                            loadedAudio->samples[0][((union m128i)sampleIndex).c],
+                                            loadedAudio->samples[0][((union m128i)sampleIndex).d]);
 
           sampleIndex = _mm_add_epi32(sampleIndex, _mm_set1_epi32(1));
-          __m128 sampleValue1 =
-              _mm_setr_ps(loadedAudio->samples[0][mi(sampleIndex, 0)], loadedAudio->samples[0][mi(sampleIndex, 1)],
-                          loadedAudio->samples[0][mi(sampleIndex, 2)], loadedAudio->samples[0][mi(sampleIndex, 3)]);
+          __m128 sampleValue1 = _mm_setr_ps(loadedAudio->samples[0][((union m128i)sampleIndex).a],
+                                            loadedAudio->samples[0][((union m128i)sampleIndex).b],
+                                            loadedAudio->samples[0][((union m128i)sampleIndex).c],
+                                            loadedAudio->samples[0][((union m128i)sampleIndex).d]);
 
 #define _mm_lerp(a, b, t) _mm_add_ps(_mm_mul_ps(_mm_sub_ps(_mm_set1_ps(1.0f), t), a), _mm_mul_ps(t, b));
           __m128 sampleValue = _mm_lerp(sampleValue0, sampleValue1, frac);
