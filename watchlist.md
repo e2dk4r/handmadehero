@@ -478,7 +478,7 @@
 - [x] Handmade Hero Day 145 - SSE Mixer Main Loop
       https://www.youtube.com/watch?v=W3rrlUEaW1E
 
-- [ ] Handmade Hero Day 146 - Accumulation vs. Explicit Calculation
+- [x] Handmade Hero Day 146 - Accumulation vs. Explicit Calculation
       https://www.youtube.com/watch?v=YlKPcSwXh54
 
 - [ ] Handmade Hero Day 147 - Defining the Asset File
