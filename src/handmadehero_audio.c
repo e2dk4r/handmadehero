@@ -68,6 +68,8 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
       f32 dSample = playingAudio->dSample;
       f32 dSampleChunk = dSample * 4.0f;
 
+      __m128 sampleCount = _mm_set1_ps((f32)loadedAudio->sampleCount);
+
       // channel 0
       __m128 volume0 = _mm_setr_ps(volume.e[0] + 0.0f * dVolume.e[0], volume.e[0] + 1.0f * dVolume.e[0],
                                    volume.e[0] + 2.0f * dVolume.e[0], volume.e[0] + 3.0f * dVolume.e[0]);
@@ -146,6 +148,10 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
                                          loadedAudio->samples[0][roundf32tou32(samplePosition + 3.0f * dSample)]);
 
 #endif
+
+        __m128 sampleMask = _mm_and_ps(_mm_cmplt_ps(samplePos, sampleCount), _mm_set1_ps(1.0f));
+        sampleValue = _mm_mul_ps(sampleValue, sampleMask);
+
         __m128 d0 = _mm_load_ps((f32 *)&dest0[0]);
         __m128 d1 = _mm_load_ps((f32 *)&dest1[0]);
 
