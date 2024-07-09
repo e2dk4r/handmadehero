@@ -1,6 +1,7 @@
 #ifndef HANDMADEHERO_ASSET_H
 #define HANDMADEHERO_ASSET_H
 
+#include "asset_type_id.h"
 #include "math.h"
 #include "memory_arena.h"
 #include "platform.h"
@@ -37,39 +38,25 @@ struct asset_slot {
   };
 };
 
+struct bitmap_info {
+  char *filename;
+  struct v2 alignPercentage;
+};
+
+struct audio_info {
+  char *filename;
+  u32 sampleIndex;
+  u32 sampleCount;
+  struct audio_id nextIdToPlay;
+};
+#define AUDIO_INFO_SAMPLE_COUNT_ALL 0
+
 enum asset_tag_id {
   ASSET_TAG_SMOOTHNESS,
   ASSET_TAG_FLATNESS,
   ASSET_TAG_FACING_DIRECTION, // angle in radians clockwise
 
   ASSET_TAG_COUNT
-};
-
-enum asset_type_id {
-  ASSET_TYPE_NONE,
-
-  /* ================ BITMAPS ================ */
-  ASSET_TYPE_SHADOW,
-  ASSET_TYPE_TREE,
-  ASSET_TYPE_SWORD,
-  ASSET_TYPE_ROCK,
-  ASSET_TYPE_GRASS,
-  ASSET_TYPE_GROUND,
-  ASSET_TYPE_TUFT,
-
-  ASSET_TYPE_HEAD,
-  ASSET_TYPE_TORSO,
-  ASSET_TYPE_CAPE,
-
-  /* ================ AUDIOS ================ */
-  ASSET_TYPE_BLOOP,
-  ASSET_TYPE_CRACK,
-  ASSET_TYPE_DROP,
-  ASSET_TYPE_GLIDE,
-  ASSET_TYPE_MUSIC,
-  ASSET_TYPE_PUHP,
-
-  ASSET_TYPE_COUNT
 };
 
 struct asset_vector {
@@ -84,26 +71,17 @@ struct asset_tag {
 struct asset {
   u32 tagIndexFirst;
   u32 tagIndexOnePastLast;
-  u32 slotId;
+
+  union {
+    struct bitmap_info bitmapInfo;
+    struct audio_info audioInfo;
+  };
 };
 
 struct asset_type {
   u32 assetIndexFirst;
   u32 assetIndexOnePastLast;
 };
-
-struct bitmap_info {
-  char *filename;
-  struct v2 alignPercentage;
-};
-
-struct audio_info {
-  char *filename;
-  u32 sampleIndex;
-  u32 sampleCount;
-  struct audio_id nextIdToPlay;
-};
-#define AUDIO_INFO_SAMPLE_COUNT_ALL 0
 
 struct asset_group {
   u32 tagFirstIndex;
@@ -117,13 +95,7 @@ struct game_assets {
   struct memory_arena arena;
   pfnPlatformReadEntireFile PlatformReadEntireFile;
 
-  u32 bitmapCount;
-  struct asset_slot *bitmaps;
-  struct bitmap_info *bitmapInfos;
-
-  u32 audioCount;
-  struct asset_slot *audios;
-  struct audio_info *audioInfos;
+  struct asset_slot *slots;
 
   u32 tagCount;
   struct asset_tag *tags;
@@ -140,8 +112,6 @@ struct game_assets {
 #define BITMAP_HERO_RIGHT 0
 
   // TODO(e2dk4r): remove this once we actually load a asset pack file
-  u32 DEBUGUsedBitmapInfoCount;
-  u32 DEBUGUsedAudioInfoCount;
   u32 DEBUGUsedAssetCount;
   u32 DEBUGUsedTagCount;
   struct asset_type *DEBUGAssetType;
