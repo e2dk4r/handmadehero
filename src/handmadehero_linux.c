@@ -254,6 +254,7 @@ struct linux_state {
   /* PIPEWIRE */
   struct pw_thread_loop *pw_thread_loop;
   struct pw_stream *pw_stream;
+  struct memory_arena pw_arena;
 
   struct game_input gameInputs[2];
   struct game_input *input;
@@ -414,14 +415,15 @@ pw_stream_process(void *data)
 
   // Get pointers in buffer memory to write to.
   struct spa_buffer *spaBuffer = pwBuffer->buffer;
-  s16 *samples = spaBuffer->datas[0].data;
+  struct spa_data *datas = spaBuffer->datas;
+  s16 *samples = datas[0].data;
   if (!samples) {
     debug("[pw_stream_events::process] empty sample\n");
     return;
   }
 
   u32 stride = sizeof(u16) * SAMPLE_CHANNELS;
-  u32 sampleCount = spaBuffer->datas[0].maxsize / stride;
+  u32 sampleCount = datas[0].maxsize / stride;
 #if PW_CHECK_VERSION(0, 3, 49)
   if (pwBuffer->requested) {
     sampleCount = Minimum((u32)pwBuffer->requested, sampleCount);
@@ -439,20 +441,70 @@ pw_stream_process(void *data)
 
   // Adjust buffer with number of written bytes, offset, stride.
   if (isWritten) {
-    spaBuffer->datas[0].chunk->offset = 0;
-    spaBuffer->datas[0].chunk->stride = (s32)stride;
-    spaBuffer->datas[0].chunk->size = sampleCount * stride;
+    datas[0].chunk->offset = 0;
+    datas[0].chunk->stride = (s32)stride;
+    datas[0].chunk->size = sampleCount * stride;
   } else {
-    spaBuffer->datas[0].chunk->size = 0;
+    datas[0].chunk->size = 0;
   }
 
   // Queue the buffer for playback.
   pw_stream_queue_buffer(state->pw_stream, pwBuffer);
 }
 
+struct pw_stream_buffer_state {
+  b32 isInitialized : 1;
+  struct memory_arena arena;
+  struct memory_temp temp;
+};
+
+internal void
+pw_stream_add_buffer(void *data, struct pw_buffer *pwBuffer)
+{
+  struct linux_state *state = data;
+  struct spa_buffer *spaBuffer = pwBuffer->buffer;
+  struct spa_data *datas = spaBuffer->datas;
+
+  struct pw_stream_buffer_state *bufferState = state->pw_arena.data;
+  if (!bufferState->isInitialized) {
+    bufferState->isInitialized = 1;
+    state->pw_arena.size += sizeof(*bufferState);
+    MemorySubArenaInitAlignment(&bufferState->arena, &state->pw_arena, MemoryArenaGetRemainingSize(&state->pw_arena),
+                                4);
+
+    datas[0].type = SPA_DATA_MemFd;
+    datas[0].flags = SPA_DATA_FLAG_READWRITE;
+    datas[0].mapoffset = 0;
+
+    datas[0].fd = memfd_create("handmadehero-pipewire", 0);
+    assert(datas[0].fd >= 0);
+    int ftruncateResult = ftruncate((int)datas[0].fd, (off_t)bufferState->arena.size);
+    assert(ftruncateResult >= 0);
+    void *mmapResult = mmap(bufferState->arena.data, (size_t)bufferState->arena.size, PROT_READ | PROT_WRITE,
+                            MAP_SHARED, (int)datas[0].fd, 0);
+    assert(mmapResult != MAP_FAILED);
+  }
+
+  bufferState->temp = BeginTemporaryMemory(&bufferState->arena);
+  u32 bufferSize = SAMPLE_RATE * SAMPLE_CHANNELS * sizeof(s16);
+  datas[0].maxsize = bufferSize;
+  datas[0].data = MemoryArenaPushAlignment(&bufferState->arena, bufferSize, 4);
+}
+
+internal void
+pw_stream_remove_buffer(void *data, struct pw_buffer *buffer)
+{
+  struct linux_state *state = data;
+  struct pw_stream_buffer_state *bufferState = state->pw_arena.data;
+  assert(bufferState->isInitialized);
+  EndTemporaryMemory(&bufferState->temp);
+}
+
 comptime struct pw_stream_events pw_stream_events = {
     PW_VERSION_STREAM_EVENTS,
     .process = pw_stream_process,
+    .add_buffer = pw_stream_add_buffer,
+    .remove_buffer = pw_stream_remove_buffer,
 };
 
 /*****************************************************************
@@ -1387,6 +1439,11 @@ main(int argc, char *argv[])
     MemoryArenaInit(&state.xkb_arena, game_memory->permanentStorage + used, size);
     used += size;
 
+    // for pipewire allocations
+    size = 256 * KILOBYTES;
+    MemoryArenaInit(&state.pw_arena, game_memory->permanentStorage + used, size);
+    used += size;
+
     // for event allocations
     size = 256 * KILOBYTES;
     MemoryArenaInit(&event_arena, game_memory->permanentStorage + used, size);
@@ -1424,9 +1481,9 @@ main(int argc, char *argv[])
         &SPA_AUDIO_INFO_RAW_INIT(.format = SPA_AUDIO_FORMAT_S16, .channels = SAMPLE_CHANNELS, .rate = SAMPLE_RATE, ));
 
     // Now we're ready to connect the stream
-    int failed = pw_stream_connect(state.pw_stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
-                                   PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
-                                   params, 1);
+    int failed = pw_stream_connect(
+        state.pw_stream, PW_DIRECTION_OUTPUT, PW_ID_ANY,
+        PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_RT_PROCESS | PW_STREAM_FLAG_ALLOC_BUFFERS, params, 1);
     if (failed) {
       error_code = HANDMADEHERO_ERROR_PIPEWIRE;
       goto xkb_context_exit;

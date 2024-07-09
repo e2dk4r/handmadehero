@@ -116,6 +116,8 @@ main(int argc, char *argv[])
       2 * MEGABYTES
       // for xkb keyboard allocations
       + 1 * MEGABYTES
+      // for pipewire allocations
+      + 256 * KILOBYTES
       // for event allocations
       + 256 * KILOBYTES);
   off_t seekBytes = lseek(state.fd, game_memory_total, SEEK_SET);
