@@ -481,7 +481,7 @@
 - [x] Handmade Hero Day 146 - Accumulation vs. Explicit Calculation
       https://www.youtube.com/watch?v=YlKPcSwXh54
 
-- [ ] Handmade Hero Day 147 - Defining the Asset File
+- [x] Handmade Hero Day 147 - Defining the Asset File
       https://www.youtube.com/watch?v=n0RRz3NlHuo
 
 - [ ] Handmade Hero Day 148 - Writing the Asset File Header
