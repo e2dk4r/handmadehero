@@ -4,17 +4,17 @@
 #if HANDMADEHERO_DEBUG
 
 #if defined(__has_builtin) && __has_builtin(__builtin_debugtrap)
-#define __assert __builtin_debugtrap()
+#define __HANDMADEHERO_ASSERT __builtin_debugtrap()
 #elif defined(_MSC_VER)
-#define __assert __debugbreak()
+#define __HANDMADEHERO_ASSERT __debugbreak()
 #else
 #include <signal.h>
-#define __assert raise(SIGTRAP)
+#define __HANDMADEHERO_ASSERT raise(SIGTRAP)
 #endif
 
 #define assert(expression)                                                                                             \
   if (!(expression)) {                                                                                                 \
-    __assert;                                                                                                          \
+    __HANDMADEHERO_ASSERT;                                                                                             \
   }
 
 #define InvalidCodePath __builtin_trap()
