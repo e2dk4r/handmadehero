@@ -1,2 +1,2 @@
 option('hh_record_read', type: 'boolean', value: true)
-option('hh_asset_builder', type: 'boolean', value: false)
+option('hh_asset_builder', type: 'boolean', value: true)
