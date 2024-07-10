@@ -88,20 +88,18 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
       f32 floatChunksRemainingInAudio =
           (f32)(loadedAudio->sampleCount - roundf32tou32(playingAudio->samplesPlayed)) / dSampleChunk;
       u32 chunksRemainingInAudio = roundf32tou32(floatChunksRemainingInAudio);
-      b32 inputSamplesEnded = 0;
       if (chunksToMix > chunksRemainingInAudio) {
         chunksToMix = chunksRemainingInAudio;
-        inputSamplesEnded = 1;
       }
 
-      b32 volumeEnded[outputChannelCount] = {};
+      u32 volumeEndsAt[outputChannelCount] = {};
       for (u32 channelIndex = 0; channelIndex < outputChannelCount; channelIndex++) {
         if (dVolumeChunk.e[channelIndex] != 0.0f) {
           f32 deltaVolume = playingAudio->targetVolume.e[channelIndex] - volume.e[channelIndex];
           u32 volumeChunkCount = (u32)((deltaVolume / dVolumeChunk.e[channelIndex]) + 0.5f);
           if (chunksToMix > volumeChunkCount) {
             chunksToMix = volumeChunkCount;
-            volumeEnded[channelIndex] = 1;
+            volumeEndsAt[channelIndex] = chunksToMix;
           }
         }
       }
@@ -173,7 +171,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
       playingAudio->currentVolume.e[1] = volume1[0];
 
       for (u32 channelIndex = 0; channelIndex < outputChannelCount; channelIndex++) {
-        if (volumeEnded[channelIndex]) {
+        if (volumeEndsAt[channelIndex] == chunksToMix) {
           playingAudio->currentVolume.e[channelIndex] = playingAudio->targetVolume.e[channelIndex];
           playingAudio->dCurrentVolume.e[channelIndex] = 0.0f;
         }
@@ -186,7 +184,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
       isWritten = 1;
 
-      if (inputSamplesEnded) {
+      if (chunksToMix == chunksRemainingInAudio) {
         if (IsAudioIdValid(info->nextIdToPlay)) {
           playingAudio->id = info->nextIdToPlay;
 
