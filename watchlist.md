@@ -487,7 +487,7 @@
 - [x] Handmade Hero Day 148 - Writing the Asset File Header
       https://www.youtube.com/watch?v=UNXHK8O-B_g
 
-- [ ] Handmade Hero Day 149 - Writing Assets to the Asset File
+- [x] Handmade Hero Day 149 - Writing Assets to the Asset File
       https://www.youtube.com/watch?v=CNTlpoYdKF8
 
 - [ ] Handmade Hero Day 150 - Loading Assets from the Asset File
