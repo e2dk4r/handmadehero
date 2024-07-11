@@ -26,107 +26,6 @@ BitmapGet(struct game_assets *assets, struct bitmap_id id)
   return slot->bitmap;
 }
 
-#define BITMAP_COMPRESSION_RGB 0
-#define BITMAP_COMPRESSION_BITFIELDS 3
-struct __attribute__((packed)) bitmap_header {
-  u16 fileType;
-  u32 fileSize;
-  u16 reserved1;
-  u16 reserved2;
-  u32 bitmapOffset;
-  u32 size;
-  s32 width;
-  s32 height;
-  u16 planes;
-  u16 bitsPerPixel;
-  u32 compression;
-  u32 imageSize;
-  u32 horzResolution;
-  u32 vertResolution;
-  u32 colorsPalette;
-  u32 colorsImportant;
-};
-
-struct __attribute__((packed)) bitmap_header_compressed {
-  struct bitmap_header header;
-  u32 redMask;
-  u32 greenMask;
-  u32 blueMask;
-};
-
-internal struct bitmap
-LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, struct v2 alignPercentage)
-{
-  struct bitmap result = {0};
-
-  struct read_file_result readResult = PlatformReadEntireFile(filename);
-  if (readResult.size == 0) {
-    return result;
-  }
-
-  struct bitmap_header *header = readResult.data;
-  u8 *pixels = readResult.data + header->bitmapOffset;
-
-  if (header->compression == BITMAP_COMPRESSION_BITFIELDS) {
-    struct bitmap_header_compressed *cHeader = (struct bitmap_header_compressed *)header;
-
-    s32 redShift = FindLeastSignificantBitSet((s32)cHeader->redMask);
-    s32 greenShift = FindLeastSignificantBitSet((s32)cHeader->greenMask);
-    s32 blueShift = FindLeastSignificantBitSet((s32)cHeader->blueMask);
-    assert(redShift != greenShift);
-
-    u32 alphaMask = ~(cHeader->redMask | cHeader->greenMask | cHeader->blueMask);
-    s32 alphaShift = FindLeastSignificantBitSet((s32)alphaMask);
-
-    u32 *srcDest = (u32 *)pixels;
-    for (s32 y = 0; y < header->height; y++) {
-      for (s32 x = 0; x < header->width; x++) {
-
-        u32 value = *srcDest;
-
-        // extract pixel from file
-        struct v4 texel = v4((f32)((value >> redShift) & 0xff), (f32)((value >> greenShift) & 0xff),
-                             (f32)((value >> blueShift) & 0xff), (f32)((value >> alphaShift) & 0xff));
-        texel = sRGB255toLinear1(texel);
-
-        /*
-         * Store channels values pre-multiplied with alpha.
-         */
-        v3_mul_ref(&texel.rgb, texel.a);
-
-        texel = Linear1tosRGB255(texel);
-        *srcDest = (u32)(texel.a + 0.5f) << 0x18 | (u32)(texel.r + 0.5f) << 0x10 | (u32)(texel.g + 0.5f) << 0x08 |
-                   (u32)(texel.b + 0.5f) << 0x00;
-
-        srcDest++;
-      }
-    }
-  }
-
-  result.width = (u32)header->width;
-  if (header->width < 0)
-    result.width = (u32)-header->width;
-
-  result.height = (u32)header->height;
-  if (header->height < 0)
-    result.height = (u32)-header->height;
-
-  assert(result.width != 0);
-  assert(result.height != 0);
-  result.alignPercentage = alignPercentage;
-  result.widthOverHeight = (f32)result.width / (f32)result.height;
-
-  result.stride = (s32)result.width * BITMAP_BYTES_PER_PIXEL;
-  result.memory = pixels;
-
-  if (header->height < 0) {
-    result.memory = pixels + (s32)(result.height - 1) * result.stride;
-    result.stride = -result.stride;
-  }
-
-  return result;
-}
-
 internal u32
 BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
                struct asset_vector *weightVector)
@@ -180,98 +79,6 @@ BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct ass
   return result;
 }
 
-internal void
-BeginAssetType(struct game_assets *assets, enum asset_type_id assetTypeId)
-{
-  assert(assets->DEBUGAssetType == 0 && "another already in progress, one at a time");
-  assets->DEBUGAssetType = assets->assetTypes + assetTypeId;
-
-  struct asset_type *type = assets->DEBUGAssetType;
-  type->assetIndexFirst = assets->DEBUGUsedAssetCount;
-  type->assetIndexOnePastLast = type->assetIndexFirst;
-}
-
-internal struct bitmap_id
-AddBitmapAsset(struct game_assets *assets, char *filename, struct v2 alignPercentage)
-{
-  assert(assets->DEBUGAssetType && "you must call BeginAssetType()");
-  assert(assets->DEBUGAssetType->assetIndexOnePastLast < assets->assetCount && "asset count exceeded");
-
-  struct asset_type *type = assets->DEBUGAssetType;
-  assets->DEBUGAsset = assets->assets + type->assetIndexOnePastLast;
-  type->assetIndexOnePastLast++;
-
-  struct asset *asset = assets->DEBUGAsset;
-  asset->tagIndexFirst = assets->DEBUGUsedTagCount;
-  asset->tagIndexOnePastLast = asset->tagIndexFirst;
-
-  struct bitmap_id id = {assets->DEBUGUsedAssetCount};
-  assets->DEBUGUsedAssetCount++;
-
-  struct bitmap_info *info = &(assets->assets + id.value)->bitmapInfo;
-  info->filename = MemoryArenaPushString(&assets->arena, filename);
-  info->alignPercentage = alignPercentage;
-
-  return id;
-}
-
-internal struct audio_id
-AddAudioAssetTrimmed(struct game_assets *assets, char *filename, u32 sampleIndex, u32 sampleCount)
-{
-  assert(assets->DEBUGAssetType && "you must call BeginAssetType()");
-  assert(assets->DEBUGAssetType->assetIndexOnePastLast < assets->assetCount && "asset count exceeded");
-
-  struct asset_type *type = assets->DEBUGAssetType;
-  assets->DEBUGAsset = assets->assets + type->assetIndexOnePastLast;
-  type->assetIndexOnePastLast++;
-
-  struct asset *asset = assets->DEBUGAsset;
-  asset->tagIndexFirst = assets->DEBUGUsedTagCount;
-  asset->tagIndexOnePastLast = asset->tagIndexFirst;
-
-  struct audio_id id = {assets->DEBUGUsedAssetCount};
-  assets->DEBUGUsedAssetCount++;
-
-  struct audio_info *info = &(assets->assets + id.value)->audioInfo;
-  info->filename = MemoryArenaPushString(&assets->arena, filename);
-  info->sampleIndex = sampleIndex;
-  info->sampleCount = sampleCount;
-  info->nextIdToPlay.value = 0;
-
-  return id;
-}
-
-internal struct audio_id
-AddAudioAsset(struct game_assets *assets, char *filename)
-{
-  return AddAudioAssetTrimmed(assets, filename, 0, 0);
-}
-
-internal void
-AddAssetTag(struct game_assets *assets, enum asset_tag_id tagId, f32 value)
-{
-  assert(assets->DEBUGAsset && "you must call one of Add...Asset()");
-  assert(assets->DEBUGAsset->tagIndexOnePastLast < assets->tagCount && "tag count exceeded");
-
-  struct asset *asset = assets->DEBUGAsset;
-  struct asset_tag *tag = assets->tags + assets->DEBUGUsedTagCount;
-  asset->tagIndexOnePastLast++;
-
-  tag->id = tagId;
-  tag->value = value;
-
-  assets->DEBUGUsedTagCount++;
-}
-
-internal void
-EndAssetType(struct game_assets *assets)
-{
-  assert(assets->DEBUGAssetType && "cannot finish something that is not started");
-  assets->DEBUGUsedAssetCount = assets->DEBUGAssetType->assetIndexOnePastLast;
-  assets->DEBUGAssetType = 0;
-  assets->DEBUGAsset = 0;
-}
-
 inline struct game_assets *
 GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState,
                    pfnPlatformReadEntireFile PlatformReadEntireFile)
@@ -282,147 +89,46 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->PlatformReadEntireFile = PlatformReadEntireFile;
   assets->transientState = transientState;
 
-  assets->tagCount = 1024 * ASSET_TYPE_COUNT;
-  assets->tags = MemoryArenaPush(arena, sizeof(*assets->tags) * assets->tagCount);
-
   for (u32 tagType = 0; tagType < ASSET_TAG_COUNT; tagType++) {
     assets->tagRanges[tagType] = 1000000.0f;
   }
   assets->tagRanges[ASSET_TAG_FACING_DIRECTION] = TAU32;
 
+  struct read_file_result readResult = PlatformReadEntireFile("test.hha");
+  if (readResult.size == 0) {
+    return assets;
+  }
+
+  struct hha_header *header = readResult.data;
+  assert(header->magic == HHA_MAGIC);
+  assert(header->version == HHA_VERSION);
+
   assets->assetCount = 256 * ASSET_TYPE_COUNT;
   assets->assets = MemoryArenaPush(arena, sizeof(*assets->assets) * assets->assetCount);
   assets->slots = MemoryArenaPush(arena, sizeof(*assets->slots) * assets->assetCount);
 
-  assets->DEBUGUsedAssetCount = 1;
-  assets->DEBUGUsedTagCount = 1;
-
-  BeginAssetType(assets, ASSET_TYPE_SHADOW);
-  AddBitmapAsset(assets, "test/test_hero_shadow.bmp", v2(0.5f, 0.156682029f));
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_TREE);
-  AddBitmapAsset(assets, "test2/tree00.bmp", v2(0.493827164f, 0.295652181f));
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_SWORD);
-  AddBitmapAsset(assets, "test2/rock03.bmp", v2(0.5f, 0.65625f));
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_GRASS);
-  AddBitmapAsset(assets, "test2/grass00.bmp", v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, "test2/grass01.bmp", v2(0.5f, 0.5f));
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_GROUND);
-  AddBitmapAsset(assets, "test2/ground00.bmp", v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, "test2/ground01.bmp", v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, "test2/ground02.bmp", v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, "test2/ground03.bmp", v2(0.5f, 0.5f));
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_TUFT);
-  AddBitmapAsset(assets, "test2/tuft00.bmp", v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, "test2/tuft01.bmp", v2(0.5f, 0.5f));
-  AddBitmapAsset(assets, "test2/tuft02.bmp", v2(0.5f, 0.5f));
-  EndAssetType(assets);
-
-  f32 angleRight = 0.00f * TAU32;
-  f32 angleBack = 0.25f * TAU32;
-  f32 angleLeft = 0.50f * TAU32;
-  f32 angleFront = 0.75f * TAU32;
-
-  BeginAssetType(assets, ASSET_TYPE_HEAD);
-
-  AddBitmapAsset(assets, "test/test_hero_right_head.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleRight);
-
-  AddBitmapAsset(assets, "test/test_hero_back_head.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleBack);
-
-  AddBitmapAsset(assets, "test/test_hero_left_head.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleLeft);
-
-  AddBitmapAsset(assets, "test/test_hero_front_head.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleFront);
-
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_TORSO);
-
-  AddBitmapAsset(assets, "test/test_hero_right_torso.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleRight);
-
-  AddBitmapAsset(assets, "test/test_hero_back_torso.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleBack);
-
-  AddBitmapAsset(assets, "test/test_hero_left_torso.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleLeft);
-
-  AddBitmapAsset(assets, "test/test_hero_front_torso.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleFront);
-
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_CAPE);
-
-  AddBitmapAsset(assets, "test/test_hero_right_cape.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleRight);
-
-  AddBitmapAsset(assets, "test/test_hero_back_cape.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleBack);
-
-  AddBitmapAsset(assets, "test/test_hero_left_cape.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleLeft);
-
-  AddBitmapAsset(assets, "test/test_hero_front_cape.bmp", v2(0.5f, 0.156682029f));
-  AddAssetTag(assets, ASSET_TAG_FACING_DIRECTION, angleFront);
-
-  EndAssetType(assets);
-
-  // audios
-  BeginAssetType(assets, ASSET_TYPE_BLOOP);
-  AddAudioAsset(assets, "test3/bloop_00.wav");
-  AddAudioAsset(assets, "test3/bloop_01.wav");
-  AddAudioAsset(assets, "test3/bloop_02.wav");
-  AddAudioAsset(assets, "test3/bloop_03.wav");
-  AddAudioAsset(assets, "test3/bloop_04.wav");
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_CRACK);
-  AddAudioAsset(assets, "test3/crack_00.wav");
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_DROP);
-  AddAudioAsset(assets, "test3/drop_00.wav");
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_GLIDE);
-  AddAudioAsset(assets, "test3/glide_00.wav");
-  EndAssetType(assets);
-
-  BeginAssetType(assets, ASSET_TYPE_MUSIC);
-  u32 sampleRate = 48000;
-  u32 chunkSampleCount = 10 * sampleRate;
-  u32 totalSampleCount = 7468095;
-  struct audio_id lastMusic = {};
-  for (u32 sampleIndex = 0; sampleIndex < totalSampleCount; sampleIndex += chunkSampleCount) {
-    u32 sampleCount = totalSampleCount - sampleIndex;
-    if (sampleCount > chunkSampleCount) {
-      sampleCount = chunkSampleCount;
-    }
-    struct audio_id thisMusic = AddAudioAssetTrimmed(assets, "test3/music_test.wav", sampleIndex, sampleCount);
-    if (IsAudioIdValid(lastMusic)) {
-      assets->assets[lastMusic.value].audioInfo.nextIdToPlay = thisMusic;
-    }
-    lastMusic = thisMusic;
+  assets->tagCount = header->tagCount;
+  assets->tags = MemoryArenaPush(arena, sizeof(*assets->tags) * assets->tagCount);
+  struct hha_tag *hhaTags = readResult.data + header->tagsOffset;
+  for (u32 tagIndex = 0; tagIndex < header->tagCount; tagIndex++) {
+    struct hha_tag *src = hhaTags + tagIndex;
+    struct asset_tag *dest = assets->tags + tagIndex;
+    dest->id = src->value;
+    dest->value = src->value;
   }
-  EndAssetType(assets);
 
-  BeginAssetType(assets, ASSET_TYPE_PUHP);
-  AddAudioAsset(assets, "test3/puhp_00.wav");
-  AddAudioAsset(assets, "test3/puhp_01.wav");
-  EndAssetType(assets);
+  struct hha_asset_type *hhaAssetTypes = readResult.data + header->assetTypesOffset;
+  for (u32 assetTypeIndex = 0; assetTypeIndex < header->assetTypeCount; assetTypeIndex++) {
+    struct hha_asset_type *src = hhaAssetTypes + assetTypeIndex;
+    if (src->typeId > ASSET_TYPE_COUNT)
+      continue;
+    struct asset_type *dest = assets->assetTypes + src->typeId;
+    dest->assetIndexFirst = src->assetIndexFirst;
+    dest->assetIndexOnePastLast = src->assetIndexOnePastLast;
+  }
+
+  // assets->assetCount = ;
+  // assets->assets = ;
 
   return assets;
 }
@@ -481,6 +187,14 @@ RandomAudio(struct random_series *series, struct game_assets *assets, enum asset
   return result;
 }
 
+internal struct bitmap
+LoadBmp(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, struct v2 alignPercentage)
+{
+  assert(0 && "not implemented");
+  struct bitmap result = {};
+  return result;
+};
+
 struct asset_load_bitmap_work {
   struct task_with_memory *task;
   struct game_assets *assets;
@@ -510,6 +224,9 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
 {
   if (id.value == 0)
     return;
+
+  // TODO: implement loading from packed asset file
+  return;
 
   struct asset_slot *slot = assets->slots + id.value;
   struct bitmap_info *info = &(assets->assets + id.value)->bitmapInfo;
@@ -543,161 +260,12 @@ BitmapPrefetch(struct game_assets *assets, struct bitmap_id id)
   BitmapLoad(assets, id);
 }
 
-struct wave_header {
-  u32 riffId;
-  u32 fileSize;
-  u32 waveId;
-} __attribute__((packed));
-
-#define WAVE_CHUNKID(a, b, c, d) (a << 0x00 | b << 0x08 | c << 0x10 | d << 0x18)
-enum {
-  WAVE_CHUNKID_FMT = WAVE_CHUNKID('f', 'm', 't', ' '),
-  WAVE_CHUNKID_RIFF = WAVE_CHUNKID('R', 'I', 'F', 'F'),
-  WAVE_CHUNKID_WAVE = WAVE_CHUNKID('W', 'A', 'V', 'E'),
-  WAVE_CHUNKID_DATA = WAVE_CHUNKID('d', 'a', 't', 'a'),
-};
-#undef WAVE_CHUNKID
-
-struct wave_chunk {
-  u32 id;
-  u32 size;
-} __attribute__((packed));
-
-struct wave_fmt {
-  u16 audioFormat;
-  u16 numChannels;
-  u32 sampleRate;
-  u32 byteRate;
-  u16 blockAlign;
-  u16 bitsPerSample;
-} __attribute__((packed));
-
-#define WAVE_FORMAT_PCM 0x0001
-
-struct wave_chunk_iterator {
-  struct wave_chunk *chunk;
-  void *eof;
-};
-
-internal struct wave_chunk_iterator
-WaveChunkParse(struct wave_header *header)
-{
-  struct wave_chunk_iterator iterator = {};
-  iterator.chunk = (void *)header + sizeof(*header);
-  iterator.eof = (void *)header + sizeof(struct wave_chunk) + header->fileSize;
-  return iterator;
-}
-
-internal void *
-WaveChunkData(struct wave_chunk *chunk)
-{
-  return (void *)chunk + sizeof(*chunk);
-}
-
-internal b32
-IsWaveChunkValid(struct wave_chunk_iterator iterator)
-{
-  return (void *)iterator.chunk != (void *)iterator.eof;
-}
-
-internal struct wave_chunk_iterator
-WaveChunkNext(struct wave_chunk_iterator iterator)
-{
-  iterator.chunk = (void *)iterator.chunk + sizeof(*iterator.chunk) + ALIGN(iterator.chunk->size, 2);
-  return iterator;
-}
-
 internal struct audio
 LoadWav(pfnPlatformReadEntireFile PlatformReadEntireFile, char *filename, u32 sectionSampleIndex,
         u32 sectionSampleCount)
 {
+  assert(0 && "not implemented");
   struct audio result = {};
-
-  struct read_file_result readResult = PlatformReadEntireFile(filename);
-  if (readResult.size == 0) {
-    return result;
-  }
-
-  struct wave_header *header = readResult.data;
-  assert(header->riffId == WAVE_CHUNKID_RIFF);
-  assert(header->waveId == WAVE_CHUNKID_WAVE);
-
-  struct wave_fmt *fmt = 0;
-  s16 *sampleData = 0;
-  u32 sampleDataSize = 0;
-  for (struct wave_chunk_iterator iterator = WaveChunkParse(header); IsWaveChunkValid(iterator);
-       iterator = WaveChunkNext(iterator)) {
-    if (iterator.chunk->id != WAVE_CHUNKID_FMT)
-      continue;
-
-    fmt = WaveChunkData(iterator.chunk);
-    assert(fmt->audioFormat == WAVE_FORMAT_PCM);
-    assert(fmt->sampleRate == 48000);
-    assert(fmt->bitsPerSample == 16);
-    assert(fmt->blockAlign == sizeof(u16) * fmt->numChannels);
-
-    iterator = WaveChunkNext(iterator);
-    assert(iterator.chunk->id == WAVE_CHUNKID_DATA && "malformed file");
-    sampleData = (s16 *)WaveChunkData(iterator.chunk);
-    sampleDataSize = iterator.chunk->size;
-
-    break;
-  }
-
-  assert(fmt && sampleData);
-
-  result.channelCount = fmt->numChannels;
-  u32 sampleCount = sampleDataSize / (u32)(fmt->numChannels * sizeof(u16));
-  switch (fmt->numChannels) {
-  case 1:
-    result.samples[0] = sampleData;
-    result.samples[1] = 0;
-    break;
-
-  case 2:
-    result.samples[0] = sampleData;
-    result.samples[1] = sampleData + sampleCount;
-
-#if 0
-    for (u32 sampleIndex = 0; sampleIndex < result.sampleCount; sampleIndex++) {
-      sampleData[sampleIndex * 2 + 0] = (s16)sampleIndex;
-      sampleData[sampleIndex * 2 + 1] = (s16)sampleIndex;
-    }
-#endif
-
-    for (u32 sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
-      s16 source = sampleData[sampleIndex * 2];
-      sampleData[sampleIndex * 2] = sampleData[sampleIndex];
-      sampleData[sampleIndex] = source;
-    }
-
-    // TODO(e2dk4r): load right channels
-    break;
-
-  default:
-    assert(0 && "Unsupported number of channels");
-  }
-
-  b32 isBufferEnd = 0;
-  if (sectionSampleCount != AUDIO_INFO_SAMPLE_COUNT_ALL) {
-    assert(sectionSampleIndex + sectionSampleCount <= sampleCount);
-    isBufferEnd = sectionSampleIndex + sectionSampleCount == sampleCount;
-    sampleCount = sectionSampleCount;
-    for (u32 channelIndex = 0; channelIndex < result.channelCount; channelIndex++) {
-      result.samples[channelIndex] += sectionSampleIndex;
-    }
-  }
-
-  if (isBufferEnd) {
-    for (u32 channelIndex = 0; channelIndex < result.channelCount; channelIndex++) {
-      for (u32 sampleIndex = sampleCount; sampleIndex < sampleCount + 8; sampleIndex++) {
-        result.samples[channelIndex][sampleIndex] = 0;
-      }
-    }
-  }
-
-  result.sampleCount = sampleCount;
-
   return result;
 }
 
@@ -730,6 +298,9 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
 {
   if (id.value == 0)
     return;
+
+  // TODO: implement loading from packed asset file
+  return;
 
   struct asset_slot *slot = assets->slots + id.value;
   struct audio_info *info = &(assets->assets + id.value)->audioInfo;

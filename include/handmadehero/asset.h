@@ -111,12 +111,6 @@ struct game_assets {
 #define BITMAP_HERO_BACK 1
 #define BITMAP_HERO_LEFT 2
 #define BITMAP_HERO_RIGHT 0
-
-  // TODO(e2dk4r): remove this once we actually load a asset pack file
-  u32 DEBUGUsedAssetCount;
-  u32 DEBUGUsedTagCount;
-  struct asset_type *DEBUGAssetType;
-  struct asset *DEBUGAsset;
 };
 
 struct game_assets *

@@ -43,14 +43,11 @@ struct hha_asset_type {
 struct hha_bitmap {
   u32 width;
   u32 height;
-  f32 alignPercentageX;
-  f32 alignPercentageY;
+  f32 alignPercentage[2];
 };
 
 struct hha_audio {
-  u32 sampleIndex;
   u32 sampleCount;
-  u32 nextIdToPlay;
 };
 
 struct hha_asset {
