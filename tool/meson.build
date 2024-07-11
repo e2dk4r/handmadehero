@@ -19,7 +19,7 @@ if get_option('hh_asset_builder')
     include_directories: [
       '../include',
     ],
-    link_args: '-static',
+    # link_args: '-static',
     dependencies: [
       libm
     ]
