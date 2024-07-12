@@ -29,6 +29,14 @@ struct hha_header {
   u64 assetsOffset;
 };
 
+struct bitmap_id {
+  u32 value;
+};
+
+struct audio_id {
+  u32 value;
+};
+
 struct hha_tag {
   u32 id;
   f32 value;
@@ -48,6 +56,7 @@ struct hha_bitmap {
 
 struct hha_audio {
   u32 sampleCount;
+  struct audio_id nextIdToPlay;
 };
 
 struct hha_asset {

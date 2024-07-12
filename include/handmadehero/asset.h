@@ -10,14 +10,6 @@
 #include "render_group.h"
 #include "types.h"
 
-struct bitmap_id {
-  u32 value;
-};
-
-struct audio_id {
-  u32 value;
-};
-
 struct audio {
   u32 channelCount;
   u32 sampleCount;

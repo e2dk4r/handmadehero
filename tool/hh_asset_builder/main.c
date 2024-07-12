@@ -206,14 +206,6 @@ enum hh_asset_builder_error {
   HH_ASSET_BUILDER_ERROR_BMP_IS_NOT_ENCODED_PROPERLY,
 };
 
-struct bitmap_id {
-  u32 value;
-};
-
-struct audio_id {
-  u32 value;
-};
-
 struct bitmap_info {
   char *filename;
   f32 alignPercentageX;
@@ -224,6 +216,7 @@ struct audio_info {
   char *filename;
   u32 sampleIndex;
   u32 sampleCount;
+  struct audio_id nextIdToPlay;
 };
 
 enum asset_tag_id {
@@ -333,6 +326,7 @@ AddAudioAssetTrimmed(struct asset_context *context, char *filename, u32 sampleIn
   asset->type = ASSET_TYPE_AUDIO;
   asset->tagIndexFirst = context->tagCount;
   asset->tagIndexOnePastLast = asset->tagIndexFirst;
+  asset->audioInfo.nextIdToPlay.value = 0;
 
   struct audio_id id = {context->assetCount};
   context->assetCount++;
@@ -965,12 +959,19 @@ main(int argc, char *argv[])
   u32 sampleRate = 48000;
   u32 chunkSampleCount = 10 * sampleRate;
   u32 totalSampleCount = 7468095;
+
+  struct audio_id lastMusic = {};
   for (u32 sampleIndex = 0; sampleIndex < totalSampleCount; sampleIndex += chunkSampleCount) {
     u32 sampleCount = totalSampleCount - sampleIndex;
     if (sampleCount > chunkSampleCount) {
       sampleCount = chunkSampleCount;
     }
     struct audio_id thisMusic = AddAudioAssetTrimmed(context, "test3/music_test.wav", sampleIndex, sampleCount);
+    if (IsAudioIdValid(lastMusic)) {
+      struct hha_audio *lastAudio = &(context->assets + lastMusic.value)->audio;
+      lastAudio->nextIdToPlay = thisMusic;
+    }
+    lastMusic = thisMusic;
   }
   EndAssetType(context);
 
