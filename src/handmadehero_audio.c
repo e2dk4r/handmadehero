@@ -59,7 +59,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         break;
       }
 
-      struct audio_info *info = AudioInfoGet(assets, playingAudio->id);
+      struct hha_audio *info = AudioInfoGet(assets, playingAudio->id);
       AudioPrefetch(assets, info->nextIdToPlay);
 
       struct v2 volume = playingAudio->currentVolume;

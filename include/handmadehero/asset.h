@@ -62,13 +62,7 @@ struct asset_tag {
 };
 
 struct asset {
-  u32 tagIndexFirst;
-  u32 tagIndexOnePastLast;
-
-  union {
-    struct bitmap_info bitmapInfo;
-    struct audio_info audioInfo;
-  };
+  struct hha_asset hha;
 };
 
 struct asset_type {
@@ -98,6 +92,8 @@ struct game_assets {
   struct asset *assets;
 
   struct asset_type assetTypes[ASSET_TYPE_COUNT];
+
+  u8 *hhaData;
 };
 
 struct game_assets *
@@ -142,7 +138,7 @@ struct audio_id
 BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
                struct asset_vector *weightVector);
 
-struct audio_info *
+struct hha_audio *
 AudioInfoGet(struct game_assets *assets, struct audio_id id);
 
 b32
