@@ -490,7 +490,7 @@
 - [x] Handmade Hero Day 149 - Writing Assets to the Asset File
       https://www.youtube.com/watch?v=CNTlpoYdKF8
 
-- [ ] Handmade Hero Day 150 - Loading Assets from the Asset File
+- [x] Handmade Hero Day 150 - Loading Assets from the Asset File
       https://www.youtube.com/watch?v=h2GoVMArDro
 
 - [ ] Handmade Hero Day 151 - New Platform File API
