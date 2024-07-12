@@ -106,11 +106,6 @@ struct game_assets {
   struct asset *assets;
 
   struct asset_type assetTypes[ASSET_TYPE_COUNT];
-
-#define BITMAP_HERO_FRONT 3
-#define BITMAP_HERO_BACK 1
-#define BITMAP_HERO_LEFT 2
-#define BITMAP_HERO_RIGHT 0
 };
 
 struct game_assets *
