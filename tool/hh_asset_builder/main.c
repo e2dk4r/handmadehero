@@ -26,6 +26,8 @@
 #include "stb_sprintf.h"
 #define sprintf stbsp_sprintf
 #define snprintf stbsp_snprintf
+#define PRIu32 "u"
+#define PRIs32 "d"
 
 #pragma GCC diagnostic pop
 
@@ -1022,7 +1024,7 @@ main(int argc, char *argv[])
   writtenBytes = write(outFd, tags, tagArraySize);
   assert(writtenBytes > 0);
 
-  logLength = snprintf(logBuffer, sizeof(logBuffer), "%u tags written\n", header.tagCount);
+  logLength = snprintf(logBuffer, sizeof(logBuffer), "%" PRIu32 " tags written\n", header.tagCount);
   assert(logLength > 0);
   info(logBuffer, (u64)logLength);
 
@@ -1032,7 +1034,7 @@ main(int argc, char *argv[])
   writtenBytes = write(outFd, assetTypes, assetTypeArraySize);
   assert(writtenBytes > 0);
 
-  logLength = snprintf(logBuffer, sizeof(logBuffer), "%u asset types written\n", header.assetTypeCount);
+  logLength = snprintf(logBuffer, sizeof(logBuffer), "%" PRIu32 " asset types written\n", header.assetTypeCount);
   assert(logLength > 0);
   info(logBuffer, (u64)logLength);
 
@@ -1205,7 +1207,7 @@ main(int argc, char *argv[])
   assert(writtenBytes > 0);
   assert(writtenBytes > 0);
 
-  logLength = snprintf(logBuffer, sizeof(logBuffer), "%u assets written\n", header.assetCount);
+  logLength = snprintf(logBuffer, sizeof(logBuffer), "%" PRIu32 " assets written\n", header.assetCount);
   assert(logLength > 0);
   info(logBuffer, (u64)logLength);
 
