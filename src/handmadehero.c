@@ -539,34 +539,6 @@ DoFillGroundChunkWork(struct platform_work_queue *queue, void *data)
   EndTaskWithMemory(work->task);
 }
 
-internal u32
-PickBest(struct bitmap_info *infos, u32 infoCount, struct asset_tag *tags, f32 *matchVector, f32 *weightVector)
-{
-  f32 bestDiff = F32_MAX;
-  u32 bestIndex = 0;
-  for (u32 infoIndex = 0; infoIndex < infoCount; infoIndex++) {
-    struct bitmap_info *info = infos + infoIndex;
-
-    f32 totalWeightedDiff = 0.0f;
-    // for (u32 tagIndex = info->tagFirstIndex; tagIndex <= info->tagLastIndex; tagIndex++) {
-    for (u32 tagIndex = 0; tagIndex <= 10; tagIndex++) {
-      struct asset_tag *tag = tags + tagIndex;
-
-      f32 diff = matchVector[tag->id] * tag->value;
-      f32 weightedDiff = weightVector[tag->id] * Absolute(diff);
-
-      totalWeightedDiff += weightedDiff;
-    }
-
-    if (bestDiff > totalWeightedDiff) {
-      bestDiff = totalWeightedDiff;
-      bestIndex = infoIndex;
-    }
-  }
-
-  return bestIndex;
-}
-
 internal void
 FillGroundChunk(struct transient_state *transientState, struct game_state *state, struct ground_buffer *groundBuffer,
                 struct world_position *chunkPosition)

@@ -56,10 +56,6 @@ struct asset_vector {
   f32 e[ASSET_TAG_COUNT];
 };
 
-struct asset {
-  struct hha_asset hha;
-};
-
 struct asset_type {
   u32 assetIndexFirst;
   u32 assetIndexOnePastLast;
@@ -84,7 +80,7 @@ struct game_assets {
   f32 tagRanges[ASSET_TYPE_COUNT];
 
   u32 assetCount;
-  struct asset *assets;
+  struct hha_asset *assets;
 
   struct asset_type assetTypes[ASSET_TYPE_COUNT];
 

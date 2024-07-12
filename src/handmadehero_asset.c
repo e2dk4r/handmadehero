@@ -35,10 +35,10 @@ BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct ass
   f32 bestDiff = F32_MAX;
   struct asset_type *type = assets->assetTypes + typeId;
   for (u32 assetIndex = type->assetIndexFirst; assetIndex < type->assetIndexOnePastLast; assetIndex++) {
-    struct asset *asset = assets->assets + assetIndex;
+    struct hha_asset *asset = assets->assets + assetIndex;
 
     f32 totalWeightedDiff = 0.0f;
-    for (u32 tagIndex = asset->hha.tagIndexFirst; tagIndex < asset->hha.tagIndexOnePastLast; tagIndex++) {
+    for (u32 tagIndex = asset->tagIndexFirst; tagIndex < asset->tagIndexOnePastLast; tagIndex++) {
       struct hha_tag *tag = assets->tags + tagIndex;
 
       f32 a = matchVector->e[tag->id];
@@ -117,15 +117,9 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
     dest->assetIndexOnePastLast = src->assetIndexOnePastLast;
   }
 
-  struct hha_asset *hhaAssets = readResult.data + header->assetsOffset;
   assets->assetCount = header->assetCount;
-  assets->assets = MemoryArenaPush(arena, sizeof(*assets->assets) * assets->assetCount);
+  assets->assets = readResult.data + header->assetsOffset;
   assets->slots = MemoryArenaPush(arena, sizeof(*assets->slots) * assets->assetCount);
-  for (u32 assetIndex = 0; assetIndex < header->assetCount; assetIndex++) {
-    struct hha_asset *src = hhaAssets + assetIndex;
-    struct asset *dest = assets->assets + assetIndex;
-    dest->hha = *src;
-  }
 
   return assets;
 }
@@ -198,7 +192,7 @@ DoLoadBitmapWork(struct platform_work_queue *queue, void *data)
   struct load_bitmap_work *work = data;
   struct game_assets *assets = work->assets;
 
-  struct hha_asset *info = &(assets->assets + work->bitmapId.value)->hha;
+  struct hha_asset *info = assets->assets + work->bitmapId.value;
   struct hha_bitmap *bitmapInfo = &info->bitmap;
   struct bitmap *bitmap = work->bitmap;
 
@@ -225,7 +219,7 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     return;
 
   struct asset_slot *slot = assets->slots + id.value;
-  struct hha_asset *info = &(assets->assets + id.value)->hha;
+  struct hha_asset *info = assets->assets + id.value;
   assert(info->dataOffset && "asset not setup properly");
 
   enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
@@ -271,7 +265,7 @@ DoLoadAudioWork(struct platform_work_queue *queue, void *data)
   struct load_audio_work *work = data;
   struct game_assets *assets = work->assets;
 
-  struct hha_asset *info = &(assets->assets + work->audioId.value)->hha;
+  struct hha_asset *info = assets->assets + work->audioId.value;
   struct hha_audio *audioInfo = &info->audio;
   struct audio *audio = work->audio;
   audio->channelCount = audioInfo->channelCount;
@@ -296,7 +290,7 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
   // TODO: implement loading from packed asset file
 
   struct asset_slot *slot = assets->slots + id.value;
-  struct hha_asset *info = &(assets->assets + id.value)->hha;
+  struct hha_asset *info = assets->assets + id.value;
   assert(info->dataOffset && "asset not setup properly");
 
   enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
@@ -346,7 +340,7 @@ AudioInfoGet(struct game_assets *assets, struct audio_id id)
     return 0;
 
   assert(id.value <= assets->assetCount);
-  struct hha_asset *info = &(assets->assets + id.value)->hha;
+  struct hha_asset *info = assets->assets + id.value;
   return &info->audio;
 }
 
