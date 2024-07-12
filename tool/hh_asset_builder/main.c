@@ -1103,6 +1103,7 @@ main(int argc, char *argv[])
 
       struct loaded_audio *loadedAudio = &loadWavResult.loadedAudio;
 
+      dest->audio.channelCount = loadedAudio->channelCount;
       dest->audio.sampleCount = loadedAudio->sampleCount;
 
       for (u32 channelIndex = 0; channelIndex < loadedAudio->channelCount; channelIndex++) {

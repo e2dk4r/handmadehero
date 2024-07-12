@@ -55,6 +55,7 @@ struct hha_bitmap {
 };
 
 struct hha_audio {
+  u32 channelCount;
   u32 sampleCount;
   struct audio_id nextIdToPlay;
 };
