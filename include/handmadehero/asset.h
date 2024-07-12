@@ -66,6 +66,17 @@ struct asset_group {
   u32 tagLastIndex;
 };
 
+#if 0
+struct asset_file {
+  struct platform_file_handle handle;
+  struct hha_header header;
+
+  // TODO: if we ever do thread stacks, assetTypes does not
+  // need to be kept here probably.
+  struct hha_asset_type *assetTypes;
+};
+#endif
+
 struct game_assets {
   // TODO(e2dk4r): copy of known, not ideal because
   // we want AssetLoad to called from anywhere

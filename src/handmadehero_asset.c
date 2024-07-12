@@ -94,6 +94,86 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   }
   assets->tagRanges[ASSET_TAG_FACING_DIRECTION] = TAU32;
 
+#if 0
+  assets->tagCount = 0;
+  assets->assetCount = 0;
+
+  {
+    struct platform_file_group fileGroup = PlatformGetAllFilesOfTypeBegin("hha");
+    assets->fileCount = fileGroup.fileCount;
+    assets->files = MemoryArenaPush(arena, sizeof(*assets->files) * assets->fileCount);
+    for (u32 fileIndex = 0; fileIndex < assets->fileCount; fileIndex++) {
+      struct asset_file *file = assets->files + fileIndex;
+      file->handle = PlatformOpenFile(fileGroup, fileIndex);
+      PlatformReadFromFile(&file->header, file->handle, 0, sizeof(file->header));
+
+      u64 assetTypeArraySize = sizeof(*file->assetTypes) * file->header.assetTypeCount;
+      file->assetTypes = MemoryArenaPush(arena, assetTypeArraySize);
+      PlatformReadFromFile(file->assetTypes, file->handle, file->header.assetTypesOffset, assetTypeArraySize);
+
+      if (PlatformHasFileError(file->handle)) {
+        // TODO: notify user
+        assert(0 && "file not read");
+        continue;
+      }
+
+      struct hha_header *header = file->header;
+      if (header->magic != HHA_MAGIC) {
+        // TODO: notify user
+        assert(0 && "file is not hha");
+        PlatformReportFileError(file->handle, "File is not hha.");
+        continue;
+      }
+
+      if (header->version > HHA_VERSION) {
+        // TODO: notify user
+        assert(0 && "not supported version");
+        PlatformReportFileError(file->handle, "Unsupported hha file version.");
+        continue;
+      }
+
+      assets->tagCount += header->tagCount;
+      assets->assetCount += header->assetCount;
+    }
+
+    PlatformGetAllFilesOfTypeEnd(fileGroup);
+  }
+
+  assets->tags = MemoryArenaPush(arena, sizeof(*assets->tags) * assets->tagCount);
+  assets->assets = MemoryArenaPush(arena, sizeof(*assets->assets) * assets->assetCount);
+  assets->slots = MemoryArenaPush(arena, sizeof(*assets->slots) * assets->assetCount);
+
+  // TODO: Fast loading 100+ asset pack files
+
+  u32 tagCount = 0;
+  u32 assetCount = 0;
+  for (u32 destAssetTypeId = 0; destAssetTypeId < ASSET_TYPE_COUNT; destAssetTypeId++) {
+    struct asset_type *destType = assets->assetTypes + destAssetTypeId;
+    destType->assetIndexFirst = assetCount;
+
+    for (u32 fileIndex = 0; fileIndex < assets->fileCount; fileIndex++) {
+      struct asset_file *file = assets->files + fileIndex;
+
+      if (PlatformHasFileError(file->handle)) {
+        continue;
+      }
+
+      for (u32 srcIndex = 0; srcIndex < file->header.assetTypeCount; srcIndex++) {
+        struct hha_asset_type *srcType = file->assetTypes + srcIndex;
+        if (srcType->typeId == destAssetTypeId) {
+          PlatformReadFromFile();
+          assetCount++;
+        }
+      }
+    }
+
+    destType->assetIndexOnePastLast = assetCount;
+  }
+
+  assert(tagCount == assets->tagCount && "missing tags");
+  assert(assetCount == assets->assetCount && "missing assets");
+#endif
+
   struct read_file_result readResult = PlatformReadEntireFile("test.hha");
   if (readResult.size == 0) {
     return assets;
