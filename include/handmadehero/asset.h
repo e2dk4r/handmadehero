@@ -56,11 +56,6 @@ struct asset_vector {
   f32 e[ASSET_TAG_COUNT];
 };
 
-struct asset_tag {
-  enum asset_tag_id id;
-  f32 value;
-};
-
 struct asset {
   struct hha_asset hha;
 };
@@ -85,7 +80,7 @@ struct game_assets {
   struct asset_slot *slots;
 
   u32 tagCount;
-  struct asset_tag *tags;
+  struct hha_tag *tags;
   f32 tagRanges[ASSET_TYPE_COUNT];
 
   u32 assetCount;

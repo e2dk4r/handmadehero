@@ -39,7 +39,7 @@ BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct ass
 
     f32 totalWeightedDiff = 0.0f;
     for (u32 tagIndex = asset->hha.tagIndexFirst; tagIndex < asset->hha.tagIndexOnePastLast; tagIndex++) {
-      struct asset_tag *tag = assets->tags + tagIndex;
+      struct hha_tag *tag = assets->tags + tagIndex;
 
       f32 a = matchVector->e[tag->id];
       f32 b = tag->value;
@@ -105,14 +105,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assert(header->version == HHA_VERSION);
 
   assets->tagCount = header->tagCount;
-  assets->tags = MemoryArenaPush(arena, sizeof(*assets->tags) * assets->tagCount);
-  struct hha_tag *hhaTags = readResult.data + header->tagsOffset;
-  for (u32 tagIndex = 0; tagIndex < header->tagCount; tagIndex++) {
-    struct hha_tag *src = hhaTags + tagIndex;
-    struct asset_tag *dest = assets->tags + tagIndex;
-    dest->id = src->id;
-    dest->value = src->value;
-  }
+  assets->tags = readResult.data + header->tagsOffset;
 
   struct hha_asset_type *hhaAssetTypes = readResult.data + header->assetTypesOffset;
   for (u32 assetTypeIndex = 0; assetTypeIndex < header->assetTypeCount; assetTypeIndex++) {
