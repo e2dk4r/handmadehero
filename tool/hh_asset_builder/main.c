@@ -660,7 +660,7 @@ onError:
 
 #define BITMAP_COMPRESSION_RGB 0
 #define BITMAP_COMPRESSION_BITFIELDS 3
-struct __attribute__((packed)) bitmap_header {
+struct bitmap_header {
   u16 fileType;
   u32 fileSize;
   u16 reserved1;
@@ -689,7 +689,7 @@ struct loaded_bitmap {
   void *memory;
 };
 
-struct __attribute__((packed)) bitmap_header_compressed {
+struct bitmap_header_compressed {
   struct bitmap_header header;
   u32 redMask;
   u32 greenMask;
