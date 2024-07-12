@@ -73,14 +73,13 @@ struct game_assets {
   struct memory_arena arena;
   pfnPlatformReadEntireFile PlatformReadEntireFile;
 
-  struct asset_slot *slots;
-
   u32 tagCount;
   struct hha_tag *tags;
   f32 tagRanges[ASSET_TYPE_COUNT];
 
   u32 assetCount;
   struct hha_asset *assets;
+  struct asset_slot *slots;
 
   struct asset_type assetTypes[ASSET_TYPE_COUNT];
 
