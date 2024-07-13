@@ -1,3 +1,4 @@
+#define _LARGEFILE64_SOURCE
 #define _GNU_SOURCE
 #define _XOPEN_SOURCE 700
 
@@ -1040,7 +1041,7 @@ main(int argc, char *argv[])
 
   // 3 - assets
   u64 assetArraySize = sizeof(struct hha_asset) * header.assetCount;
-  s64 seekResult = lseek(outFd, (s64)assetArraySize, SEEK_CUR);
+  s64 seekResult = lseek64(outFd, (s64)assetArraySize, SEEK_CUR);
   assert(seekResult != -1 && "file seek failed");
   for (u32 assetIndex = 1; assetIndex < header.assetCount; assetIndex++) {
     struct asset_metadata *src = context->assetMetadatas + assetIndex;
@@ -1049,7 +1050,7 @@ main(int argc, char *argv[])
     dest->tagIndexFirst = src->tagIndexFirst;
     dest->tagIndexOnePastLast = src->tagIndexOnePastLast;
 
-    s64 lseekResult = lseek(outFd, 0, SEEK_CUR);
+    s64 lseekResult = lseek64(outFd, 0, SEEK_CUR);
     assert(lseekResult != -1);
     dest->dataOffset = (u64)lseekResult;
 
@@ -1192,7 +1193,7 @@ main(int argc, char *argv[])
     }
   }
 
-  seekResult = lseek(outFd, (s64)header.assetsOffset, SEEK_SET);
+  seekResult = lseek64(outFd, (s64)header.assetsOffset, SEEK_SET);
   if (seekResult == -1) {
     logLength = snprintf(logBuffer, sizeof(logBuffer), "file seek failed\n  filename: '%s'\n", outFilename);
     assert(logLength > 0);
