@@ -50,16 +50,7 @@ if is_build_debug
   )
 endif
 
-wayland_client = dependency('wayland-client')
-wayland_protocols = dependency('wayland-protocols', native: true)
-xkbcommon = dependency('xkbcommon')
-libevdev = dependency('libevdev')
-liburing = dependency('liburing')
 libm = cc.find_library('m')
-libpthread = cc.find_library('pthread')
-libpipewire = dependency('libpipewire-0.3')
-
-subdir('protocol')
 
 # used in both library and platform code
 common_src = [
@@ -71,10 +62,6 @@ if is_build_debug
     'src/rdtsc.asm',
   ]
 endif
-
-platform_src = [
-  'src/handmadehero_linux.c',
-]
 
 # debug builds have handmadehero as dynamic library
 # and does not need to link with because of hot reload logic
@@ -99,19 +86,39 @@ if is_build_debug
     ]
   )
 else
-  platform_src += handmadehero_sources
+  common_src += handmadehero_sources
 endif
 
-subdir('tool')
+platform_src = []
+platform_inc_dirs = []
+platform_libs = []
+if host_machine.system() == 'windows'
+  #################################################################
+  # TODO: publish on windows platform
+  # WINDOWS BUILD
+  #################################################################
 
-executable(
-  'handmadehero',
-  sources: common_src + platform_src + wl_protocols_src,
-  include_directories: [
-    'include',
+elif host_machine.system() == 'linux'
+  #################################################################
+  # LINUX BUILD
+  #################################################################
+  wayland_client = dependency('wayland-client')
+  wayland_protocols = dependency('wayland-protocols', native: true)
+  xkbcommon = dependency('xkbcommon')
+  libevdev = dependency('libevdev')
+  liburing = dependency('liburing')
+  libpthread = cc.find_library('pthread')
+  libpipewire = dependency('libpipewire-0.3')
+  subdir('protocol')
+
+  platform_src += [
+    'src/handmadehero_linux.c',
+  ]
+  platform_src += wl_protocols_src
+  platform_inc_dirs += [
     'protocol',
-  ],
-  dependencies: [
+  ]
+  platform_libs += [
     wayland_client,
     xkbcommon,
     libevdev,
@@ -120,4 +127,16 @@ executable(
     libpthread,
     libpipewire,
   ]
+endif
+
+subdir('tool')
+
+executable(
+  'handmadehero',
+  sources: common_src + platform_src,
+  include_directories: [
+    'include',
+    platform_inc_dirs,
+  ],
+  dependencies: platform_libs,
 )
