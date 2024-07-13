@@ -1,3 +1,4 @@
+#define _LARGEFILE64_SOURCE
 #define _GNU_SOURCE
 #define _XOPEN_SOURCE 700
 
@@ -58,26 +59,108 @@
  * platform layer implementation
  *****************************************************************/
 
-struct platform_file_handle *
+struct linux_file_handle {
+  // platform required
+  struct platform_file_handle h;
+
+  // linux specific
+
+  s64 lastError;
+  s32 fd;
+};
+
+struct linux_file_handle *
 LinuxOpenFile(struct platform_file_group fileGroup, u32 fileIndex)
 {
-  assert(0 && "not implemented");
+  struct linux_file_handle *result =
+      mmap(0, sizeof(*result), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (!result) {
+    return 0;
+  }
 
-  return 0;
+  char *path = "test.hha";
+  s32 fd = open(path, O_RDONLY);
+  if (fd < 0) {
+    result->h.error = HANDMADEHERO_ERROR_OPEN_FILE;
+    result->lastError = errno;
+    goto onError;
+  }
+
+  struct stat stat;
+  s32 fstatResult = fstat(fd, &stat);
+  if (fstatResult != 0) {
+    result->h.error = HANDMADEHERO_ERROR_FILE_STAT;
+    result->lastError = errno;
+    goto onError;
+  }
+
+  if (!S_ISREG(stat.st_mode)) {
+    result->h.error = HANDMADEHERO_ERROR_PATH_IS_NOT_FILE;
+    goto onError;
+  }
+
+  result->fd = fd;
+  result->h.error = HANDMADEHERO_ERROR_NONE;
+
+  return result;
+
+onError:
+  // TODO: unmap failed?
+  munmap(result, sizeof(*result));
+
+  if (fd >= 0) {
+    // TODO: is file closed?
+    close(fd);
+  }
+  return result;
 }
 
 void
-LinuxReadFromFile(void *dest, struct platform_file_handle *src, u64 offset, u64 size)
+LinuxReadFromFile(void *dest, struct linux_file_handle *handle, u64 offset, u64 size)
 {
-  assert(0 && "not implemented");
+  // TODO: use io_uring instead of locking
+  global_variable pthread_mutex_t fileReadLock;
+  pthread_mutex_lock(&fileReadLock);
+
+  u64 seekTry = 100;
+  while (seekTry) {
+    off64_t lseekResult = lseek64(handle->fd, (off64_t)offset, SEEK_SET);
+    if (lseekResult == -1 && errno != EAGAIN) {
+      handle->h.error = HANDMADEHERO_ERROR_FILE_SEEK;
+      handle->lastError = errno;
+      goto end;
+    } else if (lseekResult == (off_t)offset) {
+      break;
+    }
+
+    seekTry--;
+  }
+
+  if (seekTry == 0) {
+    // tried so hard, got so far
+    handle->h.error = HANDMADEHERO_ERROR_FILE_SEEK;
+    handle->lastError = EAGAIN;
+    goto end;
+  }
+
+  ssize_t bytesRead = read(handle->fd, dest, size);
+  if (bytesRead < 0) {
+    handle->h.error = HANDMADEHERO_ERROR_PATH_IS_NOT_FILE;
+    handle->lastError = errno;
+    goto end;
+  }
+
+end:
+  pthread_mutex_unlock(&fileReadLock);
 }
 
 struct platform_file_group
 LinuxGetAllFilesOfTypeBegin(char *type)
 {
-  assert(0 && "not implemented");
-
   struct platform_file_group result = {};
+
+  // TODO: implement this!
+  result.fileCount = 1;
 
   return result;
 }
@@ -85,20 +168,35 @@ LinuxGetAllFilesOfTypeBegin(char *type)
 void
 LinuxGetAllFilesOfTypeEnd(struct platform_file_group *fileGroup)
 {
-  assert(0 && "not implemented");
+  // TODO: implement this!
 }
 
 void
-LinuxFileError(struct platform_file_handle *handle, char *errmsg)
+LinuxFileError(struct linux_file_handle *handle, enum handmadehero_error error)
 {
-  assert(0 && "not implemented");
+  assert(error != HANDMADEHERO_ERROR_NONE);
+  handle->h.error = error;
+
+  char *errorMessages[] = {
+      "none",
+      "open file failed",
+      "path is not file",
+      "read failed",
+      "cannot get file information. stat",
+      "cannot seek on file",
+
+      "file is not hha",
+      "hha version is not supported",
+  };
+  char *errorMessage = errorMessages[error];
+
+  debugf("[LinuxFileError]: %s\n  fd: %d\n", errorMessage, handle->fd);
 }
 
 b32
-LinuxHasFileError(struct platform_file_handle *handle)
+LinuxHasFileError(struct linux_file_handle *handle)
 {
-  assert(0 && "not implemented");
-  return 1;
+  return handle->h.error != HANDMADEHERO_ERROR_NONE;
 }
 
 #if HANDMADEHERO_INTERNAL
@@ -1458,12 +1556,12 @@ main(int argc, char *argv[])
   game_memory->platform.WorkQueueAddEntry = (pfnPlatformWorkQueueAddEntry)LinuxWorkQueueAddEntry;
   game_memory->platform.WorkQueueCompleteAllWork = (pfnPlatformWorkQueueCompleteAllWork)LinuxWorkQueueCompleteAllWork;
 
-  game_memory->platform.OpenFile = LinuxOpenFile;
-  game_memory->platform.ReadFromFile = LinuxReadFromFile;
-  game_memory->platform.HasFileError = LinuxHasFileError;
-  game_memory->platform.FileError = LinuxFileError;
-  game_memory->platform.GetAllFilesOfTypeBegin = LinuxGetAllFilesOfTypeBegin;
-  game_memory->platform.GetAllFilesOfTypeEnd = LinuxGetAllFilesOfTypeEnd;
+  game_memory->platform.OpenFile = (pfnPlatformOpenFile)LinuxOpenFile;
+  game_memory->platform.ReadFromFile = (pfnPlatformReadFromFile)LinuxReadFromFile;
+  game_memory->platform.HasFileError = (pfnPlatformHasFileError)LinuxHasFileError;
+  game_memory->platform.FileError = (pfnPlatformFileError)LinuxFileError;
+  game_memory->platform.GetAllFilesOfTypeBegin = (pfnPlatformGetAllFilesOfTypeBegin)LinuxGetAllFilesOfTypeBegin;
+  game_memory->platform.GetAllFilesOfTypeEnd = (pfnPlatformGetAllFilesOfTypeEnd)LinuxGetAllFilesOfTypeEnd;
 
   /* setup arenas */
   struct memory_arena event_arena;

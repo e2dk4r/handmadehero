@@ -2,9 +2,13 @@
 #define HANDMADEHERO_PLATFORM_H
 
 #include "assert.h"
+#include "errors.h"
 #include "types.h"
 
-struct platform_file_handle;
+struct platform_file_handle {
+  enum handmadehero_error error;
+};
+
 struct platform_file_group {
   u32 fileCount;
   void *data;
@@ -14,7 +18,7 @@ typedef struct platform_file_handle *(*pfnPlatformOpenFile)(struct platform_file
 typedef void (*pfnPlatformReadFromFile)(void *dest, struct platform_file_handle *handle, u64 offset, u64 size);
 typedef struct platform_file_group (*pfnPlatformGetAllFilesOfTypeBegin)(char *type);
 typedef void (*pfnPlatformGetAllFilesOfTypeEnd)(struct platform_file_group *fileGroup);
-typedef void (*pfnPlatformFileError)(struct platform_file_handle *handle, char *errmsg);
+typedef void (*pfnPlatformFileError)(struct platform_file_handle *handle, enum handmadehero_error error);
 typedef b32 (*pfnPlatformHasFileError)(struct platform_file_handle *handle);
 
 #if HANDMADEHERO_INTERNAL
@@ -146,8 +150,6 @@ typedef void (*pfnPlatformWorkQueueCallback)(struct platform_work_queue *queue, 
 typedef void (*pfnPlatformWorkQueueAddEntry)(struct platform_work_queue *queue, pfnPlatformWorkQueueCallback callback,
                                              void *data);
 typedef void (*pfnPlatformWorkQueueCompleteAllWork)(struct platform_work_queue *queue);
-extern pfnPlatformWorkQueueAddEntry PlatformWorkQueueAddEntry;
-extern pfnPlatformWorkQueueCompleteAllWork PlatformWorkQueueCompleteAllWork;
 
 struct platform_work_queue_entry {
   void *data;

@@ -31,6 +31,11 @@ struct asset_slot {
   };
 };
 
+struct asset {
+  u32 fileIndex;
+  struct hha_asset hhaAsset;
+};
+
 struct bitmap_info {
   char *filename;
   struct v2 alignPercentage;
@@ -89,7 +94,7 @@ struct game_assets {
   f32 tagRanges[ASSET_TYPE_COUNT];
 
   u32 assetCount;
-  struct hha_asset *assets;
+  struct asset *assets;
   struct asset_slot *slots;
 
   struct asset_type assetTypes[ASSET_TYPE_COUNT];

@@ -37,10 +37,10 @@ BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct ass
   f32 bestDiff = F32_MAX;
   struct asset_type *type = assets->assetTypes + typeId;
   for (u32 assetIndex = type->assetIndexFirst; assetIndex < type->assetIndexOnePastLast; assetIndex++) {
-    struct hha_asset *asset = assets->assets + assetIndex;
+    struct asset *asset = assets->assets + assetIndex;
 
     f32 totalWeightedDiff = 0.0f;
-    for (u32 tagIndex = asset->tagIndexFirst; tagIndex < asset->tagIndexOnePastLast; tagIndex++) {
+    for (u32 tagIndex = asset->hhaAsset.tagIndexFirst; tagIndex < asset->hhaAsset.tagIndexOnePastLast; tagIndex++) {
       struct hha_tag *tag = assets->tags + tagIndex;
 
       f32 a = matchVector->e[tag->id];
@@ -81,6 +81,15 @@ BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct ass
   return result;
 }
 
+internal struct platform_file_handle *
+AssetFileHandleGet(struct game_assets *assets, u32 fileIndex)
+{
+  assert(fileIndex < assets->fileCount);
+  struct asset_file *file = (assets->files + fileIndex);
+  struct platform_file_handle *handle = file->handle;
+  return handle;
+}
+
 inline struct game_assets *
 GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState)
 {
@@ -94,7 +103,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   }
   assets->tagRanges[ASSET_TAG_FACING_DIRECTION] = TAU32;
 
-#if 0
+#if 1
   assets->tagCount = 0;
   assets->assetCount = 0;
 
@@ -104,16 +113,12 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
     assets->files = MemoryArenaPush(arena, sizeof(*assets->files) * assets->fileCount);
     for (u32 fileIndex = 0; fileIndex < assets->fileCount; fileIndex++) {
       struct asset_file *file = assets->files + fileIndex;
+
       file->handle = Platform->OpenFile(fileGroup, fileIndex);
       Platform->ReadFromFile(&file->header, file->handle, 0, sizeof(file->header));
-
-      u64 assetTypeArraySize = sizeof(*file->assetTypes) * file->header.assetTypeCount;
-      file->assetTypes = MemoryArenaPush(arena, assetTypeArraySize);
-      Platform->ReadFromFile(file->assetTypes, file->handle, file->header.assetTypesOffset, assetTypeArraySize);
-
       if (Platform->HasFileError(file->handle)) {
         // TODO: notify user
-        assert(0 && "file not read");
+        assert(0 && "file not opened or read");
         continue;
       }
 
@@ -121,16 +126,20 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
       if (header->magic != HHA_MAGIC) {
         // TODO: notify user
         assert(0 && "file is not hha");
-        Platform->FileError(file->handle, "File is not hha.");
+        Platform->FileError(file->handle, HANDMADEHERO_ERROR_FILE_IS_NOT_HHA);
         continue;
       }
 
       if (header->version > HHA_VERSION) {
         // TODO: notify user
         assert(0 && "not supported version");
-        Platform->FileError(file->handle, "Unsupported hha file version.");
+        Platform->FileError(file->handle, HANDMADEHERO_ERROR_HHA_VERSION_IS_NOT_SUPPORTED);
         continue;
       }
+
+      u64 assetTypeArraySize = sizeof(*file->assetTypes) * file->header.assetTypeCount;
+      file->assetTypes = MemoryArenaPush(arena, assetTypeArraySize);
+      Platform->ReadFromFile(file->assetTypes, file->handle, file->header.assetTypesOffset, assetTypeArraySize);
 
       file->tagBase = assets->tagCount;
 
@@ -157,7 +166,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
     struct hha_header *header = &file->header;
     struct hha_tag *dest = assets->tags + file->tagBase;
     u64 tagArraySize = header->tagCount * sizeof(*dest);
-    Platform->ReadFromFile(dest, file->handle, 0, tagArraySize);
+    Platform->ReadFromFile(dest, file->handle, header->tagsOffset, tagArraySize);
   }
 
   // TODO: Fast loading 100+ asset pack files
@@ -182,18 +191,28 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
         if (srcType->typeId == destAssetTypeId) {
           u32 assetCountForType = srcType->assetIndexOnePastLast - srcType->assetIndexFirst;
 
-          for (u32 assetIndex = assetCount; assetIndex < assetCount + assetCountForType; assetIndex++) {
-            struct hha_asset *asset = assets->assets + assetIndex;
-            asset->tagIndexFirst += file->tagBase;
-            asset->tagIndexOnePastLast += file->tagBase;
+          // read assets metadata from file into temporary structure
+          struct hha_asset *hhaAssets;
+          u64 firstOffset = header->assetsOffset + (srcType->assetIndexFirst * sizeof(*hhaAssets));
+          u64 assetArraySize = assetCountForType * sizeof(*hhaAssets);
+          struct memory_temp temp = BeginTemporaryMemory(&transientState->transientArena);
+          hhaAssets = MemoryArenaPush(temp.arena, assetArraySize);
+          Platform->ReadFromFile(hhaAssets, file->handle, firstOffset, assetArraySize);
+
+          for (u32 assetIndex = 0; assetIndex < assetCountForType; assetIndex++) {
+            assert(assetCount < assets->assetCount);
+            struct hha_asset *hhaAsset = hhaAssets + assetIndex;
+            struct asset *asset = assets->assets + assetCount;
+
+            asset->fileIndex = fileIndex;
+            asset->hhaAsset = *hhaAsset;
+            asset->hhaAsset.tagIndexFirst += file->tagBase;
+            asset->hhaAsset.tagIndexOnePastLast += file->tagBase;
+
+            assetCount++;
           }
 
-          struct hha_asset *dest = assets->assets + assetCount;
-          u64 firstOffset = he > assetsOffset + (srcType->assetIndexFirst * sizeof(struct hha_asset));
-          u64 assetArraySize = assetCountForType * sizeof(*dest);
-          Platform->ReadFromFile(dest, fil
-                                      assetCount += assetCountForType;
-	  assert(assetCount <= assets->assetCount);
+          EndTemporaryMemory(&temp);
         }
       }
     }
@@ -201,11 +220,11 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
     destType->assetIndexOnePastLast = assetCount;
   }
 
-  assert(tagCount == assets->tagCount && "missing tags");
-  assert(assetCount == assets->assetCount && "missing assets");
-#endif
+  // First asset is always empty
+  assert(assetCount == (assets->assetCount - 1) && "missing assets");
 
-#if 1
+#else
+
   struct read_file_result readResult = Platform->ReadEntireFile("test.hha");
   if (readResult.size == 0) {
     return assets;
@@ -308,50 +327,11 @@ DoLoadAssetWork(struct platform_work_queue *queue, void *data)
   struct load_asset_work *work = data;
   struct asset_slot *slot = work->slot;
 
-#if 0
   Platform->ReadFromFile(work->dest, work->handle, work->offset, work->size);
 
   if (!Platform->HasFileError(work->handle)) {
     AtomicStore(&slot->state, work->finalState);
   }
-#else
-  // temporary bandaid
-  AtomicStore(&slot->state, work->finalState);
-#endif
-
-  EndTaskWithMemory(work->task);
-}
-
-struct load_bitmap_work {
-  struct task_with_memory *task;
-  struct game_assets *assets;
-  struct bitmap *bitmap;
-  struct bitmap_id bitmapId;
-  enum asset_state finalState;
-};
-
-internal void
-DoLoadBitmapWork(struct platform_work_queue *queue, void *data)
-{
-  struct load_bitmap_work *work = data;
-  struct game_assets *assets = work->assets;
-
-  struct hha_asset *info = assets->assets + work->bitmapId.value;
-  struct hha_bitmap *bitmapInfo = &info->bitmap;
-  struct bitmap *bitmap = work->bitmap;
-
-  bitmap->width = bitmapInfo->width;
-  bitmap->height = bitmapInfo->height;
-  bitmap->stride = (s32)(BITMAP_BYTES_PER_PIXEL * bitmap->width);
-  bitmap->memory = assets->hhaData + info->dataOffset;
-
-  bitmap->widthOverHeight = (f32)bitmap->width / (f32)bitmap->height;
-  bitmap->alignPercentage = v2(bitmapInfo->alignPercentage[0], bitmapInfo->alignPercentage[1]);
-
-  // TODO(e2dk4r): fence!
-  struct asset_slot *slot = work->assets->slots + work->bitmapId.value;
-  slot->bitmap = work->bitmap;
-  AtomicStore(&slot->state, work->finalState);
 
   EndTaskWithMemory(work->task);
 }
@@ -363,7 +343,8 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     return;
 
   struct asset_slot *slot = assets->slots + id.value;
-  struct hha_asset *info = assets->assets + id.value;
+  struct asset *asset = assets->assets + id.value;
+  struct hha_asset *info = &asset->hhaAsset;
   assert(info->dataOffset && "asset not setup properly");
 
   enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
@@ -377,19 +358,13 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     }
 
     // setup bitmap
-    struct hha_asset *info = assets->assets + id.value;
     struct hha_bitmap *bitmapInfo = &info->bitmap;
 
     struct bitmap *bitmap = MemoryArenaPush(&assets->arena, sizeof(*bitmap));
     bitmap->width = bitmapInfo->width;
     bitmap->height = bitmapInfo->height;
     bitmap->stride = (s32)(BITMAP_BYTES_PER_PIXEL * bitmap->width);
-#if 1
-    // temporary bandaid
-    bitmap->memory = assets->hhaData + info->dataOffset;
-#else
     bitmap->memory = MemoryArenaPush(&assets->arena, (u32)bitmap->stride * bitmap->height);
-#endif
 
     bitmap->widthOverHeight = (f32)bitmap->width / (f32)bitmap->height;
     bitmap->alignPercentage = v2(bitmapInfo->alignPercentage[0], bitmapInfo->alignPercentage[1]);
@@ -397,7 +372,7 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
-    work->handle = 0;
+    work->handle = AssetFileHandleGet(assets, asset->fileIndex);
     work->dest = bitmap->memory;
     work->offset = info->dataOffset;
     work->size = (u32)bitmap->stride * bitmap->height;
@@ -419,36 +394,6 @@ BitmapPrefetch(struct game_assets *assets, struct bitmap_id id)
   BitmapLoad(assets, id);
 }
 
-struct load_audio_work {
-  struct task_with_memory *task;
-  struct game_assets *assets;
-  struct audio *audio;
-  struct audio_id audioId;
-  enum asset_state finalState;
-};
-
-internal void
-DoLoadAudioWork(struct platform_work_queue *queue, void *data)
-{
-  struct load_audio_work *work = data;
-  struct game_assets *assets = work->assets;
-
-  struct hha_asset *info = assets->assets + work->audioId.value;
-  struct hha_audio *audioInfo = &info->audio;
-  struct audio *audio = work->audio;
-  audio->channelCount = audioInfo->channelCount;
-  audio->sampleCount = audioInfo->sampleCount;
-  audio->samples[0] = (s16 *)(assets->hhaData + info->dataOffset);
-  audio->samples[1] = audio->samples[0] + audio->sampleCount;
-
-  // TODO(e2dk4r): fence!
-  struct asset_slot *slot = work->assets->slots + work->audioId.value;
-  slot->audio = work->audio;
-  AtomicStore(&slot->state, work->finalState);
-
-  EndTaskWithMemory(work->task);
-}
-
 inline void
 AudioLoad(struct game_assets *assets, struct audio_id id)
 {
@@ -456,7 +401,8 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
     return;
 
   struct asset_slot *slot = assets->slots + id.value;
-  struct hha_asset *info = assets->assets + id.value;
+  struct asset *asset = assets->assets + id.value;
+  struct hha_asset *info = &asset->hhaAsset;
   assert(info->dataOffset && "asset not setup properly");
 
   enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
@@ -470,27 +416,19 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
     }
 
     // setup audio
-    struct hha_asset *info = assets->assets + id.value;
     struct hha_audio *audioInfo = &info->audio;
     struct audio *audio = MemoryArenaPush(&assets->arena, sizeof(*audio));
     audio->channelCount = audioInfo->channelCount;
     audio->sampleCount = audioInfo->sampleCount;
     u64 sampleSize = audio->channelCount * audio->sampleCount * sizeof(*audio->samples[0]);
-#if 1
-    // temporary bandaid
-    audio->samples[0] = (s16 *)(assets->hhaData + info->dataOffset);
-    audio->samples[1] = audio->samples[0] + audio->sampleCount;
-#else
     s16 *samples = MemoryArenaPush(&assets->arena, sampleSize);
     audio->samples[0] = samples;
     audio->samples[1] = audio->samples[0] + audio->sampleCount;
-#endif
     slot->audio = audio;
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
-    // TODO: implement loading from packed asset file
-    work->handle = 0;
+    work->handle = AssetFileHandleGet(assets, asset->fileIndex);
     work->dest = audio->samples[0];
     work->offset = info->dataOffset;
     work->size = sampleSize;
@@ -531,7 +469,7 @@ AudioInfoGet(struct game_assets *assets, struct audio_id id)
     return 0;
 
   assert(id.value <= assets->assetCount);
-  struct hha_asset *info = assets->assets + id.value;
+  struct hha_asset *info = &(assets->assets + id.value)->hhaAsset;
   return &info->audio;
 }
 
