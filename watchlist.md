@@ -496,7 +496,7 @@
 - [x] Handmade Hero Day 151 - New Platform File API
       https://www.youtube.com/watch?v=NFptGMDCO0k
 
-- [ ] Handmade Hero Day 152 - New Win32 File API Implementation
+- [x] Handmade Hero Day 152 - New Win32 File API Implementation
       https://www.youtube.com/watch?v=hRYrqGBmfOA
 
 - [ ] Handmade Hero Day 153 - Merging Multiple Asset Files
