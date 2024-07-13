@@ -455,8 +455,6 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
   if (id.value == 0)
     return;
 
-  // TODO: implement loading from packed asset file
-
   struct asset_slot *slot = assets->slots + id.value;
   struct hha_asset *info = assets->assets + id.value;
   assert(info->dataOffset && "asset not setup properly");
@@ -471,15 +469,39 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
       return;
     }
 
-    struct load_audio_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
+    // setup audio
+    struct hha_asset *info = assets->assets + id.value;
+    struct hha_audio *audioInfo = &info->audio;
+    struct audio *audio = MemoryArenaPush(&assets->arena, sizeof(*audio));
+    audio->channelCount = audioInfo->channelCount;
+    audio->sampleCount = audioInfo->sampleCount;
+    u64 sampleSize = audio->channelCount * audio->sampleCount * sizeof(*audio->samples[0]);
+#if 1
+    // temporary bandaid
+    audio->samples[0] = (s16 *)(assets->hhaData + info->dataOffset);
+    audio->samples[1] = audio->samples[0] + audio->sampleCount;
+#else
+    s16 *samples = MemoryArenaPush(&assets->arena, sampleSize);
+    audio->samples[0] = samples;
+    audio->samples[1] = audio->samples[0] + audio->sampleCount;
+#endif
+    slot->audio = audio;
+
+    // setup work
+    struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
+    // TODO: implement loading from packed asset file
+    work->handle = 0;
+    work->dest = audio->samples[0];
+    work->offset = info->dataOffset;
+    work->size = sampleSize;
+
     work->task = task;
-    work->assets = assets;
-    work->audioId = id;
-    work->audio = MemoryArenaPush(&assets->arena, sizeof(*work->audio));
+    work->slot = slot;
     work->finalState = ASSET_STATE_LOADED;
 
+    // queue the work
     struct platform_work_queue *queue = assets->transientState->lowPriorityQueue;
-    Platform->WorkQueueAddEntry(queue, DoLoadAudioWork, work);
+    Platform->WorkQueueAddEntry(queue, DoLoadAssetWork, work);
   }
   // else some other thread beat us to it
 }
@@ -493,11 +515,12 @@ AudioPrefetch(struct game_assets *assets, struct audio_id id)
 inline struct audio *
 AudioGet(struct game_assets *assets, struct audio_id id)
 {
-  if (id.value == 0)
-    return 0;
-
   assert(id.value <= assets->assetCount);
   struct asset_slot *slot = assets->slots + id.value;
+
+  if (slot->state != ASSET_STATE_LOADED)
+    return 0;
+
   return slot->audio;
 }
 
