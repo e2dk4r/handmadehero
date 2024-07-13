@@ -493,7 +493,7 @@
 - [x] Handmade Hero Day 150 - Loading Assets from the Asset File
       https://www.youtube.com/watch?v=h2GoVMArDro
 
-- [ ] Handmade Hero Day 151 - New Platform File API
+- [x] Handmade Hero Day 151 - New Platform File API
       https://www.youtube.com/watch?v=NFptGMDCO0k
 
 - [ ] Handmade Hero Day 152 - New Win32 File API Implementation
