@@ -1085,7 +1085,7 @@ TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_grou
 
 #if 1
       /* rendering multi-threaded */
-      PlatformWorkQueueAddEntry(renderQueue, DoTiledRenderWork, work);
+      Platform->WorkQueueAddEntry(renderQueue, DoTiledRenderWork, work);
 #else
       /* rendering single-threaded */
       DoTiledRenderWork(renderQueue, work);
@@ -1093,7 +1093,7 @@ TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_grou
     }
   }
 
-  PlatformWorkQueueCompleteAllWork(renderQueue);
+  Platform->WorkQueueCompleteAllWork(renderQueue);
 }
 
 void

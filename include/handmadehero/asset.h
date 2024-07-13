@@ -98,8 +98,7 @@ struct game_assets {
 };
 
 struct game_assets *
-GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState,
-                   pfnPlatformReadEntireFile PlatformReadEntireFile);
+GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState);
 
 void
 BitmapLoad(struct game_assets *assets, struct bitmap_id id);

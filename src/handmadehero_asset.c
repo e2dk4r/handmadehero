@@ -2,6 +2,7 @@
 #include <handmadehero/asset.h>
 #include <handmadehero/atomic.h>
 #include <handmadehero/handmadehero.h> // BeginTaskWithMemory, EndTaskWithMemory
+#include <handmadehero/platform.h>
 
 internal b32
 IsAssetTypeIdBitmap(enum asset_type_id typeId)
@@ -80,13 +81,11 @@ BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct ass
 }
 
 inline struct game_assets *
-GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState,
-                   pfnPlatformReadEntireFile PlatformReadEntireFile)
+GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState)
 {
   struct game_assets *assets = MemoryArenaPush(arena, sizeof(*assets));
 
   MemorySubArenaInit(&assets->arena, arena, size);
-  assets->PlatformReadEntireFile = PlatformReadEntireFile;
   assets->transientState = transientState;
 
   for (u32 tagType = 0; tagType < ASSET_TAG_COUNT; tagType++) {
@@ -174,7 +173,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assert(assetCount == assets->assetCount && "missing assets");
 #endif
 
-  struct read_file_result readResult = PlatformReadEntireFile("test.hha");
+  struct read_file_result readResult = Platform->ReadEntireFile("test.hha");
   if (readResult.size == 0) {
     return assets;
   }
@@ -320,7 +319,7 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     work->finalState = ASSET_STATE_LOADED;
 
     struct platform_work_queue *queue = assets->transientState->lowPriorityQueue;
-    PlatformWorkQueueAddEntry(queue, DoLoadBitmapWork, work);
+    Platform->WorkQueueAddEntry(queue, DoLoadBitmapWork, work);
   }
   // else some other thread beat us to it
 }
@@ -391,7 +390,7 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
     work->finalState = ASSET_STATE_LOADED;
 
     struct platform_work_queue *queue = assets->transientState->lowPriorityQueue;
-    PlatformWorkQueueAddEntry(queue, DoLoadAudioWork, work);
+    Platform->WorkQueueAddEntry(queue, DoLoadAudioWork, work);
   }
   // else some other thread beat us to it
 }

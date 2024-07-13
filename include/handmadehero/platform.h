@@ -4,6 +4,19 @@
 #include "assert.h"
 #include "types.h"
 
+struct platform_file_handle;
+struct platform_file_group {
+  u32 fileCount;
+  void *data;
+};
+
+typedef struct platform_file_handle *(*pfnPlatformOpenFile)(struct platform_file_group fileGroup, u32 fileIndex);
+typedef void (*pfnPlatformReadFromFile)(void *dest, struct platform_file_handle *handle, u64 offset, u64 size);
+typedef struct platform_file_group (*pfnPlatformGetAllFilesOfTypeBegin)(char *type);
+typedef void (*pfnPlatformGetAllFilesOfTypeEnd)(struct platform_file_group *fileGroup);
+typedef void (*pfnPlatformFileError)(struct platform_file_handle *handle, char *errmsg);
+typedef b32 (*pfnPlatformHasFileError)(struct platform_file_handle *handle);
+
 #if HANDMADEHERO_INTERNAL
 
 struct read_file_result {
@@ -141,6 +154,24 @@ struct platform_work_queue_entry {
   pfnPlatformWorkQueueCallback callback;
 };
 
+struct platform_api {
+  pfnPlatformWorkQueueAddEntry WorkQueueAddEntry;
+  pfnPlatformWorkQueueCompleteAllWork WorkQueueCompleteAllWork;
+
+  pfnPlatformOpenFile OpenFile;
+  pfnPlatformReadFromFile ReadFromFile;
+  pfnPlatformHasFileError HasFileError;
+  pfnPlatformFileError FileError;
+  pfnPlatformGetAllFilesOfTypeBegin GetAllFilesOfTypeBegin;
+  pfnPlatformGetAllFilesOfTypeEnd GetAllFilesOfTypeEnd;
+
+#if HANDMADEHERO_DEBUG
+  pfnPlatformReadEntireFile ReadEntireFile;
+  pfnPlatformWriteEntireFile WriteEntireFile;
+  pfnPlatformFreeMemory FreeMemory;
+#endif
+};
+
 struct game_memory {
   u64 permanentStorageSize;
   void *permanentStorage;
@@ -151,17 +182,14 @@ struct game_memory {
   struct platform_work_queue *highPriorityQueue;
   struct platform_work_queue *lowPriorityQueue;
 
-  pfnPlatformWorkQueueAddEntry PlatformWorkQueueAddEntry;
-  pfnPlatformWorkQueueCompleteAllWork PlatformWorkQueueCompleteAllWork;
+  struct platform_api platform;
 
 #if HANDMADEHERO_INTERNAL
-  pfnPlatformReadEntireFile PlatformReadEntireFile;
-  pfnPlatformWriteEntireFile PlatformWriteEntireFile;
-  pfnPlatformFreeMemory PlatformFreeMemory;
-
   struct cycle_counter counters[CYCLE_COUNTER_COUNT];
 #endif
 };
+
+extern struct platform_api *Platform;
 
 void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer);

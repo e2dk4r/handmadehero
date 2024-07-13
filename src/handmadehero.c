@@ -629,14 +629,12 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
   work->task = task;
   work->renderGroup = renderGroup;
   work->buffer = &groundBuffer->bitmap;
-  PlatformWorkQueueAddEntry(transientState->lowPriorityQueue, DoFillGroundChunkWork, work);
+  Platform->WorkQueueAddEntry(transientState->lowPriorityQueue, DoFillGroundChunkWork, work);
 }
 
 #if HANDMADEHERO_INTERNAL
 struct game_memory *DEBUG_GLOBAL_MEMORY;
 #endif
-pfnPlatformWorkQueueAddEntry PlatformWorkQueueAddEntry;
-pfnPlatformWorkQueueCompleteAllWork PlatformWorkQueueCompleteAllWork;
 
 b32
 GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffer)
@@ -654,6 +652,7 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
   return isWritten;
 }
 
+struct platform_api *Platform;
 void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer)
 {
@@ -662,10 +661,16 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #endif
   assert(memory->highPriorityQueue && "platform layer NOT provided high priority queue implementation");
   assert(memory->lowPriorityQueue && "platform layer NOT provided low priority queue implementation");
-  assert(memory->PlatformWorkQueueAddEntry && "platform layer NOT implemented PlatformWorkQueueAddEntry");
-  PlatformWorkQueueAddEntry = memory->PlatformWorkQueueAddEntry;
-  assert(memory->PlatformWorkQueueCompleteAllWork && "platform layer NOT implemented PlatformWorkQueueCompleteAllWork");
-  PlatformWorkQueueCompleteAllWork = memory->PlatformWorkQueueCompleteAllWork;
+
+  Platform = &memory->platform;
+  assert(Platform->WorkQueueAddEntry && "platform layer NOT implemented PlatformWorkQueueAddEntry");
+  assert(Platform->WorkQueueCompleteAllWork && "platform layer NOT implemented PlatformWorkQueueCompleteAllWork");
+  assert(Platform->OpenFile && "platform layer NOT implemented PlatformOpenFile");
+  assert(Platform->ReadFromFile && "platform layer NOT implemented PlatformReadFromFile");
+  assert(Platform->GetAllFilesOfTypeBegin && "platform layer NOT implemented PlatformGetAllFilesOfTypeBegin");
+  assert(Platform->HasFileError && "platform layer NOT implemented PlatformHasFileError");
+  assert(Platform->FileError && "platform layer NOT implemented PlatformFileError");
+  assert(Platform->GetAllFilesOfTypeEnd && "platform layer NOT implemented PlatformGetAllFilesOfTypeEnd");
 
   BEGIN_TIMER_BLOCK(GameUpdateAndRender);
 
@@ -909,8 +914,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     transientState->envMaps[ENV_MAP_MIDDLE].z = 0.0f;
     transientState->envMaps[ENV_MAP_TOP].z = 2.0f;
 
-    transientState->assets = GameAssetsAllocate(&transientState->transientArena, 64 * MEGABYTES, transientState,
-                                                memory->PlatformReadEntireFile);
+    transientState->assets = GameAssetsAllocate(&transientState->transientArena, 64 * MEGABYTES, transientState);
 
     state->music = PlayAudio(&state->audioState, AudioGetFirstId(transientState->assets, ASSET_TYPE_MUSIC));
 

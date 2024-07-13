@@ -58,6 +58,49 @@
  * platform layer implementation
  *****************************************************************/
 
+struct platform_file_handle *
+LinuxOpenFile(struct platform_file_group fileGroup, u32 fileIndex)
+{
+  assert(0 && "not implemented");
+
+  return 0;
+}
+
+void
+LinuxReadFromFile(void *dest, struct platform_file_handle *src, u64 offset, u64 size)
+{
+  assert(0 && "not implemented");
+}
+
+struct platform_file_group
+LinuxGetAllFilesOfTypeBegin(char *type)
+{
+  assert(0 && "not implemented");
+
+  struct platform_file_group result = {};
+
+  return result;
+}
+
+void
+LinuxGetAllFilesOfTypeEnd(struct platform_file_group *fileGroup)
+{
+  assert(0 && "not implemented");
+}
+
+void
+LinuxFileError(struct platform_file_handle *handle, char *errmsg)
+{
+  assert(0 && "not implemented");
+}
+
+b32
+LinuxHasFileError(struct platform_file_handle *handle)
+{
+  assert(0 && "not implemented");
+  return 1;
+}
+
 #if HANDMADEHERO_INTERNAL
 
 struct read_file_result
@@ -1406,14 +1449,21 @@ main(int argc, char *argv[])
     goto exit;
   }
 #if HANDMADEHERO_INTERNAL
-  game_memory->PlatformReadEntireFile = PlatformReadEntireFile;
-  game_memory->PlatformWriteEntireFile = PlatformWriteEntireFile;
-  game_memory->PlatformFreeMemory = PlatformFreeMemory;
+  game_memory->platform.ReadEntireFile = PlatformReadEntireFile;
+  game_memory->platform.WriteEntireFile = PlatformWriteEntireFile;
+  game_memory->platform.FreeMemory = PlatformFreeMemory;
 #endif
   game_memory->highPriorityQueue = (struct platform_work_queue *)&highPriorityQueue;
   game_memory->lowPriorityQueue = (struct platform_work_queue *)&lowPriorityQueue;
-  game_memory->PlatformWorkQueueAddEntry = (pfnPlatformWorkQueueAddEntry)LinuxWorkQueueAddEntry;
-  game_memory->PlatformWorkQueueCompleteAllWork = (pfnPlatformWorkQueueCompleteAllWork)LinuxWorkQueueCompleteAllWork;
+  game_memory->platform.WorkQueueAddEntry = (pfnPlatformWorkQueueAddEntry)LinuxWorkQueueAddEntry;
+  game_memory->platform.WorkQueueCompleteAllWork = (pfnPlatformWorkQueueCompleteAllWork)LinuxWorkQueueCompleteAllWork;
+
+  game_memory->platform.OpenFile = LinuxOpenFile;
+  game_memory->platform.ReadFromFile = LinuxReadFromFile;
+  game_memory->platform.HasFileError = LinuxHasFileError;
+  game_memory->platform.FileError = LinuxFileError;
+  game_memory->platform.GetAllFilesOfTypeBegin = LinuxGetAllFilesOfTypeBegin;
+  game_memory->platform.GetAllFilesOfTypeEnd = LinuxGetAllFilesOfTypeEnd;
 
   /* setup arenas */
   struct memory_arena event_arena;
