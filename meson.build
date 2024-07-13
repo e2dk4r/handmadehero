@@ -96,11 +96,23 @@ if host_machine.system() == 'windows'
   #################################################################
   # TODO: publish on windows platform
   # WINDOWS BUILD
+  #        _.-;;-._
+  # '-..-'|   ||   |
+  # '-..-'|_.-;;-._|
+  # '-..-'|   ||   |
+  # '-..-'|_.-''-._|
   #################################################################
 
 elif host_machine.system() == 'linux'
   #################################################################
   # LINUX BUILD
+  #      .--.
+  #     |o_o |
+  #     |:_/ |
+  #    //   \ \
+  #   (|     | )
+  #  /'\_   _/`\
+  #  \___)=(___/
   #################################################################
   wayland_client = dependency('wayland-client')
   wayland_protocols = dependency('wayland-protocols', native: true)
