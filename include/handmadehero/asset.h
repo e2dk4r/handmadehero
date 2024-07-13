@@ -66,16 +66,16 @@ struct asset_group {
   u32 tagLastIndex;
 };
 
-#if 0
 struct asset_file {
-  struct platform_file_handle handle;
+  struct platform_file_handle *handle;
   struct hha_header header;
 
   // TODO: if we ever do thread stacks, assetTypes does not
   // need to be kept here probably.
   struct hha_asset_type *assetTypes;
+
+  u32 tagBase;
 };
-#endif
 
 struct game_assets {
   // TODO(e2dk4r): copy of known, not ideal because
@@ -95,6 +95,9 @@ struct game_assets {
   struct asset_type assetTypes[ASSET_TYPE_COUNT];
 
   u8 *hhaData;
+
+  u32 fileCount;
+  struct asset_file *files;
 };
 
 struct game_assets *
