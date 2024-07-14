@@ -105,7 +105,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
 
 #if 1
   assets->tagCount = 0;
-  assets->assetCount = 0;
+  assets->assetCount = 1;
 
   {
     struct platform_file_group fileGroup = Platform->GetAllFilesOfTypeBegin("hha");
@@ -144,7 +144,8 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
       file->tagBase = assets->tagCount;
 
       assets->tagCount += header->tagCount;
-      assets->assetCount += header->assetCount;
+      // NOTE: First asset is always null (reserved) asset.
+      assets->assetCount += header->assetCount - 1;
     }
 
     Platform->GetAllFilesOfTypeEnd(&fileGroup);
@@ -173,6 +174,12 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
 
   // NOTE: merge asset pack files
   u32 assetCount = 0;
+
+  // first asset is always null
+  struct asset *firstAsset = assets->assets + 0;
+  ZeroMemory(firstAsset, sizeof(*firstAsset));
+  assetCount++;
+
   for (u32 destAssetTypeId = 0; destAssetTypeId < ASSET_TYPE_COUNT; destAssetTypeId++) {
     struct asset_type *destType = assets->assetTypes + destAssetTypeId;
     destType->assetIndexFirst = assetCount;
@@ -220,8 +227,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
     destType->assetIndexOnePastLast = assetCount;
   }
 
-  // First asset is always empty
-  assert(assetCount == (assets->assetCount - 1) && "missing assets");
+  assert(assetCount == assets->assetCount && "missing assets");
 
 #else
 
