@@ -8,13 +8,11 @@ on:
 
 env:
   NINJA_VERSION: '1.12.1'
-  MUON_VERSION: '0.2.0'
+  MESON_VERSION: '1.5.0'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      PKG_CONFIG_PATH: '/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig'
     steps:
     - uses: actions/checkout@v3
 
@@ -33,12 +31,13 @@ jobs:
            unzip ninja-linux.zip; rm ninja-linux.zip;
            sudo mv ninja /usr/bin/;
 
-           wget https://muon.build/releases/v$MUON_VERSION/muon-$MUON_VERSION-amd64-linux-static;
-           chmod 755 muon-$MUON_VERSION-amd64-linux-static;
-           sudo mv muon-$MUON_VERSION-amd64-linux-static /usr/bin/meson;
+           wget https://github.com/mesonbuild/meson/releases/download/$MESON_VERSION/meson-$MESON_VERSION.tar.gz;
+           tar xf meson-$MESON_VERSION.tar.gz; rm meson-$MESON_VERSION.tar.gz;
+           sudo mv meson-$MESON_VERSION/mesonbuild /usr/lib/python3/dist-packages/; sudo mv meson-$MESON_VERSION/meson.py /usr/bin/meson;
+           rm -rf meson-$MESON_VERSION/;
 
     - name: configure
-      run: meson setup build -Ddefault_library=shared
+      run: meson setup build
 
     - name: test
       run: meson test -C build
