@@ -1101,6 +1101,8 @@ main(int argc, char *argv[])
         };
         assert(logLength > 0);
         error(logBuffer, (u64)logLength);
+
+        errorCode = (s32)loadWavResult.error;
         continue;
       }
 
@@ -1175,6 +1177,8 @@ main(int argc, char *argv[])
         };
         assert(logLength > 0);
         error(logBuffer, (u64)logLength);
+
+        errorCode = (s32)loadBmpResult.error;
         continue;
       }
 
