@@ -499,7 +499,7 @@
 - [x] Handmade Hero Day 152 - New Win32 File API Implementation
       https://www.youtube.com/watch?v=hRYrqGBmfOA
 
-- [ ] Handmade Hero Day 153 - Merging Multiple Asset Files
+- [x] Handmade Hero Day 153 - Merging Multiple Asset Files
       https://www.youtube.com/watch?v=9sb8mv6q7WE
 
 - [ ] Handmade Hero Day 154 - Finding Asset Files with Win32
