@@ -140,6 +140,9 @@ struct audio_id
 AudioGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
 
 struct audio_id
+AudioGetNextInChain(struct game_assets *assets, struct audio_id id);
+
+struct audio_id
 RandomAudio(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId);
 
 struct audio_id

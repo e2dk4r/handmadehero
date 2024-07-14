@@ -219,7 +219,7 @@ struct audio_info {
   char *filename;
   u32 sampleIndex;
   u32 sampleCount;
-  struct audio_id nextIdToPlay;
+  enum hha_audio_chain chain;
 };
 
 enum asset_tag_id {
@@ -328,7 +328,7 @@ AddAudioAssetTrimmed(struct asset_context *context, char *filename, u32 sampleIn
   asset->type = ASSET_TYPE_AUDIO;
   asset->tagIndexFirst = context->tagCount;
   asset->tagIndexOnePastLast = asset->tagIndexFirst;
-  asset->audioInfo.nextIdToPlay.value = 0;
+  asset->audioInfo.chain = HHA_AUDIO_CHAIN_NONE;
 
   struct audio_id id = {context->assetCount};
   context->assetCount++;
@@ -816,30 +816,281 @@ onError:
 }
 
 /*****************************************************************
- * STARTING POINT
+ * PACKING
  *****************************************************************/
 
-int
-main(int argc, char *argv[])
+internal enum hh_asset_builder_error
+WriteHHAFile(char *filename, struct asset_context *context)
 {
-  s32 errorCode = 0;
+  enum hh_asset_builder_error errorCode = HH_ASSET_BUILDER_ERROR_NONE;
 
-  // argc 0 is program path
-  char *exepath = argv[0];
-  argc--;
-  argv++;
+  char logBuffer[256];
+  s64 logLength;
 
-  // parse arguments
-  if (argc >= 2) {
-    usage();
-    errorCode = HH_ASSET_BUILDER_ERROR_ARGUMENTS;
+  int outFd = -1;
+  outFd = open(filename, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+  if (outFd < 0) {
+    logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot open file\n  filename: %s\n", filename);
+    assert(logLength > 0);
+    fatal(logBuffer, (u64)logLength);
+
+    errorCode = HH_ASSET_BUILDER_ERROR_IO_OPEN;
     goto exitWithErrorCode;
   }
 
-  char *outFilename = "test.hha";
-  if (argc == 1)
-    outFilename = argv[1];
+  struct hha_header header = {
+      .magic = HHA_MAGIC,
+      .version = HHA_VERSION,
+  };
 
+  // TODO: First tag is null always. Should it be written to file? => count -1
+  header.tagCount = context->tagCount;
+  header.assetCount = context->assetCount;
+  // TODO: sparseness?
+  header.assetTypeCount = ASSET_TYPE_COUNT;
+  header.tagsOffset = sizeof(header);
+  header.assetTypesOffset = header.tagsOffset + (header.tagCount * sizeof(*context->tags));
+  header.assetsOffset = header.assetTypesOffset + (header.assetTypeCount * sizeof(*context->assetTypes));
+
+  s64 writtenBytes = write(outFd, &header, sizeof(header));
+  assert(writtenBytes > 0);
+
+  // 1 - tags
+  struct hha_tag *tags = context->tags;
+  if (header.tagCount) {
+    // TODO: Should first tag be null?
+    u64 tagArraySize = sizeof(*tags) * header.tagCount;
+    writtenBytes = write(outFd, tags, tagArraySize);
+    assert(writtenBytes > 0);
+
+    logLength = snprintf(logBuffer, sizeof(logBuffer), "%" PRIu32 " tags written\n", header.tagCount);
+    assert(logLength > 0);
+    info(logBuffer, (u64)logLength);
+  }
+
+  // 2 - assetTypes
+  struct hha_asset_type *assetTypes = context->assetTypes;
+  u64 assetTypeArraySize = sizeof(*assetTypes) * header.assetTypeCount;
+  writtenBytes = write(outFd, assetTypes, assetTypeArraySize);
+  assert(writtenBytes > 0);
+
+  logLength = snprintf(logBuffer, sizeof(logBuffer), "%" PRIu32 " asset types written\n", header.assetTypeCount);
+  assert(logLength > 0);
+  info(logBuffer, (u64)logLength);
+
+  // 3 - assets
+  u64 assetArraySize = sizeof(struct hha_asset) * header.assetCount;
+  s64 seekResult = lseek64(outFd, (s64)assetArraySize, SEEK_CUR);
+  assert(seekResult != -1 && "file seek failed");
+  for (u32 assetIndex = 1; assetIndex < header.assetCount; assetIndex++) {
+    struct asset_metadata *src = context->assetMetadatas + assetIndex;
+    struct hha_asset *dest = context->assets + assetIndex;
+
+    dest->tagIndexFirst = src->tagIndexFirst;
+    dest->tagIndexOnePastLast = src->tagIndexOnePastLast;
+
+    s64 lseekResult = lseek64(outFd, 0, SEEK_CUR);
+    assert(lseekResult != -1);
+    dest->dataOffset = (u64)lseekResult;
+
+    switch (src->type) {
+    case ASSET_TYPE_AUDIO: {
+      struct audio_info *audioInfo = &src->audioInfo;
+      struct load_wav_result loadWavResult =
+          LoadWav(audioInfo->filename, audioInfo->sampleIndex, audioInfo->sampleCount);
+      if (loadWavResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
+        switch (loadWavResult.error) {
+        case HH_ASSET_BUILDER_ERROR_IO_OPEN:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "file cannot be opened\n  filename: %s\n", audioInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_IS_NOT_FILE:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "given path is not file\n  filename: %s\n", audioInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_STAT:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "stat failed\n  filename: %s\n", audioInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_MALLOC:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot allocate memory\n");
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_READ:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "cannot read file.\n  filename: %s\n", audioInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_SEEK:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "cannot seek file.\n  filename: %s\n", audioInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_BMP_INVALID_MAGIC:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "file is not bmp.\n  filename: %s\n", audioInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_BMP_MALFORMED:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "bmp is malformed.\n  filename: %s\n", audioInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_BMP_IS_NOT_ENCODED_PROPERLY:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "bmp could not encoded properly.\n  filename: %s\n",
+                               audioInfo->filename);
+          break;
+
+        default:
+          assert(0 && "error not presented to user");
+          break;
+        };
+        assert(logLength > 0);
+        error(logBuffer, (u64)logLength);
+
+        errorCode = loadWavResult.error;
+        continue;
+      }
+
+      struct loaded_audio *loadedAudio = &loadWavResult.loadedAudio;
+
+      dest->audio.channelCount = loadedAudio->channelCount;
+      dest->audio.sampleCount = loadedAudio->sampleCount;
+
+      for (u32 channelIndex = 0; channelIndex < loadedAudio->channelCount; channelIndex++) {
+        writtenBytes = write(outFd, loadedAudio->samples[channelIndex], loadedAudio->sampleCount * sizeof(s16));
+        assert(writtenBytes > 0);
+      }
+
+      FreeWav(loadedAudio);
+    } break;
+
+    case ASSET_TYPE_BITMAP: {
+      struct bitmap_info *bitmapInfo = &src->bitmapInfo;
+      struct load_bmp_result loadBmpResult = LoadBmp(bitmapInfo->filename);
+      if (loadBmpResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
+        switch (loadBmpResult.error) {
+        case HH_ASSET_BUILDER_ERROR_IO_OPEN:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "file cannot be opened\n  filename: %s\n", bitmapInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_IS_NOT_FILE:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "given path is not file\n  filename: %s\n", bitmapInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_STAT:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "stat failed\n  filename: %s\n", bitmapInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_MALLOC:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot allocate memory\n");
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_READ:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "cannot read file.\n  filename: %s\n", bitmapInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_SEEK:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "cannot seek file.\n  filename: %s\n", bitmapInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_WAV_INVALID_MAGIC:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "file is not wav.\n  filename: %s\n", bitmapInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_WAV_MALFORMED:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "wav is malformed.\n  filename: %s\n", bitmapInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_WAV_FORMAT_IS_NOT_PCM:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "wav format is not PCM.\n  filename: %s\n", bitmapInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_WAV_SAMPLE_RATE_IS_NOT_48000:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "wav sample rate is not 48000.\n  filename: %s\n",
+                               bitmapInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_WAV_FORMAT_IS_NOT_S16LE:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "wav format is not S16LE.\n  filename: %s\n",
+                               bitmapInfo->filename);
+          break;
+        case HH_ASSET_BUILDER_ERROR_WAV_NUM_CHANNELS_IS_BIGGER_THAN_2:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "wav has more channels than 2.\n  filename: %s\n",
+                               bitmapInfo->filename);
+          break;
+
+        default:
+          assert(0 && "error not presented to user");
+          break;
+        };
+        assert(logLength > 0);
+        error(logBuffer, (u64)logLength);
+
+        errorCode = loadBmpResult.error;
+        continue;
+      }
+
+      struct loaded_bitmap *loadedBitmap = &loadBmpResult.loadedBitmap;
+
+      dest->bitmap.width = loadedBitmap->width;
+      dest->bitmap.height = loadedBitmap->height;
+      dest->bitmap.alignPercentage[0] = bitmapInfo->alignPercentageX;
+      dest->bitmap.alignPercentage[1] = bitmapInfo->alignPercentageY;
+
+      writtenBytes = write(outFd, loadedBitmap->memory, loadedBitmap->stride * loadedBitmap->height);
+      assert(writtenBytes > 0);
+
+      FreeBmp(loadedBitmap);
+    } break;
+    }
+  }
+
+  seekResult = lseek64(outFd, (s64)header.assetsOffset, SEEK_SET);
+  if (seekResult == -1) {
+    logLength = snprintf(logBuffer, sizeof(logBuffer), "file seek failed\n  filename: '%s'\n", filename);
+    assert(logLength > 0);
+    fatal(logBuffer, (u64)logLength);
+
+    errorCode = HH_ASSET_BUILDER_ERROR_IO_SEEK;
+    goto fsyncOutFd;
+  }
+
+  struct hha_asset *assets = context->assets;
+  writtenBytes = write(outFd, assets, assetArraySize);
+  assert(writtenBytes > 0);
+  assert(writtenBytes > 0);
+
+  logLength = snprintf(logBuffer, sizeof(logBuffer), "%" PRIu32 " assets written\n", header.assetCount);
+  assert(logLength > 0);
+  info(logBuffer, (u64)logLength);
+
+  // Packing finished
+  s32 fsyncResult;
+fsyncOutFd:
+  fsyncResult = fsync(outFd);
+  if (fsyncResult != 0) {
+    logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot sync data\n");
+    assert(logLength > 0);
+    warn(logBuffer, (u64)logLength);
+  }
+
+  s32 closeResult = close(outFd);
+  if (closeResult != 0) {
+    logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot close the file.\n  filename: '%s'\n", filename);
+    assert(logLength > 0);
+    warn(logBuffer, (u64)logLength);
+  }
+  outFd = -1;
+
+  if (errorCode != HH_ASSET_BUILDER_ERROR_NONE) {
+    logLength = snprintf(logBuffer, sizeof(logBuffer), "Assets could NOT be packed into '%s'!\n", filename);
+    assert(logLength > 0);
+    fatal(logBuffer, (u64)logLength);
+    goto exitWithErrorCode;
+  }
+
+  logLength = snprintf(logBuffer, sizeof(logBuffer), "Assets are packed into '%s' successfully.\n", filename);
+  assert(logLength > 0);
+  info(logBuffer, (u64)logLength);
+
+exitWithErrorCode:
+  return errorCode;
+}
+
+internal enum hh_asset_builder_error
+WriteAll(char *outFilename)
+{
   /*----------------------------------------------------------------
    * INGEST
    *----------------------------------------------------------------*/
@@ -957,18 +1208,17 @@ main(int argc, char *argv[])
   u32 chunkSampleCount = 10 * sampleRate;
   u32 totalSampleCount = 7468095;
 
-  struct audio_id lastMusic = {};
   for (u32 sampleIndex = 0; sampleIndex < totalSampleCount; sampleIndex += chunkSampleCount) {
     u32 sampleCount = totalSampleCount - sampleIndex;
     if (sampleCount > chunkSampleCount) {
       sampleCount = chunkSampleCount;
     }
+
     struct audio_id thisMusic = AddAudioAssetTrimmed(context, "test3/music_test.wav", sampleIndex, sampleCount);
-    if (IsAudioIdValid(lastMusic)) {
-      struct hha_audio *lastAudio = &(context->assets + lastMusic.value)->audio;
-      lastAudio->nextIdToPlay = thisMusic;
+    if ((sampleIndex + chunkSampleCount) < totalSampleCount) {
+      struct hha_audio *thisAudio = &(context->assets + thisMusic.value)->audio;
+      thisAudio->chain = HHA_AUDIO_CHAIN_ADVANCE;
     }
-    lastMusic = thisMusic;
   }
   EndAssetType(context);
 
@@ -980,265 +1230,252 @@ main(int argc, char *argv[])
   /*----------------------------------------------------------------
    * PACKING
    *----------------------------------------------------------------*/
+  enum hh_asset_builder_error errorCode = WriteHHAFile(outFilename, context);
+  return errorCode;
+}
 
-  char logBuffer[256];
-  s64 logLength;
+internal enum hh_asset_builder_error
+WriteOnlyHero1(void)
+{
+  struct asset_context *context = &(struct asset_context){};
 
-  int outFd = -1;
-  outFd = open(outFilename, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-  if (outFd < 0) {
-    logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot open file\n  filename: %s\n", outFilename);
-    assert(logLength > 0);
-    fatal(logBuffer, (u64)logLength);
+  context->tagCount = 0;
+  context->assetCount = 1;
 
-    errorCode = HH_ASSET_BUILDER_ERROR_IO_OPEN;
-    goto exitWithErrorCode;
-  }
+  BeginAssetType(context, ASSET_TYPE_SHADOW);
+  AddBitmapAsset(context, "test/test_hero_shadow.bmp", 0.5f, 0.156682029f);
+  EndAssetType(context);
 
-  struct hha_header header = {
-      .magic = HHA_MAGIC,
-      .version = HHA_VERSION,
-  };
+  f32 angleRight = 0.00f * TAU32;
+  f32 angleBack = 0.25f * TAU32;
+  f32 angleLeft = 0.50f * TAU32;
+  f32 angleFront = 0.75f * TAU32;
 
-  // TODO: First tag is null always. Should it be written to file? => count -1
-  header.tagCount = context->tagCount;
-  header.assetCount = context->assetCount;
-  // TODO: sparseness?
-  header.assetTypeCount = ASSET_TYPE_COUNT;
-  header.tagsOffset = sizeof(header);
-  header.assetTypesOffset = header.tagsOffset + (header.tagCount * sizeof(*context->tags));
-  header.assetsOffset = header.assetTypesOffset + (header.assetTypeCount * sizeof(*context->assetTypes));
+  BeginAssetType(context, ASSET_TYPE_HEAD);
 
-  s64 writtenBytes = write(outFd, &header, sizeof(header));
-  assert(writtenBytes > 0);
+  AddBitmapAsset(context, "test/test_hero_right_head.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleRight);
 
-  // 1 - tags
-  struct hha_tag *tags = context->tags;
-  // TODO: First tag is null always. Should it be written to file? => tags++
-  u64 tagArraySize = sizeof(*tags) * header.tagCount;
-  writtenBytes = write(outFd, tags, tagArraySize);
-  assert(writtenBytes > 0);
+  AddBitmapAsset(context, "test/test_hero_back_head.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleBack);
 
-  logLength = snprintf(logBuffer, sizeof(logBuffer), "%" PRIu32 " tags written\n", header.tagCount);
-  assert(logLength > 0);
-  info(logBuffer, (u64)logLength);
+  AddBitmapAsset(context, "test/test_hero_left_head.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleLeft);
 
-  // 2 - assetTypes
-  struct hha_asset_type *assetTypes = context->assetTypes;
-  u64 assetTypeArraySize = sizeof(*assetTypes) * header.assetTypeCount;
-  writtenBytes = write(outFd, assetTypes, assetTypeArraySize);
-  assert(writtenBytes > 0);
+  AddBitmapAsset(context, "test/test_hero_front_head.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleFront);
 
-  logLength = snprintf(logBuffer, sizeof(logBuffer), "%" PRIu32 " asset types written\n", header.assetTypeCount);
-  assert(logLength > 0);
-  info(logBuffer, (u64)logLength);
+  EndAssetType(context);
 
-  // 3 - assets
-  u64 assetArraySize = sizeof(struct hha_asset) * header.assetCount;
-  s64 seekResult = lseek64(outFd, (s64)assetArraySize, SEEK_CUR);
-  assert(seekResult != -1 && "file seek failed");
-  for (u32 assetIndex = 1; assetIndex < header.assetCount; assetIndex++) {
-    struct asset_metadata *src = context->assetMetadatas + assetIndex;
-    struct hha_asset *dest = context->assets + assetIndex;
+  BeginAssetType(context, ASSET_TYPE_TORSO);
+  AddBitmapAsset(context, "test/test_hero_right_torso.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleRight);
+  AddBitmapAsset(context, "test/test_hero_back_torso.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleBack);
+  AddBitmapAsset(context, "test/test_hero_left_torso.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleLeft);
+  AddBitmapAsset(context, "test/test_hero_front_torso.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleFront);
+  EndAssetType(context);
 
-    dest->tagIndexFirst = src->tagIndexFirst;
-    dest->tagIndexOnePastLast = src->tagIndexOnePastLast;
+  BeginAssetType(context, ASSET_TYPE_CAPE);
+  AddBitmapAsset(context, "test/test_hero_right_cape.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleRight);
+  AddBitmapAsset(context, "test/test_hero_back_cape.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleBack);
+  EndAssetType(context);
 
-    s64 lseekResult = lseek64(outFd, 0, SEEK_CUR);
-    assert(lseekResult != -1);
-    dest->dataOffset = (u64)lseekResult;
+  /*----------------------------------------------------------------
+   * PACKING
+   *----------------------------------------------------------------*/
+  char outFilename[] = "test1.hha";
+  enum hh_asset_builder_error errorCode = WriteHHAFile(outFilename, context);
+  return errorCode;
+}
 
-    switch (src->type) {
-    case ASSET_TYPE_AUDIO: {
-      struct audio_info *audioInfo = &src->audioInfo;
-      struct load_wav_result loadWavResult =
-          LoadWav(audioInfo->filename, audioInfo->sampleIndex, audioInfo->sampleCount);
-      if (loadWavResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
-        switch (loadWavResult.error) {
-        case HH_ASSET_BUILDER_ERROR_IO_OPEN:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "file cannot be opened\n  filename: %s\n", audioInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_IO_IS_NOT_FILE:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "given path is not file\n  filename: %s\n", audioInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_IO_STAT:
-          logLength = snprintf(logBuffer, sizeof(logBuffer), "stat failed\n  filename: %s\n", audioInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_MALLOC:
-          logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot allocate memory\n");
-          break;
-        case HH_ASSET_BUILDER_ERROR_IO_READ:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "cannot read file.\n  filename: %s\n", audioInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_IO_SEEK:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "cannot seek file.\n  filename: %s\n", audioInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_BMP_INVALID_MAGIC:
-          logLength = snprintf(logBuffer, sizeof(logBuffer), "file is not bmp.\n  filename: %s\n", audioInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_BMP_MALFORMED:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "bmp is malformed.\n  filename: %s\n", audioInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_BMP_IS_NOT_ENCODED_PROPERLY:
-          logLength = snprintf(logBuffer, sizeof(logBuffer), "bmp could not encoded properly.\n  filename: %s\n",
-                               audioInfo->filename);
-          break;
+internal enum hh_asset_builder_error
+WriteOnlyHero2(void)
+{
+  struct asset_context *context = &(struct asset_context){};
 
-        default:
-          assert(0 && "error not presented to user");
-          break;
-        };
-        assert(logLength > 0);
-        error(logBuffer, (u64)logLength);
+  context->tagCount = 0;
+  context->assetCount = 1;
 
-        errorCode = (s32)loadWavResult.error;
-        continue;
-      }
+  f32 angleRight = 0.00f * TAU32;
+  f32 angleBack = 0.25f * TAU32;
+  f32 angleLeft = 0.50f * TAU32;
+  f32 angleFront = 0.75f * TAU32;
 
-      struct loaded_audio *loadedAudio = &loadWavResult.loadedAudio;
+  BeginAssetType(context, ASSET_TYPE_CAPE);
 
-      dest->audio.channelCount = loadedAudio->channelCount;
-      dest->audio.sampleCount = loadedAudio->sampleCount;
+  AddBitmapAsset(context, "test/test_hero_left_cape.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleLeft);
 
-      for (u32 channelIndex = 0; channelIndex < loadedAudio->channelCount; channelIndex++) {
-        writtenBytes = write(outFd, loadedAudio->samples[channelIndex], loadedAudio->sampleCount * sizeof(s16));
-        assert(writtenBytes > 0);
-      }
+  AddBitmapAsset(context, "test/test_hero_front_cape.bmp", 0.5f, 0.156682029f);
+  AddAssetTag(context, ASSET_TAG_FACING_DIRECTION, angleFront);
 
-      FreeWav(loadedAudio);
-    } break;
+  EndAssetType(context);
 
-    case ASSET_TYPE_BITMAP: {
-      struct bitmap_info *bitmapInfo = &src->bitmapInfo;
-      struct load_bmp_result loadBmpResult = LoadBmp(bitmapInfo->filename);
-      if (loadBmpResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
-        switch (loadBmpResult.error) {
-        case HH_ASSET_BUILDER_ERROR_IO_OPEN:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "file cannot be opened\n  filename: %s\n", bitmapInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_IO_IS_NOT_FILE:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "given path is not file\n  filename: %s\n", bitmapInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_IO_STAT:
-          logLength = snprintf(logBuffer, sizeof(logBuffer), "stat failed\n  filename: %s\n", bitmapInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_MALLOC:
-          logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot allocate memory\n");
-          break;
-        case HH_ASSET_BUILDER_ERROR_IO_READ:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "cannot read file.\n  filename: %s\n", bitmapInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_IO_SEEK:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "cannot seek file.\n  filename: %s\n", bitmapInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_WAV_INVALID_MAGIC:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "file is not wav.\n  filename: %s\n", bitmapInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_WAV_MALFORMED:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "wav is malformed.\n  filename: %s\n", bitmapInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_WAV_FORMAT_IS_NOT_PCM:
-          logLength =
-              snprintf(logBuffer, sizeof(logBuffer), "wav format is not PCM.\n  filename: %s\n", bitmapInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_WAV_SAMPLE_RATE_IS_NOT_48000:
-          logLength = snprintf(logBuffer, sizeof(logBuffer), "wav sample rate is not 48000.\n  filename: %s\n",
-                               bitmapInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_WAV_FORMAT_IS_NOT_S16LE:
-          logLength = snprintf(logBuffer, sizeof(logBuffer), "wav format is not S16LE.\n  filename: %s\n",
-                               bitmapInfo->filename);
-          break;
-        case HH_ASSET_BUILDER_ERROR_WAV_NUM_CHANNELS_IS_BIGGER_THAN_2:
-          logLength = snprintf(logBuffer, sizeof(logBuffer), "wav has more channels than 2.\n  filename: %s\n",
-                               bitmapInfo->filename);
-          break;
+  /*----------------------------------------------------------------
+   * PACKING
+   *----------------------------------------------------------------*/
+  char outFilename[] = "test2.hha";
+  enum hh_asset_builder_error errorCode = WriteHHAFile(outFilename, context);
+  return errorCode;
+}
 
-        default:
-          assert(0 && "error not presented to user");
-          break;
-        };
-        assert(logLength > 0);
-        error(logBuffer, (u64)logLength);
+internal enum hh_asset_builder_error
+WriteNoneHero(void)
+{
+  /*----------------------------------------------------------------
+   * INGEST
+   *----------------------------------------------------------------*/
+  struct asset_context *context = &(struct asset_context){};
 
-        errorCode = (s32)loadBmpResult.error;
-        continue;
-      }
+  context->tagCount = 0;
+  context->assetCount = 1;
 
-      struct loaded_bitmap *loadedBitmap = &loadBmpResult.loadedBitmap;
+  BeginAssetType(context, ASSET_TYPE_TREE);
+  AddBitmapAsset(context, "test2/tree00.bmp", 0.493827164f, 0.295652181f);
+  EndAssetType(context);
 
-      dest->bitmap.width = loadedBitmap->width;
-      dest->bitmap.height = loadedBitmap->height;
-      dest->bitmap.alignPercentage[0] = bitmapInfo->alignPercentageX;
-      dest->bitmap.alignPercentage[1] = bitmapInfo->alignPercentageY;
+  BeginAssetType(context, ASSET_TYPE_SWORD);
+  AddBitmapAsset(context, "test2/rock03.bmp", 0.5f, 0.65625f);
+  EndAssetType(context);
 
-      writtenBytes = write(outFd, loadedBitmap->memory, loadedBitmap->stride * loadedBitmap->height);
-      assert(writtenBytes > 0);
+  BeginAssetType(context, ASSET_TYPE_GRASS);
+  AddBitmapAsset(context, "test2/grass00.bmp", 0.5f, 0.5f);
+  AddBitmapAsset(context, "test2/grass01.bmp", 0.5f, 0.5f);
+  EndAssetType(context);
 
-      FreeBmp(loadedBitmap);
-    } break;
+  BeginAssetType(context, ASSET_TYPE_GROUND);
+  AddBitmapAsset(context, "test2/ground00.bmp", 0.5f, 0.5f);
+  AddBitmapAsset(context, "test2/ground01.bmp", 0.5f, 0.5f);
+  AddBitmapAsset(context, "test2/ground02.bmp", 0.5f, 0.5f);
+  AddBitmapAsset(context, "test2/ground03.bmp", 0.5f, 0.5f);
+  EndAssetType(context);
+
+  BeginAssetType(context, ASSET_TYPE_TUFT);
+  AddBitmapAsset(context, "test2/tuft00.bmp", 0.5f, 0.5f);
+  AddBitmapAsset(context, "test2/tuft01.bmp", 0.5f, 0.5f);
+  AddBitmapAsset(context, "test2/tuft02.bmp", 0.5f, 0.5f);
+  EndAssetType(context);
+
+  /*----------------------------------------------------------------
+   * PACKING
+   *----------------------------------------------------------------*/
+  char outFilename[] = "test3.hha";
+  enum hh_asset_builder_error errorCode = WriteHHAFile(outFilename, context);
+  return errorCode;
+}
+
+internal enum hh_asset_builder_error
+WriteAudios(void)
+{
+  /*----------------------------------------------------------------
+   * INGEST
+   *----------------------------------------------------------------*/
+  struct asset_context *context = &(struct asset_context){};
+
+  context->tagCount = 0;
+  context->assetCount = 1;
+
+  // audios
+  BeginAssetType(context, ASSET_TYPE_BLOOP);
+  AddAudioAsset(context, "test3/bloop_00.wav");
+  AddAudioAsset(context, "test3/bloop_01.wav");
+  AddAudioAsset(context, "test3/bloop_02.wav");
+  AddAudioAsset(context, "test3/bloop_03.wav");
+  AddAudioAsset(context, "test3/bloop_04.wav");
+  EndAssetType(context);
+
+  BeginAssetType(context, ASSET_TYPE_CRACK);
+  AddAudioAsset(context, "test3/crack_00.wav");
+  EndAssetType(context);
+
+  BeginAssetType(context, ASSET_TYPE_DROP);
+  AddAudioAsset(context, "test3/drop_00.wav");
+  EndAssetType(context);
+
+  BeginAssetType(context, ASSET_TYPE_GLIDE);
+  AddAudioAsset(context, "test3/glide_00.wav");
+  EndAssetType(context);
+
+  BeginAssetType(context, ASSET_TYPE_MUSIC);
+  u32 sampleRate = 48000;
+  u32 chunkSampleCount = 10 * sampleRate;
+  u32 totalSampleCount = 7468095;
+
+  for (u32 sampleIndex = 0; sampleIndex < totalSampleCount; sampleIndex += chunkSampleCount) {
+    u32 sampleCount = totalSampleCount - sampleIndex;
+    if (sampleCount > chunkSampleCount) {
+      sampleCount = chunkSampleCount;
+    }
+
+    struct audio_id thisMusic = AddAudioAssetTrimmed(context, "test3/music_test.wav", sampleIndex, sampleCount);
+    if ((sampleIndex + chunkSampleCount) < totalSampleCount) {
+      struct hha_audio *thisAudio = &(context->assets + thisMusic.value)->audio;
+      thisAudio->chain = HHA_AUDIO_CHAIN_ADVANCE;
     }
   }
+  EndAssetType(context);
 
-  seekResult = lseek64(outFd, (s64)header.assetsOffset, SEEK_SET);
-  if (seekResult == -1) {
-    logLength = snprintf(logBuffer, sizeof(logBuffer), "file seek failed\n  filename: '%s'\n", outFilename);
-    assert(logLength > 0);
-    fatal(logBuffer, (u64)logLength);
+  BeginAssetType(context, ASSET_TYPE_PUHP);
+  AddAudioAsset(context, "test3/puhp_00.wav");
+  AddAudioAsset(context, "test3/puhp_01.wav");
+  EndAssetType(context);
 
-    errorCode = HH_ASSET_BUILDER_ERROR_IO_SEEK;
-    goto fsyncOutFd;
+  /*----------------------------------------------------------------
+   * PACKING
+   *----------------------------------------------------------------*/
+  char outFilename[] = "test4.hha";
+  enum hh_asset_builder_error errorCode = WriteHHAFile(outFilename, context);
+  return errorCode;
+}
+
+/*****************************************************************
+ * STARTING POINT
+ *****************************************************************/
+
+int
+main(int argc, char *argv[])
+{
+  s32 errorCode = 0;
+
+  // argc 0 is program path
+  char *exepath = argv[0];
+  argc--;
+  argv++;
+
+  // parse arguments
+  if (argc >= 2) {
+    usage();
+    errorCode = HH_ASSET_BUILDER_ERROR_ARGUMENTS;
+    goto end;
   }
 
-  struct hha_asset *assets = context->assets;
-  writtenBytes = write(outFd, assets, assetArraySize);
-  assert(writtenBytes > 0);
-  assert(writtenBytes > 0);
+  char *outFilename = "test.hha";
+  if (argc == 1)
+    outFilename = argv[1];
 
-  logLength = snprintf(logBuffer, sizeof(logBuffer), "%" PRIu32 " assets written\n", header.assetCount);
-  assert(logLength > 0);
-  info(logBuffer, (u64)logLength);
+  // errorCode = (s32)WriteAll(outFilename);
 
-  // Packing finished
-  s32 fsyncResult;
-fsyncOutFd:
-  fsyncResult = fsync(outFd);
-  if (fsyncResult != 0) {
-    logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot sync data\n");
-    assert(logLength > 0);
-    warn(logBuffer, (u64)logLength);
-  }
+  errorCode = (s32)WriteOnlyHero1();
+  if (errorCode != HH_ASSET_BUILDER_ERROR_NONE)
+    goto end;
 
-  s32 closeResult = close(outFd);
-  if (closeResult != 0) {
-    logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot close the file.\n  filename: '%s'\n", outFilename);
-    assert(logLength > 0);
-    warn(logBuffer, (u64)logLength);
-  }
-  outFd = -1;
+  errorCode = (s32)WriteOnlyHero2();
+  if (errorCode != HH_ASSET_BUILDER_ERROR_NONE)
+    goto end;
 
-  if (errorCode != HH_ASSET_BUILDER_ERROR_NONE) {
-    logLength = snprintf(logBuffer, sizeof(logBuffer), "Assets could NOT be packed into '%s'!\n", outFilename);
-    assert(logLength > 0);
-    fatal(logBuffer, (u64)logLength);
-    goto exitWithErrorCode;
-  }
+  errorCode = (s32)WriteNoneHero();
+  if (errorCode != HH_ASSET_BUILDER_ERROR_NONE)
+    goto end;
 
-  logLength = snprintf(logBuffer, sizeof(logBuffer), "Assets are packed into '%s' successfully.\n", outFilename);
-  assert(logLength > 0);
-  info(logBuffer, (u64)logLength);
+  errorCode = (s32)WriteAudios();
+  if (errorCode != HH_ASSET_BUILDER_ERROR_NONE)
+    goto end;
 
-exitWithErrorCode:
+end:
   return errorCode;
 }

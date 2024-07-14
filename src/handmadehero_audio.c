@@ -59,8 +59,8 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         break;
       }
 
-      struct hha_audio *info = AudioInfoGet(assets, playingAudio->id);
-      AudioPrefetch(assets, info->nextIdToPlay);
+      struct audio_id nextAudioInChain = AudioGetNextInChain(assets, playingAudio->id);
+      AudioPrefetch(assets, nextAudioInChain);
 
       struct v2 volume = playingAudio->currentVolume;
       struct v2 dVolume = v2_mul(playingAudio->dCurrentVolume, secondsPerSample);
@@ -185,8 +185,8 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
       isWritten = 1;
 
       if (chunksToMix == chunksRemainingInAudio) {
-        if (IsAudioIdValid(info->nextIdToPlay)) {
-          playingAudio->id = info->nextIdToPlay;
+        if (IsAudioIdValid(nextAudioInChain)) {
+          playingAudio->id = nextAudioInChain;
 
           assert(playingAudio->samplesPlayed >= (f32)loadedAudio->sampleCount);
           playingAudio->samplesPlayed -= (f32)loadedAudio->sampleCount;

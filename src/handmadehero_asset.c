@@ -437,6 +437,29 @@ AudioGet(struct game_assets *assets, struct audio_id id)
   return slot->audio;
 }
 
+inline struct audio_id
+AudioGetNextInChain(struct game_assets *assets, struct audio_id id)
+{
+  struct audio_id result = {};
+
+  struct hha_audio *audioInfo = AudioInfoGet(assets, id);
+  switch (audioInfo->chain) {
+  case HHA_AUDIO_CHAIN_NONE: {
+    // nothing to do
+  } break;
+
+  case HHA_AUDIO_CHAIN_LOOP: {
+    result = id;
+  } break;
+
+  case HHA_AUDIO_CHAIN_ADVANCE: {
+    result.value = id.value + 1;
+  } break;
+  }
+
+  return result;
+}
+
 inline struct hha_audio *
 AudioInfoGet(struct game_assets *assets, struct audio_id id)
 {

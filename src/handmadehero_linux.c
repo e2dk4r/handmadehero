@@ -78,7 +78,14 @@ LinuxOpenFile(struct platform_file_group fileGroup, u32 fileIndex)
     return 0;
   }
 
-  char *path = "test.hha";
+  char *assetPackFilenames[] = {
+      "test2.hha",
+      "test3.hha",
+      "test1.hha",
+      "test4.hha",
+  };
+
+  char *path = assetPackFilenames[fileIndex];
   s32 fd = open(path, O_RDONLY);
   if (fd < 0) {
     result->h.error = HANDMADEHERO_ERROR_OPEN_FILE;
@@ -160,7 +167,7 @@ LinuxGetAllFilesOfTypeBegin(char *type)
   struct platform_file_group result = {};
 
   // TODO: implement this!
-  result.fileCount = 1;
+  result.fileCount = 4;
 
   return result;
 }
