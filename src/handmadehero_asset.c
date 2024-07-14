@@ -103,7 +103,6 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   }
   assets->tagRanges[ASSET_TAG_FACING_DIRECTION] = TAU32;
 
-#if 1
   assets->tagCount = 0;
   assets->assetCount = 1;
 
@@ -228,36 +227,6 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   }
 
   assert(assetCount == assets->assetCount && "missing assets");
-
-#else
-
-  struct read_file_result readResult = Platform->ReadEntireFile("test.hha");
-  if (readResult.size == 0) {
-    return assets;
-  }
-  assets->hhaData = readResult.data;
-
-  struct hha_header *header = readResult.data;
-  assert(header->magic == HHA_MAGIC);
-  assert(header->version == HHA_VERSION);
-
-  assets->tagCount = header->tagCount;
-  assets->tags = readResult.data + header->tagsOffset;
-
-  struct hha_asset_type *hhaAssetTypes = readResult.data + header->assetTypesOffset;
-  for (u32 assetTypeIndex = 0; assetTypeIndex < header->assetTypeCount; assetTypeIndex++) {
-    struct hha_asset_type *src = hhaAssetTypes + assetTypeIndex;
-    if (src->typeId >= ASSET_TYPE_COUNT)
-      continue;
-    struct asset_type *dest = assets->assetTypes + src->typeId;
-    dest->assetIndexFirst = src->assetIndexFirst;
-    dest->assetIndexOnePastLast = src->assetIndexOnePastLast;
-  }
-
-  assets->assetCount = header->assetCount;
-  assets->assets = readResult.data + header->assetsOffset;
-  assets->slots = MemoryArenaPush(arena, sizeof(*assets->slots) * assets->assetCount);
-#endif
 
   return assets;
 }
