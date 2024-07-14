@@ -845,7 +845,7 @@ main(int argc, char *argv[])
    *----------------------------------------------------------------*/
   struct asset_context *context = &(struct asset_context){};
 
-  context->tagCount = 1;
+  context->tagCount = 0;
   context->assetCount = 1;
 
   BeginAssetType(context, ASSET_TYPE_SHADOW);
