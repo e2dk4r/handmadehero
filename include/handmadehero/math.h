@@ -11,7 +11,7 @@ comptime f32 TAU32 = 6.28318530717958647692f;
 #define Minimum(a, b) ((a < b) ? a : b)
 
 // (a > b) ? a : b
-#define Maximum(a, b) ((a < b) ? a : b)
+#define Maximum(a, b) ((a > b) ? a : b)
 
 internal inline b32
 InRange(f32 min, f32 max, f32 value)
