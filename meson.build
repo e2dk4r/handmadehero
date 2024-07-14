@@ -142,6 +142,7 @@ elif host_machine.system() == 'linux'
 endif
 
 subdir('tool')
+subdir('test')
 
 executable(
   'handmadehero',

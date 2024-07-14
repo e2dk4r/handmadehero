@@ -1,0 +1,44 @@
+name: test
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  NINJA_VERSION: '1.12.1'
+  MUON_VERSION: '0.2.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PKG_CONFIG_PATH: '/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig'
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: install packages
+      run: sudo apt-get install -y --no-install-recommends --no-install-suggests
+           wget unzip libarchive-tools
+           nasm
+           pkg-config
+           libevdev-dev liburing-dev
+           libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev
+           libpipewire-0.3-dev;
+
+           sudo ln -sf /usr/bin/bsdtar /usr/bin/tar;
+
+           wget https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip;
+           unzip ninja-linux.zip; rm ninja-linux.zip;
+           sudo mv ninja /usr/bin/;
+
+           wget https://muon.build/releases/v$MUON_VERSION/muon-$MUON_VERSION-amd64-linux-static;
+           chmod 755 muon-$MUON_VERSION-amd64-linux-static;
+           sudo mv muon-$MUON_VERSION-amd64-linux-static /usr/bin/meson;
+
+    - name: configure
+      run: meson setup build -Ddefault_library=shared
+
+    - name: test
+      run: meson test -C build
