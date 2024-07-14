@@ -136,7 +136,7 @@ LinuxReadFromFile(void *dest, struct linux_file_handle *handle, u64 offset, u64 
       handle->h.error = HANDMADEHERO_ERROR_FILE_SEEK;
       handle->lastError = errno;
       goto end;
-    } else if (lseekResult == (off_t)offset) {
+    } else if (lseekResult == (off64_t)offset) {
       break;
     }
 
