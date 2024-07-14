@@ -254,7 +254,6 @@ struct asset_metadata {
 struct asset_context {
   u32 tagCount;
   struct hha_tag tags[TAG_COUNT];
-  f32 tagRanges[ASSET_TYPE_COUNT];
 
   u32 assetTypeCount;
   struct hha_asset_type assetTypes[ASSET_TYPE_COUNT];
@@ -848,11 +847,6 @@ main(int argc, char *argv[])
 
   context->tagCount = 1;
   context->assetCount = 1;
-
-  for (u32 tagType = 0; tagType < ASSET_TAG_COUNT; tagType++) {
-    context->tagRanges[tagType] = 1000000.0f;
-  }
-  context->tagRanges[ASSET_TAG_FACING_DIRECTION] = TAU32;
 
   BeginAssetType(context, ASSET_TYPE_SHADOW);
   AddBitmapAsset(context, "test/test_hero_shadow.bmp", 0.5f, 0.156682029f);
