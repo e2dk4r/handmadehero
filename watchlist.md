@@ -502,7 +502,7 @@
 - [x] Handmade Hero Day 153 - Merging Multiple Asset Files
       https://www.youtube.com/watch?v=9sb8mv6q7WE
 
-- [ ] Handmade Hero Day 154 - Finding Asset Files with Win32
+- [x] Handmade Hero Day 154 - Finding Asset Files with Win32
       https://www.youtube.com/watch?v=vrZkMo77BI8
 
 - [ ] Handmade Hero Day 155 - Introduction to Particle Systems
