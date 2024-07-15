@@ -5,28 +5,16 @@
 
 #if HANDMADEHERO_DEBUG
 
+#include <handmadehero/text.h>
 #include <stdio.h>
 #include <unistd.h>
 
-internal inline u64
-strnlen(const char *p, u64 max)
-{
-  u64 length = 0;
-  while (*p) {
-    length++;
-    if (length == max)
-      break;
-    p++;
-  }
-  return length;
-}
-
 void
-debug(const char *string)
+debug(const char *zeroTerminatedString)
 {
-  u64 len = strnlen(string, 1024);
-  assert(len > 0);
-  write(STDOUT_FILENO, string, len);
+  struct string string = StringFromZeroTerminated((u8 *)zeroTerminatedString, 1024);
+  assert(string.length > 0);
+  write(STDOUT_FILENO, string.value, string.length);
 }
 
 void
