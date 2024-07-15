@@ -11,12 +11,11 @@ struct platform_file_handle {
 
 struct platform_file_group {
   u32 fileCount;
-  void *data;
 };
 
-typedef struct platform_file_handle *(*pfnPlatformOpenFile)(struct platform_file_group fileGroup, u32 fileIndex);
+typedef struct platform_file_handle *(*pfnPlatformOpenNextFile)(struct platform_file_group *fileGroup);
 typedef void (*pfnPlatformReadFromFile)(void *dest, struct platform_file_handle *handle, u64 offset, u64 size);
-typedef struct platform_file_group (*pfnPlatformGetAllFilesOfTypeBegin)(char *type);
+typedef struct platform_file_group *(*pfnPlatformGetAllFilesOfTypeBegin)(char *type);
 typedef void (*pfnPlatformGetAllFilesOfTypeEnd)(struct platform_file_group *fileGroup);
 typedef void (*pfnPlatformFileError)(struct platform_file_handle *handle, enum handmadehero_error error);
 typedef b32 (*pfnPlatformHasFileError)(struct platform_file_handle *handle);
@@ -160,7 +159,7 @@ struct platform_api {
   pfnPlatformWorkQueueAddEntry WorkQueueAddEntry;
   pfnPlatformWorkQueueCompleteAllWork WorkQueueCompleteAllWork;
 
-  pfnPlatformOpenFile OpenFile;
+  pfnPlatformOpenNextFile OpenNextFile;
   pfnPlatformReadFromFile ReadFromFile;
   pfnPlatformHasFileError HasFileError;
   pfnPlatformFileError FileError;

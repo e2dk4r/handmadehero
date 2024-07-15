@@ -8,9 +8,11 @@ enum text_test_error {
   TEXT_TEST_ERROR_STRING_ENDS_WITH,
   TEXT_TEST_ERROR_STRING_ENDS_WITH_EXPECTED_FALSE,
   TEXT_TEST_ERROR_STRING_ENDS_WITH_WHEN_SEARCH_IS_BIGGER,
+  TEXT_TEST_ERROR_PATH_HAS_EXTENSION,
+  TEXT_TEST_ERROR_PATH_HAS_EXTENSION_EXPECTED_FALSE,
+  TEXT_TEST_ERROR_PATH_HAS_EXTENSION_WHEN_EXTENSION_IS_BIGGER,
 };
 
-#define test(result, expected)
 int
 main(void)
 {
@@ -71,6 +73,40 @@ main(void)
     b32 expected = 0;
     if (result != expected) {
       errorCode = TEXT_TEST_ERROR_STRING_ENDS_WITH_WHEN_SEARCH_IS_BIGGER;
+      goto end;
+    }
+  }
+
+  // PathHasExtension
+  {
+    struct string path = StringFromZeroTerminated((u8 *)"file.jpg", 1024);
+    struct string extension = StringFromZeroTerminated((u8 *)"jpg", 1024);
+    b32 result = PathHasExtension(path, extension);
+    b32 expected = 1;
+    if (result != expected) {
+      errorCode = TEXT_TEST_ERROR_PATH_HAS_EXTENSION;
+      goto end;
+    }
+  }
+
+  {
+    struct string path = StringFromZeroTerminated((u8 *)"file.jpg", 1024);
+    struct string extension = StringFromZeroTerminated((u8 *)"png", 1024);
+    b32 result = PathHasExtension(path, extension);
+    b32 expected = 0;
+    if (result != expected) {
+      errorCode = TEXT_TEST_ERROR_PATH_HAS_EXTENSION_EXPECTED_FALSE;
+      goto end;
+    }
+  }
+
+  {
+    struct string path = StringFromZeroTerminated((u8 *)"file.jpg", 1024);
+    struct string extension = StringFromZeroTerminated((u8 *)"very_long_extension", 1024);
+    b32 result = PathHasExtension(path, extension);
+    b32 expected = 0;
+    if (result != expected) {
+      errorCode = TEXT_TEST_ERROR_PATH_HAS_EXTENSION_WHEN_EXTENSION_IS_BIGGER;
       goto end;
     }
   }

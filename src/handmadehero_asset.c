@@ -107,13 +107,13 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->assetCount = 1;
 
   {
-    struct platform_file_group fileGroup = Platform->GetAllFilesOfTypeBegin("hha");
-    assets->fileCount = fileGroup.fileCount;
+    struct platform_file_group *fileGroup = Platform->GetAllFilesOfTypeBegin("hha");
+    assets->fileCount = fileGroup->fileCount;
     assets->files = MemoryArenaPush(arena, sizeof(*assets->files) * assets->fileCount);
     for (u32 fileIndex = 0; fileIndex < assets->fileCount; fileIndex++) {
       struct asset_file *file = assets->files + fileIndex;
 
-      file->handle = Platform->OpenFile(fileGroup, fileIndex);
+      file->handle = Platform->OpenNextFile(fileGroup);
       Platform->ReadFromFile(&file->header, file->handle, 0, sizeof(file->header));
       if (Platform->HasFileError(file->handle)) {
         // TODO: notify user
@@ -147,7 +147,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
       assets->assetCount += header->assetCount - 1;
     }
 
-    Platform->GetAllFilesOfTypeEnd(&fileGroup);
+    Platform->GetAllFilesOfTypeEnd(fileGroup);
   }
 
   // NOTE: allocate memory for all metadatas from asset pack files

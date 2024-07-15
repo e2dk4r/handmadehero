@@ -43,4 +43,29 @@ StringEndsWith(struct string source, struct string search)
   return 1;
 }
 
+internal inline b32
+PathHasExtension(struct string path, struct string extension)
+{
+  if (path.length == 0 || extension.length == 0)
+    return 0;
+
+  if (extension.length > path.length)
+    return 0;
+
+  u64 pathIndex = path.length - extension.length;
+  if (path.length != extension.length && path.value[pathIndex - 1] != '.')
+    return 0;
+
+  for (u64 extensionIndex = 0; extensionIndex < extension.length; extensionIndex++) {
+    if (path.value[pathIndex] != extension.value[extensionIndex])
+      return 0;
+    pathIndex++;
+  }
+
+  if (path.length != extension.length) {
+  }
+
+  return 1;
+}
+
 #endif /* HANDMADEHERO_TEXT_H */

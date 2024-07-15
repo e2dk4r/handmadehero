@@ -50,6 +50,7 @@
 #include <handmadehero/errors.h>
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/platform.h>
+#include <handmadehero/text.h>
 
 #define PAUSE_WHEN_SURFACE_OUT_OF_FOCUS 0
 #define RESOLUTION 1080
@@ -69,8 +70,16 @@ struct linux_file_handle {
   s32 fd;
 };
 
+struct linux_file_group {
+  // platform required
+  struct platform_file_group g;
+  DIR *dir;
+  long direntIndexes[1024];
+  u32 fileIndex;
+};
+
 struct linux_file_handle *
-LinuxOpenFile(struct platform_file_group fileGroup, u32 fileIndex)
+LinuxOpenNextFile(struct linux_file_group *fileGroup)
 {
   struct linux_file_handle *result =
       mmap(0, sizeof(*result), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -78,14 +87,14 @@ LinuxOpenFile(struct platform_file_group fileGroup, u32 fileIndex)
     return 0;
   }
 
-  char *assetPackFilenames[] = {
-      "test2.hha",
-      "test3.hha",
-      "test1.hha",
-      "test4.hha",
-  };
+  long direntIndex = fileGroup->direntIndexes[fileGroup->fileIndex];
+  seekdir(fileGroup->dir, direntIndex);
+  struct dirent *dirent = readdir(fileGroup->dir);
+  assert(dirent != 0);
 
-  char *path = assetPackFilenames[fileIndex];
+  char *path = dirent->d_name;
+  fileGroup->fileIndex++;
+
   s32 fd = open(path, O_RDONLY);
   if (fd < 0) {
     result->h.error = HANDMADEHERO_ERROR_OPEN_FILE;
@@ -161,21 +170,73 @@ end:
   pthread_mutex_unlock(&fileReadLock);
 }
 
-struct platform_file_group
+struct linux_file_group *
 LinuxGetAllFilesOfTypeBegin(char *type)
 {
-  struct platform_file_group result = {};
+  struct linux_file_group *fileGroup =
+      mmap(0, sizeof(*fileGroup), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (!fileGroup) {
+    return 0;
+  }
 
-  // TODO: implement this!
-  result.fileCount = 4;
+  ZeroMemory(fileGroup, sizeof(*fileGroup));
 
-  return result;
+  fileGroup->dir = opendir("./");
+  if (fileGroup->dir == 0) {
+    // TODO: directory cannot opened
+    goto onError;
+  }
+
+  struct dirent *dirent;
+  u32 dirent_max = ARRAY_COUNT(fileGroup->direntIndexes);
+  while (dirent_max--) {
+    long direntIndex = telldir(fileGroup->dir);
+    assert(direntIndex != -1);
+
+    dirent = readdir(fileGroup->dir);
+
+    /* error occured */
+    if (!dirent && errno != 0) {
+      // TODO: error happend
+      break;
+    }
+
+    /* end of directory stream is reached */
+    if (dirent == 0)
+      break;
+
+    /* is directory entry regular file. man 2 getdents */
+    if (dirent->d_type != DT_REG)
+      continue;
+
+    struct string filename = StringFromZeroTerminated((u8 *)dirent->d_name, 255);
+    struct string extension = StringFromZeroTerminated((u8 *)type, 255);
+    if (!PathHasExtension(filename, extension))
+      continue;
+
+    fileGroup->direntIndexes[fileGroup->g.fileCount] = direntIndex;
+
+    fileGroup->g.fileCount++;
+  }
+
+  return fileGroup;
+
+onError:
+  // TODO: unmap failed?
+  munmap(fileGroup, sizeof(*fileGroup));
+  return 0;
 }
 
 void
-LinuxGetAllFilesOfTypeEnd(struct platform_file_group *fileGroup)
+LinuxGetAllFilesOfTypeEnd(struct linux_file_group *fileGroup)
 {
-  // TODO: implement this!
+  assert(fileGroup);
+
+  closedir(fileGroup->dir);
+
+  // TODO: unmap failed?
+  munmap(fileGroup, sizeof(*fileGroup));
+  fileGroup = 0;
 }
 
 void
@@ -1563,7 +1624,7 @@ main(int argc, char *argv[])
   game_memory->platform.WorkQueueAddEntry = (pfnPlatformWorkQueueAddEntry)LinuxWorkQueueAddEntry;
   game_memory->platform.WorkQueueCompleteAllWork = (pfnPlatformWorkQueueCompleteAllWork)LinuxWorkQueueCompleteAllWork;
 
-  game_memory->platform.OpenFile = (pfnPlatformOpenFile)LinuxOpenFile;
+  game_memory->platform.OpenNextFile = (pfnPlatformOpenNextFile)LinuxOpenNextFile;
   game_memory->platform.ReadFromFile = (pfnPlatformReadFromFile)LinuxReadFromFile;
   game_memory->platform.HasFileError = (pfnPlatformHasFileError)LinuxHasFileError;
   game_memory->platform.FileError = (pfnPlatformFileError)LinuxFileError;

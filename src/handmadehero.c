@@ -665,7 +665,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   Platform = &memory->platform;
   assert(Platform->WorkQueueAddEntry && "platform layer NOT implemented PlatformWorkQueueAddEntry");
   assert(Platform->WorkQueueCompleteAllWork && "platform layer NOT implemented PlatformWorkQueueCompleteAllWork");
-  assert(Platform->OpenFile && "platform layer NOT implemented PlatformOpenFile");
+  assert(Platform->OpenNextFile && "platform layer NOT implemented PlatformOpenFile");
   assert(Platform->ReadFromFile && "platform layer NOT implemented PlatformReadFromFile");
   assert(Platform->GetAllFilesOfTypeBegin && "platform layer NOT implemented PlatformGetAllFilesOfTypeBegin");
   assert(Platform->HasFileError && "platform layer NOT implemented PlatformHasFileError");
