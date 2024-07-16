@@ -438,6 +438,7 @@ ReadEntireFile(char *path)
   if (bytesRead <= 0) {
     result.error = HH_ASSET_BUILDER_ERROR_IO_READ;
     FreeMemory(result.data);
+    result.data = 0;
     return result;
   }
 
@@ -537,6 +538,7 @@ internal void
 FreeWav(struct loaded_audio *audio)
 {
   FreeMemory(audio->_filememory);
+  audio->_filememory = 0;
 }
 
 internal struct load_wav_result
