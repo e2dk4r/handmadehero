@@ -815,12 +815,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       __m128i sampleD;
 
       union m128i {
-        struct {
-          s32 a;
-          s32 b;
-          s32 c;
-          s32 d;
-        };
+        __m128i value;
         s32 e[4];
       };
 
