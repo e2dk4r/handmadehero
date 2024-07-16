@@ -83,12 +83,13 @@ struct game_state {
   struct bitmap testDiffuse;
   struct bitmap testNormal;
 
-  struct random_series generalEntropy;
+  // entropy that doesn't affect gameplay
+  struct random_series effectsEntropy;
   struct audio_state audioState;
   struct playing_audio *music;
 
   u32 nextParticle;
-  struct particle particles[64];
+  struct particle particles[256];
 };
 
 struct task_with_memory {

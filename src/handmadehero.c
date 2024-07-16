@@ -684,7 +684,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * INITIALIZATION
    ****************************************************************/
   if (!state->isInitialized) {
-    state->generalEntropy = RandomSeed(1234);
+    state->effectsEntropy = RandomSeed(1234);
 
     void *data = memory->permanentStorage + sizeof(*state);
     memory_arena_size_t size = memory->permanentStorageSize - sizeof(*state);
@@ -1176,7 +1176,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
             sword->dPosition.xy = v2_mul(dSword, 5.0f);
 
             PlayAudio(&state->audioState,
-                      RandomAudio(&state->generalEntropy, transientState->assets, ASSET_TYPE_BLOOP));
+                      RandomAudio(&state->effectsEntropy, transientState->assets, ASSET_TYPE_BLOOP));
           }
         }
       }
@@ -1396,17 +1396,21 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   renderGroup->transform.offsetP = v3(0.0f, 0.0f, 0.0f);
   renderGroup->alpha = 1.0f;
 
-  for (u32 particleSpawnIndex = 0; particleSpawnIndex < 1; particleSpawnIndex++) {
+  for (u32 particleSpawnIndex = 0; particleSpawnIndex < 4; particleSpawnIndex++) {
     struct particle *particle = state->particles + state->nextParticle;
     state->nextParticle++;
 
     if (state->nextParticle == ARRAY_COUNT(state->particles))
       state->nextParticle = 0;
 
-    particle->position = v3(0.0f, 0.0f, 0.0f);
-    particle->dPosition = v3(0.0f, 1.0f, 0.0f);
-    particle->color = v4(1.0f, 1.0f, 1.0f, 2.0f);
-    particle->dColor = v4(0.0f, 0.0f, 0.0f, -1.0f);
+    particle->position = v3(RandomBetween(&state->effectsEntropy, -0.25f, 0.25f), 0.0f, 0.0f);
+    particle->dPosition =
+        v3(RandomBetween(&state->effectsEntropy, -0.5f, 0.5f), RandomBetween(&state->effectsEntropy, 0.7f, 1.0f), 0.0f);
+    particle->color =
+        v4(RandomBetween(&state->effectsEntropy, 0.75f, 1.0f), RandomBetween(&state->effectsEntropy, 0.75f, 1.0f),
+           RandomBetween(&state->effectsEntropy, 0.75f, 1.0f), 1.0f);
+    // v4(1.0f, 1.0f, 1.0f, 1.0f);
+    particle->dColor = v4(0.0f, 0.0f, 0.0f, -0.5f);
   }
 
   for (u32 particleIndex = 0; particleIndex < ARRAY_COUNT(state->particles); particleIndex++) {
@@ -1425,8 +1429,16 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
         .a = Clamp01(particle->color.a),
     };
 
+    if (color.a > 0.9f) {
+      // HACK: fade in
+      color.a = 0.9f * Clamp01Range(1.0f, 0.9f, color.a);
+    }
+
     // render
-    BitmapWithColor(renderGroup, &state->testDiffuse, particle->position, 0.3f, color);
+
+    // BitmapWithColor(renderGroup, &state->testDiffuse, particle->position, 1.0f, color);
+    BitmapAsset(renderGroup, BitmapGetFirstId(transientState->assets, ASSET_TYPE_HEAD), particle->position, 1.0f,
+                color);
   }
 
   TiledDrawRenderGroup(transientState->highPriorityQueue, renderGroup, &drawBuffer);
