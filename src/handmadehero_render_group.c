@@ -814,18 +814,26 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
       __m128i sampleC;
       __m128i sampleD;
 
-#define mi(a, i) *((s32 *)&a + i)
+      union m128i {
+        struct {
+          s32 a;
+          s32 b;
+          s32 c;
+          s32 d;
+        };
+        s32 e[4];
+      };
 
       for (s32 i = 0; i < 4; i++) {
-        s32 fetchX = mi(texelX, i);
-        s32 fetchY = mi(texelY, i);
+        s32 fetchX = ((union m128i *)&texelX)->e[i];
+        s32 fetchY = ((union m128i *)&texelY)->e[i];
 
         // BilinearSample
         u8 *texelPtr = ((u8 *)texture->memory + fetchY * texture->stride + fetchX * BITMAP_BYTES_PER_PIXEL);
-        mi(sampleA, i) = *(s32 *)(texelPtr);
-        mi(sampleB, i) = *(s32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
-        mi(sampleC, i) = *(s32 *)(texelPtr + texture->stride);
-        mi(sampleD, i) = *(s32 *)(texelPtr + texture->stride + BITMAP_BYTES_PER_PIXEL);
+        ((union m128i *)&sampleA)->e[i] = *(s32 *)(texelPtr);
+        ((union m128i *)&sampleB)->e[i] = *(s32 *)(texelPtr + BITMAP_BYTES_PER_PIXEL);
+        ((union m128i *)&sampleC)->e[i] = *(s32 *)(texelPtr + texture->stride);
+        ((union m128i *)&sampleD)->e[i] = *(s32 *)(texelPtr + texture->stride + BITMAP_BYTES_PER_PIXEL);
       }
 
       // sRGBBilinearBlend - Unpack4x8
