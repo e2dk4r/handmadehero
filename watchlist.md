@@ -505,7 +505,7 @@
 - [x] Handmade Hero Day 154 - Finding Asset Files with Win32
       https://www.youtube.com/watch?v=vrZkMo77BI8
 
-- [ ] Handmade Hero Day 155 - Introduction to Particle Systems
+- [x] Handmade Hero Day 155 - Introduction to Particle Systems
       https://www.youtube.com/watch?v=G6OGKP3MaUI
 
 - [ ] Handmade Hero Day 156 - Lagrangian vs. Eulerian Simulation
