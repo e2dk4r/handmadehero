@@ -43,6 +43,13 @@ struct hero_bitmap_ids {
   struct bitmap_id cape;
 };
 
+struct particle {
+  struct v3 position;
+  struct v3 dPosition;
+  struct v4 color;
+  struct v4 dColor;
+};
+
 struct game_state {
   b32 isInitialized : 1;
 
@@ -79,6 +86,9 @@ struct game_state {
   struct random_series generalEntropy;
   struct audio_state audioState;
   struct playing_audio *music;
+
+  u32 nextParticle;
+  struct particle particles[64];
 };
 
 struct task_with_memory {

@@ -1392,6 +1392,43 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 #endif
 
+  // Particles system test
+  renderGroup->transform.offsetP = v3(0.0f, 0.0f, 0.0f);
+  renderGroup->alpha = 1.0f;
+
+  for (u32 particleSpawnIndex = 0; particleSpawnIndex < 1; particleSpawnIndex++) {
+    struct particle *particle = state->particles + state->nextParticle;
+    state->nextParticle++;
+
+    if (state->nextParticle == ARRAY_COUNT(state->particles))
+      state->nextParticle = 0;
+
+    particle->position = v3(0.0f, 0.0f, 0.0f);
+    particle->dPosition = v3(0.0f, 1.0f, 0.0f);
+    particle->color = v4(1.0f, 1.0f, 1.0f, 2.0f);
+    particle->dColor = v4(0.0f, 0.0f, 0.0f, -1.0f);
+  }
+
+  for (u32 particleIndex = 0; particleIndex < ARRAY_COUNT(state->particles); particleIndex++) {
+    struct particle *particle = state->particles + particleIndex;
+
+    // update
+    v3_add_ref(&particle->position, v3_mul(particle->dPosition, dt));
+
+    v4_add_ref(&particle->color, v4_mul(particle->dColor, dt));
+
+    // TODO: should we clamp color in renderer?
+    struct v4 color = {
+        .r = Clamp01(particle->color.r),
+        .g = Clamp01(particle->color.g),
+        .b = Clamp01(particle->color.b),
+        .a = Clamp01(particle->color.a),
+    };
+
+    // render
+    BitmapWithColor(renderGroup, &state->testDiffuse, particle->position, 0.3f, color);
+  }
+
   TiledDrawRenderGroup(transientState->highPriorityQueue, renderGroup, &drawBuffer);
 
   EndSimRegion(simRegion, state);
