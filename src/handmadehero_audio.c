@@ -263,6 +263,9 @@ void
 ChangeVolume(struct audio_state *audioState, struct playing_audio *playingAudio, f32 fadeDurationInSeconds,
              struct v2 volume)
 {
+  if (!playingAudio)
+    return;
+
   if (fadeDurationInSeconds <= 0.0f) {
     playingAudio->currentVolume = playingAudio->targetVolume = volume;
   } else {
