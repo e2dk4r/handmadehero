@@ -1403,9 +1403,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     if (state->nextParticle == ARRAY_COUNT(state->particles))
       state->nextParticle = 0;
 
-    particle->position = v3(RandomBetween(&state->effectsEntropy, -0.25f, 0.25f), 0.0f, 0.0f);
-    particle->dPosition =
-        v3(RandomBetween(&state->effectsEntropy, -0.5f, 0.5f), RandomBetween(&state->effectsEntropy, 0.7f, 1.0f), 0.0f);
+    particle->position = v3(RandomBetween(&state->effectsEntropy, -0.05f, 0.05f), 0.0f, 0.0f);
+    particle->dPosition = v3(RandomBetween(&state->effectsEntropy, -0.01f, 0.01f),
+                             5.0f * RandomBetween(&state->effectsEntropy, 0.7f, 1.0f), 0.0f);
+    particle->ddPosition = v3(0.0f, -9.8f, 0.0f);
     particle->color =
         v4(RandomBetween(&state->effectsEntropy, 0.75f, 1.0f), RandomBetween(&state->effectsEntropy, 0.75f, 1.0f),
            RandomBetween(&state->effectsEntropy, 0.75f, 1.0f), 1.0f);
@@ -1419,7 +1420,23 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     // update
     v3_add_ref(&particle->position, v3_mul(particle->dPosition, dt));
 
+    // p' = 1/2 a t² + v t + p
+    v3_add_ref(&particle->position,
+               v3_add(v3_mul(particle->ddPosition, 0.5f * Square(dt)), v3_mul(particle->dPosition, dt)));
+    // v' = a t + v
+    v3_add_ref(&particle->dPosition, v3_mul(particle->ddPosition, dt));
+
     v4_add_ref(&particle->color, v4_mul(particle->dColor, dt));
+
+    if (particle->position.y <= 0.0f) {
+      f32 coefficentOfRestitution = 0.3f;
+      particle->position.y = -particle->position.y;
+      particle->dPosition.y = -(coefficentOfRestitution * particle->dPosition.y);
+    }
+
+    if (particle->dPosition.y > -0.2f && particle->dPosition.y < 0.2f && particle->position.y > 1.0f) {
+      v3_add_ref(&particle->ddPosition, v3_mul(v3(particle->position.x, 0.0f, 0.0f), 100.0f * dt));
+    }
 
     // TODO: should we clamp color in renderer?
     struct v4 color = {

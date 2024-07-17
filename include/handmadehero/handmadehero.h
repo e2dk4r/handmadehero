@@ -46,6 +46,7 @@ struct hero_bitmap_ids {
 struct particle {
   struct v3 position;
   struct v3 dPosition;
+  struct v3 ddPosition;
   struct v4 color;
   struct v4 dColor;
 };
