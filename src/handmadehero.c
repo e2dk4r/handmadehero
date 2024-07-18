@@ -1398,7 +1398,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   ZeroMemory(state->particleCells, sizeof(state->particleCells));
 
-  f32 gridScale = 0.5f;
+  f32 gridScale = 0.25f;
   f32 invGridScale = 1.0f / gridScale;
   struct v3 gridOrigin = v3(-0.5f * gridScale * PARTICLE_CELL_DIM, 0.0f, 0.0f);
   for (u32 particleIndex = 0; particleIndex < ARRAY_COUNT(state->particles); particleIndex++) {

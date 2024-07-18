@@ -96,7 +96,7 @@ struct game_state {
 
   u32 nextParticle;
   struct particle particles[256];
-#define PARTICLE_CELL_DIM 16
+#define PARTICLE_CELL_DIM 32
   struct particle_cell particleCells[PARTICLE_CELL_DIM][PARTICLE_CELL_DIM];
 };
 
