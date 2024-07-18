@@ -1444,8 +1444,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
     particle->position = v3(RandomBetween(&state->effectsEntropy, -0.05f, 0.05f), 0.0f, 0.0f);
     particle->dPosition = v3(RandomBetween(&state->effectsEntropy, -0.01f, 0.01f),
-                             5.0f * RandomBetween(&state->effectsEntropy, 0.7f, 1.0f), 0.0f);
-    particle->ddPosition = v3(0.0f, -9.8f, 0.0f);
+                             6.0f * RandomBetween(&state->effectsEntropy, 0.7f, 1.0f), 0.0f);
+    const f32 earthSurfaceGravity = 9.80665f; /* m/s² */
+    particle->ddPosition = v3(0.0f, -earthSurfaceGravity, 0.0f);
     particle->color =
         v4(RandomBetween(&state->effectsEntropy, 0.75f, 1.0f), RandomBetween(&state->effectsEntropy, 0.75f, 1.0f),
            RandomBetween(&state->effectsEntropy, 0.75f, 1.0f), 1.0f);
