@@ -511,7 +511,7 @@
 - [x] Handmade Hero Day 156 - Lagrangian vs. Eulerian Simulation
       https://www.youtube.com/watch?v=HH_iaJairW8
 
-- [ ] Handmade Hero Day 157 - Introduction to General Purpose Allocation
+- [x] Handmade Hero Day 157 - Introduction to General Purpose Allocation
       https://www.youtube.com/watch?v=MvDUe2evkHg
 
 - [ ] Handmade Hero Day 158 - Tracking Asset Usage
