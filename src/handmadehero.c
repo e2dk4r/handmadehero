@@ -1424,6 +1424,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     cell->velocityTimesDensity = v3_mul(particle->dPosition, density);
   }
 
+#if 0
   for (u32 y = 0; y < PARTICLE_CELL_DIM; y++) {
     for (u32 x = 0; x < PARTICLE_CELL_DIM; x++) {
       struct particle_cell *cell = &state->particleCells[y][x];
@@ -1434,6 +1435,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       Rect(renderGroup, offset, dim, v4(alpha, alpha, alpha, 1.0f));
     }
   }
+#endif
 
   for (u32 particleSpawnIndex = 0; particleSpawnIndex < 4; particleSpawnIndex++) {
     struct particle *particle = state->particles + state->nextParticle;
