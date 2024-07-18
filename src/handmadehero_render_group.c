@@ -682,9 +682,6 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   f32 NzScale = 0.5f * (xAxisLength + yAxisLength);
 
   __m128 half = _mm_set1_ps(0.5f);
-  // TODO(e2dk4r): IMPORTANT: REMOVE THIS ONCE WE HAVE REAL ROW LOADING
-  // s32 widthMax = (s32)buffer->width - 3;
-  // s32 heightMax = (s32)buffer->height - 3;
 
   // TODO(e2dk4r): this will need to be specified seperately
   f32 originZ = 0.0f;
