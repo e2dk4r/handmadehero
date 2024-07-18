@@ -38,6 +38,7 @@ struct bitmap {
 
   u16 width;
   u16 height;
+  // TODO: get rid of stride
   s16 stride;
   void *memory;
 };
