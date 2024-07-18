@@ -48,4 +48,29 @@ typedef u32 b32;
 #define ALIGN16(value) ALIGN(value, 16)
 #define IS_ALIGNED(value, alignment) (((value) & (__typeof__(value))(alignment - 1)) == 0)
 
+#include "assert.h"
+internal inline u32
+SafeTruncate_u64_u32(u64 value)
+{
+  assert(value <= U32_MAX);
+  u32 result = (u32)value;
+  return result;
+}
+
+internal inline u16
+SafeTruncate_u32_u16(u32 value)
+{
+  assert(value <= U16_MAX);
+  u16 result = (u16)value;
+  return result;
+}
+
+internal inline u16
+SafeTruncate_s32_u16(s32 value)
+{
+  assert(value >= 0 && value <= U16_MAX);
+  u16 result = (u16)value;
+  return result;
+}
+
 #endif /* HANDMADEHERO_TYPES_H */

@@ -36,9 +36,9 @@ struct bitmap {
   struct v2 alignPercentage;
   f32 widthOverHeight;
 
-  u32 width;
-  u32 height;
-  s32 stride;
+  u16 width;
+  u16 height;
+  s16 stride;
   void *memory;
 };
 

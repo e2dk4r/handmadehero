@@ -687,9 +687,9 @@ struct bitmap_header {
 struct loaded_bitmap {
   void *_filememory;
 
-  u32 width;
-  u32 height;
-  u32 stride;
+  u16 width;
+  u16 height;
+  s16 stride;
   void *memory;
 };
 
@@ -791,21 +791,21 @@ LoadBmp(char *filename)
     }
   }
 
-  loadedBitmap->width = (u32)header->width;
+  loadedBitmap->width = SafeTruncate_s32_u16(header->width);
   if (header->width < 0)
-    loadedBitmap->width = (u32)-header->width;
+    loadedBitmap->width = SafeTruncate_s32_u16(-header->width);
 
-  loadedBitmap->height = (u32)header->height;
+  loadedBitmap->height = SafeTruncate_s32_u16(header->height);
   if (header->height < 0)
-    loadedBitmap->height *= (u32)-header->height;
+    loadedBitmap->height = SafeTruncate_s32_u16(-header->height);
 
   assert(loadedBitmap->width != 0);
   assert(loadedBitmap->height != 0);
 
-  loadedBitmap->stride = loadedBitmap->width * BITMAP_BYTES_PER_PIXEL;
+  loadedBitmap->stride = (s16)(loadedBitmap->width * BITMAP_BYTES_PER_PIXEL);
   loadedBitmap->memory = pixels;
 
-  if (loadedBitmap->stride != (loadedBitmap->width * sizeof(u32))) {
+  if ((u64)loadedBitmap->stride != (loadedBitmap->width * sizeof(u32))) {
     result.error = HH_ASSET_BUILDER_ERROR_BMP_IS_NOT_ENCODED_PROPERLY;
     goto onError;
   }
@@ -1030,7 +1030,7 @@ WriteHHAFile(char *filename, struct asset_context *context)
       dest->bitmap.alignPercentage[0] = bitmapInfo->alignPercentageX;
       dest->bitmap.alignPercentage[1] = bitmapInfo->alignPercentageY;
 
-      writtenBytes = write(outFd, loadedBitmap->memory, loadedBitmap->stride * loadedBitmap->height);
+      writtenBytes = write(outFd, loadedBitmap->memory, (size_t)(loadedBitmap->stride * loadedBitmap->height));
       assert(writtenBytes > 0);
 
       FreeBmp(loadedBitmap);

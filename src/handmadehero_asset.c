@@ -336,10 +336,10 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     struct hha_bitmap *bitmapInfo = &info->bitmap;
 
     struct bitmap *bitmap = MemoryArenaPush(&assets->arena, sizeof(*bitmap));
-    bitmap->width = bitmapInfo->width;
-    bitmap->height = bitmapInfo->height;
-    bitmap->stride = (s32)(BITMAP_BYTES_PER_PIXEL * bitmap->width);
-    bitmap->memory = MemoryArenaPush(&assets->arena, (u32)bitmap->stride * bitmap->height);
+    bitmap->width = SafeTruncate_u32_u16(bitmapInfo->width);
+    bitmap->height = SafeTruncate_u32_u16(bitmapInfo->height);
+    bitmap->stride = (s16)(BITMAP_BYTES_PER_PIXEL * bitmap->width);
+    bitmap->memory = MemoryArenaPush(&assets->arena, (u64)(bitmap->stride * bitmap->height));
 
     bitmap->widthOverHeight = (f32)bitmap->width / (f32)bitmap->height;
     bitmap->alignPercentage = v2(bitmapInfo->alignPercentage[0], bitmapInfo->alignPercentage[1]);
