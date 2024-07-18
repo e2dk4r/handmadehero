@@ -28,8 +28,8 @@ enum asset_state {
 struct asset_slot {
   enum asset_state state;
   union {
-    struct bitmap *bitmap;
-    struct audio *audio;
+    struct bitmap bitmap;
+    struct audio audio;
   };
 };
 

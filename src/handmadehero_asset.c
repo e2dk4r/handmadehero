@@ -25,7 +25,7 @@ BitmapGet(struct game_assets *assets, struct bitmap_id id)
   if (slot->state != ASSET_STATE_LOADED)
     return 0;
 
-  return slot->bitmap;
+  return &slot->bitmap;
 }
 
 internal u32
@@ -335,7 +335,7 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     // setup bitmap
     struct hha_bitmap *bitmapInfo = &info->bitmap;
 
-    struct bitmap *bitmap = MemoryArenaPush(&assets->arena, sizeof(*bitmap));
+    struct bitmap *bitmap = &slot->bitmap;
     bitmap->width = SafeTruncate_u32_u16(bitmapInfo->width);
     bitmap->height = SafeTruncate_u32_u16(bitmapInfo->height);
     bitmap->stride = (s16)(BITMAP_BYTES_PER_PIXEL * bitmap->width);
@@ -343,7 +343,6 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
 
     bitmap->widthOverHeight = (f32)bitmap->width / (f32)bitmap->height;
     bitmap->alignPercentage = v2(bitmapInfo->alignPercentage[0], bitmapInfo->alignPercentage[1]);
-    slot->bitmap = bitmap;
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
@@ -392,14 +391,13 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
 
     // setup audio
     struct hha_audio *audioInfo = &info->audio;
-    struct audio *audio = MemoryArenaPush(&assets->arena, sizeof(*audio));
+    struct audio *audio = &slot->audio;
     audio->channelCount = audioInfo->channelCount;
     audio->sampleCount = audioInfo->sampleCount;
     u64 sampleSize = audio->channelCount * audio->sampleCount * sizeof(*audio->samples[0]);
     s16 *samples = MemoryArenaPush(&assets->arena, sampleSize);
     audio->samples[0] = samples;
     audio->samples[1] = audio->samples[0] + audio->sampleCount;
-    slot->audio = audio;
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
@@ -434,7 +432,7 @@ AudioGet(struct game_assets *assets, struct audio_id id)
   if (slot->state != ASSET_STATE_LOADED)
     return 0;
 
-  return slot->audio;
+  return &slot->audio;
 }
 
 inline struct audio_id
