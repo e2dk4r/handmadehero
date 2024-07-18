@@ -43,6 +43,11 @@ struct hero_bitmap_ids {
   struct bitmap_id cape;
 };
 
+struct particle_cell {
+  f32 density;
+  struct v3 velocityTimesDensity;
+};
+
 struct particle {
   struct v3 position;
   struct v3 dPosition;
@@ -91,6 +96,8 @@ struct game_state {
 
   u32 nextParticle;
   struct particle particles[256];
+#define PARTICLE_CELL_DIM 16
+  struct particle_cell particleCells[PARTICLE_CELL_DIM][PARTICLE_CELL_DIM];
 };
 
 struct task_with_memory {

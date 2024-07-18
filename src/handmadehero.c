@@ -1396,6 +1396,45 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   renderGroup->transform.offsetP = v3(0.0f, 0.0f, 0.0f);
   renderGroup->alpha = 1.0f;
 
+  ZeroMemory(state->particleCells, sizeof(state->particleCells));
+
+  f32 gridScale = 0.2f;
+  f32 invGridScale = 1.0f / gridScale;
+  struct v3 gridOrigin = v3(-0.5f * gridScale * PARTICLE_CELL_DIM, 0.0f, 0.0f);
+  for (u32 particleIndex = 0; particleIndex < ARRAY_COUNT(state->particles); particleIndex++) {
+    struct particle *particle = state->particles + particleIndex;
+
+    struct v3 position = v3_mul(v3_sub(particle->position, gridOrigin), invGridScale);
+
+    s32 x = truncatef32tos32(position.x);
+    s32 y = truncatef32tos32(position.y);
+    if (x < 0)
+      x = 0;
+    if (x > PARTICLE_CELL_DIM - 1)
+      x = PARTICLE_CELL_DIM - 1;
+    if (y < 0)
+      y = 0;
+    if (y > PARTICLE_CELL_DIM - 1)
+      y = PARTICLE_CELL_DIM - 1;
+
+    struct particle_cell *cell = &state->particleCells[y][x];
+
+    f32 density = particle->color.a;
+    cell->density += density;
+    cell->velocityTimesDensity = v3_mul(particle->dPosition, density);
+  }
+
+  for (u32 y = 0; y < PARTICLE_CELL_DIM; y++) {
+    for (u32 x = 0; x < PARTICLE_CELL_DIM; x++) {
+      struct particle_cell *cell = &state->particleCells[y][x];
+
+      f32 alpha = Clamp01(0.1f * cell->density);
+      struct v3 offset = v3_add(v3_mul(v3((f32)x, (f32)y, 0.0f), gridScale), gridOrigin);
+      struct v2 dim = v2_mul(v2(1.0f, 1.0f), gridScale);
+      Rect(renderGroup, offset, dim, v4(alpha, alpha, alpha, 1.0f));
+    }
+  }
+
   for (u32 particleSpawnIndex = 0; particleSpawnIndex < 4; particleSpawnIndex++) {
     struct particle *particle = state->particles + state->nextParticle;
     state->nextParticle++;
@@ -1417,6 +1456,21 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   for (u32 particleIndex = 0; particleIndex < ARRAY_COUNT(state->particles); particleIndex++) {
     struct particle *particle = state->particles + particleIndex;
 
+    struct v3 position = v3_mul(v3_sub(particle->position, gridOrigin), invGridScale);
+
+    s32 x = truncatef32tos32(position.x);
+    s32 y = truncatef32tos32(position.y);
+    if (x < 0)
+      x = 0;
+    if (x > PARTICLE_CELL_DIM - 1)
+      x = PARTICLE_CELL_DIM - 1;
+    if (y < 0)
+      y = 0;
+    if (y > PARTICLE_CELL_DIM - 1)
+      y = PARTICLE_CELL_DIM - 1;
+
+    struct particle_cell *cell = &state->particleCells[y][x];
+
     // update
     v3_add_ref(&particle->position, v3_mul(particle->dPosition, dt));
 
@@ -1429,14 +1483,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     v4_add_ref(&particle->color, v4_mul(particle->dColor, dt));
 
     if (particle->position.y <= 0.0f) {
-      f32 coefficentOfRestitution = 0.3f;
+      f32 coefficentOfRestitution = 0.1f;
       particle->position.y = -particle->position.y;
       particle->dPosition.y = -(coefficentOfRestitution * particle->dPosition.y);
     }
 
-    if (particle->dPosition.y > -0.2f && particle->dPosition.y < 0.2f && particle->position.y > 1.0f) {
-      v3_add_ref(&particle->ddPosition, v3_mul(v3(particle->position.x, 0.0f, 0.0f), 100.0f * dt));
-    }
+    v3_add_ref(&particle->dPosition, v3_mul(v3(particle->position.x, 0.0f, 0.0f), 3.0f * cell->density * dt));
 
     // TODO: should we clamp color in renderer?
     struct v4 color = {
