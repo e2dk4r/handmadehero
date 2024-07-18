@@ -319,8 +319,6 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
 
   struct asset_slot *slot = assets->slots + id.value;
   struct asset *asset = assets->assets + id.value;
-  struct hha_asset *info = &asset->hhaAsset;
-  assert(info->dataOffset && "asset not setup properly");
 
   enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
   if (AtomicCompareExchange(&slot->state, &expectedAssetState, ASSET_STATE_QUEUED)) {
@@ -333,6 +331,8 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     }
 
     // setup bitmap
+    struct hha_asset *info = &asset->hhaAsset;
+    assert(info->dataOffset && "asset not setup properly");
     struct hha_bitmap *bitmapInfo = &info->bitmap;
 
     struct bitmap *bitmap = &slot->bitmap;
@@ -376,8 +376,6 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
 
   struct asset_slot *slot = assets->slots + id.value;
   struct asset *asset = assets->assets + id.value;
-  struct hha_asset *info = &asset->hhaAsset;
-  assert(info->dataOffset && "asset not setup properly");
 
   enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
   if (AtomicCompareExchange(&slot->state, &expectedAssetState, ASSET_STATE_QUEUED)) {
@@ -390,7 +388,10 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
     }
 
     // setup audio
+    struct hha_asset *info = &asset->hhaAsset;
+    assert(info->dataOffset && "asset not setup properly");
     struct hha_audio *audioInfo = &info->audio;
+
     struct audio *audio = &slot->audio;
     audio->channelCount = audioInfo->channelCount;
     audio->sampleCount = audioInfo->sampleCount;
