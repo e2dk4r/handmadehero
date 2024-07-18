@@ -1398,7 +1398,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   ZeroMemory(state->particleCells, sizeof(state->particleCells));
 
-  f32 gridScale = 0.2f;
+  f32 gridScale = 0.5f;
   f32 invGridScale = 1.0f / gridScale;
   struct v3 gridOrigin = v3(-0.5f * gridScale * PARTICLE_CELL_DIM, 0.0f, 0.0f);
   for (u32 particleIndex = 0; particleIndex < ARRAY_COUNT(state->particles); particleIndex++) {
@@ -1469,16 +1469,28 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     if (y > PARTICLE_CELL_DIM - 1)
       y = PARTICLE_CELL_DIM - 1;
 
-    struct particle_cell *cell = &state->particleCells[y][x];
+    struct particle_cell *cellCenter = &state->particleCells[y][x];
+    struct particle_cell *cellLeft = &state->particleCells[y][x - 1];
+    struct particle_cell *cellRight = &state->particleCells[y][x + 1];
+    struct particle_cell *cellUp = &state->particleCells[y + 1][x];
+    struct particle_cell *cellDown = &state->particleCells[y - 1][x];
+
+    struct v3 dispertion = {};
+    f32 dc = 1.0f;
+    v3_add_ref(&dispertion, v3_mul(v3(-1.0f, 0.0f, 0.0f), dc * (cellCenter->density - cellLeft->density)));
+    v3_add_ref(&dispertion, v3_mul(v3(1.0f, 0.0f, 0.0f), dc * (cellCenter->density - cellRight->density)));
+    v3_add_ref(&dispertion, v3_mul(v3(0.0f, 1.0f, 0.0f), dc * (cellCenter->density - cellUp->density)));
+    v3_add_ref(&dispertion, v3_mul(v3(0.0f, -1.0f, 0.0f), dc * (cellCenter->density - cellDown->density)));
+
+    struct v3 ddPosition = v3_add(particle->ddPosition, dispertion);
 
     // update
     v3_add_ref(&particle->position, v3_mul(particle->dPosition, dt));
 
     // p' = 1/2 a t² + v t + p
-    v3_add_ref(&particle->position,
-               v3_add(v3_mul(particle->ddPosition, 0.5f * Square(dt)), v3_mul(particle->dPosition, dt)));
+    v3_add_ref(&particle->position, v3_add(v3_mul(ddPosition, 0.5f * Square(dt)), v3_mul(particle->dPosition, dt)));
     // v' = a t + v
-    v3_add_ref(&particle->dPosition, v3_mul(particle->ddPosition, dt));
+    v3_add_ref(&particle->dPosition, v3_mul(ddPosition, dt));
 
     v4_add_ref(&particle->color, v4_mul(particle->dColor, dt));
 
@@ -1487,8 +1499,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
       particle->position.y = -particle->position.y;
       particle->dPosition.y = -(coefficentOfRestitution * particle->dPosition.y);
     }
-
-    v3_add_ref(&particle->dPosition, v3_mul(v3(particle->position.x, 0.0f, 0.0f), 3.0f * cell->density * dt));
 
     // TODO: should we clamp color in renderer?
     struct v4 color = {
