@@ -1496,7 +1496,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     v4_add_ref(&particle->color, v4_mul(particle->dColor, dt));
 
     if (particle->position.y <= 0.0f) {
-      f32 coefficentOfRestitution = 0.1f;
+      f32 coefficentOfRestitution = 0.2f;
       f32 coefficentOfFriction = 0.5f;
       particle->position.y = -particle->position.y;
       particle->dPosition.y = -(coefficentOfRestitution * particle->dPosition.y);
