@@ -23,6 +23,11 @@ enum asset_state {
   ASSET_STATE_QUEUED,
   ASSET_STATE_LOADED,
   ASSET_STATE_LOCKED,
+  ASSET_STATE_MASK = 0x0fff,
+
+  ASSET_STATE_AUDIO = 0x1000,
+  ASSET_STATE_BITMAP = 0x2000,
+  ASSET_STATE_TYPE_MASK = 0xf000,
 };
 
 struct asset_slot {
@@ -73,6 +78,12 @@ struct asset_group {
   u32 tagLastIndex;
 };
 
+struct asset_memory_header {
+  struct asset_memory_header *next;
+  struct asset_memory_header *prev;
+  u32 slotIndex;
+};
+
 struct asset_file {
   struct platform_file_handle *handle;
   struct hha_header header;
@@ -89,6 +100,10 @@ struct game_assets {
   // we want AssetLoad to called from anywhere
   struct transient_state *transientState;
   struct memory_arena arena;
+
+  u64 targetMemoryUsed;
+  u64 totalMemoryUsed;
+  struct asset_memory_header loadedAssetSentiel;
 
   u32 tagCount;
   struct hha_tag *tags;
@@ -155,5 +170,8 @@ AudioInfoGet(struct game_assets *assets, struct audio_id id);
 
 b32
 IsAudioIdValid(struct audio_id id);
+
+void
+EvictAssetsAsNecessary(struct game_assets *assets);
 
 #endif /* HANDMADEHERO_ASSET_H */

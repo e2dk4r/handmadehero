@@ -19,6 +19,8 @@ typedef struct platform_file_group *(*pfnPlatformGetAllFilesOfTypeBegin)(char *t
 typedef void (*pfnPlatformGetAllFilesOfTypeEnd)(struct platform_file_group *fileGroup);
 typedef void (*pfnPlatformFileError)(struct platform_file_handle *handle, enum handmadehero_error error);
 typedef b32 (*pfnPlatformHasFileError)(struct platform_file_handle *handle);
+typedef void *(*pfnPlatformAllocateMemory)(memory_arena_size_t size);
+typedef void (*pfnPlatformDeallocateMemory)(void *memory);
 
 #if HANDMADEHERO_INTERNAL
 
@@ -165,6 +167,9 @@ struct platform_api {
   pfnPlatformFileError FileError;
   pfnPlatformGetAllFilesOfTypeBegin GetAllFilesOfTypeBegin;
   pfnPlatformGetAllFilesOfTypeEnd GetAllFilesOfTypeEnd;
+
+  pfnPlatformAllocateMemory AllocateMemory;
+  pfnPlatformDeallocateMemory DeallocateMemory;
 
 #if HANDMADEHERO_DEBUG
   pfnPlatformReadEntireFile ReadEntireFile;

@@ -78,6 +78,23 @@ struct linux_file_group {
   u32 fileIndex;
 };
 
+void *
+LinuxAllocateMemory(u64 size)
+{
+  void *memory = malloc(size);
+  return memory;
+}
+
+void
+LinuxDeallocateMemory(void *memory)
+{
+  if (!memory)
+    return;
+
+  free(memory);
+  memory = 0;
+}
+
 struct linux_file_handle *
 LinuxOpenNextFile(struct linux_file_group *fileGroup)
 {
@@ -1630,6 +1647,8 @@ main(int argc, char *argv[])
   game_memory->platform.FileError = (pfnPlatformFileError)LinuxFileError;
   game_memory->platform.GetAllFilesOfTypeBegin = (pfnPlatformGetAllFilesOfTypeBegin)LinuxGetAllFilesOfTypeBegin;
   game_memory->platform.GetAllFilesOfTypeEnd = (pfnPlatformGetAllFilesOfTypeEnd)LinuxGetAllFilesOfTypeEnd;
+  game_memory->platform.AllocateMemory = (pfnPlatformAllocateMemory)LinuxAllocateMemory;
+  game_memory->platform.DeallocateMemory = (pfnPlatformDeallocateMemory)LinuxDeallocateMemory;
 
   /* setup arenas */
   struct memory_arena event_arena;

@@ -73,4 +73,12 @@ SafeTruncate_s32_u16(s32 value)
   return result;
 }
 
+internal inline s16
+SafeTruncate_u32_s16(u32 value)
+{
+  assert(value <= S16_MAX);
+  s16 result = (s16)value;
+  return result;
+}
+
 #endif /* HANDMADEHERO_TYPES_H */

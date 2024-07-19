@@ -16,13 +16,90 @@ IsAssetTypeIdAudio(enum asset_type_id typeId)
   return typeId >= ASSET_TYPE_BLOOP && typeId <= ASSET_TYPE_PUHP;
 }
 
+internal inline u32
+GetAssetState(struct asset_slot *slot)
+{
+  u32 result = slot->state & ASSET_STATE_MASK;
+  return result;
+}
+
+internal inline u32
+GetAssetType(struct asset_slot *slot)
+{
+  u32 result = slot->state & ASSET_STATE_TYPE_MASK;
+  return result;
+}
+
+struct asset_memory_size {
+  u32 section;
+  u32 data;
+  u32 total;
+};
+
+internal inline struct asset_memory_size
+GetSizeOfAsset(struct game_assets *assets, u32 type, u32 slotIndex)
+{
+  struct asset *asset = assets->assets + slotIndex;
+  struct hha_asset *info = &asset->hhaAsset;
+
+  struct asset_memory_size result = {};
+
+  switch (type) {
+  case ASSET_STATE_BITMAP: {
+    struct hha_bitmap *bitmapInfo = &info->bitmap;
+    result.section = bitmapInfo->width * BITMAP_BYTES_PER_PIXEL;
+    result.data = bitmapInfo->height * result.section;
+  } break;
+
+  case ASSET_STATE_AUDIO: {
+    struct hha_audio *audioInfo = &info->audio;
+    result.section = audioInfo->sampleCount * sizeof(s16);
+    result.data = audioInfo->channelCount * result.section;
+  } break;
+
+  default: {
+    assert(0 && "unknown asset");
+  } break;
+  }
+
+  result.total = result.data + sizeof(struct asset_memory_header);
+
+  return result;
+}
+
+internal struct asset_memory_header *
+AddAssetHeaderToList(struct game_assets *assets, void *memory, u64 data, u32 slotIndex)
+{
+  struct asset_memory_header *header = memory + data;
+  struct asset_memory_header *sentinel = &assets->loadedAssetSentiel;
+
+  // set data
+  header->slotIndex = slotIndex;
+
+  // insert header to front
+  header->prev = sentinel;
+  header->next = sentinel->next;
+
+  header->next->prev = header;
+  header->prev->next = header;
+
+  return header;
+}
+
+internal void
+RemoveAssetHeaderFromList(struct asset_memory_header *header)
+{
+  header->next->prev = header->prev;
+  header->prev->next = header->next;
+}
+
 inline struct bitmap *
 BitmapGet(struct game_assets *assets, struct bitmap_id id)
 {
   assert(id.value <= assets->assetCount);
   struct asset_slot *slot = assets->slots + id.value;
 
-  if (slot->state != ASSET_STATE_LOADED)
+  if (GetAssetState(slot) != ASSET_STATE_LOADED)
     return 0;
 
   return &slot->bitmap;
@@ -90,6 +167,26 @@ AssetFileHandleGet(struct game_assets *assets, u32 fileIndex)
   return handle;
 }
 
+internal void *
+AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size)
+{
+  void *result = Platform->AllocateMemory(size);
+  if (result) {
+    assets->totalMemoryUsed += size;
+  }
+
+  return result;
+}
+
+internal void
+ReleaseAssetMemory(struct game_assets *assets, void *memory, memory_arena_size_t size)
+{
+  if (memory) {
+    assets->totalMemoryUsed -= size;
+  }
+  Platform->DeallocateMemory(memory);
+}
+
 inline struct game_assets *
 GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState)
 {
@@ -97,6 +194,10 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
 
   MemorySubArenaInit(&assets->arena, arena, size);
   assets->transientState = transientState;
+
+  assets->totalMemoryUsed = 0;
+  assets->targetMemoryUsed = size;
+  assets->loadedAssetSentiel.next = assets->loadedAssetSentiel.prev = &assets->loadedAssetSentiel;
 
   for (u32 tagType = 0; tagType < ASSET_TAG_COUNT; tagType++) {
     assets->tagRanges[tagType] = 1000000.0f;
@@ -304,9 +405,12 @@ DoLoadAssetWork(struct platform_work_queue *queue, void *data)
 
   Platform->ReadFromFile(work->dest, work->handle, work->offset, work->size);
 
-  if (!Platform->HasFileError(work->handle)) {
-    AtomicStore(&slot->state, work->finalState);
+  if (Platform->HasFileError(work->handle)) {
+    // TODO: should we fill it with bogus data
+    ZeroMemory(work->dest, work->size);
   }
+
+  AtomicStore(&slot->state, work->finalState);
 
   EndTaskWithMemory(work->task);
 }
@@ -338,22 +442,27 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     struct bitmap *bitmap = &slot->bitmap;
     bitmap->width = SafeTruncate_u32_u16(bitmapInfo->width);
     bitmap->height = SafeTruncate_u32_u16(bitmapInfo->height);
-    bitmap->stride = (s16)(BITMAP_BYTES_PER_PIXEL * bitmap->width);
-    bitmap->memory = MemoryArenaPush(&assets->arena, (u64)(bitmap->stride * bitmap->height));
+
+    struct asset_memory_size size = GetSizeOfAsset(assets, ASSET_STATE_BITMAP, id.value);
+    bitmap->stride = SafeTruncate_u32_s16(size.section);
+    void *memory = AcquireAssetMemory(assets, size.total);
+    bitmap->memory = memory;
 
     bitmap->widthOverHeight = (f32)bitmap->width / (f32)bitmap->height;
     bitmap->alignPercentage = v2(bitmapInfo->alignPercentage[0], bitmapInfo->alignPercentage[1]);
+
+    AddAssetHeaderToList(assets, memory, size.data, id.value);
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
     work->handle = AssetFileHandleGet(assets, asset->fileIndex);
     work->dest = bitmap->memory;
     work->offset = info->dataOffset;
-    work->size = (u32)bitmap->stride * bitmap->height;
+    work->size = size.data;
 
     work->task = task;
     work->slot = slot;
-    work->finalState = ASSET_STATE_LOADED;
+    work->finalState = ASSET_STATE_LOADED | ASSET_STATE_BITMAP;
 
     // queue the work
     struct platform_work_queue *queue = assets->transientState->lowPriorityQueue;
@@ -395,21 +504,25 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
     struct audio *audio = &slot->audio;
     audio->channelCount = audioInfo->channelCount;
     audio->sampleCount = audioInfo->sampleCount;
-    u64 sampleSize = audio->channelCount * audio->sampleCount * sizeof(*audio->samples[0]);
-    s16 *samples = MemoryArenaPush(&assets->arena, sampleSize);
+
+    struct asset_memory_size size = GetSizeOfAsset(assets, ASSET_STATE_AUDIO, id.value);
+    void *memory = AcquireAssetMemory(assets, size.total);
+    s16 *samples = memory;
     audio->samples[0] = samples;
     audio->samples[1] = audio->samples[0] + audio->sampleCount;
+
+    AddAssetHeaderToList(assets, memory, size.data, id.value);
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
     work->handle = AssetFileHandleGet(assets, asset->fileIndex);
     work->dest = audio->samples[0];
     work->offset = info->dataOffset;
-    work->size = sampleSize;
+    work->size = size.data;
 
     work->task = task;
     work->slot = slot;
-    work->finalState = ASSET_STATE_LOADED;
+    work->finalState = ASSET_STATE_LOADED | ASSET_STATE_AUDIO;
 
     // queue the work
     struct platform_work_queue *queue = assets->transientState->lowPriorityQueue;
@@ -430,7 +543,7 @@ AudioGet(struct game_assets *assets, struct audio_id id)
   assert(id.value <= assets->assetCount);
   struct asset_slot *slot = assets->slots + id.value;
 
-  if (slot->state != ASSET_STATE_LOADED)
+  if (GetAssetState(slot) != ASSET_STATE_LOADED)
     return 0;
 
   return &slot->audio;
@@ -474,4 +587,47 @@ inline b32
 IsAudioIdValid(struct audio_id id)
 {
   return id.value != 0;
+}
+
+internal void
+EvictAsset(struct game_assets *assets, struct asset_memory_header *header)
+{
+  u32 slotIndex = header->slotIndex;
+  struct asset_slot *slot = assets->slots + slotIndex;
+  assert(GetAssetState(slot) == ASSET_STATE_LOADED);
+
+  u32 type = GetAssetType(slot);
+  struct asset_memory_size size = GetSizeOfAsset(assets, type, slotIndex);
+  void *memory = 0;
+  switch (type) {
+  case ASSET_STATE_BITMAP: {
+    memory = slot->bitmap.memory;
+  } break;
+
+  case ASSET_STATE_AUDIO: {
+    memory = slot->audio.samples[0];
+  } break;
+  default: {
+    assert(0 && "unknown asset");
+  } break;
+  };
+
+  RemoveAssetHeaderFromList(header);
+  ReleaseAssetMemory(assets, memory, size.total);
+
+  AtomicStore(&slot->state, ASSET_STATE_UNLOADED);
+}
+
+void
+EvictAssetsAsNecessary(struct game_assets *assets)
+{
+  while (assets->totalMemoryUsed > assets->targetMemoryUsed) {
+    struct asset_memory_header *lruAsset = assets->loadedAssetSentiel.prev;
+    if (lruAsset == &assets->loadedAssetSentiel) {
+      // no asset loaded
+      break;
+    }
+
+    EvictAsset(assets, lruAsset);
+  }
 }

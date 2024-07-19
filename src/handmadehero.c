@@ -671,6 +671,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   assert(Platform->HasFileError && "platform layer NOT implemented PlatformHasFileError");
   assert(Platform->FileError && "platform layer NOT implemented PlatformFileError");
   assert(Platform->GetAllFilesOfTypeEnd && "platform layer NOT implemented PlatformGetAllFilesOfTypeEnd");
+  assert(Platform->AllocateMemory && "platform layer NOT implemented PlatformAllocateMemory");
+  assert(Platform->DeallocateMemory && "platform layer NOT implemented PlatformDeallocateMemory");
 
   BEGIN_TIMER_BLOCK(GameUpdateAndRender);
 
@@ -1530,6 +1532,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   EndSimRegion(simRegion, state);
   EndTemporaryMemory(&simRegionMemory);
   EndTemporaryMemory(&renderMemory);
+
+  EvictAssetsAsNecessary(transientState->assets);
 
   MemoryArenaCheck(&state->worldArena);
   MemoryArenaCheck(&transientState->transientArena);
