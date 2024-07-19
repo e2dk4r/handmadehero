@@ -89,7 +89,6 @@ struct game_assets {
   // we want AssetLoad to called from anywhere
   struct transient_state *transientState;
   struct memory_arena arena;
-  pfnPlatformReadEntireFile PlatformReadEntireFile;
 
   u32 tagCount;
   struct hha_tag *tags;
