@@ -514,7 +514,7 @@
 - [x] Handmade Hero Day 157 - Introduction to General Purpose Allocation
       https://www.youtube.com/watch?v=MvDUe2evkHg
 
-- [ ] Handmade Hero Day 158 - Tracking Asset Usage
+- [x] Handmade Hero Day 158 - Tracking Asset Usage
       https://www.youtube.com/watch?v=D5JG3XGPf8Y
 
 - [ ] Handmade Hero Day 159 - Cleaning Up the Loaded Asset Infrastructure
