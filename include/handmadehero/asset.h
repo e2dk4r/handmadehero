@@ -22,21 +22,30 @@ enum asset_state {
   ASSET_STATE_UNLOADED,
   ASSET_STATE_QUEUED,
   ASSET_STATE_LOADED,
-  ASSET_STATE_MASK = 0x0fff,
-
-  ASSET_STATE_AUDIO = 0x1000,
-  ASSET_STATE_BITMAP = 0x2000,
-  ASSET_STATE_TYPE_MASK = 0xf000,
-
-  ASSET_STATE_LOCKED = 0x10000,
+  ASSET_STATE_LOCKED,
 };
 
-struct asset {
-  enum asset_state state;
+enum asset_memory_type {
+  ASSET_STATE_AUDIO,
+  ASSET_STATE_BITMAP,
+};
+
+struct asset_memory_header {
+  struct asset_memory_header *next;
+  struct asset_memory_header *prev;
+
+  u32 assetIndex;
+  enum asset_memory_type type;
+
   union {
     struct bitmap bitmap;
     struct audio audio;
   };
+};
+
+struct asset {
+  enum asset_state state;
+  struct asset_memory_header *header;
 
   u32 fileIndex;
   struct hha_asset hhaAsset;
@@ -75,12 +84,6 @@ struct asset_type {
 struct asset_group {
   u32 tagFirstIndex;
   u32 tagLastIndex;
-};
-
-struct asset_memory_header {
-  struct asset_memory_header *next;
-  struct asset_memory_header *prev;
-  u32 assetIndex;
 };
 
 struct asset_file {
