@@ -11,8 +11,6 @@
 #include "types.h"
 
 struct audio {
-  // TODO: this could be shrunk to 12 bytes if bitmap
-  // ever got that small
   s16 *samples[2];
   u32 channelCount;
   u32 sampleCount;
