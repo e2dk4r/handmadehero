@@ -126,6 +126,7 @@ struct render_group {
   struct game_assets *assets;
 
   u32 missingResourceCount;
+  b32 assetsShouldBeLocked : 1;
 };
 
 struct v4
@@ -136,7 +137,7 @@ Linear1tosRGB255(struct v4 color);
 
 // You need to set Perspective or Orthographic
 struct render_group *
-RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets *assets);
+RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets *assets, b32 assetsShouldBeLocked);
 
 void
 RenderGroupPerspective(struct render_group *renderGroup, u32 pixelWidth, u32 pixelHeight);

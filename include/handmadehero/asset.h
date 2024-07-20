@@ -22,12 +22,13 @@ enum asset_state {
   ASSET_STATE_UNLOADED,
   ASSET_STATE_QUEUED,
   ASSET_STATE_LOADED,
-  ASSET_STATE_LOCKED,
   ASSET_STATE_MASK = 0x0fff,
 
   ASSET_STATE_AUDIO = 0x1000,
   ASSET_STATE_BITMAP = 0x2000,
   ASSET_STATE_TYPE_MASK = 0xf000,
+
+  ASSET_STATE_LOCKED = 0x10000,
 };
 
 struct asset_slot {
@@ -125,13 +126,13 @@ struct game_assets *
 GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState);
 
 void
-BitmapLoad(struct game_assets *assets, struct bitmap_id id);
+BitmapLoad(struct game_assets *assets, struct bitmap_id id, b32 locked);
 
 void
-BitmapPrefetch(struct game_assets *assets, struct bitmap_id id);
+BitmapPrefetch(struct game_assets *assets, struct bitmap_id id, b32 locked);
 
 struct bitmap *
-BitmapGet(struct game_assets *assets, struct bitmap_id id);
+BitmapGet(struct game_assets *assets, struct bitmap_id id, b32 mustBeLocked);
 
 struct bitmap_id
 BitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
