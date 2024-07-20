@@ -517,7 +517,7 @@
 - [x] Handmade Hero Day 158 - Tracking Asset Usage
       https://www.youtube.com/watch?v=D5JG3XGPf8Y
 
-- [ ] Handmade Hero Day 159 - Cleaning Up the Loaded Asset Infrastructure
+- [x] Handmade Hero Day 159 - Cleaning Up the Loaded Asset Infrastructure
       https://www.youtube.com/watch?v=ZrAoRHSTzMY
 
 - [ ] Handmade Hero Day 160 - Basic General Purpose Allocation
