@@ -31,15 +31,13 @@ enum asset_state {
   ASSET_STATE_LOCKED = 0x10000,
 };
 
-struct asset_slot {
+struct asset {
   enum asset_state state;
   union {
     struct bitmap bitmap;
     struct audio audio;
   };
-};
 
-struct asset {
   u32 fileIndex;
   struct hha_asset hhaAsset;
 };
@@ -82,7 +80,7 @@ struct asset_group {
 struct asset_memory_header {
   struct asset_memory_header *next;
   struct asset_memory_header *prev;
-  u32 slotIndex;
+  u32 assetIndex;
 };
 
 struct asset_file {
@@ -112,7 +110,6 @@ struct game_assets {
 
   u32 assetCount;
   struct asset *assets;
-  struct asset_slot *slots;
 
   struct asset_type assetTypes[ASSET_TYPE_COUNT];
 
