@@ -22,36 +22,6 @@ struct asset_memory_size {
   u32 total;
 };
 
-internal inline struct asset_memory_size
-GetSizeOfAsset(struct game_assets *assets, enum asset_memory_type type, struct asset *asset)
-{
-  struct hha_asset *info = &asset->hhaAsset;
-
-  struct asset_memory_size result = {};
-
-  switch (type) {
-  case ASSET_STATE_BITMAP: {
-    struct hha_bitmap *bitmapInfo = &info->bitmap;
-    result.section = bitmapInfo->width * BITMAP_BYTES_PER_PIXEL;
-    result.data = bitmapInfo->height * result.section;
-  } break;
-
-  case ASSET_STATE_AUDIO: {
-    struct hha_audio *audioInfo = &info->audio;
-    result.section = audioInfo->sampleCount * sizeof(s16);
-    result.data = audioInfo->channelCount * result.section;
-  } break;
-
-  default: {
-    assert(0 && "unknown asset");
-  } break;
-  }
-
-  result.total = result.data + sizeof(asset->header);
-
-  return result;
-}
-
 internal void
 InsertAssetHeaderToFront(struct game_assets *assets, struct asset_memory_header *header)
 {
@@ -66,10 +36,11 @@ InsertAssetHeaderToFront(struct game_assets *assets, struct asset_memory_header 
 }
 
 internal void
-AddAssetHeaderToList(struct game_assets *assets, struct asset_memory_header *header, u32 assetIndex)
+AddAssetHeaderToList(struct game_assets *assets, struct asset_memory_header *header, u32 assetIndex, u64 totalSize)
 {
   // set data
   header->assetIndex = assetIndex;
+  header->totalSize = totalSize;
   InsertAssetHeaderToFront(assets, header);
 }
 
@@ -435,28 +406,35 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id, b32 locked)
       return;
     }
 
-    // memory
-    struct asset_memory_size size = GetSizeOfAsset(assets, ASSET_STATE_BITMAP, asset);
-    asset->header = AcquireAssetMemory(assets, size.total);
-    void *memory = (asset->header + 1);
-
-    // setup bitmap
+    // setup header
     struct hha_asset *info = &asset->hhaAsset;
     assert(info->dataOffset && "asset not setup properly");
     struct hha_bitmap *bitmapInfo = &info->bitmap;
 
-    struct bitmap *bitmap = &asset->header->bitmap;
-    bitmap->width = SafeTruncate_u32_u16(bitmapInfo->width);
-    bitmap->height = SafeTruncate_u32_u16(bitmapInfo->height);
+    u16 width = SafeTruncate_u32_u16(bitmapInfo->width);
+    u16 height = SafeTruncate_u32_u16(bitmapInfo->height);
+    s16 stride = SafeTruncate_u32_s16(width * BITMAP_BYTES_PER_PIXEL);
 
-    bitmap->stride = SafeTruncate_u32_s16(size.section);
+    struct asset_memory_size size = {};
+    size.section = (u16)stride;
+    size.data = height * size.section;
+    size.total = size.data + sizeof(*asset->header);
+
+    asset->header = AcquireAssetMemory(assets, size.total);
+    void *memory = (asset->header + 1);
+
+    // setup bitmap
+    struct bitmap *bitmap = &asset->header->bitmap;
+    bitmap->width = width;
+    bitmap->height = height;
+    bitmap->stride = stride;
     bitmap->memory = memory;
 
     bitmap->widthOverHeight = (f32)bitmap->width / (f32)bitmap->height;
     bitmap->alignPercentage = v2(bitmapInfo->alignPercentage[0], bitmapInfo->alignPercentage[1]);
 
     if (!locked)
-      AddAssetHeaderToList(assets, asset->header, id.value);
+      AddAssetHeaderToList(assets, asset->header, id.value, size.total);
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
@@ -505,16 +483,20 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
       return;
     }
 
-    // memory
-    struct asset_memory_size size = GetSizeOfAsset(assets, ASSET_STATE_AUDIO, asset);
-    asset->header = AcquireAssetMemory(assets, size.total);
-    void *memory = (asset->header + 1);
-
-    // setup audio
+    // setup header
     struct hha_asset *info = &asset->hhaAsset;
     assert(info->dataOffset && "asset not setup properly");
     struct hha_audio *audioInfo = &info->audio;
 
+    struct asset_memory_size size = {};
+    size.section = audioInfo->channelCount * sizeof(s16);
+    size.data = audioInfo->sampleCount * size.section;
+    size.total = size.data + sizeof(*asset->header);
+
+    asset->header = AcquireAssetMemory(assets, size.total);
+    void *memory = (asset->header + 1);
+
+    // setup audio
     struct audio *audio = &asset->header->audio;
     audio->channelCount = audioInfo->channelCount;
     audio->sampleCount = audioInfo->sampleCount;
@@ -523,7 +505,7 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
     audio->samples[0] = samples;
     audio->samples[1] = audio->samples[0] + audio->sampleCount;
 
-    AddAssetHeaderToList(assets, asset->header, id.value);
+    AddAssetHeaderToList(assets, asset->header, id.value, size.total);
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
@@ -609,8 +591,7 @@ EvictAsset(struct game_assets *assets, struct asset *asset)
 
   RemoveAssetHeaderFromList(asset->header);
 
-  struct asset_memory_size size = GetSizeOfAsset(assets, asset->header->type, asset);
-  ReleaseAssetMemory(assets, asset->header, size.total);
+  ReleaseAssetMemory(assets, asset->header, asset->header->totalSize);
 
   AtomicStore(&asset->state, ASSET_STATE_UNLOADED);
 }

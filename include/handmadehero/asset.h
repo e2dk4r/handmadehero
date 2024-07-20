@@ -34,6 +34,7 @@ struct asset_memory_header {
   struct asset_memory_header *next;
   struct asset_memory_header *prev;
 
+  u64 totalSize;
   u32 assetIndex;
   enum asset_memory_type type;
 
