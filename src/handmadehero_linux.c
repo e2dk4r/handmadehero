@@ -78,10 +78,20 @@ struct linux_file_group {
   u32 fileIndex;
 };
 
+struct linux_memory_block {
+  u64 size;
+};
+
 void *
 LinuxAllocateMemory(u64 size)
 {
-  void *memory = malloc(size);
+  u64 total = size + sizeof(struct linux_memory_block);
+  struct linux_memory_block *memoryBlock = mmap(0, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  assert(memoryBlock != MAP_FAILED);
+
+  memoryBlock->size = total;
+  void *memory = memoryBlock + 1;
+
   return memory;
 }
 
@@ -91,7 +101,10 @@ LinuxDeallocateMemory(void *memory)
   if (!memory)
     return;
 
-  free(memory);
+  struct linux_memory_block *memoryBlock = memory - sizeof(*memoryBlock);
+
+  // TODO: unmap failed?
+  munmap(memoryBlock, memoryBlock->size);
   memory = 0;
 }
 
