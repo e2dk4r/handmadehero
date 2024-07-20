@@ -146,6 +146,12 @@ RandomBitmap(struct random_series *series, struct game_assets *assets, enum asse
 void
 AudioLoad(struct game_assets *assets, struct audio_id id);
 
+b32
+AudioLock(struct game_assets *assets, struct audio_id id);
+
+void
+AudioUnlock(struct game_assets *assets, struct audio_id id);
+
 void
 AudioPrefetch(struct game_assets *assets, struct audio_id id);
 

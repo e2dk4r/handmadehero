@@ -584,6 +584,33 @@ IsAudioIdValid(struct audio_id id)
   return id.value != 0;
 }
 
+b32
+AudioLock(struct game_assets *assets, struct audio_id id)
+{
+  struct asset *asset = assets->assets + id.value;
+
+  enum asset_state expectedAssetState = ASSET_STATE_LOADED;
+  enum asset_state wantedAssetState = ASSET_STATE_LOCKED;
+  if (AtomicCompareExchange(&asset->state, &expectedAssetState, wantedAssetState)) {
+    RemoveAssetHeaderFromList(asset->header);
+    return 1;
+  }
+
+  return 0;
+}
+
+void
+AudioUnlock(struct game_assets *assets, struct audio_id id)
+{
+  struct asset *asset = assets->assets + id.value;
+
+  enum asset_state expectedAssetState = ASSET_STATE_LOCKED;
+  enum asset_state wantedAssetState = ASSET_STATE_LOADED;
+  if (AtomicCompareExchange(&asset->state, &expectedAssetState, wantedAssetState)) {
+    InsertAssetHeaderToFront(assets, asset->header);
+  }
+}
+
 internal void
 EvictAsset(struct game_assets *assets, struct asset *asset)
 {
