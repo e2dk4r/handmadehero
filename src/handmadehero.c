@@ -330,9 +330,9 @@ MakeEmptyBitmap(struct memory_arena *arena, u32 width, u32 height)
 {
   u32 totalBitmapSize = width * height * BITMAP_BYTES_PER_PIXEL;
   struct bitmap bitmap = {
-      .width = SafeTruncate_u32_u16(width),
-      .height = SafeTruncate_u32_u16(height),
-      .stride = (s16)width * BITMAP_BYTES_PER_PIXEL,
+      .width = width,
+      .height = height,
+      .stride = (s32)width * BITMAP_BYTES_PER_PIXEL,
       .memory = MemoryArenaPushAlignment(arena, totalBitmapSize, 16),
       .alignPercentage = v2(0.5f, 0.5f),
       .widthOverHeight = (f32)width / (f32)height,
@@ -1015,8 +1015,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
    * RENDERING
    ****************************************************************/
   struct bitmap drawBuffer = {
-      .width = SafeTruncate_u32_u16(backbuffer->width),
-      .height = SafeTruncate_u32_u16(backbuffer->height),
+      .width = backbuffer->width,
+      .height = backbuffer->height,
       .stride = (s16)backbuffer->stride,
       .memory = backbuffer->memory,
   };

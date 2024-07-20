@@ -411,9 +411,9 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id, b32 locked)
     assert(info->dataOffset && "asset not setup properly");
     struct hha_bitmap *bitmapInfo = &info->bitmap;
 
-    u16 width = SafeTruncate_u32_u16(bitmapInfo->width);
-    u16 height = SafeTruncate_u32_u16(bitmapInfo->height);
-    s16 stride = SafeTruncate_u32_s16(width * BITMAP_BYTES_PER_PIXEL);
+    u32 width = bitmapInfo->width;
+    u32 height = bitmapInfo->height;
+    s32 stride = (s32)(width * BITMAP_BYTES_PER_PIXEL);
 
     struct asset_memory_size size = {};
     size.section = (u16)stride;

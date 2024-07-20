@@ -36,10 +36,10 @@ struct bitmap {
   struct v2 alignPercentage;
   f32 widthOverHeight;
 
-  u16 width;
-  u16 height;
+  u32 width;
+  u32 height;
   // TODO: get rid of stride
-  s16 stride;
+  s32 stride;
   void *memory;
 };
 

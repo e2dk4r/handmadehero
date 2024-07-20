@@ -687,9 +687,9 @@ struct bitmap_header {
 struct loaded_bitmap {
   void *_filememory;
 
-  u16 width;
-  u16 height;
-  s16 stride;
+  u32 width;
+  u32 height;
+  u32 stride;
   void *memory;
 };
 
@@ -791,21 +791,21 @@ LoadBmp(char *filename)
     }
   }
 
-  loadedBitmap->width = SafeTruncate_s32_u16(header->width);
+  loadedBitmap->width = (u32)header->width;
   if (header->width < 0)
-    loadedBitmap->width = SafeTruncate_s32_u16(-header->width);
+    loadedBitmap->width = (u32)-header->width;
 
-  loadedBitmap->height = SafeTruncate_s32_u16(header->height);
+  loadedBitmap->height = (u32)header->height;
   if (header->height < 0)
-    loadedBitmap->height = SafeTruncate_s32_u16(-header->height);
+    loadedBitmap->height = (u32)-header->height;
 
   assert(loadedBitmap->width != 0);
   assert(loadedBitmap->height != 0);
 
-  loadedBitmap->stride = (s16)(loadedBitmap->width * BITMAP_BYTES_PER_PIXEL);
+  loadedBitmap->stride = loadedBitmap->width * BITMAP_BYTES_PER_PIXEL;
   loadedBitmap->memory = pixels;
 
-  if ((u64)loadedBitmap->stride != (loadedBitmap->width * sizeof(u32))) {
+  if (loadedBitmap->stride != (loadedBitmap->width * sizeof(u32))) {
     result.error = HH_ASSET_BUILDER_ERROR_BMP_IS_NOT_ENCODED_PROPERLY;
     goto onError;
   }
