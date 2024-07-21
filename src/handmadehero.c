@@ -1533,8 +1533,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   EndTemporaryMemory(&simRegionMemory);
   EndTemporaryMemory(&renderMemory);
 
-  EvictAssetsAsNecessary(transientState->assets);
-
   MemoryArenaCheck(&state->worldArena);
   MemoryArenaCheck(&transientState->transientArena);
 

@@ -96,11 +96,23 @@ struct asset_file {
   u32 tagBase;
 };
 
+enum asset_memory_block_flags {
+  ASSET_MEMORY_BLOCK_USED = 1,
+};
+
+struct asset_memory_block {
+  struct asset_memory_block *prev;
+  struct asset_memory_block *next;
+  u64 flags;
+  u64 size;
+};
+
 struct game_assets {
   // TODO(e2dk4r): copy of known, not ideal because
   // we want AssetLoad to called from anywhere
   struct transient_state *transientState;
-  struct memory_arena arena;
+
+  struct asset_memory_block memorySentiel;
 
   u64 targetMemoryUsed;
   u64 totalMemoryUsed;
