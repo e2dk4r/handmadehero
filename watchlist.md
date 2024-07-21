@@ -520,7 +520,7 @@
 - [x] Handmade Hero Day 159 - Cleaning Up the Loaded Asset Infrastructure
       https://www.youtube.com/watch?v=ZrAoRHSTzMY
 
-- [ ] Handmade Hero Day 160 - Basic General Purpose Allocation
+- [x] Handmade Hero Day 160 - Basic General Purpose Allocation
       https://www.youtube.com/watch?v=MyGsWY6dezE
 
 - [ ] Handmade Hero Day 161 - Finishing the General Purpose Allocator
