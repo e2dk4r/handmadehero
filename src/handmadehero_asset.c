@@ -136,7 +136,7 @@ AssetFileHandleGet(struct game_assets *assets, u32 fileIndex)
 {
   assert(fileIndex < assets->fileCount);
   struct asset_file *file = (assets->files + fileIndex);
-  struct platform_file_handle *handle = file->handle;
+  struct platform_file_handle *handle = &file->handle;
   return handle;
 }
 
@@ -281,15 +281,15 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->assetCount = 1;
 
   {
-    struct platform_file_group *fileGroup = Platform->GetAllFilesOfTypeBegin("hha");
-    assets->fileCount = fileGroup->fileCount;
+    struct platform_file_group fileGroup = Platform->GetAllFilesOfTypeBegin("hha");
+    assets->fileCount = fileGroup.fileCount;
     assets->files = MemoryArenaPush(arena, sizeof(*assets->files) * assets->fileCount);
     for (u32 fileIndex = 0; fileIndex < assets->fileCount; fileIndex++) {
       struct asset_file *file = assets->files + fileIndex;
 
-      file->handle = Platform->OpenNextFile(fileGroup);
-      Platform->ReadFromFile(&file->header, file->handle, 0, sizeof(file->header));
-      if (Platform->HasFileError(file->handle)) {
+      file->handle = Platform->OpenNextFile(&fileGroup);
+      Platform->ReadFromFile(&file->header, &file->handle, 0, sizeof(file->header));
+      if (Platform->HasFileError(&file->handle)) {
         // TODO: notify user
         assert(0 && "file not opened or read");
         continue;
@@ -299,20 +299,20 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
       if (header->magic != HHA_MAGIC) {
         // TODO: notify user
         assert(0 && "file is not hha");
-        Platform->FileError(file->handle, HANDMADEHERO_ERROR_FILE_IS_NOT_HHA);
+        Platform->FileError(&file->handle, HANDMADEHERO_ERROR_FILE_IS_NOT_HHA);
         continue;
       }
 
       if (header->version > HHA_VERSION) {
         // TODO: notify user
         assert(0 && "not supported version");
-        Platform->FileError(file->handle, HANDMADEHERO_ERROR_HHA_VERSION_IS_NOT_SUPPORTED);
+        Platform->FileError(&file->handle, HANDMADEHERO_ERROR_HHA_VERSION_IS_NOT_SUPPORTED);
         continue;
       }
 
       u64 assetTypeArraySize = sizeof(*file->assetTypes) * file->header.assetTypeCount;
       file->assetTypes = MemoryArenaPush(arena, assetTypeArraySize);
-      Platform->ReadFromFile(file->assetTypes, file->handle, file->header.assetTypesOffset, assetTypeArraySize);
+      Platform->ReadFromFile(file->assetTypes, &file->handle, file->header.assetTypesOffset, assetTypeArraySize);
 
       file->tagBase = assets->tagCount;
 
@@ -321,7 +321,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
       assets->assetCount += header->assetCount - 1;
     }
 
-    Platform->GetAllFilesOfTypeEnd(fileGroup);
+    Platform->GetAllFilesOfTypeEnd(&fileGroup);
   }
 
   // NOTE: allocate memory for all metadatas from asset pack files
@@ -332,14 +332,14 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   for (u32 fileIndex = 0; fileIndex < assets->fileCount; fileIndex++) {
     struct asset_file *file = assets->files + fileIndex;
 
-    if (Platform->HasFileError(file->handle)) {
+    if (Platform->HasFileError(&file->handle)) {
       continue;
     }
 
     struct hha_header *header = &file->header;
     struct hha_tag *dest = assets->tags + file->tagBase;
     u64 tagArraySize = header->tagCount * sizeof(*dest);
-    Platform->ReadFromFile(dest, file->handle, header->tagsOffset, tagArraySize);
+    Platform->ReadFromFile(dest, &file->handle, header->tagsOffset, tagArraySize);
   }
 
   // TODO: Fast loading 100+ asset pack files
@@ -359,7 +359,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
     for (u32 fileIndex = 0; fileIndex < assets->fileCount; fileIndex++) {
       struct asset_file *file = assets->files + fileIndex;
 
-      if (Platform->HasFileError(file->handle)) {
+      if (Platform->HasFileError(&file->handle)) {
         continue;
       }
 
@@ -376,7 +376,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
           u64 assetArraySize = assetCountForType * sizeof(*hhaAssets);
           struct memory_temp temp = BeginTemporaryMemory(&transientState->transientArena);
           hhaAssets = MemoryArenaPush(temp.arena, assetArraySize);
-          Platform->ReadFromFile(hhaAssets, file->handle, firstOffset, assetArraySize);
+          Platform->ReadFromFile(hhaAssets, &file->handle, firstOffset, assetArraySize);
 
           for (u32 assetIndex = 0; assetIndex < assetCountForType; assetIndex++) {
             assert(assetCount < assets->assetCount);

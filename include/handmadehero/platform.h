@@ -7,15 +7,17 @@
 
 struct platform_file_handle {
   enum handmadehero_error error;
+  void *data;
 };
 
 struct platform_file_group {
   u32 fileCount;
+  void *data;
 };
 
-typedef struct platform_file_handle *(*pfnPlatformOpenNextFile)(struct platform_file_group *fileGroup);
+typedef struct platform_file_handle (*pfnPlatformOpenNextFile)(struct platform_file_group *fileGroup);
 typedef void (*pfnPlatformReadFromFile)(void *dest, struct platform_file_handle *handle, u64 offset, u64 size);
-typedef struct platform_file_group *(*pfnPlatformGetAllFilesOfTypeBegin)(char *type);
+typedef struct platform_file_group (*pfnPlatformGetAllFilesOfTypeBegin)(char *type);
 typedef void (*pfnPlatformGetAllFilesOfTypeEnd)(struct platform_file_group *fileGroup);
 typedef void (*pfnPlatformFileError)(struct platform_file_handle *handle, enum handmadehero_error error);
 typedef b32 (*pfnPlatformHasFileError)(struct platform_file_handle *handle);

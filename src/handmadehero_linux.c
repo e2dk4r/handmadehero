@@ -61,18 +61,11 @@
  *****************************************************************/
 
 struct linux_file_handle {
-  // platform required
-  struct platform_file_handle h;
-
-  // linux specific
-
   s64 lastError;
   s32 fd;
 };
 
 struct linux_file_group {
-  // platform required
-  struct platform_file_group g;
   DIR *dir;
   long direntIndexes[1024];
   u32 fileIndex;
@@ -108,14 +101,18 @@ LinuxDeallocateMemory(void *memory)
   memory = 0;
 }
 
-struct linux_file_handle *
-LinuxOpenNextFile(struct linux_file_group *fileGroup)
+struct platform_file_handle
+LinuxOpenNextFile(struct platform_file_group *platformFileGroup)
 {
-  struct linux_file_handle *result =
-      mmap(0, sizeof(*result), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (!result) {
-    return 0;
+  struct platform_file_handle platformFileHandle = {};
+  struct linux_file_group *fileGroup = platformFileGroup->data;
+
+  struct linux_file_handle *fileHandle =
+      mmap(0, sizeof(*fileHandle), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (!fileHandle) {
+    return platformFileHandle;
   }
+  platformFileHandle.data = fileHandle;
 
   long direntIndex = fileGroup->direntIndexes[fileGroup->fileIndex];
   seekdir(fileGroup->dir, direntIndex);
@@ -127,53 +124,55 @@ LinuxOpenNextFile(struct linux_file_group *fileGroup)
 
   s32 fd = open(path, O_RDONLY);
   if (fd < 0) {
-    result->h.error = HANDMADEHERO_ERROR_OPEN_FILE;
-    result->lastError = errno;
+    platformFileHandle.error = HANDMADEHERO_ERROR_OPEN_FILE;
+    fileHandle->lastError = errno;
     goto onError;
   }
 
   struct stat stat;
   s32 fstatResult = fstat(fd, &stat);
   if (fstatResult != 0) {
-    result->h.error = HANDMADEHERO_ERROR_FILE_STAT;
-    result->lastError = errno;
+    platformFileHandle.error = HANDMADEHERO_ERROR_FILE_STAT;
+    fileHandle->lastError = errno;
     goto onError;
   }
 
   if (!S_ISREG(stat.st_mode)) {
-    result->h.error = HANDMADEHERO_ERROR_PATH_IS_NOT_FILE;
+    platformFileHandle.error = HANDMADEHERO_ERROR_PATH_IS_NOT_FILE;
     goto onError;
   }
 
-  result->fd = fd;
-  result->h.error = HANDMADEHERO_ERROR_NONE;
+  platformFileHandle.error = HANDMADEHERO_ERROR_NONE;
+  fileHandle->fd = fd;
 
-  return result;
+  return platformFileHandle;
 
 onError:
   // TODO: unmap failed?
-  munmap(result, sizeof(*result));
+  munmap(fileHandle, sizeof(*fileHandle));
 
   if (fd >= 0) {
     // TODO: is file closed?
     close(fd);
   }
-  return result;
+  return platformFileHandle;
 }
 
 void
-LinuxReadFromFile(void *dest, struct linux_file_handle *handle, u64 offset, u64 size)
+LinuxReadFromFile(void *dest, struct platform_file_handle *platformFileHandle, u64 offset, u64 size)
 {
   // TODO: use io_uring instead of locking
+  struct linux_file_handle *fileHandle = platformFileHandle->data;
+
   global_variable pthread_mutex_t fileReadLock;
   pthread_mutex_lock(&fileReadLock);
 
   u64 seekTry = 100;
   while (seekTry) {
-    off64_t lseekResult = lseek64(handle->fd, (off64_t)offset, SEEK_SET);
+    off64_t lseekResult = lseek64(fileHandle->fd, (off64_t)offset, SEEK_SET);
     if (lseekResult == -1 && errno != EAGAIN) {
-      handle->h.error = HANDMADEHERO_ERROR_FILE_SEEK;
-      handle->lastError = errno;
+      platformFileHandle->error = HANDMADEHERO_ERROR_FILE_SEEK;
+      fileHandle->lastError = errno;
       goto end;
     } else if (lseekResult == (off64_t)offset) {
       break;
@@ -184,15 +183,15 @@ LinuxReadFromFile(void *dest, struct linux_file_handle *handle, u64 offset, u64 
 
   if (seekTry == 0) {
     // tried so hard, got so far
-    handle->h.error = HANDMADEHERO_ERROR_FILE_SEEK;
-    handle->lastError = EAGAIN;
+    platformFileHandle->error = HANDMADEHERO_ERROR_FILE_SEEK;
+    fileHandle->lastError = EAGAIN;
     goto end;
   }
 
-  ssize_t bytesRead = read(handle->fd, dest, size);
+  ssize_t bytesRead = read(fileHandle->fd, dest, size);
   if (bytesRead < 0) {
-    handle->h.error = HANDMADEHERO_ERROR_PATH_IS_NOT_FILE;
-    handle->lastError = errno;
+    platformFileHandle->error = HANDMADEHERO_ERROR_PATH_IS_NOT_FILE;
+    fileHandle->lastError = errno;
     goto end;
   }
 
@@ -200,14 +199,16 @@ end:
   pthread_mutex_unlock(&fileReadLock);
 }
 
-struct linux_file_group *
+struct platform_file_group
 LinuxGetAllFilesOfTypeBegin(char *type)
 {
+  struct platform_file_group platformFileGroup = {};
   struct linux_file_group *fileGroup =
       mmap(0, sizeof(*fileGroup), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   if (!fileGroup) {
-    return 0;
+    return platformFileGroup;
   }
+  platformFileGroup.data = fileGroup;
 
   ZeroMemory(fileGroup, sizeof(*fileGroup));
 
@@ -244,22 +245,23 @@ LinuxGetAllFilesOfTypeBegin(char *type)
     if (!PathHasExtension(filename, extension))
       continue;
 
-    fileGroup->direntIndexes[fileGroup->g.fileCount] = direntIndex;
+    fileGroup->direntIndexes[platformFileGroup.fileCount] = direntIndex;
 
-    fileGroup->g.fileCount++;
+    platformFileGroup.fileCount++;
   }
 
-  return fileGroup;
+  return platformFileGroup;
 
 onError:
   // TODO: unmap failed?
   munmap(fileGroup, sizeof(*fileGroup));
-  return 0;
+  return platformFileGroup;
 }
 
 void
-LinuxGetAllFilesOfTypeEnd(struct linux_file_group *fileGroup)
+LinuxGetAllFilesOfTypeEnd(struct platform_file_group *platformFileGroup)
 {
+  struct linux_file_group *fileGroup = platformFileGroup->data;
   assert(fileGroup);
 
   closedir(fileGroup->dir);
@@ -270,10 +272,11 @@ LinuxGetAllFilesOfTypeEnd(struct linux_file_group *fileGroup)
 }
 
 void
-LinuxFileError(struct linux_file_handle *handle, enum handmadehero_error error)
+LinuxFileError(struct platform_file_handle *platformFileHandle, enum handmadehero_error error)
 {
   assert(error != HANDMADEHERO_ERROR_NONE);
-  handle->h.error = error;
+  struct linux_file_handle *fileHandle = platformFileHandle->data;
+  platformFileHandle->error = error;
 
   char *errorMessages[] = {
       "none",
@@ -288,13 +291,13 @@ LinuxFileError(struct linux_file_handle *handle, enum handmadehero_error error)
   };
   char *errorMessage = errorMessages[error];
 
-  debugf("[LinuxFileError]: %s\n  fd: %d\n", errorMessage, handle->fd);
+  debugf("[LinuxFileError]: %s\n  fd: %d\n", errorMessage, fileHandle->fd);
 }
 
 b32
-LinuxHasFileError(struct linux_file_handle *handle)
+LinuxHasFileError(struct platform_file_handle *platformFileHandle)
 {
-  return handle->h.error != HANDMADEHERO_ERROR_NONE;
+  return platformFileHandle->error != HANDMADEHERO_ERROR_NONE;
 }
 
 #if HANDMADEHERO_INTERNAL

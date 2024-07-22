@@ -85,7 +85,7 @@ struct asset_group {
 };
 
 struct asset_file {
-  struct platform_file_handle *handle;
+  struct platform_file_handle handle;
   struct hha_header header;
 
   // TODO: if we ever do thread stacks, assetTypes does not
