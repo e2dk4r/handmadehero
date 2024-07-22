@@ -15,9 +15,16 @@ struct platform_file_group {
   void *data;
 };
 
+enum platform_file_type {
+  PLATFORM_FILE_TYPE_ASSET_FILE,
+  PLATFORM_FILE_TYPE_SAVE_FILE,
+
+  PLATFORM_FILE_TYPE_COUNT,
+};
+
 typedef struct platform_file_handle (*pfnPlatformOpenNextFile)(struct platform_file_group *fileGroup);
 typedef void (*pfnPlatformReadFromFile)(void *dest, struct platform_file_handle *handle, u64 offset, u64 size);
-typedef struct platform_file_group (*pfnPlatformGetAllFilesOfTypeBegin)(char *type);
+typedef struct platform_file_group (*pfnPlatformGetAllFilesOfTypeBegin)(enum platform_file_type type);
 typedef void (*pfnPlatformGetAllFilesOfTypeEnd)(struct platform_file_group *fileGroup);
 typedef void (*pfnPlatformFileError)(struct platform_file_handle *handle, enum handmadehero_error error);
 typedef b32 (*pfnPlatformHasFileError)(struct platform_file_handle *handle);

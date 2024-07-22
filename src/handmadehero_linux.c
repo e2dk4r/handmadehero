@@ -200,7 +200,7 @@ end:
 }
 
 struct platform_file_group
-LinuxGetAllFilesOfTypeBegin(char *type)
+LinuxGetAllFilesOfTypeBegin(enum platform_file_type type)
 {
   struct platform_file_group platformFileGroup = {};
   struct linux_file_group *fileGroup =
@@ -241,7 +241,17 @@ LinuxGetAllFilesOfTypeBegin(char *type)
       continue;
 
     struct string filename = StringFromZeroTerminated((u8 *)dirent->d_name, 255);
-    struct string extension = StringFromZeroTerminated((u8 *)type, 255);
+
+    char *extensionString = 0;
+    switch (type) {
+    case PLATFORM_FILE_TYPE_ASSET_FILE: {
+      extensionString = "hha";
+    } break;
+    default: {
+      assert(0 && "type is not supported in this function");
+    } break;
+    }
+    struct string extension = StringFromZeroTerminated((u8 *)extensionString, 255);
     if (!PathHasExtension(filename, extension))
       continue;
 

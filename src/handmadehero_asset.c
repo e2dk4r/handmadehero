@@ -281,7 +281,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
   assets->assetCount = 1;
 
   {
-    struct platform_file_group fileGroup = Platform->GetAllFilesOfTypeBegin("hha");
+    struct platform_file_group fileGroup = Platform->GetAllFilesOfTypeBegin(PLATFORM_FILE_TYPE_ASSET_FILE);
     assets->fileCount = fileGroup.fileCount;
     assets->files = MemoryArenaPush(arena, sizeof(*assets->files) * assets->fileCount);
     for (u32 fileIndex = 0; fileIndex < assets->fileCount; fileIndex++) {
