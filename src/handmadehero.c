@@ -916,9 +916,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     transientState->envMaps[ENV_MAP_MIDDLE].z = 0.0f;
     transientState->envMaps[ENV_MAP_TOP].z = 2.0f;
 
-    transientState->assets = GameAssetsAllocate(&transientState->transientArena, 64 * MEGABYTES, transientState);
+    transientState->assets = GameAssetsAllocate(&transientState->transientArena, 16 * MEGABYTES, transientState);
 
-#if 0
+#if 1
     state->music = PlayAudio(&state->audioState, AudioGetFirstId(transientState->assets, ASSET_TYPE_MUSIC));
 #else
     state->music = 0;
