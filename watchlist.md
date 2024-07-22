@@ -523,7 +523,7 @@
 - [x] Handmade Hero Day 160 - Basic General Purpose Allocation
       https://www.youtube.com/watch?v=MyGsWY6dezE
 
-- [ ] Handmade Hero Day 161 - Finishing the General Purpose Allocator
+- [x] Handmade Hero Day 161 - Finishing the General Purpose Allocator
       https://www.youtube.com/watch?v=1LyHQVYlClw
 
 - [ ] Handmade Hero Day 162 - Introduction to Fonts
