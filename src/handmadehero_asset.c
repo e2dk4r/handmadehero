@@ -36,6 +36,19 @@ InsertAssetHeaderToFront(struct game_assets *assets, struct asset_memory_header 
 }
 
 internal void
+InsertAssetHeaderToEnd(struct game_assets *assets, struct asset_memory_header *header)
+{
+  struct asset_memory_header *sentinel = &assets->loadedAssetSentiel;
+
+  // insert header to end
+  header->prev = sentinel->prev;
+  header->next = sentinel;
+
+  header->prev->next = header;
+  header->next->prev = header;
+}
+
+internal void
 AddAssetHeaderToList(struct game_assets *assets, struct asset_memory_header *header, u32 assetIndex, u64 totalSize)
 {
   // set data
@@ -706,6 +719,6 @@ AudioUnlock(struct game_assets *assets, struct audio_id id)
   enum asset_state expectedAssetState = ASSET_STATE_LOCKED;
   enum asset_state wantedAssetState = ASSET_STATE_LOADED;
   if (AtomicCompareExchange(&asset->state, &expectedAssetState, wantedAssetState)) {
-    InsertAssetHeaderToFront(assets, asset->header);
+    InsertAssetHeaderToEnd(assets, asset->header);
   }
 }
