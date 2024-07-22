@@ -32,7 +32,6 @@ struct asset_memory_header {
   struct asset_memory_header *next;
   struct asset_memory_header *prev;
 
-  u64 totalSize;
   u32 assetIndex;
   enum asset_memory_type type;
 
@@ -114,8 +113,6 @@ struct game_assets {
 
   struct asset_memory_block memorySentiel;
 
-  u64 targetMemoryUsed;
-  u64 totalMemoryUsed;
   struct asset_memory_header loadedAssetSentiel;
 
   u32 tagCount;

@@ -40,7 +40,6 @@ AddAssetHeaderToList(struct game_assets *assets, struct asset_memory_header *hea
 {
   // set data
   header->assetIndex = assetIndex;
-  header->totalSize = totalSize;
   InsertAssetHeaderToFront(assets, header);
 }
 
@@ -141,41 +140,6 @@ AssetFileHandleGet(struct game_assets *assets, u32 fileIndex)
   return handle;
 }
 
-internal void
-ReleaseAssetMemory(struct game_assets *assets, void *memory, memory_arena_size_t size);
-
-internal void
-EvictAsset(struct game_assets *assets, struct asset *asset)
-{
-  assert(asset->state == ASSET_STATE_LOADED);
-
-  RemoveAssetHeaderFromList(asset->header);
-
-  ReleaseAssetMemory(assets, asset->header, asset->header->totalSize);
-
-  AtomicStore(&asset->state, ASSET_STATE_UNLOADED);
-}
-
-void
-EvictAssetsAsNecessary(struct game_assets *assets)
-{
-  while (assets->totalMemoryUsed > assets->targetMemoryUsed) {
-    struct asset_memory_header *lruHeader = assets->loadedAssetSentiel.prev;
-    if (lruHeader == &assets->loadedAssetSentiel) {
-      // no asset loaded
-      break;
-    }
-
-    u32 assetIndex = lruHeader->assetIndex;
-    struct asset *asset = assets->assets + assetIndex;
-    if (asset->state < ASSET_STATE_LOADED) {
-      break;
-    }
-
-    EvictAsset(assets, asset);
-  }
-}
-
 internal struct asset_memory_block *
 InsertMemoryBlock(struct asset_memory_block *prev, void *memory, u64 size)
 {
@@ -213,21 +177,42 @@ FindMemoryBlockForSize(struct game_assets *assets, memory_arena_size_t size)
   return found;
 }
 
+internal b32
+MergeMemoryBlock(struct game_assets *assets, struct asset_memory_block *first, struct asset_memory_block *second)
+{
+  b32 isMerged = 0;
+  if (first == &assets->memorySentiel || second == &assets->memorySentiel)
+    return isMerged;
+
+  if (first->flags & ASSET_MEMORY_BLOCK_USED || second->flags & ASSET_MEMORY_BLOCK_USED)
+    return isMerged;
+
+  // expected to be continuous space
+  u8 *expectedSecond = (u8 *)first + sizeof(*first) + first->size;
+  if ((u8 *)second != expectedSecond)
+    return isMerged;
+
+  // detach memory block from list
+  second->next->prev = second->prev;
+  second->prev->next = second->next;
+
+  // notify that first is bigger now
+  first->size += sizeof(*second) + second->size;
+
+  isMerged = 1;
+
+  return isMerged;
+}
+
 internal void *
 AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size)
 {
-#if 0
-  EvictAssetsAsNecessary(assets);
-  // platform memory path
-  void *result = Platform->AllocateMemory(size);
-#else
   void *result = 0;
   for (;;) {
     struct asset_memory_block *block = FindMemoryBlockForSize(assets, size);
-    if (block) {
+    if (block && size <= block->size) {
       block->flags |= ASSET_MEMORY_BLOCK_USED;
 
-      assert(size <= block->size && "memory overflow");
       result = (u8 *)(block + 1);
 
       u64 remainingSize = block->size - size;
@@ -240,44 +225,35 @@ AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size)
       break;
     } else { // if memory block for size NOT found
       for (struct asset_memory_header *header = assets->loadedAssetSentiel.prev; header != &assets->loadedAssetSentiel;
-           header = header->next) {
-        u32 assetIndex = header->assetIndex;
-        struct asset *asset = assets->assets + assetIndex;
+           header = header->prev) {
+        struct asset *asset = assets->assets + header->assetIndex;
         if (asset->state < ASSET_STATE_LOADED) {
           continue;
         }
 
-        EvictAsset(assets, asset);
+        // evict asset
+        enum asset_state expectedAssetState = ASSET_STATE_LOADED;
+        if (!AtomicCompareExchange(&asset->state, &expectedAssetState, ASSET_STATE_UNLOADED))
+          continue;
+
+        RemoveAssetHeaderFromList(header);
+
+        // ReleaseAssetMemory
+        struct asset_memory_block *block = (struct asset_memory_block *)((u8 *)header - sizeof(*block));
+        block->flags &= (u64)(~ASSET_MEMORY_BLOCK_USED);
+
+        if (MergeMemoryBlock(assets, block->prev, block)) {
+          block = block->prev;
+        }
+
+        MergeMemoryBlock(assets, block, block->next);
+
         break;
       }
     }
   }
 
-#endif
-
-  if (result) {
-    assets->totalMemoryUsed += size;
-  }
-
   return result;
-}
-
-internal void
-ReleaseAssetMemory(struct game_assets *assets, void *memory, memory_arena_size_t size)
-{
-  assert(memory);
-  assets->totalMemoryUsed -= size;
-
-#if 0
-  // platform memory path
-  Platform->DeallocateMemory(memory);
-#else
-  struct asset_memory_block *block = (struct asset_memory_block *)memory - 1;
-  block->flags &= (u64)(~ASSET_MEMORY_BLOCK_USED);
-  // TODO: merge memory blocks!
-#endif
-
-  memory = 0;
 }
 
 inline struct game_assets *
@@ -294,8 +270,6 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
 
   assets->transientState = transientState;
 
-  assets->totalMemoryUsed = 0;
-  assets->targetMemoryUsed = size;
   assets->loadedAssetSentiel.next = assets->loadedAssetSentiel.prev = &assets->loadedAssetSentiel;
 
   for (u32 tagType = 0; tagType < ASSET_TAG_COUNT; tagType++) {
