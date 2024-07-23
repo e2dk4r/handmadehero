@@ -526,7 +526,7 @@
 - [x] Handmade Hero Day 161 - Finishing the General Purpose Allocator
       https://www.youtube.com/watch?v=1LyHQVYlClw
 
-- [ ] Handmade Hero Day 162 - Introduction to Fonts
+- [x] Handmade Hero Day 162 - Introduction to Fonts
       https://www.youtube.com/watch?v=ZK7PezR1KgU
 
 - [ ] Handmade Hero Day 163 - Asset Processing with STB TrueType
