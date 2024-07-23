@@ -221,14 +221,6 @@ struct audio_info {
   enum hha_audio_chain chain;
 };
 
-enum asset_tag_id {
-  ASSET_TAG_SMOOTHNESS,
-  ASSET_TAG_FLATNESS,
-  ASSET_TAG_FACING_DIRECTION, // angle in radians clockwise
-
-  ASSET_TAG_COUNT
-};
-
 enum asset_type {
   ASSET_TYPE_AUDIO,
   ASSET_TYPE_BITMAP,

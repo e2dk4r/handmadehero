@@ -61,14 +61,6 @@ struct audio_info {
 };
 #define AUDIO_INFO_SAMPLE_COUNT_ALL 0
 
-enum asset_tag_id {
-  ASSET_TAG_SMOOTHNESS,
-  ASSET_TAG_FLATNESS,
-  ASSET_TAG_FACING_DIRECTION, // angle in radians clockwise
-
-  ASSET_TAG_COUNT
-};
-
 struct asset_vector {
   f32 e[ASSET_TAG_COUNT];
 };

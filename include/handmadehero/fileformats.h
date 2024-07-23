@@ -34,6 +34,14 @@ enum asset_type_id {
   ASSET_TYPE_COUNT
 };
 
+enum asset_tag_id {
+  ASSET_TAG_SMOOTHNESS,
+  ASSET_TAG_FLATNESS,
+  ASSET_TAG_FACING_DIRECTION, // angle in radians clockwise
+
+  ASSET_TAG_COUNT
+};
+
 // Handmadehero Asset Header
 struct hha_header {
 #define HHA_MAGIC HHA_ENCODE('h', 'h', 'a', 'f')
