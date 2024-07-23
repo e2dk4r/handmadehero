@@ -1,7 +1,6 @@
 #ifndef HANDMADEHERO_ASSET_H
 #define HANDMADEHERO_ASSET_H
 
-#include "asset_type_id.h"
 #include "fileformats.h"
 #include "math.h"
 #include "memory_arena.h"

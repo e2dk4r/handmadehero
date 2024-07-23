@@ -16,7 +16,6 @@
 #include <unistd.h>
 
 #include <handmadehero/assert.h>
-#include <handmadehero/asset_type_id.h>
 #include <handmadehero/fileformats.h>
 #include <handmadehero/types.h>
 

@@ -7,6 +7,33 @@
 
 #pragma pack(push, 1)
 
+enum asset_type_id {
+  ASSET_TYPE_NONE,
+
+  /* ================ BITMAPS ================ */
+  ASSET_TYPE_SHADOW,
+  ASSET_TYPE_TREE,
+  ASSET_TYPE_SWORD,
+  ASSET_TYPE_ROCK,
+  ASSET_TYPE_GRASS,
+  ASSET_TYPE_GROUND,
+  ASSET_TYPE_TUFT,
+
+  ASSET_TYPE_HEAD,
+  ASSET_TYPE_TORSO,
+  ASSET_TYPE_CAPE,
+
+  /* ================ AUDIOS ================ */
+  ASSET_TYPE_BLOOP,
+  ASSET_TYPE_CRACK,
+  ASSET_TYPE_DROP,
+  ASSET_TYPE_GLIDE,
+  ASSET_TYPE_MUSIC,
+  ASSET_TYPE_PUHP,
+
+  ASSET_TYPE_COUNT
+};
+
 // Handmadehero Asset Header
 struct hha_header {
 #define HHA_MAGIC HHA_ENCODE('h', 'h', 'a', 'f')
