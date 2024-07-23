@@ -11,7 +11,7 @@
 #pragma GCC diagnostic ignored "-Wsign-compare"
 
 #include <fcntl.h>
-#include <stdlib.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -28,6 +28,9 @@
 #define snprintf stbsp_snprintf
 #define PRIu32 "u"
 #define PRIs32 "d"
+
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
 
 #pragma GCC diagnostic pop
 
@@ -206,6 +209,7 @@ enum hh_asset_builder_error {
   HH_ASSET_BUILDER_ERROR_BMP_INVALID_MAGIC,
   HH_ASSET_BUILDER_ERROR_BMP_MALFORMED,
   HH_ASSET_BUILDER_ERROR_BMP_IS_NOT_ENCODED_PROPERLY,
+  HH_ASSET_BUILDER_ERROR_TTF_MALFORMED,
 };
 
 struct bitmap_info {
@@ -221,13 +225,19 @@ struct audio_info {
   enum hha_audio_chain chain;
 };
 
-enum asset_type {
-  ASSET_TYPE_AUDIO,
-  ASSET_TYPE_BITMAP,
+struct font_info {
+  char *fontPath;
+  u32 codepoint;
+};
+
+enum asset_metadata_type {
+  ASSET_METADATA_TYPE_AUDIO,
+  ASSET_METADATA_TYPE_BITMAP,
+  ASSET_METADATA_TYPE_FONT,
 };
 
 struct asset_metadata {
-  enum asset_type type;
+  enum asset_metadata_type type;
   char *filename;
 
   u32 tagIndexFirst;
@@ -236,6 +246,7 @@ struct asset_metadata {
   union {
     struct bitmap_info bitmapInfo;
     struct audio_info audioInfo;
+    struct font_info fontInfo;
   };
 };
 
@@ -290,7 +301,7 @@ AddBitmapAsset(struct asset_context *context, char *filename, f32 alignPercentag
   type->assetIndexOnePastLast++;
 
   struct asset_metadata *asset = context->currentAsset;
-  asset->type = ASSET_TYPE_BITMAP;
+  asset->type = ASSET_METADATA_TYPE_BITMAP;
   asset->tagIndexFirst = context->tagCount;
   asset->tagIndexOnePastLast = asset->tagIndexFirst;
 
@@ -316,7 +327,7 @@ AddAudioAssetTrimmed(struct asset_context *context, char *filename, u32 sampleIn
   type->assetIndexOnePastLast++;
 
   struct asset_metadata *asset = context->currentAsset;
-  asset->type = ASSET_TYPE_AUDIO;
+  asset->type = ASSET_METADATA_TYPE_AUDIO;
   asset->tagIndexFirst = context->tagCount;
   asset->tagIndexOnePastLast = asset->tagIndexFirst;
   asset->audioInfo.chain = HHA_AUDIO_CHAIN_NONE;
@@ -336,6 +347,31 @@ internal struct audio_id
 AddAudioAsset(struct asset_context *context, char *filename)
 {
   return AddAudioAssetTrimmed(context, filename, 0, 0);
+}
+
+internal struct bitmap_id
+AddCharacterAsset(struct asset_context *context, char *fontPath, u32 codepoint)
+{
+  assert(context->currentAssetType && "you must call BeginAssetType()");
+  assert(context->currentAssetType->assetIndexOnePastLast < ARRAY_COUNT(context->assets) && "asset count exceeded");
+
+  struct hha_asset_type *type = context->currentAssetType;
+  context->currentAsset = context->assetMetadatas + type->assetIndexOnePastLast;
+  type->assetIndexOnePastLast++;
+
+  struct asset_metadata *asset = context->currentAsset;
+  asset->type = ASSET_METADATA_TYPE_FONT;
+  asset->tagIndexFirst = context->tagCount;
+  asset->tagIndexOnePastLast = asset->tagIndexFirst;
+
+  struct bitmap_id id = {context->assetCount};
+  context->assetCount++;
+
+  struct font_info *fontInfo = &(context->assetMetadatas + id.value)->fontInfo;
+  fontInfo->fontPath = fontPath;
+  fontInfo->codepoint = codepoint;
+
+  return id;
 }
 
 internal void
@@ -381,6 +417,41 @@ usage(void)
 }
 
 /*****************************************************************
+ * MEMORY
+ *****************************************************************/
+
+struct memory_block {
+  u64 size;
+};
+
+void *
+AllocateMemory(u64 size)
+{
+  u64 total = size + sizeof(struct memory_block);
+  struct memory_block *memoryBlock = mmap(0, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (memoryBlock == MAP_FAILED)
+    return 0;
+
+  memoryBlock->size = total;
+  void *memory = memoryBlock + 1;
+
+  return memory;
+}
+
+void
+DeallocateMemory(void *memory)
+{
+  if (!memory)
+    return;
+
+  struct memory_block *memoryBlock = memory - sizeof(*memoryBlock);
+
+  // TODO: unmap failed?
+  munmap(memoryBlock, memoryBlock->size);
+  memory = 0;
+}
+
+/*****************************************************************
  * LOADING FILES
  *****************************************************************/
 
@@ -389,13 +460,6 @@ struct read_file_result {
   u64 size;
   void *data;
 };
-
-void
-FreeMemory(void *memory)
-{
-  assert(memory);
-  free(memory);
-}
 
 internal struct read_file_result
 ReadEntireFile(char *path)
@@ -419,7 +483,7 @@ ReadEntireFile(char *path)
   }
 
   result.size = (u64)stat.st_size;
-  result.data = malloc((size_t)stat.st_size);
+  result.data = AllocateMemory(result.size);
   if (!result.data) {
     result.error = HH_ASSET_BUILDER_ERROR_MALLOC;
     return result;
@@ -428,7 +492,7 @@ ReadEntireFile(char *path)
   ssize_t bytesRead = read(fd, result.data, (size_t)stat.st_size);
   if (bytesRead <= 0) {
     result.error = HH_ASSET_BUILDER_ERROR_IO_READ;
-    FreeMemory(result.data);
+    DeallocateMemory(result.data);
     result.data = 0;
     return result;
   }
@@ -528,7 +592,7 @@ struct load_wav_result {
 internal void
 FreeWav(struct loaded_audio *audio)
 {
-  FreeMemory(audio->_filememory);
+  DeallocateMemory(audio->_filememory);
   audio->_filememory = 0;
 }
 
@@ -701,7 +765,7 @@ struct load_bmp_result {
 void
 FreeBmp(struct loaded_bitmap *bitmap)
 {
-  FreeMemory(bitmap->_filememory);
+  DeallocateMemory(bitmap->_filememory);
 }
 
 internal struct load_bmp_result
@@ -809,6 +873,86 @@ onError:
 }
 
 /*****************************************************************
+ * LOADING TTF FILES
+ *****************************************************************/
+
+struct load_ttf_codepoint_result {
+  enum hh_asset_builder_error error;
+  struct loaded_bitmap loadedBitmap;
+};
+
+// loadedBitmap.memory is allocated on heap
+internal struct load_ttf_codepoint_result
+LoadTTFCodepoint(char *fontPath, u32 codepoint)
+{
+  struct load_ttf_codepoint_result result = {};
+  struct read_file_result ttfFile = ReadEntireFile(fontPath);
+  if (ttfFile.error != HH_ASSET_BUILDER_ERROR_NONE) {
+    result.error = ttfFile.error;
+    return result;
+  }
+
+  stbtt_fontinfo font;
+  int ok = stbtt_InitFont(&font, ttfFile.data, stbtt_GetFontOffsetForIndex(ttfFile.data, 0));
+  if (!ok) {
+    result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
+    DeallocateMemory(ttfFile.data);
+    return result;
+  }
+
+  s32 width;
+  s32 height;
+  s32 xOffset;
+  s32 yOffset;
+  // 8bpp, stored as left-to-right, top-to-bottom
+  u8 *codepointBitmap = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 128.0f), (int)codepoint,
+                                                 &width, &height, &xOffset, &yOffset);
+  if (!codepointBitmap) {
+    result.error = HH_ASSET_BUILDER_ERROR_MALLOC;
+    DeallocateMemory(ttfFile.data);
+    return result;
+  }
+
+  // transform
+  struct loaded_bitmap loadedBitmap = {};
+  loadedBitmap.width = (u32)width;
+  loadedBitmap.height = (u32)height;
+  loadedBitmap.stride = loadedBitmap.width * sizeof(u32);
+  loadedBitmap.memory = AllocateMemory(loadedBitmap.height * loadedBitmap.stride);
+  if (!loadedBitmap.memory) {
+    result.error = HH_ASSET_BUILDER_ERROR_MALLOC;
+    DeallocateMemory(ttfFile.data);
+    stbtt_FreeBitmap(codepointBitmap, 0);
+    return result;
+  }
+
+  u8 *srcRow = codepointBitmap + (width * (height - 1)); // start at bottom left
+  s32 srcStride = -width;                                // go up
+  u8 *destRow = loadedBitmap.memory;
+  u32 destStride = loadedBitmap.stride;
+  for (u32 y = 0; y < loadedBitmap.height; y++) {
+    u8 *src = srcRow;
+    u32 *dest = (u32 *)destRow;
+    for (u32 x = 0; x < loadedBitmap.width; x++) {
+      u32 alpha = (u32)*src++;
+      u32 color = (alpha << 0x18) | (alpha << 0x10) | (alpha << 0x08) | (alpha << 0x00);
+      *dest++ = color;
+    }
+
+    srcRow += srcStride;
+    destRow += destStride;
+  }
+
+  // cleanup
+  stbtt_FreeBitmap(codepointBitmap, 0);
+  DeallocateMemory(ttfFile.data);
+
+  result.loadedBitmap = loadedBitmap;
+
+  return result;
+}
+
+/*****************************************************************
  * PACKING
  *****************************************************************/
 
@@ -887,7 +1031,7 @@ WriteHHAFile(char *filename, struct asset_context *context)
     dest->dataOffset = (u64)lseekResult;
 
     switch (src->type) {
-    case ASSET_TYPE_AUDIO: {
+    case ASSET_METADATA_TYPE_AUDIO: {
       struct audio_info *audioInfo = &src->audioInfo;
       struct load_wav_result loadWavResult =
           LoadWav(audioInfo->filename, audioInfo->sampleIndex, audioInfo->sampleCount);
@@ -951,7 +1095,7 @@ WriteHHAFile(char *filename, struct asset_context *context)
       FreeWav(loadedAudio);
     } break;
 
-    case ASSET_TYPE_BITMAP: {
+    case ASSET_METADATA_TYPE_BITMAP: {
       struct bitmap_info *bitmapInfo = &src->bitmapInfo;
       struct load_bmp_result loadBmpResult = LoadBmp(bitmapInfo->filename);
       if (loadBmpResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
@@ -1025,6 +1169,61 @@ WriteHHAFile(char *filename, struct asset_context *context)
       assert(writtenBytes > 0);
 
       FreeBmp(loadedBitmap);
+    } break;
+
+    case ASSET_METADATA_TYPE_FONT: {
+      struct font_info *fontInfo = &src->fontInfo;
+      struct load_ttf_codepoint_result loadTTFCodepointResult =
+          LoadTTFCodepoint(fontInfo->fontPath, fontInfo->codepoint);
+
+      if (loadTTFCodepointResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
+        switch (loadTTFCodepointResult.error) {
+        case HH_ASSET_BUILDER_ERROR_IO_OPEN:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "file cannot be opened\n  filename: %s\n", fontInfo->fontPath);
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_IS_NOT_FILE:
+          logLength =
+              snprintf(logBuffer, sizeof(logBuffer), "given path is not file\n  filename: %s\n", fontInfo->fontPath);
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_STAT:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "stat failed\n  filename: %s\n", fontInfo->fontPath);
+          break;
+        case HH_ASSET_BUILDER_ERROR_MALLOC:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot allocate memory\n");
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_READ:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot read file.\n  filename: %s\n", fontInfo->fontPath);
+          break;
+        case HH_ASSET_BUILDER_ERROR_IO_SEEK:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot seek file.\n  filename: %s\n", fontInfo->fontPath);
+          break;
+        case HH_ASSET_BUILDER_ERROR_TTF_MALFORMED:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "file is not ttf or malformed.\n  filename: %s\n",
+                               fontInfo->fontPath);
+          break;
+        default:
+          assert(0 && "error not presented to user");
+          break;
+        };
+        assert(logLength > 0);
+        error(logBuffer, (u64)logLength);
+
+        errorCode = loadTTFCodepointResult.error;
+        continue;
+      }
+
+      struct loaded_bitmap *loadedBitmap = &loadTTFCodepointResult.loadedBitmap;
+
+      dest->bitmap.width = loadedBitmap->width;
+      dest->bitmap.height = loadedBitmap->height;
+      dest->bitmap.alignPercentage[0] = 0.0f;
+      dest->bitmap.alignPercentage[1] = 0.0f;
+
+      writtenBytes = write(outFd, loadedBitmap->memory, (size_t)(loadedBitmap->stride * loadedBitmap->height));
+      assert(writtenBytes > 0);
+
+      DeallocateMemory(loadedBitmap->memory);
     } break;
     }
   }
@@ -1352,6 +1551,14 @@ WriteNoneHero(void)
   AddBitmapAsset(context, "test2/tuft00.bmp", 0.5f, 0.5f);
   AddBitmapAsset(context, "test2/tuft01.bmp", 0.5f, 0.5f);
   AddBitmapAsset(context, "test2/tuft02.bmp", 0.5f, 0.5f);
+  EndAssetType(context);
+
+  BeginAssetType(context, ASSET_TYPE_FONT);
+  char *fontPath = "/usr/share/fonts/liberation-fonts/LiberationSerif-Regular.ttf";
+  for (u32 character = 'a'; character <= 'z'; character++) {
+    AddCharacterAsset(context, fontPath, character);
+    AddAssetTag(context, ASSET_TAG_UNICODE_CODEPOINT, (f32)character);
+  }
   EndAssetType(context);
 
   /*----------------------------------------------------------------
