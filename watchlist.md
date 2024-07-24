@@ -532,7 +532,7 @@
 - [x] Handmade Hero Day 163 - Asset Processing with STB TrueType
       https://www.youtube.com/watch?v=lOLRQ01QY48
 
-- [ ] Handmade Hero Day 164 - Asset Processing with Windows Fonts
+- [x] Handmade Hero Day 164 - Asset Processing with Windows Fonts
       https://www.youtube.com/watch?v=KF0jRm89bRM
 
 - [ ] Handmade Hero Day 165 - Fixing an Asset System Thread Bug
