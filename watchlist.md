@@ -529,7 +529,7 @@
 - [x] Handmade Hero Day 162 - Introduction to Fonts
       https://www.youtube.com/watch?v=ZK7PezR1KgU
 
-- [ ] Handmade Hero Day 163 - Asset Processing with STB TrueType
+- [x] Handmade Hero Day 163 - Asset Processing with STB TrueType
       https://www.youtube.com/watch?v=lOLRQ01QY48
 
 - [ ] Handmade Hero Day 164 - Asset Processing with Windows Fonts
