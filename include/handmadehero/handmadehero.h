@@ -54,6 +54,7 @@ struct particle {
   struct v3 ddPosition;
   struct v4 color;
   struct v4 dColor;
+  struct bitmap_id bitmapId;
 };
 
 struct game_state {

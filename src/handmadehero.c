@@ -1451,6 +1451,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
                              6.0f * RandomBetween(&state->effectsEntropy, 0.7f, 1.0f), 0.0f);
     const f32 earthSurfaceGravity = 9.80665f; /* m/s² */
     particle->ddPosition = v3(0.0f, -earthSurfaceGravity, 0.0f);
+    particle->bitmapId = RandomBitmap(&state->effectsEntropy, transientState->assets, ASSET_TYPE_FONT);
     particle->color =
         v4(RandomBetween(&state->effectsEntropy, 0.75f, 1.0f), RandomBetween(&state->effectsEntropy, 0.75f, 1.0f),
            RandomBetween(&state->effectsEntropy, 0.75f, 1.0f), 1.0f);
@@ -1523,8 +1524,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     // render
 
     // BitmapWithColor(renderGroup, &state->testDiffuse, particle->position, 1.0f, color);
-    BitmapAsset(renderGroup, RandomBitmap(&state->effectsEntropy, transientState->assets, ASSET_TYPE_FONT),
-                particle->position, 1.0f, color);
+    BitmapAsset(renderGroup, particle->bitmapId, particle->position, 1.0f, color);
   }
 
   TiledDrawRenderGroup(transientState->highPriorityQueue, renderGroup, &drawBuffer);
