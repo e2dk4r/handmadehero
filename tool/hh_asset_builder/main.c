@@ -24,13 +24,22 @@
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
-#define sprintf stbsp_sprintf
-#define snprintf stbsp_snprintf
 #define PRIu32 "u"
 #define PRIs32 "d"
 
+// TRUETYPE_BACKEND_XXX
+#if TRUETYPE_BACKEND_FREETYPE
+#undef internal
+#include <freetype/freetype.h>
+#define internal static
+
+#elif TRUETYPE_BACKEND_STBTT
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
+#endif
+
+#undef snprintf
+#define snprintf stbsp_snprintf
 
 #pragma GCC diagnostic pop
 
@@ -881,6 +890,96 @@ struct load_ttf_codepoint_result {
   struct loaded_bitmap loadedBitmap;
 };
 
+#if TRUETYPE_BACKEND_FREETYPE
+
+// loadedBitmap.memory is allocated on heap
+internal struct load_ttf_codepoint_result
+LoadTTFCodepoint(char *fontPath, u32 codepoint)
+{
+  struct load_ttf_codepoint_result result = {};
+  struct read_file_result ttfFile = ReadEntireFile(fontPath);
+  if (ttfFile.error != HH_ASSET_BUILDER_ERROR_NONE) {
+    result.error = ttfFile.error;
+    return result;
+  }
+
+  FT_Library library;
+  FT_Error error = FT_Init_FreeType(&library);
+  if (error) {
+    result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
+    goto cleanupFile;
+  }
+
+  FT_Face face;
+  error = FT_New_Memory_Face(library, ttfFile.data, (FT_Long)ttfFile.size, 0, &face);
+  if (error) {
+    result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
+    goto cleanupLibrary;
+  }
+
+  error = FT_Set_Pixel_Sizes(face, 0, 128);
+  if (error) {
+    result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
+    goto cleanupFace;
+  }
+
+  error = FT_Load_Char(face, codepoint, FT_LOAD_RENDER);
+  if (error) {
+    result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
+    goto cleanupFace;
+  }
+
+  FT_GlyphSlot slot = face->glyph;
+  FT_Bitmap *bitmap = &slot->bitmap;
+
+  // transform
+  struct loaded_bitmap loadedBitmap = {};
+  loadedBitmap.width = bitmap->width;
+  loadedBitmap.height = bitmap->rows;
+  loadedBitmap.stride = loadedBitmap.width * sizeof(u32);
+  loadedBitmap.memory = AllocateMemory(loadedBitmap.height * loadedBitmap.stride);
+  if (!loadedBitmap.memory) {
+    result.error = HH_ASSET_BUILDER_ERROR_MALLOC;
+    goto cleanupFace;
+  }
+
+  u8 *srcRow = bitmap->buffer + ((int)(bitmap->rows - 1) * bitmap->pitch); // start at bottom left
+  s32 srcStride = -bitmap->pitch;                                          // go up
+  u8 *destRow = loadedBitmap.memory;
+  u32 destStride = loadedBitmap.stride;
+  for (u32 y = 0; y < loadedBitmap.height; y++) {
+    u8 *src = srcRow;
+    u32 *dest = (u32 *)destRow;
+    for (u32 x = 0; x < loadedBitmap.width; x++) {
+      u32 alpha = (u32)*src++;
+      u32 color = (alpha << 0x18) | (alpha << 0x10) | (alpha << 0x08) | (alpha << 0x00);
+      *dest++ = color;
+    }
+
+    srcRow += srcStride;
+    destRow += destStride;
+  }
+
+  // cleanup
+  FT_Done_Face(face);
+  FT_Done_FreeType(library);
+  DeallocateMemory(ttfFile.data);
+
+  result.loadedBitmap = loadedBitmap;
+  return result;
+
+cleanupFace:
+  FT_Done_Face(face);
+cleanupLibrary:
+  FT_Done_FreeType(library);
+cleanupFile:
+  DeallocateMemory(ttfFile.data);
+
+  return result;
+}
+
+#elif TRUETYPE_BACKEND_STBTT
+
 // loadedBitmap.memory is allocated on heap
 internal struct load_ttf_codepoint_result
 LoadTTFCodepoint(char *fontPath, u32 codepoint)
@@ -952,6 +1051,7 @@ LoadTTFCodepoint(char *fontPath, u32 codepoint)
   return result;
 }
 
+#endif
 /*****************************************************************
  * PACKING
  *****************************************************************/

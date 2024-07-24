@@ -1,5 +1,15 @@
 option('hh_record_read', type: 'boolean', value: true)
+
 option('hh_asset_builder', type: 'boolean', value: true)
+option(
+  'truetype_backend',
+  type: 'array',
+  value: ['freetype'],
+  choices: [
+    'stbtt',
+    'freetype',
+  ],
+)
 
 # TODO: disable this on release
 option('test', type: 'boolean', value: true)
