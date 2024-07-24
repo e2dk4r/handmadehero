@@ -98,8 +98,6 @@ struct game_state {
   struct particle particles[256];
 #define PARTICLE_CELL_DIM 32
   struct particle_cell particleCells[PARTICLE_CELL_DIM][PARTICLE_CELL_DIM];
-
-  struct bitmap testCodepoint;
 };
 
 struct task_with_memory {

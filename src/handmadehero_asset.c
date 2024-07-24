@@ -7,7 +7,7 @@
 internal b32
 IsAssetTypeIdBitmap(enum asset_type_id typeId)
 {
-  return typeId >= ASSET_TYPE_SHADOW && typeId <= ASSET_TYPE_CAPE;
+  return typeId >= ASSET_TYPE_SHADOW && typeId <= ASSET_TYPE_FONT;
 }
 
 internal b32

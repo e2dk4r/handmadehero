@@ -636,68 +636,6 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 struct game_memory *DEBUG_GLOBAL_MEMORY;
 #endif
 
-#pragma GCC diagnostic push
-
-// caused by: stb_truetype.h
-#pragma GCC diagnostic ignored "-Wconversion"
-#pragma GCC diagnostic ignored "-Wsign-conversion"
-#pragma GCC diagnostic ignored "-Wfloat-conversion"
-#pragma GCC diagnostic ignored "-Wsign-compare"
-
-#define STB_TRUETYPE_IMPLEMENTATION
-#include "stb_truetype.h"
-
-#pragma GCC diagnostic pop
-
-internal struct bitmap
-MakeCodepoint(struct memory_arena *transientArena)
-{
-  struct bitmap bitmap = {};
-  struct read_file_result ttfFile =
-      Platform->ReadEntireFile("/usr/share/fonts/liberation-fonts/LiberationSerif-Regular.ttf");
-  if (ttfFile.size == 0) {
-    return bitmap;
-  }
-
-  stbtt_fontinfo font;
-  int ok = stbtt_InitFont(&font, ttfFile.data, stbtt_GetFontOffsetForIndex(ttfFile.data, 0));
-  assert(ok);
-
-  s32 width;
-  s32 height;
-  s32 xOffset;
-  s32 yOffset;
-  // 8bpp, stored as left-to-right, top-to-bottom
-  u8 *codepointBitmap = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 128.0f), 'N', &width,
-                                                 &height, &xOffset, &yOffset);
-
-  // transform
-  bitmap = MakeEmptyBitmap(transientArena, (u32)width, (u32)height);
-
-  u8 *srcRow = codepointBitmap + (width * (height - 1)); // start at bottom left
-  s32 srcStride = -width;                                // go up
-  u8 *destRow = bitmap.memory;
-  s32 destStride = bitmap.stride;
-  for (u32 y = 0; y < bitmap.width; y++) {
-    u8 *src = srcRow;
-    u32 *dest = (u32 *)destRow;
-    for (u32 x = 0; x < bitmap.height; x++) {
-      u32 alpha = (u32)*src++;
-      u32 color = (alpha << 0x18) | (alpha << 0x10) | (alpha << 0x08) | (alpha << 0x00);
-      *dest++ = color;
-    }
-
-    srcRow += srcStride;
-    destRow += destStride;
-  }
-
-  // cleanup
-  stbtt_FreeBitmap(codepointBitmap, 0);
-  Platform->FreeMemory(ttfFile.data);
-
-  return bitmap;
-}
-
 b32
 GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffer)
 {
@@ -985,8 +923,6 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #else
     state->music = 0;
 #endif
-
-    state->testCodepoint = MakeCodepoint(&transientState->transientArena);
 
     transientState->isInitialized = 1;
   }
@@ -1587,12 +1523,9 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     // render
 
     // BitmapWithColor(renderGroup, &state->testDiffuse, particle->position, 1.0f, color);
-    // BitmapAsset(renderGroup, BitmapGetFirstId(transientState->assets, ASSET_TYPE_HEAD), particle->position, 1.0f,
-    //           color);
-    BitmapWithColor(renderGroup, &state->testCodepoint, particle->position, 1.0f, color);
+    BitmapAsset(renderGroup, RandomBitmap(&state->effectsEntropy, transientState->assets, ASSET_TYPE_FONT),
+                particle->position, 1.0f, color);
   }
-
-  Bitmap(renderGroup, &state->testCodepoint, v3(-5, 0, 0), 1.0f);
 
   TiledDrawRenderGroup(transientState->highPriorityQueue, renderGroup, &drawBuffer);
 
