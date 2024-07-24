@@ -396,6 +396,8 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
             struct hha_asset *hhaAsset = hhaAssets + assetIndex;
             struct asset *asset = assets->assets + assetCount;
 
+            // TODO: validate hhaAsset
+
             asset->fileIndex = fileIndex;
             asset->hhaAsset = *hhaAsset;
             asset->hhaAsset.tagIndexFirst += file->tagBase;
