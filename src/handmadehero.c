@@ -1451,12 +1451,23 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
                              6.0f * RandomBetween(&state->effectsEntropy, 0.7f, 1.0f), 0.0f);
     const f32 earthSurfaceGravity = 9.80665f; /* m/s² */
     particle->ddPosition = v3(0.0f, -earthSurfaceGravity, 0.0f);
-    particle->bitmapId = RandomBitmap(&state->effectsEntropy, transientState->assets, ASSET_TYPE_FONT);
     particle->color =
         v4(RandomBetween(&state->effectsEntropy, 0.75f, 1.0f), RandomBetween(&state->effectsEntropy, 0.75f, 1.0f),
            RandomBetween(&state->effectsEntropy, 0.75f, 1.0f), 1.0f);
     // v4(1.0f, 1.0f, 1.0f, 1.0f);
     particle->dColor = v4(0.0f, 0.0f, 0.0f, -0.5f);
+
+    // Random character
+    // particle->bitmapId = RandomBitmap(&state->effectsEntropy, transientState->assets, ASSET_TYPE_FONT);
+
+    // Random character restricted
+    char characters[] = "nothings";
+    struct asset_vector matchVector = {};
+    matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] =
+        (f32)characters[RandomChoice(&state->effectsEntropy, ARRAY_COUNT(characters))];
+    struct asset_vector weightVector = {};
+    weightVector.e[ASSET_TAG_UNICODE_CODEPOINT] = 1.0f;
+    particle->bitmapId = BestMatchBitmap(transientState->assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
   }
 
   for (u32 particleIndex = 0; particleIndex < ARRAY_COUNT(state->particles); particleIndex++) {
@@ -1524,7 +1535,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     // render
 
     // BitmapWithColor(renderGroup, &state->testDiffuse, particle->position, 1.0f, color);
-    BitmapAsset(renderGroup, particle->bitmapId, particle->position, 1.0f, color);
+    BitmapAsset(renderGroup, particle->bitmapId, particle->position, 0.2f, color);
   }
 
   TiledDrawRenderGroup(transientState->highPriorityQueue, renderGroup, &drawBuffer);
