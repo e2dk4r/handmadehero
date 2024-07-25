@@ -4,7 +4,7 @@ option('hh_asset_builder', type: 'boolean', value: true)
 option(
   'truetype_backend',
   type: 'array',
-  value: ['freetype'],
+  value: ['stbtt'],
   choices: [
     'stbtt',
     'freetype',
