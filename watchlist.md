@@ -535,7 +535,7 @@
 - [x] Handmade Hero Day 164 - Asset Processing with Windows Fonts
       https://www.youtube.com/watch?v=KF0jRm89bRM
 
-- [ ] Handmade Hero Day 165 - Fixing an Asset System Thread Bug
+- [x] Handmade Hero Day 165 - Fixing an Asset System Thread Bug
       https://www.youtube.com/watch?v=9_jVu7RfP88
 
 - [ ] Handmade Hero Day 166 - Adding Locks to the Asset Operations
