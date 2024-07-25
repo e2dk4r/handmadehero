@@ -104,10 +104,6 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         }
       }
 
-      if (!AudioLock(assets, playingAudio->id)) {
-        chunksToMix = 0;
-      }
-
       // TODO(e2dk4r): handle stereo
       f32 beginSamplePosition = playingAudio->samplesPlayed;
       f32 endSamplePosition = beginSamplePosition + ((f32)chunksToMix * dSampleChunk);
@@ -170,8 +166,6 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
         volume0 = _mm_add_ps(volume0, dVolumeChunk0);
         volume1 = _mm_add_ps(volume1, dVolumeChunk1);
       }
-
-      AudioUnlock(assets, playingAudio->id);
 
       playingAudio->currentVolume.e[0] = volume0[0];
       playingAudio->currentVolume.e[1] = volume1[0];

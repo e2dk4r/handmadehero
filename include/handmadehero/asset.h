@@ -15,11 +15,12 @@ struct audio {
   u32 sampleCount;
 };
 
+// TODO: use asset header to determine if asset is unloaded
 enum asset_state {
   ASSET_STATE_UNLOADED,
   ASSET_STATE_QUEUED,
   ASSET_STATE_LOADED,
-  ASSET_STATE_LOCKED,
+  ASSET_STATE_OPERATING,
 };
 
 enum asset_memory_type {
@@ -32,7 +33,7 @@ struct asset_memory_header {
   struct asset_memory_header *prev;
 
   u32 assetIndex;
-  enum asset_memory_type type;
+  u32 generationId;
 
   union {
     struct bitmap bitmap;
@@ -87,7 +88,7 @@ struct asset_file {
 };
 
 enum asset_memory_block_flags {
-  ASSET_MEMORY_BLOCK_USED = 1,
+  ASSET_MEMORY_BLOCK_USED = (1 << 0),
 };
 
 struct asset_memory_block {
@@ -125,13 +126,13 @@ struct game_assets *
 GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState);
 
 void
-BitmapLoad(struct game_assets *assets, struct bitmap_id id, b32 locked);
+BitmapLoad(struct game_assets *assets, struct bitmap_id id);
 
 void
-BitmapPrefetch(struct game_assets *assets, struct bitmap_id id, b32 locked);
+BitmapPrefetch(struct game_assets *assets, struct bitmap_id id);
 
 struct bitmap *
-BitmapGet(struct game_assets *assets, struct bitmap_id id, b32 mustBeLocked);
+BitmapGet(struct game_assets *assets, struct bitmap_id id);
 
 struct bitmap_id
 BitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
@@ -145,12 +146,6 @@ RandomBitmap(struct random_series *series, struct game_assets *assets, enum asse
 
 void
 AudioLoad(struct game_assets *assets, struct audio_id id);
-
-b32
-AudioLock(struct game_assets *assets, struct audio_id id);
-
-void
-AudioUnlock(struct game_assets *assets, struct audio_id id);
 
 void
 AudioPrefetch(struct game_assets *assets, struct audio_id id);

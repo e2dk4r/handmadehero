@@ -557,7 +557,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
 
   // TODO(e2dk4r): Pushbuffer size?
   struct render_group *renderGroup = RenderGroup(
-      &task->arena, MemoryArenaGetRemainingSize(&task->arena) - sizeof(*renderGroup), transientState->assets, 1);
+      &task->arena, MemoryArenaGetRemainingSize(&task->arena) - sizeof(*renderGroup), transientState->assets);
   RenderGroupOrthographic(renderGroup, buffer->width, buffer->height, (f32)(buffer->width - 2) / width);
 
   Clear(renderGroup, COLOR_FUCHSIA_900);
@@ -1023,7 +1023,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 
   struct memory_temp renderMemory = BeginTemporaryMemory(&transientState->transientArena);
   struct render_group *renderGroup =
-      RenderGroup(&transientState->transientArena, 4 * MEGABYTES, transientState->assets, 0);
+      RenderGroup(&transientState->transientArena, 4 * MEGABYTES, transientState->assets);
   RenderGroupPerspective(renderGroup, drawBuffer.width, drawBuffer.height);
 
 /* drawing background */

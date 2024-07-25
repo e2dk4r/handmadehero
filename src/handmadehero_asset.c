@@ -72,23 +72,52 @@ MoveAssetHeaderToFront(struct game_assets *assets, struct asset_memory_header *h
   InsertAssetHeaderToFront(assets, header);
 }
 
-inline struct bitmap *
-BitmapGet(struct game_assets *assets, struct bitmap_id id, b32 mustBeLocked)
+internal struct asset_memory_header *
+AssetGet(struct game_assets *assets, u32 assetIndex)
 {
-  assert(id.value <= assets->assetCount);
-  struct asset *asset = assets->assets + id.value;
+  assert(assetIndex <= assets->assetCount);
+  struct asset *asset = assets->assets + assetIndex;
 
-  if (asset->state < ASSET_STATE_LOADED)
-    return 0;
+  struct asset_memory_header *header = 0;
+  while (1) {
+    enum asset_state state = asset->state;
+    if (state == ASSET_STATE_LOADED) {
+      if (AtomicCompareExchange(&asset->state, &state, ASSET_STATE_OPERATING)) {
+        header = asset->header;
+        MoveAssetHeaderToFront(assets, header);
 
-  assert(!mustBeLocked || asset->state == ASSET_STATE_LOCKED);
+#if 0
+        if (header->generationId < generationId) {
+          header->generationId = generationId;
+        }
+#endif
 
-  if (asset->state != ASSET_STATE_LOCKED) {
-    MoveAssetHeaderToFront(assets, asset->header);
+        asset->state = state;
+        break;
+      }
+
+    } else if (state != ASSET_STATE_OPERATING) {
+      break;
+    }
   }
 
-  struct bitmap *bitmap = &asset->header->bitmap;
+  return header;
+}
+
+inline struct bitmap *
+BitmapGet(struct game_assets *assets, struct bitmap_id id)
+{
+  struct asset_memory_header *header = AssetGet(assets, id.value);
+  struct bitmap *bitmap = header ? &header->bitmap : 0;
   return bitmap;
+}
+
+inline struct audio *
+AudioGet(struct game_assets *assets, struct audio_id id)
+{
+  struct asset_memory_header *header = AssetGet(assets, id.value);
+  struct audio *audio = header ? &header->audio : 0;
+  return audio;
 }
 
 internal u32
@@ -245,13 +274,11 @@ AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size)
         }
 
         // evict asset
-        enum asset_state expectedAssetState = ASSET_STATE_LOADED;
-        if (!AtomicCompareExchange(&asset->state, &expectedAssetState, ASSET_STATE_UNLOADED))
-          continue;
+        assert(asset->state == ASSET_STATE_LOADED);
 
         RemoveAssetHeaderFromList(header);
 
-        // ReleaseAssetMemory
+        // release asset memory
         struct asset_memory_block *block = (struct asset_memory_block *)((u8 *)header - sizeof(*block));
         block->flags &= (u64)(~ASSET_MEMORY_BLOCK_USED);
 
@@ -261,6 +288,7 @@ AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size)
 
         MergeMemoryBlock(assets, block, block->next);
 
+        asset->state = ASSET_STATE_UNLOADED;
         break;
       }
     }
@@ -503,7 +531,7 @@ DoLoadAssetWork(struct platform_work_queue *queue, void *data)
 }
 
 inline void
-BitmapLoad(struct game_assets *assets, struct bitmap_id id, b32 locked)
+BitmapLoad(struct game_assets *assets, struct bitmap_id id)
 {
   if (id.value == 0)
     return;
@@ -547,8 +575,7 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id, b32 locked)
     bitmap->widthOverHeight = (f32)bitmap->width / (f32)bitmap->height;
     bitmap->alignPercentage = v2(bitmapInfo->alignPercentage[0], bitmapInfo->alignPercentage[1]);
 
-    if (!locked)
-      AddAssetHeaderToList(assets, asset->header, id.value, size.total);
+    AddAssetHeaderToList(assets, asset->header, id.value, size.total);
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
@@ -561,11 +588,6 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id, b32 locked)
     work->asset = asset;
     work->finalState = ASSET_STATE_LOADED;
 
-    if (locked) {
-      asset->state = ASSET_STATE_LOCKED;
-      work->finalState = ASSET_STATE_LOCKED;
-    }
-
     // queue the work
     struct platform_work_queue *queue = assets->transientState->lowPriorityQueue;
     Platform->WorkQueueAddEntry(queue, DoLoadAssetWork, work);
@@ -574,9 +596,9 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id, b32 locked)
 }
 
 inline void
-BitmapPrefetch(struct game_assets *assets, struct bitmap_id id, b32 locked)
+BitmapPrefetch(struct game_assets *assets, struct bitmap_id id)
 {
-  BitmapLoad(assets, id, locked);
+  BitmapLoad(assets, id);
 }
 
 inline void
@@ -645,19 +667,6 @@ AudioPrefetch(struct game_assets *assets, struct audio_id id)
   AudioLoad(assets, id);
 }
 
-inline struct audio *
-AudioGet(struct game_assets *assets, struct audio_id id)
-{
-  assert(id.value <= assets->assetCount);
-  struct asset *asset = assets->assets + id.value;
-
-  if (asset->state < ASSET_STATE_LOADED)
-    return 0;
-
-  struct audio *audio = &asset->header->audio;
-  return audio;
-}
-
 inline struct audio_id
 AudioGetNextInChain(struct game_assets *assets, struct audio_id id)
 {
@@ -696,31 +705,4 @@ inline b32
 IsAudioIdValid(struct audio_id id)
 {
   return id.value != 0;
-}
-
-b32
-AudioLock(struct game_assets *assets, struct audio_id id)
-{
-  struct asset *asset = assets->assets + id.value;
-
-  enum asset_state expectedAssetState = ASSET_STATE_LOADED;
-  enum asset_state wantedAssetState = ASSET_STATE_LOCKED;
-  if (AtomicCompareExchange(&asset->state, &expectedAssetState, wantedAssetState)) {
-    RemoveAssetHeaderFromList(asset->header);
-    return 1;
-  }
-
-  return 0;
-}
-
-void
-AudioUnlock(struct game_assets *assets, struct audio_id id)
-{
-  struct asset *asset = assets->assets + id.value;
-
-  enum asset_state expectedAssetState = ASSET_STATE_LOCKED;
-  enum asset_state wantedAssetState = ASSET_STATE_LOADED;
-  if (AtomicCompareExchange(&asset->state, &expectedAssetState, wantedAssetState)) {
-    InsertAssetHeaderToEnd(assets, asset->header);
-  }
 }
