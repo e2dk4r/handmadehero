@@ -8,13 +8,15 @@ DrawRenderGroupInterleaved(struct render_group *renderGroup, struct bitmap *outp
                            b32 even);
 
 struct render_group *
-RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets *assets)
+RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets *assets, b32 isRenderingInBackground)
 {
   struct render_group *renderGroup = MemoryArenaPush(arena, sizeof(*renderGroup));
 
   renderGroup->assets = assets;
 
   renderGroup->missingResourceCount = 0;
+
+  renderGroup->isRenderingInBackground = isRenderingInBackground & 0x1;
 
   renderGroup->pushBufferSize = 0;
   renderGroup->pushBufferTotal = pushBufferTotal;
@@ -229,9 +231,16 @@ inline void
 BitmapAsset(struct render_group *renderGroup, struct bitmap_id id, struct v3 offset, f32 height, struct v4 color)
 {
   struct bitmap *bitmap = BitmapGet(renderGroup->assets, id);
+  if (renderGroup->isRenderingInBackground && !bitmap) {
+    BitmapLoadImmediate(renderGroup->assets, id);
+    bitmap = BitmapGet(renderGroup->assets, id);
+    assert(bitmap && "cannot load bitmap immediately.");
+  }
+
   if (bitmap) {
     BitmapWithColor(renderGroup, bitmap, offset, height, color);
   } else {
+    assert(!renderGroup->isRenderingInBackground);
     BitmapLoad(renderGroup->assets, id);
     renderGroup->missingResourceCount += 1;
   }

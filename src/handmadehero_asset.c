@@ -36,27 +36,6 @@ InsertAssetHeaderToFront(struct game_assets *assets, struct asset_memory_header 
 }
 
 internal void
-InsertAssetHeaderToEnd(struct game_assets *assets, struct asset_memory_header *header)
-{
-  struct asset_memory_header *sentinel = &assets->loadedAssetSentiel;
-
-  // insert header to end
-  header->prev = sentinel->prev;
-  header->next = sentinel;
-
-  header->prev->next = header;
-  header->next->prev = header;
-}
-
-internal void
-AddAssetHeaderToList(struct game_assets *assets, struct asset_memory_header *header, u32 assetIndex, u64 totalSize)
-{
-  // set data
-  header->assetIndex = assetIndex;
-  InsertAssetHeaderToFront(assets, header);
-}
-
-internal void
 RemoveAssetHeaderFromList(struct asset_memory_header *header)
 {
   header->next->prev = header->prev;
@@ -66,10 +45,21 @@ RemoveAssetHeaderFromList(struct asset_memory_header *header)
 }
 
 internal void
-MoveAssetHeaderToFront(struct game_assets *assets, struct asset_memory_header *header)
+BeginAssetLock(struct game_assets *assets)
 {
-  RemoveAssetHeaderFromList(header);
-  InsertAssetHeaderToFront(assets, header);
+  u32 expected = 0;
+  u32 desired = 1;
+  while (1) {
+    if (AtomicCompareExchange(&assets->operationLock, &expected, desired))
+      break;
+  }
+}
+
+internal void
+EndAssetLock(struct game_assets *assets)
+{
+  u32 desired = 0;
+  AtomicStore(&assets->operationLock, desired);
 }
 
 internal struct asset_memory_header *
@@ -79,27 +69,22 @@ AssetGet(struct game_assets *assets, u32 assetIndex)
   struct asset *asset = assets->assets + assetIndex;
 
   struct asset_memory_header *header = 0;
-  while (1) {
-    enum asset_state state = asset->state;
-    if (state == ASSET_STATE_LOADED) {
-      if (AtomicCompareExchange(&asset->state, &state, ASSET_STATE_OPERATING)) {
-        header = asset->header;
-        MoveAssetHeaderToFront(assets, header);
+
+  BeginAssetLock(assets);
+
+  if (asset->state == ASSET_STATE_LOADED) {
+    header = asset->header;
+    RemoveAssetHeaderFromList(header);
+    InsertAssetHeaderToFront(assets, header);
 
 #if 0
         if (header->generationId < generationId) {
           header->generationId = generationId;
         }
 #endif
-
-        asset->state = state;
-        break;
-      }
-
-    } else if (state != ASSET_STATE_OPERATING) {
-      break;
-    }
   }
+
+  EndAssetLock(assets);
 
   return header;
 }
@@ -246,16 +231,19 @@ MergeMemoryBlock(struct game_assets *assets, struct asset_memory_block *first, s
   return isMerged;
 }
 
-internal void *
-AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size)
+internal struct asset_memory_header *
+AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size, u32 assetIndex)
 {
-  void *result = 0;
+  struct asset_memory_header *result = 0;
+
+  BeginAssetLock(assets);
+
   for (;;) {
     struct asset_memory_block *block = FindMemoryBlockForSize(assets, size);
     if (block && size <= block->size) {
       block->flags |= ASSET_MEMORY_BLOCK_USED;
 
-      result = (u8 *)(block + 1);
+      result = (struct asset_memory_header *)(block + 1);
 
       u64 remainingSize = block->size - size;
       u64 memoryBlockSplitThreshold = 4 * KILOBYTES;
@@ -289,10 +277,19 @@ AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size)
         MergeMemoryBlock(assets, block, block->next);
 
         asset->state = ASSET_STATE_UNLOADED;
+        asset->header = 0;
         break;
       }
     }
   }
+
+  if (result) {
+    // AddAssetHeaderToList
+    result->assetIndex = assetIndex;
+    InsertAssetHeaderToFront(assets, result);
+  }
+
+  EndAssetLock(assets);
 
   return result;
 }
@@ -513,25 +510,29 @@ struct load_asset_work {
 };
 
 internal void
-DoLoadAssetWork(struct platform_work_queue *queue, void *data)
+LoadAssetWork(struct load_asset_work *work)
 {
-  struct load_asset_work *work = data;
   struct asset *asset = work->asset;
 
   Platform->ReadFromFile(work->dest, work->handle, work->offset, work->size);
 
   if (Platform->HasFileError(work->handle)) {
-    // TODO: should we fill it with bogus data
     ZeroMemory(work->dest, work->size);
   }
 
   AtomicStore(&asset->state, work->finalState);
+}
 
+internal void
+DoLoadAssetWork(struct platform_work_queue *queue, void *data)
+{
+  struct load_asset_work *work = data;
+  LoadAssetWork(work);
   EndTaskWithMemory(work->task);
 }
 
-inline void
-BitmapLoad(struct game_assets *assets, struct bitmap_id id)
+internal inline void
+_BitmapLoad(struct game_assets *assets, struct bitmap_id id, b32 immediate)
 {
   if (id.value == 0)
     return;
@@ -541,11 +542,15 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
   enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
   if (AtomicCompareExchange(&asset->state, &expectedAssetState, ASSET_STATE_QUEUED)) {
     // asset now queued
-    struct task_with_memory *task = BeginTaskWithMemory(assets->transientState);
-    if (!task) {
-      // memory cannot obtained, revert back
-      AtomicStore(&asset->state, ASSET_STATE_UNLOADED);
-      return;
+    struct task_with_memory *task = 0;
+
+    if (!immediate) {
+      task = BeginTaskWithMemory(assets->transientState);
+      if (!task) {
+        // memory cannot obtained, revert back
+        AtomicStore(&asset->state, ASSET_STATE_UNLOADED);
+        return;
+      }
     }
 
     // setup header
@@ -562,7 +567,7 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     size.data = height * size.section;
     size.total = size.data + sizeof(*asset->header);
 
-    asset->header = AcquireAssetMemory(assets, size.total);
+    asset->header = AcquireAssetMemory(assets, size.total, id.value);
     void *memory = (asset->header + 1);
 
     // setup bitmap
@@ -575,24 +580,41 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
     bitmap->widthOverHeight = (f32)bitmap->width / (f32)bitmap->height;
     bitmap->alignPercentage = v2(bitmapInfo->alignPercentage[0], bitmapInfo->alignPercentage[1]);
 
-    AddAssetHeaderToList(assets, asset->header, id.value, size.total);
-
     // setup work
-    struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
-    work->handle = AssetFileHandleGet(assets, asset->fileIndex);
-    work->dest = bitmap->memory;
-    work->offset = info->dataOffset;
-    work->size = size.data;
+    struct load_asset_work work = {};
+    work.handle = AssetFileHandleGet(assets, asset->fileIndex);
+    work.dest = bitmap->memory;
+    work.offset = info->dataOffset;
+    work.size = size.data;
 
-    work->task = task;
-    work->asset = asset;
-    work->finalState = ASSET_STATE_LOADED;
+    work.task = task;
+    work.asset = asset;
+    work.finalState = ASSET_STATE_LOADED;
 
-    // queue the work
-    struct platform_work_queue *queue = assets->transientState->lowPriorityQueue;
-    Platform->WorkQueueAddEntry(queue, DoLoadAssetWork, work);
+    if (immediate) {
+      LoadAssetWork(&work);
+    } else {
+      struct load_asset_work *taskWork = MemoryArenaPush(&task->arena, sizeof(*taskWork));
+      *taskWork = work;
+
+      // queue the work
+      struct platform_work_queue *queue = assets->transientState->lowPriorityQueue;
+      Platform->WorkQueueAddEntry(queue, DoLoadAssetWork, taskWork);
+    }
   }
   // else some other thread beat us to it
+}
+
+inline void
+BitmapLoad(struct game_assets *assets, struct bitmap_id id)
+{
+  _BitmapLoad(assets, id, 0);
+}
+
+inline void
+BitmapLoadImmediate(struct game_assets *assets, struct bitmap_id id)
+{
+  _BitmapLoad(assets, id, 1);
 }
 
 inline void
@@ -629,7 +651,7 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
     size.data = audioInfo->sampleCount * size.section;
     size.total = size.data + sizeof(*asset->header);
 
-    asset->header = AcquireAssetMemory(assets, size.total);
+    asset->header = AcquireAssetMemory(assets, size.total, id.value);
     void *memory = (asset->header + 1);
 
     // setup audio
@@ -640,8 +662,6 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
     s16 *samples = memory;
     audio->samples[0] = samples;
     audio->samples[1] = audio->samples[0] + audio->sampleCount;
-
-    AddAssetHeaderToList(assets, asset->header, id.value, size.total);
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));

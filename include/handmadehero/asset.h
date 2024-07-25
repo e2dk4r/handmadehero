@@ -20,7 +20,6 @@ enum asset_state {
   ASSET_STATE_UNLOADED,
   ASSET_STATE_QUEUED,
   ASSET_STATE_LOADED,
-  ASSET_STATE_OPERATING,
 };
 
 enum asset_memory_type {
@@ -120,6 +119,8 @@ struct game_assets {
 
   u32 fileCount;
   struct asset_file *files;
+
+  u32 operationLock;
 };
 
 struct game_assets *
@@ -127,6 +128,9 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
 
 void
 BitmapLoad(struct game_assets *assets, struct bitmap_id id);
+
+void
+BitmapLoadImmediate(struct game_assets *assets, struct bitmap_id id);
 
 void
 BitmapPrefetch(struct game_assets *assets, struct bitmap_id id);
