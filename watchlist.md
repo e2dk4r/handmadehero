@@ -538,7 +538,7 @@
 - [x] Handmade Hero Day 165 - Fixing an Asset System Thread Bug
       https://www.youtube.com/watch?v=9_jVu7RfP88
 
-- [ ] Handmade Hero Day 166 - Adding Locks to the Asset Operations
+- [x] Handmade Hero Day 166 - Adding Locks to the Asset Operations
       https://www.youtube.com/watch?v=jIWa0AZz2Sk
 
 - [ ] Handmade Hero Day 167 - Finishing Win32 Font Glyph Extraction
