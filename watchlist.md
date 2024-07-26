@@ -541,7 +541,7 @@
 - [x] Handmade Hero Day 166 - Adding Locks to the Asset Operations
       https://www.youtube.com/watch?v=jIWa0AZz2Sk
 
-- [ ] Handmade Hero Day 167 - Finishing Win32 Font Glyph Extraction
+- [x] Handmade Hero Day 167 - Finishing Win32 Font Glyph Extraction
       https://www.youtube.com/watch?v=Hc33CNhmAg8
 
 - [ ] Handmade Hero Day 168 - Rendering Lines of Text
