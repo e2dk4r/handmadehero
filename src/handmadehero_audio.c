@@ -17,6 +17,8 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
   b32 isWritten = 0;
   struct memory_temp mixerMemory = BeginTemporaryMemory(audioState->permanentArena);
 
+  u32 generationId = NewGenerationId(assets);
+
   assert(IS_ALIGNED(audioBuffer->sampleCount, 4));
   u32 chunkCount = audioBuffer->sampleCount / 4;
 
@@ -52,7 +54,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
     __m128 *dest1 = mixerChannel1;
     u32 totalChunksToMix = chunkCount;
     while (totalChunksToMix && !isAudioFinished) {
-      struct audio *loadedAudio = AudioGet(assets, playingAudio->id);
+      struct audio *loadedAudio = AudioGet(assets, playingAudio->id, generationId);
       if (!loadedAudio) {
         // audio is not in cache
         AudioLoad(assets, playingAudio->id);

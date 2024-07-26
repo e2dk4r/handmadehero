@@ -127,6 +127,7 @@ struct render_group {
 
   u32 missingResourceCount;
   b32 isRenderingInBackground : 1;
+  u32 generationId;
 };
 
 struct v4

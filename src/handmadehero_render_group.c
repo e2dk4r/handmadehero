@@ -13,6 +13,7 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets 
   struct render_group *renderGroup = MemoryArenaPush(arena, sizeof(*renderGroup));
 
   renderGroup->assets = assets;
+  renderGroup->generationId = NewGenerationId(renderGroup->assets);
 
   renderGroup->missingResourceCount = 0;
 
@@ -230,10 +231,10 @@ Clear(struct render_group *renderGroup, struct v4 color)
 inline void
 BitmapAsset(struct render_group *renderGroup, struct bitmap_id id, struct v3 offset, f32 height, struct v4 color)
 {
-  struct bitmap *bitmap = BitmapGet(renderGroup->assets, id);
+  struct bitmap *bitmap = BitmapGet(renderGroup->assets, id, renderGroup->generationId);
   if (renderGroup->isRenderingInBackground && !bitmap) {
     BitmapLoadImmediate(renderGroup->assets, id);
-    bitmap = BitmapGet(renderGroup->assets, id);
+    bitmap = BitmapGet(renderGroup->assets, id, renderGroup->generationId);
     assert(bitmap && "cannot load bitmap immediately.");
   }
 

@@ -98,6 +98,8 @@ struct asset_memory_block {
 };
 
 struct game_assets {
+  u32 nextGenerationId;
+
   // TODO(e2dk4r): copy of known, not ideal because
   // we want AssetLoad to called from anywhere
   struct transient_state *transientState;
@@ -136,7 +138,7 @@ void
 BitmapPrefetch(struct game_assets *assets, struct bitmap_id id);
 
 struct bitmap *
-BitmapGet(struct game_assets *assets, struct bitmap_id id);
+BitmapGet(struct game_assets *assets, struct bitmap_id id, u32 generationId);
 
 struct bitmap_id
 BitmapGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
@@ -155,7 +157,7 @@ void
 AudioPrefetch(struct game_assets *assets, struct audio_id id);
 
 struct audio *
-AudioGet(struct game_assets *assets, struct audio_id id);
+AudioGet(struct game_assets *assets, struct audio_id id, u32 generationId);
 
 struct audio_id
 AudioGetFirstId(struct game_assets *assets, enum asset_type_id typeId);
@@ -178,5 +180,8 @@ IsAudioIdValid(struct audio_id id);
 
 void
 EvictAssetsAsNecessary(struct game_assets *assets);
+
+u32
+NewGenerationId(struct game_assets *assets);
 
 #endif /* HANDMADEHERO_ASSET_H */

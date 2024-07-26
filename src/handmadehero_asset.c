@@ -63,7 +63,7 @@ EndAssetLock(struct game_assets *assets)
 }
 
 internal struct asset_memory_header *
-AssetGet(struct game_assets *assets, u32 assetIndex)
+AssetGet(struct game_assets *assets, u32 assetIndex, u32 generationId)
 {
   assert(assetIndex <= assets->assetCount);
   struct asset *asset = assets->assets + assetIndex;
@@ -77,11 +77,9 @@ AssetGet(struct game_assets *assets, u32 assetIndex)
     RemoveAssetHeaderFromList(header);
     InsertAssetHeaderToFront(assets, header);
 
-#if 0
-        if (header->generationId < generationId) {
-          header->generationId = generationId;
-        }
-#endif
+    if (header->generationId < generationId) {
+      header->generationId = generationId;
+    }
   }
 
   EndAssetLock(assets);
@@ -90,17 +88,17 @@ AssetGet(struct game_assets *assets, u32 assetIndex)
 }
 
 inline struct bitmap *
-BitmapGet(struct game_assets *assets, struct bitmap_id id)
+BitmapGet(struct game_assets *assets, struct bitmap_id id, u32 generationId)
 {
-  struct asset_memory_header *header = AssetGet(assets, id.value);
+  struct asset_memory_header *header = AssetGet(assets, id.value, generationId);
   struct bitmap *bitmap = header ? &header->bitmap : 0;
   return bitmap;
 }
 
 inline struct audio *
-AudioGet(struct game_assets *assets, struct audio_id id)
+AudioGet(struct game_assets *assets, struct audio_id id, u32 generationId)
 {
-  struct asset_memory_header *header = AssetGet(assets, id.value);
+  struct asset_memory_header *header = AssetGet(assets, id.value, generationId);
   struct audio *audio = header ? &header->audio : 0;
   return audio;
 }
@@ -725,4 +723,11 @@ inline b32
 IsAudioIdValid(struct audio_id id)
 {
   return id.value != 0;
+}
+
+inline u32
+NewGenerationId(struct game_assets *assets)
+{
+  u32 generationId = AtomicFetchAdd(&assets->nextGenerationId, 1);
+  return generationId;
 }
