@@ -1455,10 +1455,11 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     // v4(1.0f, 1.0f, 1.0f, 1.0f);
     particle->dColor = v4(0.0f, 0.0f, 0.0f, -0.5f);
 
+#if 0
     // Random character
-    // particle->bitmapId = RandomBitmap(&state->effectsEntropy, transientState->assets, ASSET_TYPE_FONT);
-
-    // Random character restricted
+    particle->bitmapId = RandomBitmap(&state->effectsEntropy, transientState->assets, ASSET_TYPE_FONT);
+#else
+    // Random character restricted to set
     char characters[] = "nothings";
     struct asset_vector matchVector = {};
     matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] =
@@ -1466,6 +1467,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     struct asset_vector weightVector = {};
     weightVector.e[ASSET_TAG_UNICODE_CODEPOINT] = 1.0f;
     particle->bitmapId = BestMatchBitmap(transientState->assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
+#endif
   }
 
   for (u32 particleIndex = 0; particleIndex < ARRAY_COUNT(state->particles); particleIndex++) {
