@@ -618,8 +618,15 @@ _BitmapLoad(struct game_assets *assets, struct bitmap_id id, b32 immediate)
       struct platform_work_queue *queue = assets->transientState->lowPriorityQueue;
       Platform->WorkQueueAddEntry(queue, DoLoadAssetWork, taskWork);
     }
+  } else {
+    // some other thread beat us to it
+
+    // Wait for it to be queued than return.
+    // Without this requesting immediate breaks when two thread call at the same time.
+    volatile enum asset_state *state = &asset->state;
+    while (*state == ASSET_STATE_QUEUED)
+      ;
   }
-  // else some other thread beat us to it
 }
 
 inline void
