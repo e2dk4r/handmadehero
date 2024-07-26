@@ -536,6 +536,7 @@ DoFillGroundChunkWork(struct platform_work_queue *queue, void *data)
 {
   struct fill_ground_chunk_work *work = data;
   DrawRenderGroup(work->renderGroup, work->buffer);
+  RenderGroupFinish(work->renderGroup);
   EndTaskWithMemory(work->task);
 }
 
@@ -618,11 +619,8 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
     }
   }
 
-  if (!RenderGroupIsAllResourcesPreset(renderGroup)) {
-    // do not blit, until all resources loaded into memory
-    EndTaskWithMemory(task);
-    return;
-  }
+  // do not blit, until all resources loaded into memory
+  assert(RenderGroupIsAllResourcesPreset(renderGroup));
 
   groundBuffer->position = *chunkPosition;
 
@@ -1539,6 +1537,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 
   TiledDrawRenderGroup(transientState->highPriorityQueue, renderGroup, &drawBuffer);
+  RenderGroupFinish(renderGroup);
 
   EndSimRegion(simRegion, state);
   EndTemporaryMemory(&simRegionMemory);

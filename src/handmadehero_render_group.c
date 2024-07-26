@@ -13,7 +13,7 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets 
   struct render_group *renderGroup = MemoryArenaPush(arena, sizeof(*renderGroup));
 
   renderGroup->assets = assets;
-  renderGroup->generationId = NewGenerationId(renderGroup->assets);
+  renderGroup->generationId = BeginGeneration(renderGroup->assets);
 
   renderGroup->missingResourceCount = 0;
 
@@ -30,6 +30,13 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets 
   renderGroup->transform.scale = 1.0f;
 
   return renderGroup;
+}
+
+void
+RenderGroupFinish(struct render_group *renderGroup)
+{
+  assert(renderGroup);
+  EndGeneration(renderGroup->assets, renderGroup->generationId);
 }
 
 inline b32

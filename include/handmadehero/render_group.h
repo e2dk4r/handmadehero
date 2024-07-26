@@ -141,6 +141,9 @@ struct render_group *
 RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets *assets, b32 isRenderingInBackground);
 
 void
+RenderGroupFinish(struct render_group *renderGroup);
+
+void
 RenderGroupPerspective(struct render_group *renderGroup, u32 pixelWidth, u32 pixelHeight);
 
 void

@@ -99,6 +99,8 @@ struct asset_memory_block {
 
 struct game_assets {
   u32 nextGenerationId;
+  u32 inFlightGenerationCount;
+  u32 inFlightGenerations[16];
 
   // TODO(e2dk4r): copy of known, not ideal because
   // we want AssetLoad to called from anywhere
@@ -182,6 +184,9 @@ void
 EvictAssetsAsNecessary(struct game_assets *assets);
 
 u32
-NewGenerationId(struct game_assets *assets);
+BeginGeneration(struct game_assets *assets);
+
+void
+EndGeneration(struct game_assets *assets, u32 generationId);
 
 #endif /* HANDMADEHERO_ASSET_H */

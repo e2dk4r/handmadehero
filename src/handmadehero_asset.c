@@ -229,6 +229,21 @@ MergeMemoryBlock(struct game_assets *assets, struct asset_memory_block *first, s
   return isMerged;
 }
 
+internal b32
+HasGenerationCompleted(struct game_assets *assets, u32 generationId)
+{
+  b32 isCompleted = 1;
+
+  for (u32 index = 0; index < assets->inFlightGenerationCount; index++) {
+    if (assets->inFlightGenerations[index] == generationId) {
+      isCompleted = 0;
+      break;
+    }
+  }
+
+  return isCompleted;
+}
+
 internal struct asset_memory_header *
 AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size, u32 assetIndex)
 {
@@ -255,7 +270,7 @@ AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size, u32 ass
       for (struct asset_memory_header *header = assets->loadedAssetSentiel.prev; header != &assets->loadedAssetSentiel;
            header = header->prev) {
         struct asset *asset = assets->assets + header->assetIndex;
-        if (asset->state < ASSET_STATE_LOADED) {
+        if (asset->state < ASSET_STATE_LOADED && !HasGenerationCompleted(assets, asset->header->generationId)) {
           continue;
         }
 
@@ -296,6 +311,10 @@ inline struct game_assets *
 GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState)
 {
   struct game_assets *assets = MemoryArenaPush(arena, sizeof(*assets));
+
+  assets->nextGenerationId = 0;
+  assets->inFlightGenerationCount = 0;
+  ZeroMemory(assets->inFlightGenerations, sizeof(assets->inFlightGenerations));
 
   assets->memorySentiel.prev = &assets->memorySentiel;
   assets->memorySentiel.next = &assets->memorySentiel;
@@ -726,8 +745,34 @@ IsAudioIdValid(struct audio_id id)
 }
 
 inline u32
-NewGenerationId(struct game_assets *assets)
+BeginGeneration(struct game_assets *assets)
 {
-  u32 generationId = AtomicFetchAdd(&assets->nextGenerationId, 1);
+  BeginAssetLock(assets);
+
+  assert(assets->inFlightGenerationCount < ARRAY_COUNT(assets->inFlightGenerations));
+  u32 generationId = assets->nextGenerationId++;
+  assets->inFlightGenerations[assets->inFlightGenerationCount++] = generationId;
+
+  EndAssetLock(assets);
+
   return generationId;
+}
+
+inline void
+EndGeneration(struct game_assets *assets, u32 generationId)
+{
+  BeginAssetLock(assets);
+
+  for (u32 index = 0; index < assets->inFlightGenerationCount; index++) {
+    if (assets->inFlightGenerations[index] == generationId) {
+      assets->inFlightGenerations[index] = assets->inFlightGenerations[assets->inFlightGenerationCount - 1];
+      assets->inFlightGenerationCount--;
+      goto found;
+    }
+  }
+
+  assert(0 && "no generation id found");
+
+found:
+  EndAssetLock(assets);
 }

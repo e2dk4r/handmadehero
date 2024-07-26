@@ -17,7 +17,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
   b32 isWritten = 0;
   struct memory_temp mixerMemory = BeginTemporaryMemory(audioState->permanentArena);
 
-  u32 generationId = NewGenerationId(assets);
+  u32 generationId = BeginGeneration(assets);
 
   assert(IS_ALIGNED(audioBuffer->sampleCount, 4));
   u32 chunkCount = audioBuffer->sampleCount / 4;
@@ -234,6 +234,7 @@ OutputPlayingAudios(struct audio_state *audioState, struct game_audio_buffer *au
 
   END_TIMER_BLOCK(AudioMixer);
 
+  EndGeneration(assets, generationId);
   EndTemporaryMemory(&mixerMemory);
   return isWritten;
 }
