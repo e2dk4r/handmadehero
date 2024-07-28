@@ -318,9 +318,9 @@ global_variable f32 fontScale;
 void
 DEBUGReset(u32 width, u32 height)
 {
-  fontScale = 20.0f;
+  fontScale = 1.0f;
   RenderGroupOrthographic(DEBUG_TEXT_RENDER_GROUP, width, height, 1.0f);
-  atY = (0.5f * (f32)height) - (1.2f * fontScale);
+  atY = (0.5f * (f32)height) - (0.5f * fontScale);
   leftEdge = (-0.5f * (f32)width) + (0.5f * fontScale);
 }
 
@@ -336,18 +336,21 @@ DEBUGTextLine(char *line)
   f32 atX = leftEdge;
 
   for (char *character = line; *character; character++) {
+    f32 characterDim = fontScale * 10.0f;
     if (*character != ' ') {
       matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] = (f32)*character;
       struct bitmap_id bitmapId = BestMatchBitmap(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
+      struct hha_bitmap *bitmapInfo = BitmapInfoGet(assets, bitmapId);
+      characterDim = fontScale * (f32)bitmapInfo->width;
 
       struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
-      BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), fontScale, color);
+      BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), characterDim, color);
     }
 
-    atX += fontScale;
+    atX += characterDim;
   }
 
-  atY -= 1.2f * fontScale;
+  atY -= 1.2f * 80.0f * fontScale;
 }
 
 #endif

@@ -649,6 +649,17 @@ BitmapPrefetch(struct game_assets *assets, struct bitmap_id id)
   BitmapLoad(assets, id);
 }
 
+inline struct hha_bitmap *
+BitmapInfoGet(struct game_assets *assets, struct bitmap_id id)
+{
+  if (id.value == 0)
+    return 0;
+
+  assert(id.value <= assets->assetCount);
+  struct hha_asset *info = &(assets->assets + id.value)->hhaAsset;
+  return &info->bitmap;
+}
+
 inline void
 AudioLoad(struct game_assets *assets, struct audio_id id)
 {

@@ -152,6 +152,9 @@ BestMatchBitmap(struct game_assets *assets, enum asset_type_id typeId, struct as
 struct bitmap_id
 RandomBitmap(struct random_series *series, struct game_assets *assets, enum asset_type_id typeId);
 
+struct hha_bitmap *
+BitmapInfoGet(struct game_assets *assets, struct bitmap_id id);
+
 void
 AudioLoad(struct game_assets *assets, struct audio_id id);
 
