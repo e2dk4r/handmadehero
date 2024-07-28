@@ -536,7 +536,7 @@ DoFillGroundChunkWork(struct platform_work_queue *queue, void *data)
 {
   struct fill_ground_chunk_work *work = data;
   DrawRenderGroup(work->renderGroup, work->buffer);
-  RenderGroupFinish(work->renderGroup);
+  RenderEnd(work->renderGroup);
   EndTaskWithMemory(work->task);
 }
 
@@ -560,6 +560,7 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
   struct render_group *renderGroup = RenderGroup(
       &task->arena, MemoryArenaGetRemainingSize(&task->arena) - sizeof(*renderGroup), transientState->assets, 1);
   RenderGroupOrthographic(renderGroup, buffer->width, buffer->height, (f32)(buffer->width - 2) / width);
+  RenderBegin(renderGroup);
 
   Clear(renderGroup, COLOR_FUCHSIA_900);
 
@@ -630,8 +631,34 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
   Platform->WorkQueueAddEntry(transientState->lowPriorityQueue, DoFillGroundChunkWork, work);
 }
 
+internal void
+OverlayCycleCounters(struct game_memory *memory)
+{
+#if HANDMADEHERO_INTERNAL
+  DEBUGTextLine("CYCLE COUNTS:\n");
+
+  char *counterNameTable[] = {"GameUpdateAndRender", "DrawRenderGroup",      "DrawRectangleSlowly",
+                              "ProcessPixel",        "DrawRectangleQuickly", "AudioMixer"};
+  static_assert(ARRAY_COUNT(counterNameTable) == CYCLE_COUNTER_COUNT);
+  for (u32 counterIndex = 0; counterIndex < ARRAY_COUNT(memory->counters); counterIndex++) {
+    struct cycle_counter *counter = memory->counters + counterIndex;
+
+    if (counter->hitCount == 0)
+      continue;
+
+#if 0
+    debugf("  %s: %" PRIu64 "cy %" PRIu64 "h %" PRIu64 "cy/h\n", counterNameTable[counterIndex], counter->cycleCount,
+           counter->hitCount, counter->cycleCount / counter->hitCount);
+#else
+    DEBUGTextLine(counterNameTable[counterIndex]);
+#endif
+  }
+#endif
+}
+
 #if HANDMADEHERO_INTERNAL
 struct game_memory *DEBUG_GLOBAL_MEMORY;
+struct render_group *DEBUG_TEXT_RENDER_GROUP;
 #endif
 
 b32
@@ -922,8 +949,19 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     state->music = 0;
 #endif
 
+#if HANDMADEHERO_INTERNAL
+    memory->DEBUGtextRenderGroup =
+        RenderGroup(&transientState->transientArena, 4 * MEGABYTES, transientState->assets, 0);
+#endif
+
     transientState->isInitialized = 1;
   }
+
+#if HANDMADEHERO_INTERNAL
+  DEBUG_TEXT_RENDER_GROUP = memory->DEBUGtextRenderGroup;
+  RenderBegin(DEBUG_TEXT_RENDER_GROUP);
+  RenderGroupOrthographic(DEBUG_TEXT_RENDER_GROUP, backbuffer->width, backbuffer->height, 100.0f);
+#endif
 
 #if HANDMADEHERO_DEBUG
   // TODO(e2dk4r): Re-enable this? But make sure we don't touch ones in flight?
@@ -1023,6 +1061,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   struct render_group *renderGroup =
       RenderGroup(&transientState->transientArena, 4 * MEGABYTES, transientState->assets, 0);
   RenderGroupPerspective(renderGroup, drawBuffer.width, drawBuffer.height);
+  RenderBegin(renderGroup);
 
 /* drawing background */
 #if 0
@@ -1535,11 +1574,12 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     // render
 
     // BitmapWithColor(renderGroup, &state->testDiffuse, particle->position, 1.0f, color);
-    BitmapAsset(renderGroup, particle->bitmapId, particle->position, 0.2f, color);
+    BitmapAsset(renderGroup, particle->bitmapId, particle->position, 1.2f, color);
   }
 
-  TiledDrawRenderGroup(transientState->highPriorityQueue, renderGroup, &drawBuffer);
-  RenderGroupFinish(renderGroup);
+  struct platform_work_queue *renderQueue = transientState->highPriorityQueue;
+  TiledDrawRenderGroup(renderQueue, renderGroup, &drawBuffer);
+  RenderEnd(renderGroup);
 
   EndSimRegion(simRegion, state);
   EndTemporaryMemory(&simRegionMemory);
@@ -1549,4 +1589,10 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   MemoryArenaCheck(&transientState->transientArena);
 
   END_TIMER_BLOCK(GameUpdateAndRender);
+
+#if HANDMADEHERO_INTERNAL
+  OverlayCycleCounters(memory);
+  TiledDrawRenderGroup(renderQueue, DEBUG_TEXT_RENDER_GROUP, &drawBuffer);
+  RenderEnd(DEBUG_TEXT_RENDER_GROUP);
+#endif
 }

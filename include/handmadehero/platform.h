@@ -201,6 +201,7 @@ struct game_memory {
 
 #if HANDMADEHERO_INTERNAL
   struct cycle_counter counters[CYCLE_COUNTER_COUNT];
+  struct render_group *DEBUGtextRenderGroup;
 #endif
 };
 

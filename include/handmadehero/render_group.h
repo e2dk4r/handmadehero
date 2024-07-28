@@ -127,8 +127,11 @@ struct render_group {
 
   u32 missingResourceCount;
   b32 isRenderingInBackground : 1;
+  b32 isRenderingStarted : 1;
   u32 generationId;
 };
+
+extern struct render_group *DEBUG_TEXT_RENDER_GROUP;
 
 struct v4
 sRGB255toLinear1(struct v4 color);
@@ -141,7 +144,10 @@ struct render_group *
 RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets *assets, b32 isRenderingInBackground);
 
 void
-RenderGroupFinish(struct render_group *renderGroup);
+RenderBegin(struct render_group *renderGroup);
+
+void
+RenderEnd(struct render_group *renderGroup);
 
 void
 RenderGroupPerspective(struct render_group *renderGroup, u32 pixelWidth, u32 pixelHeight);
@@ -172,6 +178,9 @@ Rect(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v
 
 void
 RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);
+
+void
+DEBUGTextLine(char *line);
 
 void
 DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color, struct rect2s clipRect,

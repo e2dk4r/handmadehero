@@ -13,11 +13,12 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets 
   struct render_group *renderGroup = MemoryArenaPush(arena, sizeof(*renderGroup));
 
   renderGroup->assets = assets;
-  renderGroup->generationId = BeginGeneration(renderGroup->assets);
+  renderGroup->generationId = 0;
 
   renderGroup->missingResourceCount = 0;
 
   renderGroup->isRenderingInBackground = isRenderingInBackground & 0x1;
+  renderGroup->isRenderingStarted = 0;
 
   renderGroup->pushBufferSize = 0;
   renderGroup->pushBufferTotal = pushBufferTotal;
@@ -33,10 +34,27 @@ RenderGroup(struct memory_arena *arena, u64 pushBufferTotal, struct game_assets 
 }
 
 void
-RenderGroupFinish(struct render_group *renderGroup)
+RenderBegin(struct render_group *renderGroup)
 {
-  assert(renderGroup);
+  assert(renderGroup->generationId == 0);
+  assert(!renderGroup->isRenderingStarted);
+
+  renderGroup->generationId = BeginGeneration(renderGroup->assets);
+
+  renderGroup->isRenderingStarted = 1;
+}
+
+void
+RenderEnd(struct render_group *renderGroup)
+{
+  assert(renderGroup->isRenderingStarted);
+  // assert(renderGroup->generationId != 0);
+
   EndGeneration(renderGroup->assets, renderGroup->generationId);
+  renderGroup->generationId = 0;
+  renderGroup->pushBufferSize = 0;
+
+  renderGroup->isRenderingStarted = 0;
 }
 
 inline b32
@@ -148,6 +166,8 @@ GetRenderEntityBasisP(struct render_transform *transform, struct v3 originalPosi
 internal inline void *
 PushRenderEntry(struct render_group *renderGroup, u32 size, enum render_group_entry_type type)
 {
+  assert(renderGroup->isRenderingStarted);
+
   void *data = 0;
   struct render_group_entry *header;
 
@@ -288,6 +308,29 @@ RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, s
   PushRectangleEntry(renderGroup, v3_add(offset, v3(0.5f * dim.x, 0.0f, 0.0f)), v2(thickness, dim.y), color);
 #endif
 }
+
+#if HANDMADEHERO_INTERNAL
+
+inline void
+DEBUGTextLine(char *line)
+{
+  struct render_group *renderGroup = DEBUG_TEXT_RENDER_GROUP;
+  struct game_assets *assets = renderGroup->assets;
+
+  struct asset_vector matchVector = {};
+  struct asset_vector weightVector = {};
+  weightVector.e[ASSET_TAG_UNICODE_CODEPOINT] = 1.0f;
+
+  for (char *character = line; *character; character++) {
+    matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] = (f32)*character;
+    struct bitmap_id bitmapId = BestMatchBitmap(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
+
+    struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
+    BitmapAsset(renderGroup, bitmapId, v3(0.0f, 0.0f, 0.0f), 1.0f, color);
+  }
+}
+
+#endif
 
 inline void
 DrawRectangle(struct bitmap *buffer, struct v2 min, struct v2 max, const struct v4 color, struct rect2s clipRect,
