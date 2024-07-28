@@ -1655,7 +1655,7 @@ WriteNoneHero(void)
 
   BeginAssetType(context, ASSET_TYPE_FONT);
   char *fontPath = "/usr/share/fonts/liberation-fonts/LiberationSerif-Regular.ttf";
-  for (u32 character = 'A'; character <= 'z'; character++) {
+  for (u32 character = '!'; character <= '~'; character++) {
     AddCharacterAsset(context, fontPath, character);
     AddAssetTag(context, ASSET_TAG_UNICODE_CODEPOINT, (f32)character);
   }
