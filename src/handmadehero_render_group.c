@@ -312,12 +312,16 @@ RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, s
 #if HANDMADEHERO_INTERNAL
 
 global_variable f32 atY;
+global_variable f32 leftEdge;
+global_variable f32 fontScale;
 
 void
 DEBUGReset(u32 width, u32 height)
 {
+  fontScale = 20.0f;
   RenderGroupOrthographic(DEBUG_TEXT_RENDER_GROUP, width, height, 1.0f);
-  atY = 0.0f;
+  atY = (0.5f * (f32)height) - (1.2f * fontScale);
+  leftEdge = (-0.5f * (f32)width) + (0.5f * fontScale);
 }
 
 inline void
@@ -329,9 +333,7 @@ DEBUGTextLine(char *line)
   struct asset_vector matchVector = {};
   struct asset_vector weightVector = {};
   weightVector.e[ASSET_TAG_UNICODE_CODEPOINT] = 1.0f;
-
-  f32 scale = 20.0f;
-  f32 atX = 0.0f;
+  f32 atX = leftEdge;
 
   for (char *character = line; *character; character++) {
     if (*character != ' ') {
@@ -339,13 +341,13 @@ DEBUGTextLine(char *line)
       struct bitmap_id bitmapId = BestMatchBitmap(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
 
       struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
-      BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), scale, color);
+      BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), fontScale, color);
     }
 
-    atX += scale;
+    atX += fontScale;
   }
 
-  atY -= 1.2f * scale;
+  atY -= 1.2f * fontScale;
 }
 
 #endif
