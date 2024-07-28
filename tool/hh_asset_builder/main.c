@@ -1033,9 +1033,26 @@ LoadTTFCodepoint(char *fontPath, u32 codepoint)
     u8 *src = srcRow;
     u32 *dest = (u32 *)destRow;
     for (u32 x = 0; x < loadedBitmap.width; x++) {
-      u32 alpha = (u32)*src++;
-      u32 color = (alpha << 0x18) | (alpha << 0x10) | (alpha << 0x08) | (alpha << 0x00);
-      *dest++ = color;
+      f32 a = (f32)*src++;
+
+      // texel = sRGB255toLinear1(texel);
+      a /= 255.0f;
+
+      /*
+       * Store channels values pre-multiplied with alpha.
+       */
+      // v3_mul_ref(&texel.rgb, texel.a);
+      f32 r = 1.0f * a;
+      f32 g = 1.0f * a;
+      f32 b = 1.0f * a;
+
+      // texel = Linear1tosRGB255(texel);
+      r = 255.0f * SquareRoot(r);
+      g = 255.0f * SquareRoot(g);
+      b = 255.0f * SquareRoot(b);
+      a = 255.0f * a;
+
+      *dest++ = (u32)(a + 0.5f) << 0x18 | (u32)(r + 0.5f) << 0x10 | (u32)(g + 0.5f) << 0x08 | (u32)(b + 0.5f) << 0x00;
     }
 
     srcRow += srcStride;
