@@ -311,11 +311,12 @@ RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, s
 
 #if HANDMADEHERO_INTERNAL
 
-global_variable f32 atY = 0.0f;
+global_variable f32 atY;
 
 void
-DEBUGReset(void)
+DEBUGReset(u32 width, u32 height)
 {
+  RenderGroupOrthographic(DEBUG_TEXT_RENDER_GROUP, width, height, 1.0f);
   atY = 0.0f;
 }
 
@@ -329,7 +330,7 @@ DEBUGTextLine(char *line)
   struct asset_vector weightVector = {};
   weightVector.e[ASSET_TAG_UNICODE_CODEPOINT] = 1.0f;
 
-  f32 scale = 0.2f;
+  f32 scale = 20.0f;
   f32 atX = 0.0f;
 
   for (char *character = line; *character; character++) {
