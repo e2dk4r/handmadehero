@@ -333,11 +333,13 @@ DEBUGTextLine(char *line)
   f32 atX = 0.0f;
 
   for (char *character = line; *character; character++) {
-    matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] = (f32)*character;
-    struct bitmap_id bitmapId = BestMatchBitmap(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
+    if (*character != ' ') {
+      matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] = (f32)*character;
+      struct bitmap_id bitmapId = BestMatchBitmap(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
 
-    struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
-    BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), scale, color);
+      struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
+      BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), scale, color);
+    }
 
     atX += scale;
   }
