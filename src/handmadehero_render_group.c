@@ -311,6 +311,14 @@ RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, s
 
 #if HANDMADEHERO_INTERNAL
 
+global_variable f32 atY = 0.0f;
+
+void
+DEBUGReset(void)
+{
+  atY = 0.0f;
+}
+
 inline void
 DEBUGTextLine(char *line)
 {
@@ -321,13 +329,20 @@ DEBUGTextLine(char *line)
   struct asset_vector weightVector = {};
   weightVector.e[ASSET_TAG_UNICODE_CODEPOINT] = 1.0f;
 
+  f32 scale = 0.2f;
+  f32 atX = 0.0f;
+
   for (char *character = line; *character; character++) {
     matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] = (f32)*character;
     struct bitmap_id bitmapId = BestMatchBitmap(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
 
     struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
-    BitmapAsset(renderGroup, bitmapId, v3(0.0f, 0.0f, 0.0f), 1.0f, color);
+    BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), scale, color);
+
+    atX += scale;
   }
+
+  atY -= scale;
 }
 
 #endif

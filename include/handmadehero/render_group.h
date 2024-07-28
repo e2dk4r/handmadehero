@@ -180,6 +180,9 @@ void
 RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);
 
 void
+DEBUGReset(void);
+
+void
 DEBUGTextLine(char *line);
 
 void

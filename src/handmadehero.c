@@ -635,7 +635,7 @@ internal void
 OverlayCycleCounters(struct game_memory *memory)
 {
 #if HANDMADEHERO_INTERNAL
-  DEBUGTextLine("CYCLE COUNTS:\n");
+  DEBUGTextLine("CYCLE COUNTS:");
 
   char *counterNameTable[] = {"GameUpdateAndRender", "DrawRenderGroup",      "DrawRectangleSlowly",
                               "ProcessPixel",        "DrawRectangleQuickly", "AudioMixer"};
@@ -961,6 +961,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   DEBUG_TEXT_RENDER_GROUP = memory->DEBUGtextRenderGroup;
   RenderBegin(DEBUG_TEXT_RENDER_GROUP);
   RenderGroupOrthographic(DEBUG_TEXT_RENDER_GROUP, backbuffer->width, backbuffer->height, 100.0f);
+  DEBUGReset();
 #endif
 
 #if HANDMADEHERO_DEBUG
