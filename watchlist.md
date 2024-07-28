@@ -544,7 +544,7 @@
 - [x] Handmade Hero Day 167 - Finishing Win32 Font Glyph Extraction
       https://www.youtube.com/watch?v=Hc33CNhmAg8
 
-- [ ] Handmade Hero Day 168 - Rendering Lines of Text
+- [x] Handmade Hero Day 168 - Rendering Lines of Text
       https://www.youtube.com/watch?v=jG9qVQ450GA
 
 - [ ] Handmade Hero Day 169 - Aligning Text to a Baseline
