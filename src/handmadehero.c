@@ -1431,6 +1431,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   }
 #endif
 
+#if 0
   // Particles system test
   renderGroup->transform.offsetP = v3(0.0f, 0.0f, 0.0f);
   renderGroup->alpha = 1.0f;
@@ -1576,6 +1577,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
     // BitmapWithColor(renderGroup, &state->testDiffuse, particle->position, 1.0f, color);
     BitmapAsset(renderGroup, particle->bitmapId, particle->position, 1.2f, color);
   }
+#endif
 
   struct platform_work_queue *renderQueue = transientState->highPriorityQueue;
   TiledDrawRenderGroup(renderQueue, renderGroup, &drawBuffer);
