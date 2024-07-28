@@ -341,10 +341,12 @@ DEBUGTextLine(char *line)
       matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] = (f32)*character;
       struct bitmap_id bitmapId = BestMatchBitmap(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
       struct hha_bitmap *bitmapInfo = BitmapInfoGet(assets, bitmapId);
-      characterDim = fontScale * (f32)bitmapInfo->width;
+      characterDim = fontScale * (f32)bitmapInfo->height;
 
       struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
       BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), characterDim, color);
+
+      characterDim = fontScale * (f32)bitmapInfo->width;
     }
 
     atX += characterDim;

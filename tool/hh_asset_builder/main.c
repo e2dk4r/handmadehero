@@ -885,9 +885,14 @@ onError:
  * LOADING TTF FILES
  *****************************************************************/
 
+struct ttf_metric {
+  f32 alignPercentageY;
+};
+
 struct load_ttf_codepoint_result {
   enum hh_asset_builder_error error;
   struct loaded_bitmap loadedBitmap;
+  struct ttf_metric ttfMetric;
 };
 
 #if TRUETYPE_BACKEND_FREETYPE
@@ -999,13 +1004,25 @@ LoadTTFCodepoint(char *fontPath, u32 codepoint)
     return result;
   }
 
+  struct ttf_metric *ttfMetric = &result.ttfMetric;
+  f32 scale = stbtt_ScaleForPixelHeight(&font, 128.0f);
+  int descent;
+  stbtt_GetFontVMetrics(&font, 0, &descent, 0);
+
+  int x0, y0, x1, y1;
+  stbtt_GetCodepointBitmapBox(&font, (int)codepoint, scale, scale, &x0, &y0, &x1, &y1);
+
+  // stbtt renders bitmap in top down left right, we pack in bottom up left right order.
+  // Y axis operations are flipped.
+  s32 baseline = (s32)((f32)descent * scale);
+  ttfMetric->alignPercentageY = (f32)(baseline + y1) / (f32)(y1 - y0);
+
   s32 width;
   s32 height;
   s32 xOffset;
   s32 yOffset;
   // 8bpp, stored as left-to-right, top-to-bottom
-  u8 *codepointBitmap = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 128.0f), (int)codepoint,
-                                                 &width, &height, &xOffset, &yOffset);
+  u8 *codepointBitmap = stbtt_GetCodepointBitmap(&font, 0, scale, (int)codepoint, &width, &height, &xOffset, &yOffset);
   if (!codepointBitmap) {
     result.error = HH_ASSET_BUILDER_ERROR_MALLOC;
     DeallocateMemory(ttfFile.data);
@@ -1331,11 +1348,12 @@ WriteHHAFile(char *filename, struct asset_context *context)
       }
 
       struct loaded_bitmap *loadedBitmap = &loadTTFCodepointResult.loadedBitmap;
+      struct ttf_metric *ttfMetric = &loadTTFCodepointResult.ttfMetric;
 
       dest->bitmap.width = loadedBitmap->width;
       dest->bitmap.height = loadedBitmap->height;
-      dest->bitmap.alignPercentage[0] = 0.0f;
-      dest->bitmap.alignPercentage[1] = 0.0f;
+      dest->bitmap.alignPercentage[0] = 1.0f / (f32)loadedBitmap->width;
+      dest->bitmap.alignPercentage[1] = ttfMetric->alignPercentageY;
 
       writtenBytes = write(outFd, loadedBitmap->memory, (size_t)(loadedBitmap->stride * loadedBitmap->height));
       assert(writtenBytes > 0);
