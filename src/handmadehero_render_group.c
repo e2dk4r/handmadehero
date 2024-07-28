@@ -342,7 +342,7 @@ DEBUGTextLine(char *line)
     atX += scale;
   }
 
-  atY -= scale;
+  atY -= 1.2f * scale;
 }
 
 #endif
