@@ -934,6 +934,11 @@ LoadTTFCodepoint(char *fontPath, u32 codepoint)
     goto cleanupFace;
   }
 
+  struct ttf_metric *ttfMetric = &result.ttfMetric;
+  assert(!FT_HAS_VERTICAL(face));
+  FT_Glyph_Metrics *glyphMetrics = &face->glyph->metrics;
+  ttfMetric->alignPercentageY = (f32)(glyphMetrics->height - glyphMetrics->horiBearingY) / (f32)(glyphMetrics->height);
+
   FT_GlyphSlot slot = face->glyph;
   FT_Bitmap *bitmap = &slot->bitmap;
 
