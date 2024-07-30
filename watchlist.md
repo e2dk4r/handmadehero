@@ -547,7 +547,7 @@
 - [x] Handmade Hero Day 168 - Rendering Lines of Text
       https://www.youtube.com/watch?v=jG9qVQ450GA
 
-- [ ] Handmade Hero Day 169 - Aligning Text to a Baseline
+- [x] Handmade Hero Day 169 - Aligning Text to a Baseline
       https://www.youtube.com/watch?v=fVyzTKCfchw
 
 - [ ] Handmade Hero Day 170 - Defining Font Metadata
