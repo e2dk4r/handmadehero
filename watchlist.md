@@ -550,7 +550,7 @@
 - [x] Handmade Hero Day 169 - Aligning Text to a Baseline
       https://www.youtube.com/watch?v=fVyzTKCfchw
 
-- [ ] Handmade Hero Day 170 - Defining Font Metadata
+- [x] Handmade Hero Day 170 - Defining Font Metadata
       https://www.youtube.com/watch?v=eIi2OYFWfdQ
 
 - [ ] Handmade Hero Day 171 - Adding Font Metadata to the Asset Builder
