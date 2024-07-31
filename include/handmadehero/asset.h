@@ -16,6 +16,8 @@ struct audio {
 };
 
 struct font {
+  struct bitmap_id *codepoints;
+  f32 *horizontalAdvanceTable;
 };
 
 // TODO: use asset header to determine if asset is unloaded
@@ -187,6 +189,9 @@ AudioInfoGet(struct game_assets *assets, struct audio_id id);
 b32
 IsAudioIdValid(struct audio_id id);
 
+void
+FontLoad(struct game_assets *assets, struct font_id id);
+
 struct font *
 FontGet(struct game_assets *assets, struct font_id id, u32 generationId);
 
@@ -195,13 +200,16 @@ BestMatchFont(struct game_assets *assets, enum asset_type_id typeId, struct asse
               struct asset_vector *weightVector);
 
 struct bitmap_id
-FontGetBitmapGlyph(struct game_assets *assets, struct font *font, u32 codepoint);
+FontGetBitmapGlyph(struct game_assets *assets, struct hha_font *fontInfo, struct font *font, u32 codepoint);
 
 f32
-FontGetLineAdvance(struct font *font);
+FontGetLineAdvance(struct hha_font *fontInfo);
 
 f32
-FontGetHorizontalAdvanceForPair(struct font *font, u32 prevCodepoint, u32 codepoint);
+FontGetHorizontalAdvanceForPair(struct hha_font *fontInfo, struct font *font, u32 prevCodepoint, u32 codepoint);
+
+struct hha_font *
+FontInfoGet(struct game_assets *assets, struct font_id id);
 
 u32
 BeginGeneration(struct game_assets *assets);

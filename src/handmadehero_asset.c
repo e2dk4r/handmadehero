@@ -106,15 +106,9 @@ AudioGet(struct game_assets *assets, struct audio_id id, u32 generationId)
 struct font *
 FontGet(struct game_assets *assets, struct font_id id, u32 generationId)
 {
-  // TODO: implement this
-#if 0
   struct asset_memory_header *header = AssetGet(assets, id.value, generationId);
   struct font *font = header ? &header->font : 0;
   return font;
-#else
-  struct font *font = (struct font *)1;
-  return font;
-#endif
 }
 
 internal u32
@@ -174,8 +168,7 @@ struct font_id
 BestMatchFont(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
               struct asset_vector *weightVector)
 {
-  // TODO: implement this
-  struct font_id result = {1};
+  struct font_id result = {BestMatchAsset(assets, typeId, matchVector, weightVector)};
   return result;
 }
 
@@ -787,30 +780,106 @@ IsAudioIdValid(struct audio_id id)
   return id.value != 0;
 }
 
-struct bitmap_id
-FontGetBitmapGlyph(struct game_assets *assets, struct font *font, u32 codepoint)
+inline void
+FontLoad(struct game_assets *assets, struct font_id id)
 {
-  // TODO: implement this
-  struct asset_vector matchVector = {};
-  matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] = (f32)codepoint;
-  struct asset_vector weightVector = {};
-  weightVector.e[ASSET_TAG_UNICODE_CODEPOINT] = 1.0f;
-  struct bitmap_id bitmapId = BestMatchBitmap(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
+  if (id.value == 0)
+    return;
+
+  struct asset *asset = assets->assets + id.value;
+
+  enum asset_state expectedAssetState = ASSET_STATE_UNLOADED;
+  if (AtomicCompareExchange(&asset->state, &expectedAssetState, ASSET_STATE_QUEUED)) {
+    // asset now queued
+    struct task_with_memory *task = BeginTaskWithMemory(assets->transientState);
+    if (!task) {
+      // memory cannot obtained, revert back
+      AtomicStore(&asset->state, ASSET_STATE_UNLOADED);
+      return;
+    }
+
+    // setup header
+    struct hha_asset *info = &asset->hhaAsset;
+    assert(info->dataOffset && "asset not setup properly");
+    struct hha_font *fontInfo = &info->font;
+
+    u32 codepointsSize = fontInfo->codepointCount * sizeof(struct bitmap_id);
+    u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount + sizeof(f32);
+    u32 dataSize = codepointsSize + horizontalAdvanceTableSize; // size of data in file
+    u32 totalSize = dataSize + sizeof(*asset->header);
+    asset->header = AcquireAssetMemory(assets, totalSize, id.value);
+    void *memory = (asset->header + 1);
+
+    // setup font
+    struct font *font = &asset->header->font;
+    font->codepoints = memory;
+    font->horizontalAdvanceTable = (f32 *)((u8 *)font->codepoints + codepointsSize);
+
+    // setup work
+    struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
+    work->handle = AssetFileHandleGet(assets, asset->fileIndex);
+    work->dest = memory;
+    work->offset = info->dataOffset;
+    work->size = dataSize;
+
+    work->task = task;
+    work->asset = asset;
+    work->finalState = ASSET_STATE_LOADED;
+
+    // queue the work
+    struct platform_work_queue *queue = assets->transientState->lowPriorityQueue;
+    Platform->WorkQueueAddEntry(queue, DoLoadAssetWork, work);
+  }
+  // else some other thread beat us to it
+}
+
+internal inline u32
+FontGetClampedCodepoint(struct hha_font *fontInfo, u32 desiredCodepoint)
+{
+  u32 codepoint = desiredCodepoint;
+  if (codepoint >= fontInfo->codepointCount)
+    // when codepoint is not in font, give default
+    codepoint = 0;
+
+  return codepoint;
+}
+
+struct bitmap_id
+FontGetBitmapGlyph(struct game_assets *assets, struct hha_font *fontInfo, struct font *font, u32 desiredCodepoint)
+{
+  u32 codepoint = FontGetClampedCodepoint(fontInfo, desiredCodepoint);
+  struct bitmap_id bitmapId = *(font->codepoints + codepoint);
   return bitmapId;
 }
 
 f32
-FontGetLineAdvance(struct font *font)
+FontGetLineAdvance(struct hha_font *fontInfo)
 {
-  // TODO: implement this
-  return 1.2f * 80.0f;
+  return fontInfo->lineAdvance;
 }
 
 f32
-FontGetHorizontalAdvanceForPair(struct font *font, u32 prevCodepoint, u32 codepoint)
+FontGetHorizontalAdvanceForPair(struct hha_font *fontInfo, struct font *font, u32 desiredPrevCodepoint,
+                                u32 desiredCodepoint)
 {
-  // TODO: implement this
-  return 80.0f;
+  u32 prevCodepoint = FontGetClampedCodepoint(fontInfo, desiredPrevCodepoint);
+  u32 codepoint = FontGetClampedCodepoint(fontInfo, desiredCodepoint);
+
+  u32 offset = (prevCodepoint * fontInfo->codepointCount) + codepoint;
+  assert(offset < fontInfo->codepointCount * fontInfo->codepointCount);
+  f32 result = *(font->horizontalAdvanceTable + offset);
+  return result;
+}
+
+struct hha_font *
+FontInfoGet(struct game_assets *assets, struct font_id id)
+{
+  if (id.value == 0)
+    return 0;
+
+  assert(id.value <= assets->assetCount);
+  struct hha_asset *info = &(assets->assets + id.value)->hhaAsset;
+  return &info->font;
 }
 
 inline u32

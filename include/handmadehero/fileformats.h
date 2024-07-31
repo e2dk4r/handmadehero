@@ -19,11 +19,11 @@ enum asset_type_id {
   ASSET_TYPE_GROUND,
   ASSET_TYPE_TUFT,
 
+  ASSET_TYPE_FONT_GLYPH,
+
   ASSET_TYPE_HEAD,
   ASSET_TYPE_TORSO,
   ASSET_TYPE_CAPE,
-
-  ASSET_TYPE_FONT,
 
   /* ================ AUDIOS ================ */
   ASSET_TYPE_BLOOP,
@@ -32,6 +32,9 @@ enum asset_type_id {
   ASSET_TYPE_GLIDE,
   ASSET_TYPE_MUSIC,
   ASSET_TYPE_PUHP,
+
+  /* ================ FONT ================ */
+  ASSET_TYPE_FONT,
 
   ASSET_TYPE_COUNT
 };
@@ -94,6 +97,10 @@ struct hha_bitmap {
   u32 width;
   u32 height;
   f32 alignPercentage[2];
+  /*
+   * NOTE: data is:
+   *   u32 pixels[width * height];
+   */
 };
 
 enum hha_audio_chain {
@@ -106,6 +113,20 @@ struct hha_audio {
   u32 channelCount;
   u32 sampleCount;
   enum hha_audio_chain chain;
+  /*
+   * NOTE: data is:
+   *   s16 samples[channelCount][sampleCount];
+   */
+};
+
+struct hha_font {
+  u32 codepointCount;
+  f32 lineAdvance;
+  /*
+   * NOTE: data is:
+   *   struct bitmap_id codepoints[codepointCount];
+   *   f32 horizontalAdvanceTable[codepointCount * codepointCount];
+   */
 };
 
 struct hha_asset {
@@ -115,6 +136,7 @@ struct hha_asset {
   union {
     struct hha_bitmap bitmap;
     struct hha_audio audio;
+    struct hha_font font;
   };
 };
 

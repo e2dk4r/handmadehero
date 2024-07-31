@@ -338,17 +338,19 @@ DEBUGTextLine(char *line)
   if (!font)
     return;
 
+  struct hha_font *fontInfo = FontInfoGet(assets, fontId);
+
   f32 atX = leftEdge;
 
   u32 prevCodepoint = 0;
 
   for (char *character = line; *character; character++) {
     u32 codepoint = (u32)*character;
-    f32 advanceX = fontScale * FontGetHorizontalAdvanceForPair(font, prevCodepoint, codepoint);
+    f32 advanceX = fontScale * FontGetHorizontalAdvanceForPair(fontInfo, font, prevCodepoint, codepoint);
     atX += advanceX;
 
     if (codepoint != ' ') {
-      struct bitmap_id bitmapId = FontGetBitmapGlyph(assets, font, codepoint);
+      struct bitmap_id bitmapId = FontGetBitmapGlyph(assets, fontInfo, font, codepoint);
       struct hha_bitmap *bitmapInfo = BitmapInfoGet(assets, bitmapId);
 
       f32 height = fontScale * (f32)bitmapInfo->height;
@@ -359,7 +361,7 @@ DEBUGTextLine(char *line)
     prevCodepoint = codepoint;
   }
 
-  atY -= fontScale * FontGetLineAdvance(font);
+  atY -= fontScale * FontGetLineAdvance(fontInfo);
 }
 
 #endif
