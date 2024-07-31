@@ -183,9 +183,6 @@ AudioInfoGet(struct game_assets *assets, struct audio_id id);
 b32
 IsAudioIdValid(struct audio_id id);
 
-void
-EvictAssetsAsNecessary(struct game_assets *assets);
-
 u32
 BeginGeneration(struct game_assets *assets);
 
