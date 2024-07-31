@@ -103,6 +103,20 @@ AudioGet(struct game_assets *assets, struct audio_id id, u32 generationId)
   return audio;
 }
 
+struct font *
+FontGet(struct game_assets *assets, struct font_id id, u32 generationId)
+{
+  // TODO: implement this
+#if 0
+  struct asset_memory_header *header = AssetGet(assets, id.value, generationId);
+  struct font *font = header ? &header->font : 0;
+  return font;
+#else
+  struct font *font = (struct font *)1;
+  return font;
+#endif
+}
+
 internal u32
 BestMatchAsset(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
                struct asset_vector *weightVector)
@@ -153,6 +167,15 @@ BestMatchAudio(struct game_assets *assets, enum asset_type_id typeId, struct ass
 {
   assert(IsAssetTypeIdAudio(typeId));
   struct audio_id result = {BestMatchAsset(assets, typeId, matchVector, weightVector)};
+  return result;
+}
+
+struct font_id
+BestMatchFont(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
+              struct asset_vector *weightVector)
+{
+  // TODO: implement this
+  struct font_id result = {1};
   return result;
 }
 
@@ -762,6 +785,32 @@ inline b32
 IsAudioIdValid(struct audio_id id)
 {
   return id.value != 0;
+}
+
+struct bitmap_id
+FontGetBitmapGlyph(struct game_assets *assets, struct font *font, u32 codepoint)
+{
+  // TODO: implement this
+  struct asset_vector matchVector = {};
+  matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] = (f32)codepoint;
+  struct asset_vector weightVector = {};
+  weightVector.e[ASSET_TAG_UNICODE_CODEPOINT] = 1.0f;
+  struct bitmap_id bitmapId = BestMatchBitmap(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
+  return bitmapId;
+}
+
+f32
+FontGetLineAdvance(struct font *font)
+{
+  // TODO: implement this
+  return 1.2f * 80.0f;
+}
+
+f32
+FontGetHorizontalAdvanceForPair(struct font *font, u32 prevCodepoint, u32 codepoint)
+{
+  // TODO: implement this
+  return 80.0f;
 }
 
 inline u32

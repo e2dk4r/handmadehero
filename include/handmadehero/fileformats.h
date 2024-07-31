@@ -75,6 +75,10 @@ struct audio_id {
   u32 value;
 };
 
+struct font_id {
+  u32 value;
+};
+
 struct hha_tag {
   u32 id;
   f32 value;

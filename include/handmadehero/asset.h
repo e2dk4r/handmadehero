@@ -15,6 +15,9 @@ struct audio {
   u32 sampleCount;
 };
 
+struct font {
+};
+
 // TODO: use asset header to determine if asset is unloaded
 enum asset_state {
   ASSET_STATE_UNLOADED,
@@ -37,6 +40,7 @@ struct asset_memory_header {
   union {
     struct bitmap bitmap;
     struct audio audio;
+    struct font font;
   };
 };
 
@@ -182,6 +186,22 @@ AudioInfoGet(struct game_assets *assets, struct audio_id id);
 
 b32
 IsAudioIdValid(struct audio_id id);
+
+struct font *
+FontGet(struct game_assets *assets, struct font_id id, u32 generationId);
+
+struct font_id
+BestMatchFont(struct game_assets *assets, enum asset_type_id typeId, struct asset_vector *matchVector,
+              struct asset_vector *weightVector);
+
+struct bitmap_id
+FontGetBitmapGlyph(struct game_assets *assets, struct font *font, u32 codepoint);
+
+f32
+FontGetLineAdvance(struct font *font);
+
+f32
+FontGetHorizontalAdvanceForPair(struct font *font, u32 prevCodepoint, u32 codepoint);
 
 u32
 BeginGeneration(struct game_assets *assets);

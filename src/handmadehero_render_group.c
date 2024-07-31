@@ -332,27 +332,34 @@ DEBUGTextLine(char *line)
 
   struct asset_vector matchVector = {};
   struct asset_vector weightVector = {};
-  weightVector.e[ASSET_TAG_UNICODE_CODEPOINT] = 1.0f;
+  struct font_id fontId = BestMatchFont(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
+
+  struct font *font = FontGet(assets, fontId, renderGroup->generationId);
+  if (!font)
+    return;
+
   f32 atX = leftEdge;
 
+  u32 prevCodepoint = 0;
+
   for (char *character = line; *character; character++) {
-    f32 characterDim = fontScale * 10.0f;
-    if (*character != ' ') {
-      matchVector.e[ASSET_TAG_UNICODE_CODEPOINT] = (f32)*character;
-      struct bitmap_id bitmapId = BestMatchBitmap(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
+    u32 codepoint = (u32)*character;
+    f32 advanceX = fontScale * FontGetHorizontalAdvanceForPair(font, prevCodepoint, codepoint);
+    atX += advanceX;
+
+    if (codepoint != ' ') {
+      struct bitmap_id bitmapId = FontGetBitmapGlyph(assets, font, codepoint);
       struct hha_bitmap *bitmapInfo = BitmapInfoGet(assets, bitmapId);
-      characterDim = fontScale * (f32)bitmapInfo->height;
 
+      f32 height = fontScale * (f32)bitmapInfo->height;
       struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
-      BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), characterDim, color);
-
-      characterDim = fontScale * (f32)bitmapInfo->width;
+      BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), height, color);
     }
 
-    atX += characterDim;
+    prevCodepoint = codepoint;
   }
 
-  atY -= 1.2f * 80.0f * fontScale;
+  atY -= fontScale * FontGetLineAdvance(font);
 }
 
 #endif
