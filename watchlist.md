@@ -553,7 +553,7 @@
 - [x] Handmade Hero Day 170 - Defining Font Metadata
       https://www.youtube.com/watch?v=eIi2OYFWfdQ
 
-- [ ] Handmade Hero Day 171 - Adding Font Metadata to the Asset Builder
+- [x] Handmade Hero Day 171 - Adding Font Metadata to the Asset Builder
       https://www.youtube.com/watch?v=tJMvJaM-BtY
 
 - [ ] Handmade Hero Day 172 - Extracting Kerning Tables from Windows
