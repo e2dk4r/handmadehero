@@ -44,6 +44,41 @@
 #pragma GCC diagnostic pop
 
 /*****************************************************************
+ * MEMORY
+ *****************************************************************/
+
+struct memory_block {
+  u64 size;
+};
+
+void *
+AllocateMemory(u64 size)
+{
+  u64 total = size + sizeof(struct memory_block);
+  struct memory_block *memoryBlock = mmap(0, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (memoryBlock == MAP_FAILED)
+    return 0;
+
+  memoryBlock->size = total;
+  void *memory = memoryBlock + 1;
+
+  return memory;
+}
+
+void
+DeallocateMemory(void *memory)
+{
+  if (!memory)
+    return;
+
+  struct memory_block *memoryBlock = memory - sizeof(*memoryBlock);
+
+  // TODO: unmap failed?
+  munmap(memoryBlock, memoryBlock->size);
+  memory = 0;
+}
+
+/*****************************************************************
  * MATH
  *****************************************************************/
 
@@ -79,7 +114,7 @@ enum log_color {
   LOG_COLOR_WARN,
 };
 
-b32
+internal b32
 IsStdoutTerminal(void)
 {
   s32 isattyResult = isatty(STDOUT_FILENO);
@@ -236,6 +271,18 @@ struct audio_info {
 
 struct font_info {
   char *fontPath;
+  u32 codepointCount;
+
+  struct bitmap_id *codepoints; // codepoints[codepointCount]
+  f32 *horizontalAdvanceTable;  // horizontalAdvanceTable[codepointCount][codepointCount]
+
+  // to be used with font_glyph_info
+  struct loaded_font *loadedFont;
+  u32 writtenCodepointCount;
+};
+
+struct font_glyph_info {
+  struct font_id fontId;
   u32 codepoint;
 };
 
@@ -243,6 +290,7 @@ enum asset_metadata_type {
   ASSET_METADATA_TYPE_AUDIO,
   ASSET_METADATA_TYPE_BITMAP,
   ASSET_METADATA_TYPE_FONT,
+  ASSET_METADATA_TYPE_FONT_GLYPH,
 };
 
 struct asset_metadata {
@@ -255,6 +303,7 @@ struct asset_metadata {
     struct bitmap_info bitmapInfo;
     struct audio_info audioInfo;
     struct font_info fontInfo;
+    struct font_glyph_info fontGlyphInfo;
   };
 };
 
@@ -298,8 +347,13 @@ BeginAssetType(struct asset_context *context, enum asset_type_id typeId)
   type->assetIndexOnePastLast = type->assetIndexFirst;
 }
 
-internal struct bitmap_id
-AddBitmapAsset(struct asset_context *context, char *filename, f32 alignPercentageX, f32 alignPercentageY)
+struct added_asset {
+  u32 id;
+  struct asset_metadata *metadata;
+};
+
+internal struct added_asset
+AddAsset(struct asset_context *context)
 {
   assert(context->currentAssetType && "you must call BeginAssetType()");
   assert(context->currentAssetType->assetIndexOnePastLast < ARRAY_COUNT(context->assets) && "asset count exceeded");
@@ -308,15 +362,28 @@ AddBitmapAsset(struct asset_context *context, char *filename, f32 alignPercentag
   context->currentAsset = context->assetMetadatas + type->assetIndexOnePastLast;
   type->assetIndexOnePastLast++;
 
-  struct asset_metadata *asset = context->currentAsset;
-  asset->type = ASSET_METADATA_TYPE_BITMAP;
-  asset->tagIndexFirst = context->tagCount;
-  asset->tagIndexOnePastLast = asset->tagIndexFirst;
+  struct asset_metadata *metadata = context->currentAsset;
+  metadata->tagIndexFirst = context->tagCount;
+  metadata->tagIndexOnePastLast = metadata->tagIndexFirst;
 
-  struct bitmap_id id = {context->assetCount};
+  u32 id = context->assetCount;
   context->assetCount++;
 
-  struct bitmap_info *info = &(context->assetMetadatas + id.value)->bitmapInfo;
+  return (struct added_asset){
+      .id = id,
+      .metadata = metadata,
+  };
+}
+
+internal struct bitmap_id
+AddBitmapAsset(struct asset_context *context, char *filename, f32 alignPercentageX, f32 alignPercentageY)
+{
+  struct added_asset asset = AddAsset(context);
+  struct asset_metadata *metadata = asset.metadata;
+  metadata->type = ASSET_METADATA_TYPE_BITMAP;
+
+  struct bitmap_id id = {asset.id};
+  struct bitmap_info *info = &metadata->bitmapInfo;
   info->filename = filename;
   info->alignPercentageX = alignPercentageX;
   info->alignPercentageY = alignPercentageY;
@@ -327,26 +394,16 @@ AddBitmapAsset(struct asset_context *context, char *filename, f32 alignPercentag
 internal struct audio_id
 AddAudioAssetTrimmed(struct asset_context *context, char *filename, u32 sampleIndex, u32 sampleCount)
 {
-  assert(context->currentAssetType && "you must call BeginAssetType()");
-  assert(context->currentAssetType->assetIndexOnePastLast < ARRAY_COUNT(context->assets) && "asset count exceeded");
+  struct added_asset asset = AddAsset(context);
+  struct asset_metadata *metadata = asset.metadata;
+  metadata->type = ASSET_METADATA_TYPE_AUDIO;
 
-  struct hha_asset_type *type = context->currentAssetType;
-  context->currentAsset = context->assetMetadatas + type->assetIndexOnePastLast;
-  type->assetIndexOnePastLast++;
-
-  struct asset_metadata *asset = context->currentAsset;
-  asset->type = ASSET_METADATA_TYPE_AUDIO;
-  asset->tagIndexFirst = context->tagCount;
-  asset->tagIndexOnePastLast = asset->tagIndexFirst;
-  asset->audioInfo.chain = HHA_AUDIO_CHAIN_NONE;
-
-  struct audio_id id = {context->assetCount};
-  context->assetCount++;
-
-  struct audio_info *info = &(context->assetMetadatas + id.value)->audioInfo;
+  struct audio_id id = {asset.id};
+  struct audio_info *info = &metadata->audioInfo;
   info->filename = filename;
   info->sampleIndex = sampleIndex;
   info->sampleCount = sampleCount;
+  info->chain = HHA_AUDIO_CHAIN_NONE;
 
   return id;
 }
@@ -357,27 +414,40 @@ AddAudioAsset(struct asset_context *context, char *filename)
   return AddAudioAssetTrimmed(context, filename, 0, 0);
 }
 
-internal struct bitmap_id
-AddCharacterAsset(struct asset_context *context, char *fontPath, u32 codepoint)
+// fontInfo.codepoints is allocated on heap, after used call DeallocateMemory() on it.
+// fontInfo.horizontalAdvanceTable is allocated on heap, after used call DeallocateMemory() on it.
+internal struct font_id
+AddFontAsset(struct asset_context *context, char *fontPath, u32 codepointCount)
 {
-  assert(context->currentAssetType && "you must call BeginAssetType()");
-  assert(context->currentAssetType->assetIndexOnePastLast < ARRAY_COUNT(context->assets) && "asset count exceeded");
+  struct added_asset asset = AddAsset(context);
+  struct asset_metadata *metadata = asset.metadata;
+  metadata->type = ASSET_METADATA_TYPE_FONT;
 
-  struct hha_asset_type *type = context->currentAssetType;
-  context->currentAsset = context->assetMetadatas + type->assetIndexOnePastLast;
-  type->assetIndexOnePastLast++;
-
-  struct asset_metadata *asset = context->currentAsset;
-  asset->type = ASSET_METADATA_TYPE_FONT;
-  asset->tagIndexFirst = context->tagCount;
-  asset->tagIndexOnePastLast = asset->tagIndexFirst;
-
-  struct bitmap_id id = {context->assetCount};
-  context->assetCount++;
-
-  struct font_info *fontInfo = &(context->assetMetadatas + id.value)->fontInfo;
+  struct font_id id = {asset.id};
+  struct font_info *fontInfo = &metadata->fontInfo;
   fontInfo->fontPath = fontPath;
-  fontInfo->codepoint = codepoint;
+  fontInfo->codepointCount = codepointCount;
+
+  u32 codepointsSize = fontInfo->codepointCount * sizeof(struct bitmap_id);
+  fontInfo->codepoints = AllocateMemory(codepointsSize);
+
+  u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount + sizeof(f32);
+  fontInfo->horizontalAdvanceTable = AllocateMemory(horizontalAdvanceTableSize);
+
+  return id;
+}
+
+internal struct bitmap_id
+AddFontGlyphAsset(struct asset_context *context, struct font_id fontId, u32 codepoint)
+{
+  struct added_asset asset = AddAsset(context);
+  struct asset_metadata *metadata = asset.metadata;
+  metadata->type = ASSET_METADATA_TYPE_FONT_GLYPH;
+
+  struct bitmap_id id = {asset.id};
+  struct font_glyph_info *fontGlyphInfo = &metadata->fontGlyphInfo;
+  fontGlyphInfo->fontId = fontId;
+  fontGlyphInfo->codepoint = codepoint;
 
   return id;
 }
@@ -425,41 +495,6 @@ usage(void)
 }
 
 /*****************************************************************
- * MEMORY
- *****************************************************************/
-
-struct memory_block {
-  u64 size;
-};
-
-void *
-AllocateMemory(u64 size)
-{
-  u64 total = size + sizeof(struct memory_block);
-  struct memory_block *memoryBlock = mmap(0, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (memoryBlock == MAP_FAILED)
-    return 0;
-
-  memoryBlock->size = total;
-  void *memory = memoryBlock + 1;
-
-  return memory;
-}
-
-void
-DeallocateMemory(void *memory)
-{
-  if (!memory)
-    return;
-
-  struct memory_block *memoryBlock = memory - sizeof(*memoryBlock);
-
-  // TODO: unmap failed?
-  munmap(memoryBlock, memoryBlock->size);
-  memory = 0;
-}
-
-/*****************************************************************
  * LOADING FILES
  *****************************************************************/
 
@@ -497,7 +532,7 @@ ReadEntireFile(char *path)
     return result;
   }
 
-  ssize_t bytesRead = read(fd, result.data, (size_t)stat.st_size);
+  ssize_t bytesRead = read(fd, result.data, (size_t)result.size);
   if (bytesRead <= 0) {
     result.error = HH_ASSET_BUILDER_ERROR_IO_READ;
     DeallocateMemory(result.data);
@@ -884,59 +919,114 @@ onError:
  * LOADING TTF FILES
  *****************************************************************/
 
-struct ttf_metric {
+struct loaded_font {
+  void *_filememory;
+  f32 lineAdvance;
+
+#if TRUETYPE_BACKEND_FREETYPE
+  FT_Library library;
+  FT_Face face;
+#elif TRUETYPE_BACKEND_STBTT
+  stbtt_fontinfo font;
+  f32 scale;
+  s32 baseline;
+#endif
+};
+
+struct load_font_result {
+  enum hh_asset_builder_error error;
+  struct loaded_font *loadedFont;
+};
+
+struct load_font_glyph_result {
+  enum hh_asset_builder_error error;
+  struct loaded_bitmap loadedBitmap;
   f32 alignPercentageY;
 };
 
-struct load_ttf_codepoint_result {
-  enum hh_asset_builder_error error;
-  struct loaded_bitmap loadedBitmap;
-  struct ttf_metric ttfMetric;
-};
+// loadedFont is allocated on heap, after used call DeallocateMemory() on it.
+// loadedFont._filememory is allocated on heap, after used call DeallocateMemory() on it.
+internal struct load_font_result
+LoadFont(char *fontPath);
+
+// loadedBitmap.memory is allocated on heap, after used call DeallocateMemory() on it.
+internal struct load_font_glyph_result
+LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint);
 
 #if TRUETYPE_BACKEND_FREETYPE
 
-// loadedBitmap.memory is allocated on heap
-internal struct load_ttf_codepoint_result
-LoadTTFCodepoint(char *fontPath, u32 codepoint)
+internal struct load_font_result
+LoadFont(char *fontPath)
 {
-  struct load_ttf_codepoint_result result = {};
+  struct load_font_result result = {};
+
   struct read_file_result ttfFile = ReadEntireFile(fontPath);
   if (ttfFile.error != HH_ASSET_BUILDER_ERROR_NONE) {
     result.error = ttfFile.error;
     return result;
   }
 
-  FT_Library library;
-  FT_Error error = FT_Init_FreeType(&library);
+  struct loaded_font *loadedFont = AllocateMemory(sizeof(*loadedFont));
+  if (!loadedFont) {
+    result.error = HH_ASSET_BUILDER_ERROR_MALLOC;
+    return result;
+  }
+  loadedFont->_filememory = ttfFile.data;
+
+  FT_Error error = FT_Init_FreeType(&loadedFont->library);
   if (error) {
     result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
     goto cleanupFile;
   }
 
-  FT_Face face;
-  error = FT_New_Memory_Face(library, ttfFile.data, (FT_Long)ttfFile.size, 0, &face);
+  FT_Library library = loadedFont->library;
+  error = FT_New_Memory_Face(library, ttfFile.data, (FT_Long)ttfFile.size, 0, &loadedFont->face);
   if (error) {
     result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
     goto cleanupLibrary;
   }
 
+  FT_Face face = loadedFont->face;
   error = FT_Set_Pixel_Sizes(face, 0, 128);
   if (error) {
     result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
     goto cleanupFace;
   }
 
-  error = FT_Load_Char(face, codepoint, FT_LOAD_RENDER);
+  // TODO: get line advance using freetype API
+  FT_Glyph_Metrics *glyphMetrics = &face->glyph->metrics;
+  loadedFont->lineAdvance = (f32)glyphMetrics->vertAdvance;
+
+  result.loadedFont = loadedFont;
+
+  return result;
+
+  // cleanup
+cleanupFace:
+  FT_Done_Face(loadedFont->face);
+cleanupLibrary:
+  FT_Done_FreeType(loadedFont->library);
+cleanupFile:
+  DeallocateMemory(loadedFont->_filememory);
+
+  return result;
+}
+
+internal struct load_font_glyph_result
+LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
+{
+  struct load_font_glyph_result result = {};
+
+  FT_Face face = loadedFont->face;
+  FT_Error error = FT_Load_Char(face, codepoint, FT_LOAD_RENDER);
   if (error) {
     result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
-    goto cleanupFace;
+    return result;
   }
 
-  struct ttf_metric *ttfMetric = &result.ttfMetric;
   assert(!FT_HAS_VERTICAL(face));
   FT_Glyph_Metrics *glyphMetrics = &face->glyph->metrics;
-  ttfMetric->alignPercentageY = (f32)(glyphMetrics->height - glyphMetrics->horiBearingY) / (f32)(glyphMetrics->height);
+  result.alignPercentageY = (f32)(glyphMetrics->height - glyphMetrics->horiBearingY) / (f32)(glyphMetrics->height);
 
   FT_GlyphSlot slot = face->glyph;
   FT_Bitmap *bitmap = &slot->bitmap;
@@ -949,7 +1039,7 @@ LoadTTFCodepoint(char *fontPath, u32 codepoint)
   loadedBitmap.memory = AllocateMemory(loadedBitmap.height * loadedBitmap.stride);
   if (!loadedBitmap.memory) {
     result.error = HH_ASSET_BUILDER_ERROR_MALLOC;
-    goto cleanupFace;
+    return result;
   }
 
   u8 *srcRow = bitmap->buffer + ((int)(bitmap->rows - 1) * bitmap->pitch); // start at bottom left
@@ -969,67 +1059,74 @@ LoadTTFCodepoint(char *fontPath, u32 codepoint)
     destRow += destStride;
   }
 
-  // cleanup
-  FT_Done_Face(face);
-  FT_Done_FreeType(library);
-  DeallocateMemory(ttfFile.data);
-
   result.loadedBitmap = loadedBitmap;
-  return result;
-
-cleanupFace:
-  FT_Done_Face(face);
-cleanupLibrary:
-  FT_Done_FreeType(library);
-cleanupFile:
-  DeallocateMemory(ttfFile.data);
 
   return result;
 }
 
 #elif TRUETYPE_BACKEND_STBTT
 
-// loadedBitmap.memory is allocated on heap
-internal struct load_ttf_codepoint_result
-LoadTTFCodepoint(char *fontPath, u32 codepoint)
+internal struct load_font_result
+LoadFont(char *fontPath)
 {
-  struct load_ttf_codepoint_result result = {};
+  struct load_font_result result = {};
   struct read_file_result ttfFile = ReadEntireFile(fontPath);
   if (ttfFile.error != HH_ASSET_BUILDER_ERROR_NONE) {
     result.error = ttfFile.error;
     return result;
   }
 
-  stbtt_fontinfo font;
-  int ok = stbtt_InitFont(&font, ttfFile.data, stbtt_GetFontOffsetForIndex(ttfFile.data, 0));
+  struct loaded_font *loadedFont = AllocateMemory(sizeof(*loadedFont));
+  if (!loadedFont) {
+    result.error = HH_ASSET_BUILDER_ERROR_MALLOC;
+    return result;
+  }
+  loadedFont->_filememory = ttfFile.data;
+
+  stbtt_fontinfo *font = &loadedFont->font;
+  int ok = stbtt_InitFont(font, ttfFile.data, stbtt_GetFontOffsetForIndex(ttfFile.data, 0));
   if (!ok) {
     result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
-    DeallocateMemory(ttfFile.data);
+    DeallocateMemory(loadedFont->_filememory);
+    DeallocateMemory(loadedFont);
     return result;
   }
 
-  struct ttf_metric *ttfMetric = &result.ttfMetric;
-  f32 scale = stbtt_ScaleForPixelHeight(&font, 128.0f);
-  int descent;
-  stbtt_GetFontVMetrics(&font, 0, &descent, 0);
+  loadedFont->scale = stbtt_ScaleForPixelHeight(font, 128.0f);
+  int descent, lineGap;
+  stbtt_GetFontVMetrics(font, 0, &descent, &lineGap);
+  loadedFont->baseline = (s32)((f32)descent * loadedFont->scale);
+  // TODO: check this value
+  loadedFont->lineAdvance = (f32)lineGap * loadedFont->scale;
+
+  result.loadedFont = loadedFont;
+
+  return result;
+}
+
+internal struct load_font_glyph_result
+LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
+{
+  struct load_font_glyph_result result = {};
+  stbtt_fontinfo *font = &loadedFont->font;
+  f32 scale = loadedFont->scale;
+  s32 baseline = loadedFont->baseline;
 
   int x0, y0, x1, y1;
-  stbtt_GetCodepointBitmapBox(&font, (int)codepoint, scale, scale, &x0, &y0, &x1, &y1);
+  stbtt_GetCodepointBitmapBox(font, (int)codepoint, scale, scale, &x0, &y0, &x1, &y1);
 
   // stbtt renders bitmap in top down left right, we pack in bottom up left right order.
   // Y axis operations are flipped.
-  s32 baseline = (s32)((f32)descent * scale);
-  ttfMetric->alignPercentageY = (f32)(baseline + y1) / (f32)(y1 - y0);
+  result.alignPercentageY = (f32)(baseline + y1) / (f32)(y1 - y0);
 
   s32 width;
   s32 height;
   s32 xOffset;
   s32 yOffset;
   // 8bpp, stored as left-to-right, top-to-bottom
-  u8 *codepointBitmap = stbtt_GetCodepointBitmap(&font, 0, scale, (int)codepoint, &width, &height, &xOffset, &yOffset);
+  u8 *codepointBitmap = stbtt_GetCodepointBitmap(font, 0, scale, (int)codepoint, &width, &height, &xOffset, &yOffset);
   if (!codepointBitmap) {
     result.error = HH_ASSET_BUILDER_ERROR_MALLOC;
-    DeallocateMemory(ttfFile.data);
     return result;
   }
 
@@ -1041,9 +1138,7 @@ LoadTTFCodepoint(char *fontPath, u32 codepoint)
   loadedBitmap.memory = AllocateMemory(loadedBitmap.height * loadedBitmap.stride);
   if (!loadedBitmap.memory) {
     result.error = HH_ASSET_BUILDER_ERROR_MALLOC;
-    DeallocateMemory(ttfFile.data);
-    stbtt_FreeBitmap(codepointBitmap, 0);
-    return result;
+    goto cleanupCodepointBitmap;
   }
 
   u8 *srcRow = codepointBitmap + (width * (height - 1)); // start at bottom left
@@ -1080,11 +1175,11 @@ LoadTTFCodepoint(char *fontPath, u32 codepoint)
     destRow += destStride;
   }
 
-  // cleanup
-  stbtt_FreeBitmap(codepointBitmap, 0);
-  DeallocateMemory(ttfFile.data);
-
   result.loadedBitmap = loadedBitmap;
+
+  // cleanup
+cleanupCodepointBitmap:
+  stbtt_FreeBitmap(codepointBitmap, 0);
 
   return result;
 }
@@ -1311,11 +1406,10 @@ WriteHHAFile(char *filename, struct asset_context *context)
 
     case ASSET_METADATA_TYPE_FONT: {
       struct font_info *fontInfo = &src->fontInfo;
-      struct load_ttf_codepoint_result loadTTFCodepointResult =
-          LoadTTFCodepoint(fontInfo->fontPath, fontInfo->codepoint);
+      struct load_font_result loadFontResult = LoadFont(fontInfo->fontPath);
 
-      if (loadTTFCodepointResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
-        switch (loadTTFCodepointResult.error) {
+      if (loadFontResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
+        switch (loadFontResult.error) {
         case HH_ASSET_BUILDER_ERROR_IO_OPEN:
           logLength =
               snprintf(logBuffer, sizeof(logBuffer), "file cannot be opened\n  filename: %s\n", fontInfo->fontPath);
@@ -1347,22 +1441,69 @@ WriteHHAFile(char *filename, struct asset_context *context)
         assert(logLength > 0);
         error(logBuffer, (u64)logLength);
 
-        errorCode = loadTTFCodepointResult.error;
+        errorCode = loadFontResult.error;
         continue;
       }
 
-      struct loaded_bitmap *loadedBitmap = &loadTTFCodepointResult.loadedBitmap;
-      struct ttf_metric *ttfMetric = &loadTTFCodepointResult.ttfMetric;
+      struct loaded_font *loadedFont = loadFontResult.loadedFont;
+      dest->font.codepointCount = fontInfo->codepointCount;
+      dest->font.lineAdvance = loadedFont->lineAdvance;
 
+      u32 codepointsSize = fontInfo->codepointCount * sizeof(struct bitmap_id);
+      writtenBytes = write(outFd, fontInfo->codepoints, codepointsSize);
+      assert(writtenBytes > 0);
+
+      u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount + sizeof(f32);
+      writtenBytes = write(outFd, fontInfo->horizontalAdvanceTable, horizontalAdvanceTableSize);
+      assert(writtenBytes > 0);
+
+      DeallocateMemory(fontInfo->codepoints);
+      DeallocateMemory(fontInfo->horizontalAdvanceTable);
+
+      fontInfo->loadedFont = loadedFont;
+    } break;
+
+    case ASSET_METADATA_TYPE_FONT_GLYPH: {
+      struct font_glyph_info *fontGlyphInfo = &src->fontGlyphInfo;
+      struct font_info *fontInfo = &(context->assetMetadatas + fontGlyphInfo->fontId.value)->fontInfo;
+      struct load_font_glyph_result loadFontGlyphResult = LoadFontGlyph(fontInfo->loadedFont, fontGlyphInfo->codepoint);
+      if (loadFontGlyphResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
+        switch (loadFontGlyphResult.error) {
+        case HH_ASSET_BUILDER_ERROR_MALLOC:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "cannot allocate memory\n");
+          break;
+        case HH_ASSET_BUILDER_ERROR_TTF_MALFORMED:
+          logLength = snprintf(logBuffer, sizeof(logBuffer), "file is not ttf or malformed.\n  filename: %s\n",
+                               fontInfo->fontPath);
+          break;
+        default:
+          assert(0 && "error not presented to user");
+          break;
+        };
+        assert(logLength > 0);
+        error(logBuffer, (u64)logLength);
+
+        errorCode = loadFontGlyphResult.error;
+        continue;
+      }
+
+      struct loaded_bitmap *loadedBitmap = &loadFontGlyphResult.loadedBitmap;
       dest->bitmap.width = loadedBitmap->width;
       dest->bitmap.height = loadedBitmap->height;
       dest->bitmap.alignPercentage[0] = 1.0f / (f32)loadedBitmap->width;
-      dest->bitmap.alignPercentage[1] = ttfMetric->alignPercentageY;
+      dest->bitmap.alignPercentage[1] = loadFontGlyphResult.alignPercentageY;
 
       writtenBytes = write(outFd, loadedBitmap->memory, (size_t)(loadedBitmap->stride * loadedBitmap->height));
       assert(writtenBytes > 0);
 
       DeallocateMemory(loadedBitmap->memory);
+
+      if (fontInfo->writtenCodepointCount == fontInfo->codepointCount) {
+        // on last codepoint from file close it
+        DeallocateMemory(fontInfo->loadedFont->_filememory);
+        DeallocateMemory(fontInfo->loadedFont);
+      }
+      fontInfo->writtenCodepointCount++;
     } break;
     }
   }
@@ -1694,9 +1835,11 @@ WriteNoneHero(void)
 
   BeginAssetType(context, ASSET_TYPE_FONT);
   char *fontPath = "/usr/share/fonts/liberation-fonts/LiberationSerif-Regular.ttf";
-  for (u32 character = '!'; character <= '~'; character++) {
-    AddCharacterAsset(context, fontPath, character);
-    AddAssetTag(context, ASSET_TAG_UNICODE_CODEPOINT, (f32)character);
+  struct font_id fontId = AddFontAsset(context, fontPath, (u32)('~' - '!'));
+  struct font_info *fontInfo = &(context->assetMetadatas + fontId.value)->fontInfo;
+  for (u32 codepoint = '!'; codepoint <= '~'; codepoint++) {
+    struct bitmap_id bitmapId = AddFontGlyphAsset(context, fontId, codepoint);
+    fontInfo->codepoints[0] = bitmapId;
   }
   EndAssetType(context);
 
