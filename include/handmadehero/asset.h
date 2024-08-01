@@ -18,6 +18,7 @@ struct audio {
 struct font {
   struct bitmap_id *codepoints;
   f32 *horizontalAdvanceTable;
+  u32 bitmapIdOffset;
 };
 
 // TODO: use asset header to determine if asset is unloaded
@@ -90,6 +91,7 @@ struct asset_file {
   struct hha_asset_type *assetTypes;
 
   u32 tagBase;
+  u32 fontBitmapIdOffset;
 };
 
 enum asset_memory_block_flags {

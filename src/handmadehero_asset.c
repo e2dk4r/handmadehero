@@ -172,11 +172,18 @@ BestMatchFont(struct game_assets *assets, enum asset_type_id typeId, struct asse
   return result;
 }
 
-internal struct platform_file_handle *
-AssetFileHandleGet(struct game_assets *assets, u32 fileIndex)
+internal struct asset_file *
+AssetFileGet(struct game_assets *assets, u32 fileIndex)
 {
   assert(fileIndex < assets->fileCount);
   struct asset_file *file = (assets->files + fileIndex);
+  return file;
+}
+
+internal struct platform_file_handle *
+AssetFileHandleGet(struct game_assets *assets, u32 fileIndex)
+{
+  struct asset_file *file = AssetFileGet(assets, fileIndex);
   struct platform_file_handle *handle = &file->handle;
   return handle;
 }
@@ -357,6 +364,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
     assets->files = MemoryArenaPush(arena, sizeof(*assets->files) * assets->fileCount);
     for (u32 fileIndex = 0; fileIndex < assets->fileCount; fileIndex++) {
       struct asset_file *file = assets->files + fileIndex;
+      file->fontBitmapIdOffset = 0;
 
       file->handle = Platform->OpenNextFile(&fileGroup);
       Platform->ReadFromFile(&file->header, &file->handle, 0, sizeof(file->header));
@@ -439,6 +447,10 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
       for (u32 srcIndex = 0; srcIndex < file->header.assetTypeCount; srcIndex++) {
         struct hha_asset_type *srcType = file->assetTypes + srcIndex;
         if (srcType->typeId == destAssetTypeId) {
+          if (srcType->typeId == ASSET_TYPE_FONT) {
+            file->fontBitmapIdOffset = assetCount - srcType->assetIndexFirst;
+          }
+
           u32 assetCountForType = srcType->assetIndexOnePastLast - srcType->assetIndexFirst;
 
           // read assets metadata from file into temporary structure
@@ -812,12 +824,14 @@ FontLoad(struct game_assets *assets, struct font_id id)
 
     // setup font
     struct font *font = &asset->header->font;
+    struct asset_file *file = AssetFileGet(assets, asset->fileIndex);
+    font->bitmapIdOffset = file->fontBitmapIdOffset;
     font->codepoints = memory;
     font->horizontalAdvanceTable = (f32 *)((u8 *)font->codepoints + codepointsSize);
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
-    work->handle = AssetFileHandleGet(assets, asset->fileIndex);
+    work->handle = &file->handle;
     work->dest = memory;
     work->offset = info->dataOffset;
     work->size = dataSize;
@@ -849,6 +863,7 @@ FontGetBitmapGlyph(struct game_assets *assets, struct hha_font *fontInfo, struct
 {
   u32 codepoint = FontGetClampedCodepoint(fontInfo, desiredCodepoint);
   struct bitmap_id bitmapId = *(font->codepoints + codepoint);
+  bitmapId.value += font->bitmapIdOffset;
   return bitmapId;
 }
 
