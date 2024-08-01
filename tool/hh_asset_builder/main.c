@@ -247,7 +247,6 @@ enum asset_metadata_type {
 
 struct asset_metadata {
   enum asset_metadata_type type;
-  char *filename;
 
   u32 tagIndexFirst;
   u32 tagIndexOnePastLast;
