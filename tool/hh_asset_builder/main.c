@@ -431,7 +431,7 @@ AddFontAsset(struct asset_context *context, char *fontPath, u32 codepointCount)
   u32 codepointsSize = fontInfo->codepointCount * sizeof(struct bitmap_id);
   fontInfo->codepoints = AllocateMemory(codepointsSize);
 
-  u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount + sizeof(f32);
+  u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount * sizeof(f32);
   fontInfo->horizontalAdvanceTable = AllocateMemory(horizontalAdvanceTableSize);
 
   return id;
