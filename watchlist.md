@@ -556,7 +556,7 @@
 - [x] Handmade Hero Day 171 - Adding Font Metadata to the Asset Builder
       https://www.youtube.com/watch?v=tJMvJaM-BtY
 
-- [ ] Handmade Hero Day 172 - Extracting Kerning Tables from Windows
+- [x] Handmade Hero Day 172 - Extracting Kerning Tables from Windows
       https://www.youtube.com/watch?v=xUQRWBpYcsk
 
 - [ ] Handmade Hero Day 173 - Precise Font Alignment
