@@ -255,6 +255,21 @@ Clear(struct render_group *renderGroup, struct v4 color)
   PushClearEntry(renderGroup, color);
 }
 
+internal inline struct font *
+Font(struct render_group *renderGroup, struct font_id id)
+{
+  struct font *font = FontGet(renderGroup->assets, id, renderGroup->generationId);
+  if (font) {
+    // nothing to do
+  } else {
+    assert(!renderGroup->isRenderingInBackground);
+    FontLoad(renderGroup->assets, id);
+    renderGroup->missingResourceCount += 1;
+  }
+
+  return font;
+}
+
 inline void
 BitmapAsset(struct render_group *renderGroup, struct bitmap_id id, struct v3 offset, f32 height, struct v4 color)
 {
@@ -334,7 +349,7 @@ DEBUGTextLine(char *line)
   struct asset_vector weightVector = {};
   struct font_id fontId = BestMatchFont(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
 
-  struct font *font = FontGet(assets, fontId, renderGroup->generationId);
+  struct font *font = Font(renderGroup, fontId);
   if (!font)
     return;
 
@@ -348,6 +363,7 @@ DEBUGTextLine(char *line)
     u32 codepoint = (u32)*character;
     f32 advanceX = fontScale * FontGetHorizontalAdvanceForPair(fontInfo, font, prevCodepoint, codepoint);
     atX += advanceX;
+    assert(advanceX != 0);
 
     if (codepoint != ' ') {
       struct bitmap_id bitmapId = FontGetBitmapGlyph(assets, fontInfo, font, codepoint);

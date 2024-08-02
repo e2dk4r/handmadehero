@@ -923,6 +923,7 @@ onError:
 struct loaded_font {
   void *_filememory;
   f32 lineAdvance;
+  f32 defaultHorizontalAdvance;
 
 #if TRUETYPE_BACKEND_FREETYPE
   FT_Library library;
@@ -997,6 +998,8 @@ LoadFont(char *fontPath)
   // TODO: get line advance using freetype API
   FT_Glyph_Metrics *glyphMetrics = &face->glyph->metrics;
   loadedFont->lineAdvance = (f32)glyphMetrics->vertAdvance;
+
+  loadedFont->defaultHorizontalAdvance = ;
 
   result.loadedFont = loadedFont;
 
@@ -1097,8 +1100,11 @@ LoadFont(char *fontPath)
   int descent, lineGap;
   stbtt_GetFontVMetrics(font, 0, &descent, &lineGap);
   loadedFont->baseline = (s32)((f32)descent * loadedFont->scale);
-  // TODO: check this value
-  loadedFont->lineAdvance = (f32)lineGap * loadedFont->scale;
+  loadedFont->lineAdvance = (f32)lineGap;
+
+  int x0, x1, y0, y1;
+  stbtt_GetFontBoundingBox(font, &x0, &y0, &x1, &y1);
+  loadedFont->defaultHorizontalAdvance = (f32)(x1 - x0) * loadedFont->scale;
 
   result.loadedFont = loadedFont;
 
@@ -1454,7 +1460,14 @@ WriteHHAFile(char *filename, struct asset_context *context)
       writtenBytes = write(outFd, fontInfo->codepoints, codepointsSize);
       assert(writtenBytes > 0);
 
-      u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount + sizeof(f32);
+      for (u32 codepointIndex = 0; codepointIndex < fontInfo->codepointCount; codepointIndex++) {
+        for (u32 otherCodepointIndex = 0; otherCodepointIndex < fontInfo->codepointCount; otherCodepointIndex++) {
+          u32 offset = (codepointIndex * fontInfo->codepointCount) + otherCodepointIndex;
+          *(fontInfo->horizontalAdvanceTable + offset) = loadedFont->defaultHorizontalAdvance;
+        }
+      }
+
+      u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount * sizeof(f32);
       writtenBytes = write(outFd, fontInfo->horizontalAdvanceTable, horizontalAdvanceTableSize);
       assert(writtenBytes > 0);
 

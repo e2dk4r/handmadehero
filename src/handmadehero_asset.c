@@ -862,8 +862,9 @@ struct bitmap_id
 FontGetBitmapGlyph(struct game_assets *assets, struct hha_font *fontInfo, struct font *font, u32 desiredCodepoint)
 {
   u32 codepoint = FontGetClampedCodepoint(fontInfo, desiredCodepoint);
-  struct bitmap_id bitmapId = *(font->codepoints + codepoint);
-  bitmapId.value += font->bitmapIdOffset;
+  struct bitmap_id bitmapIdInFile = *(font->codepoints + codepoint);
+  struct bitmap_id bitmapId = {font->bitmapIdOffset + bitmapIdInFile.value};
+  assert(bitmapId.value < assets->assetCount);
   return bitmapId;
 }
 
