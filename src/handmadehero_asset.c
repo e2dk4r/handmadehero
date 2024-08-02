@@ -816,7 +816,7 @@ FontLoad(struct game_assets *assets, struct font_id id)
     struct hha_font *fontInfo = &info->font;
 
     u32 codepointsSize = fontInfo->codepointCount * sizeof(struct bitmap_id);
-    u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount + sizeof(f32);
+    u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount * sizeof(f32);
     u32 dataSize = codepointsSize + horizontalAdvanceTableSize; // size of data in file
     u32 totalSize = dataSize + sizeof(*asset->header);
     asset->header = AcquireAssetMemory(assets, totalSize, id.value);
