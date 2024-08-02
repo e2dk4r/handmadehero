@@ -1921,6 +1921,9 @@ WriteFonts(void)
   BeginAssetType(context, ASSET_TYPE_FONT);
   char *fontPath = "/usr/share/fonts/liberation-fonts/LiberationSerif-Regular.ttf";
   struct font_id fontId = AddFontAsset(context, fontPath, ('~' + 1));
+  EndAssetType(context);
+
+  BeginAssetType(context, ASSET_TYPE_FONT_GLYPH);
   struct font_info *fontInfo = &(context->assetMetadatas + fontId.value)->fontInfo;
   for (u32 codepoint = '!'; codepoint <= '~'; codepoint++) {
     struct bitmap_id bitmapId = AddFontGlyphAsset(context, fontId, codepoint);
