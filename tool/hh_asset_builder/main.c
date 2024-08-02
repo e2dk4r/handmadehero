@@ -1115,36 +1115,16 @@ LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable)
     }
   }
 
-  u32 kerningTableCount = (u32)stbtt_GetKerningTableLength(font);
-  assert(kerningTableCount != 0);
-  if (kerningTableCount != 0) {
-    stbtt_kerningentry *kerningTable = AllocateMemory(kerningTableCount * sizeof(*kerningTable));
-    ok = stbtt_GetKerningTable(font, kerningTable, (int)kerningTableCount);
-    if (!ok) {
-      result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
-      DeallocateMemory(kerningTable);
-      DeallocateMemory(loadedFont->_filememory);
-      DeallocateMemory(loadedFont);
-      return result;
+  for (u32 codepointIndex = 0; codepointIndex < codepointCount; codepointIndex++) {
+    for (u32 otherCodepointIndex = 0; otherCodepointIndex < codepointCount; otherCodepointIndex++) {
+      int kerningAdvance = stbtt_GetCodepointKernAdvance(font, (int)otherCodepointIndex, (int)codepointIndex);
+      if (kerningAdvance == 0)
+        continue;
+      f32 kerningAdvanceScaled = (f32)kerningAdvance * loadedFont->scale;
+
+      u32 offset = (codepointIndex * codepointCount) + otherCodepointIndex;
+      *(horizontalAdvanceTable + offset) += kerningAdvanceScaled;
     }
-
-    for (u32 kerningEntryIndex = 0; kerningEntryIndex < kerningTableCount; kerningEntryIndex++) {
-      stbtt_kerningentry *kerningEntry = kerningTable + kerningEntryIndex;
-
-      for (u32 codepointIndex = 0; codepointIndex < codepointCount; codepointIndex++) {
-        for (u32 otherCodepointIndex = 0; otherCodepointIndex < codepointCount; otherCodepointIndex++) {
-          if (kerningEntry->glyph1 != stbtt_FindGlyphIndex(font, (int)codepointIndex) ||
-              kerningEntry->glyph2 != stbtt_FindGlyphIndex(font, (int)otherCodepointIndex))
-            continue;
-
-          u32 offset = (codepointIndex * codepointCount) + otherCodepointIndex;
-          f32 kerningAdvance = (f32)kerningEntry->advance * loadedFont->scale;
-          *(horizontalAdvanceTable + offset) += kerningAdvance;
-        }
-      }
-    }
-
-    DeallocateMemory(kerningTable);
   }
 
   result.loadedFont = loadedFont;
