@@ -1833,16 +1833,6 @@ WriteNoneHero(void)
   AddBitmapAsset(context, "test2/tuft02.bmp", 0.5f, 0.5f);
   EndAssetType(context);
 
-  BeginAssetType(context, ASSET_TYPE_FONT);
-  char *fontPath = "/usr/share/fonts/liberation-fonts/LiberationSerif-Regular.ttf";
-  struct font_id fontId = AddFontAsset(context, fontPath, (u32)('~' - '!'));
-  struct font_info *fontInfo = &(context->assetMetadatas + fontId.value)->fontInfo;
-  for (u32 codepoint = '!'; codepoint <= '~'; codepoint++) {
-    struct bitmap_id bitmapId = AddFontGlyphAsset(context, fontId, codepoint);
-    fontInfo->codepoints[0] = bitmapId;
-  }
-  EndAssetType(context);
-
   /*----------------------------------------------------------------
    * PACKING
    *----------------------------------------------------------------*/
@@ -1915,6 +1905,36 @@ WriteAudios(void)
   return errorCode;
 }
 
+internal enum hh_asset_builder_error
+WriteFonts(void)
+{
+  /*----------------------------------------------------------------
+   * INGEST
+   *----------------------------------------------------------------*/
+  struct asset_context *context = &(struct asset_context){};
+
+  context->tagCount = 0;
+  context->assetCount = 1;
+
+  // fonts
+  BeginAssetType(context, ASSET_TYPE_FONT);
+  char *fontPath = "/usr/share/fonts/liberation-fonts/LiberationSerif-Regular.ttf";
+  struct font_id fontId = AddFontAsset(context, fontPath, ('~' + 1));
+  struct font_info *fontInfo = &(context->assetMetadatas + fontId.value)->fontInfo;
+  for (u32 codepoint = '!'; codepoint <= '~'; codepoint++) {
+    struct bitmap_id bitmapId = AddFontGlyphAsset(context, fontId, codepoint);
+    fontInfo->codepoints[codepoint] = bitmapId;
+  }
+  EndAssetType(context);
+
+  /*----------------------------------------------------------------
+   * PACKING
+   *----------------------------------------------------------------*/
+  char outFilename[] = "test5_fonts.hha";
+  enum hh_asset_builder_error errorCode = WriteHHAFile(outFilename, context);
+  return errorCode;
+}
+
 /*****************************************************************
  * STARTING POINT
  *****************************************************************/
@@ -1955,6 +1975,10 @@ main(int argc, char *argv[])
     goto end;
 
   errorCode = (s32)WriteAudios();
+  if (errorCode != HH_ASSET_BUILDER_ERROR_NONE)
+    goto end;
+
+  errorCode = (s32)WriteFonts();
   if (errorCode != HH_ASSET_BUILDER_ERROR_NONE)
     goto end;
 
