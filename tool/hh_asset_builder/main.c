@@ -51,6 +51,7 @@ struct memory_block {
   u64 size;
 };
 
+// allocates and fills memory with zeros
 void *
 AllocateMemory(u64 size)
 {
