@@ -923,7 +923,6 @@ onError:
 struct loaded_font {
   void *_filememory;
   f32 lineAdvance;
-  f32 defaultHorizontalAdvance;
 
 #if TRUETYPE_BACKEND_FREETYPE
   FT_Library library;
@@ -949,7 +948,7 @@ struct load_font_glyph_result {
 // loadedFont is allocated on heap, after used call DeallocateMemory() on it.
 // loadedFont._filememory is allocated on heap, after used call DeallocateMemory() on it.
 internal struct load_font_result
-LoadFont(char *fontPath);
+LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable);
 
 // loadedBitmap.memory is allocated on heap, after used call DeallocateMemory() on it.
 internal struct load_font_glyph_result
@@ -998,8 +997,6 @@ LoadFont(char *fontPath)
   // TODO: get line advance using freetype API
   FT_Glyph_Metrics *glyphMetrics = &face->glyph->metrics;
   loadedFont->lineAdvance = (f32)glyphMetrics->vertAdvance;
-
-  loadedFont->defaultHorizontalAdvance = ;
 
   result.loadedFont = loadedFont;
 
@@ -1071,7 +1068,7 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
 #elif TRUETYPE_BACKEND_STBTT
 
 internal struct load_font_result
-LoadFont(char *fontPath)
+LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable)
 {
   struct load_font_result result = {};
   struct read_file_result ttfFile = ReadEntireFile(fontPath);
@@ -1104,7 +1101,50 @@ LoadFont(char *fontPath)
 
   int x0, x1, y0, y1;
   stbtt_GetFontBoundingBox(font, &x0, &y0, &x1, &y1);
-  loadedFont->defaultHorizontalAdvance = (f32)(x1 - x0) * loadedFont->scale;
+  f32 defaultHorizontalAdvance = (f32)(x1 - x0) * loadedFont->scale;
+
+  for (u32 codepointIndex = 0; codepointIndex < codepointCount; codepointIndex++) {
+    int advance;
+    stbtt_GetCodepointHMetrics(font, (int)codepointIndex, &advance, 0);
+    f32 horizontalAdvance = (f32)advance * loadedFont->scale;
+
+    for (u32 otherCodepointIndex = 0; otherCodepointIndex < codepointCount; otherCodepointIndex++) {
+      u32 offset = (codepointIndex * codepointCount) + otherCodepointIndex;
+      *(horizontalAdvanceTable + offset) = horizontalAdvance;
+    }
+  }
+
+  u32 kerningTableCount = (u32)stbtt_GetKerningTableLength(font);
+  assert(kerningTableCount != 0);
+  if (kerningTableCount != 0) {
+    stbtt_kerningentry *kerningTable = AllocateMemory(kerningTableCount * sizeof(*kerningTable));
+    ok = stbtt_GetKerningTable(font, kerningTable, (int)kerningTableCount);
+    if (!ok) {
+      result.error = HH_ASSET_BUILDER_ERROR_TTF_MALFORMED;
+      DeallocateMemory(kerningTable);
+      DeallocateMemory(loadedFont->_filememory);
+      DeallocateMemory(loadedFont);
+      return result;
+    }
+
+    for (u32 kerningEntryIndex = 0; kerningEntryIndex < kerningTableCount; kerningEntryIndex++) {
+      stbtt_kerningentry *kerningEntry = kerningTable + kerningEntryIndex;
+
+      for (u32 codepointIndex = 0; codepointIndex < codepointCount; codepointIndex++) {
+        for (u32 otherCodepointIndex = 0; otherCodepointIndex < codepointCount; otherCodepointIndex++) {
+          if (kerningEntry->glyph1 != stbtt_FindGlyphIndex(font, (int)codepointIndex) ||
+              kerningEntry->glyph2 != stbtt_FindGlyphIndex(font, (int)otherCodepointIndex))
+            continue;
+
+          u32 offset = (codepointIndex * codepointCount) + otherCodepointIndex;
+          f32 kerningAdvance = (f32)kerningEntry->advance * loadedFont->scale;
+          *(horizontalAdvanceTable + offset) += kerningAdvance;
+        }
+      }
+    }
+
+    DeallocateMemory(kerningTable);
+  }
 
   result.loadedFont = loadedFont;
 
@@ -1413,7 +1453,8 @@ WriteHHAFile(char *filename, struct asset_context *context)
 
     case ASSET_METADATA_TYPE_FONT: {
       struct font_info *fontInfo = &src->fontInfo;
-      struct load_font_result loadFontResult = LoadFont(fontInfo->fontPath);
+      struct load_font_result loadFontResult =
+          LoadFont(fontInfo->fontPath, fontInfo->codepointCount, fontInfo->horizontalAdvanceTable);
 
       if (loadFontResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
         switch (loadFontResult.error) {
@@ -1459,13 +1500,6 @@ WriteHHAFile(char *filename, struct asset_context *context)
       u32 codepointsSize = fontInfo->codepointCount * sizeof(struct bitmap_id);
       writtenBytes = write(outFd, fontInfo->codepoints, codepointsSize);
       assert(writtenBytes > 0);
-
-      for (u32 codepointIndex = 0; codepointIndex < fontInfo->codepointCount; codepointIndex++) {
-        for (u32 otherCodepointIndex = 0; otherCodepointIndex < fontInfo->codepointCount; otherCodepointIndex++) {
-          u32 offset = (codepointIndex * fontInfo->codepointCount) + otherCodepointIndex;
-          *(fontInfo->horizontalAdvanceTable + offset) = loadedFont->defaultHorizontalAdvance;
-        }
-      }
 
       u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount * sizeof(f32);
       writtenBytes = write(outFd, fontInfo->horizontalAdvanceTable, horizontalAdvanceTableSize);
