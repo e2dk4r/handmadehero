@@ -942,6 +942,7 @@ struct load_font_result {
 struct load_font_glyph_result {
   enum hh_asset_builder_error error;
   struct loaded_bitmap loadedBitmap;
+  f32 alignPercentageX;
   f32 alignPercentageY;
 };
 
@@ -1165,6 +1166,11 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
   // stbtt renders bitmap in top down left right, we pack in bottom up left right order.
   // Y axis operations are flipped.
   result.alignPercentageY = (f32)(baseline + y1) / (f32)(y1 - y0);
+
+  int leftSideBearing;
+  stbtt_GetCodepointHMetrics(font, (int)codepoint, 0, &leftSideBearing);
+  f32 bearingX = (f32)leftSideBearing * loadedFont->scale;
+  result.alignPercentageX = (1.0f - bearingX) / (f32)(x1 - x0);
 
   s32 width;
   s32 height;
@@ -1538,7 +1544,7 @@ WriteHHAFile(char *filename, struct asset_context *context)
       struct loaded_bitmap *loadedBitmap = &loadFontGlyphResult.loadedBitmap;
       dest->bitmap.width = loadedBitmap->width;
       dest->bitmap.height = loadedBitmap->height;
-      dest->bitmap.alignPercentage[0] = 1.0f / (f32)loadedBitmap->width;
+      dest->bitmap.alignPercentage[0] = loadFontGlyphResult.alignPercentageX;
       dest->bitmap.alignPercentage[1] = loadFontGlyphResult.alignPercentageY;
 
       writtenBytes = write(outFd, loadedBitmap->memory, (size_t)(loadedBitmap->stride * loadedBitmap->height));
