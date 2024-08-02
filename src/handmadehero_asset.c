@@ -447,7 +447,7 @@ GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct 
       for (u32 srcIndex = 0; srcIndex < file->header.assetTypeCount; srcIndex++) {
         struct hha_asset_type *srcType = file->assetTypes + srcIndex;
         if (srcType->typeId == destAssetTypeId) {
-          if (srcType->typeId == ASSET_TYPE_FONT) {
+          if (srcType->typeId == ASSET_TYPE_FONT_GLYPH) {
             file->fontBitmapIdOffset = assetCount - srcType->assetIndexFirst;
           }
 
