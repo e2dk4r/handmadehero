@@ -9,6 +9,17 @@ struct string {
 };
 
 internal inline struct string
+StringFrom(const u8 *src, u64 length)
+{
+  struct string string = {};
+
+  string.value = src;
+  string.length = length;
+
+  return string;
+}
+
+internal inline struct string
 StringFromZeroTerminated(const u8 *src, u64 max)
 {
   struct string string = {};
@@ -66,6 +77,34 @@ PathHasExtension(struct string path, struct string extension)
   }
 
   return 1;
+}
+
+internal inline u8
+HexStringToU8(struct string hexString)
+{
+  u8 value = 0;
+
+  assert(hexString.length == 2);
+  for (u64 index = 0; index < 2; index++) {
+    u64 multiplier = 16;
+    if (index != 0)
+      multiplier /= 16;
+
+    u8 character = hexString.value[index];
+    u8 number = 0; // 0-15
+    if (character >= '0' && character <= '9')
+      number = character - '0';
+    else if (character >= 'A' && character <= 'F')
+      number = character - 'A' + 10;
+    else if (character >= 'a' && character <= 'f')
+      number = character - 'a' + 10;
+    else
+      assert(0 && "hex invalid");
+
+    value += (u8)(number * multiplier);
+  }
+
+  return value;
 }
 
 #endif /* HANDMADEHERO_TEXT_H */

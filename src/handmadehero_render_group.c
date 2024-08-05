@@ -1,6 +1,7 @@
 #include <handmadehero/analysis.h>
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/render_group.h>
+#include <handmadehero/text.h>
 #include <x86intrin.h>
 
 internal inline void
@@ -359,22 +360,49 @@ DEBUGTextLine(char *line)
 
   u32 prevCodepoint = 0;
 
-  for (char *character = line; *character; character++) {
-    u32 codepoint = (u32)*character;
-    f32 advanceX = fontScale * FontGetHorizontalAdvanceForPair(fontInfo, font, prevCodepoint, codepoint);
-    atX += advanceX;
-    assert(advanceX != 0);
+  struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
+  for (char *character = line; *character; /* handled in if */) {
+    // color mode
+    if (character[0] == '#' && character[1] && character[2] && character[3] && character[4] && character[5] &&
+        character[6] && character[7] == '#') {
+      struct string rHexString = StringFrom((u8 *)(character + 1), 2);
+      struct string gHexString = StringFrom((u8 *)(character + 3), 2);
+      struct string bHexString = StringFrom((u8 *)(character + 5), 2);
 
-    if (codepoint != ' ') {
-      struct bitmap_id bitmapId = FontGetBitmapGlyph(assets, fontInfo, font, codepoint);
-      struct hha_bitmap *bitmapInfo = BitmapInfoGet(assets, bitmapId);
-
-      f32 height = fontScale * (f32)bitmapInfo->height;
-      struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
-      BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), height, color);
+      f32 r = (f32)HexStringToU8(rHexString) / 255.0f;
+      f32 g = (f32)HexStringToU8(gHexString) / 255.0f;
+      f32 b = (f32)HexStringToU8(bHexString) / 255.0f;
+      color = v4(r, g, b, 1.0f);
+      character += 8;
     }
 
-    prevCodepoint = codepoint;
+#if 0
+    // size mode
+    if (character[0] == '/' && character[1] != 0 && character[2] == '/') {
+      f32 characterScale = 1.0f / 9.0f;
+      inlineScale = Clamp01((f32)(character[1] - '0') * characterScale);
+      character += 3;
+    }
+#endif
+
+    // character mode
+    else {
+      u32 codepoint = (u32)*character;
+      f32 advanceX = fontScale * FontGetHorizontalAdvanceForPair(fontInfo, font, prevCodepoint, codepoint);
+      atX += advanceX;
+      assert(advanceX != 0);
+
+      if (codepoint != ' ') {
+        struct bitmap_id bitmapId = FontGetBitmapGlyph(assets, fontInfo, font, codepoint);
+        struct hha_bitmap *bitmapInfo = BitmapInfoGet(assets, bitmapId);
+
+        f32 height = fontScale * (f32)bitmapInfo->height;
+        BitmapAsset(renderGroup, bitmapId, v3(atX, atY, 0.0f), height, color);
+      }
+
+      prevCodepoint = codepoint;
+      character++;
+    }
   }
 
   atY -= fontScale * FontGetLineAdvance(fontInfo);

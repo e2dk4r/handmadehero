@@ -635,7 +635,7 @@ internal void
 OverlayCycleCounters(struct game_memory *memory)
 {
 #if HANDMADEHERO_INTERNAL
-  DEBUGTextLine("CYCLE COUNTS:");
+  DEBUGTextLine("#7f1d1d#CYCLE #10b981#COUNTS:");
 
   char *counterNameTable[] = {"GameUpdateAndRender", "DrawRenderGroup",      "DrawRectangleSlowly",
                               "ProcessPixel",        "DrawRectangleQuickly", "AudioMixer"};
