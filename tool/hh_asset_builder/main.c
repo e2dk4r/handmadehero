@@ -960,7 +960,7 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint);
 #if TRUETYPE_BACKEND_FREETYPE
 
 internal struct load_font_result
-LoadFont(char *fontPath)
+LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable)
 {
   struct load_font_result result = {};
 
@@ -997,9 +997,47 @@ LoadFont(char *fontPath)
     goto cleanupFace;
   }
 
-  // TODO: get line advance using freetype API
-  FT_Glyph_Metrics *glyphMetrics = &face->glyph->metrics;
-  loadedFont->lineAdvance = (f32)glyphMetrics->vertAdvance;
+  FT_Size_Metrics *metrics = &face->size->metrics;
+  assert(FT_IS_SCALABLE(face));
+  loadedFont->ascent = (f32)(metrics->ascender >> 6);
+  loadedFont->descent = (f32)(-metrics->descender >> 6);
+  loadedFont->lineGap = (f32)((metrics->height - (metrics->ascender - metrics->descender)) >> 6);
+
+  // started from 1 because 0 is used for empty,
+  // for this to work horizontalAdvanceTable must be initialized to zero
+  for (u32 codepointIndex = 1; codepointIndex < codepointCount; codepointIndex++) {
+    /* retrieve glyph index from character code */
+    FT_UInt glyphIndex = FT_Get_Char_Index(face, codepointIndex);
+
+    /* load glyph image into the slot (erase previous one) */
+    error = FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT);
+    if (error)
+      continue; /* ignore errors */
+
+    f32 horizontalAdvance = (f32)(face->glyph->advance.x >> 6);
+
+    for (u32 otherCodepointIndex = 0; otherCodepointIndex < codepointCount; otherCodepointIndex++) {
+      u32 offset = (codepointIndex * codepointCount) + otherCodepointIndex;
+      *(horizontalAdvanceTable + offset) = horizontalAdvance;
+    }
+  }
+
+  b32 hasKerning = FT_HAS_KERNING(face);
+  if (hasKerning) {
+    for (u32 codepointIndex = 0; codepointIndex < codepointCount; codepointIndex++) {
+      for (u32 otherCodepointIndex = 0; otherCodepointIndex < codepointCount; otherCodepointIndex++) {
+        FT_Vector delta;
+        FT_Get_Kerning(face, codepointIndex, otherCodepointIndex, FT_KERNING_DEFAULT, &delta);
+        // f32 kerningAdvance = delta.x;
+        if (delta.x == 0)
+          continue;
+
+        f32 kerningAdvanceScaled = (f32)(FT_MulFix(delta.x, metrics->y_scale) >> 6);
+        u32 offset = (codepointIndex * codepointCount) + otherCodepointIndex;
+        *(horizontalAdvanceTable + offset) += kerningAdvanceScaled;
+      }
+    }
+  }
 
   result.loadedFont = loadedFont;
 
@@ -1028,17 +1066,24 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
     return result;
   }
 
-  assert(!FT_HAS_VERTICAL(face));
+  assert(FT_HAS_HORIZONTAL(face));
   FT_Glyph_Metrics *glyphMetrics = &face->glyph->metrics;
+  result.alignPercentageX = (1.0f - (f32)glyphMetrics->horiBearingX) / (f32)(glyphMetrics->width);
   result.alignPercentageY = (f32)(glyphMetrics->height - glyphMetrics->horiBearingY) / (f32)(glyphMetrics->height);
 
-  FT_GlyphSlot slot = face->glyph;
-  FT_Bitmap *bitmap = &slot->bitmap;
+#if 0
+  // TODO: fix aligning bitmap
+  // result.alignPercentageX = (f32)face->glyph->bitmap_left / (f32)face->glyph->bitmap.width;
+  // result.alignPercentageY = (1.0f - (f32)face->glyph->bitmap_top) / (f32)face->glyph->bitmap.rows;
+#endif
+
+  FT_Bitmap *bitmap = &face->glyph->bitmap;
 
   // transform
+  u32 padding = 2;
   struct loaded_bitmap loadedBitmap = {};
-  loadedBitmap.width = bitmap->width;
-  loadedBitmap.height = bitmap->rows;
+  loadedBitmap.width = bitmap->width + padding;
+  loadedBitmap.height = bitmap->rows + padding;
   loadedBitmap.stride = loadedBitmap.width * sizeof(u32);
   loadedBitmap.memory = AllocateMemory(loadedBitmap.height * loadedBitmap.stride);
   if (!loadedBitmap.memory) {
@@ -1046,14 +1091,14 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
     return result;
   }
 
-  u8 *srcRow = bitmap->buffer + ((int)(bitmap->rows - 1) * bitmap->pitch); // start at bottom left
+  u8 *srcRow = bitmap->buffer + (((s32)bitmap->rows - 1) * bitmap->pitch); // start at bottom left
   s32 srcStride = -bitmap->pitch;                                          // go up
   u8 *destRow = loadedBitmap.memory;
   u32 destStride = loadedBitmap.stride;
-  for (u32 y = 0; y < loadedBitmap.height; y++) {
+  for (u32 y = padding; y < loadedBitmap.height; y++) {
     u8 *src = srcRow;
     u32 *dest = (u32 *)destRow;
-    for (u32 x = 0; x < loadedBitmap.width; x++) {
+    for (u32 x = padding; x < loadedBitmap.width; x++) {
       u32 alpha = (u32)*src++;
       u32 color = (alpha << 0x18) | (alpha << 0x10) | (alpha << 0x08) | (alpha << 0x00);
       *dest++ = color;
