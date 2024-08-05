@@ -52,7 +52,7 @@ struct memory_block {
 };
 
 // allocates and fills memory with zeros
-void *
+internal void *
 AllocateMemory(u64 size)
 {
   u64 total = size + sizeof(struct memory_block);
@@ -66,7 +66,7 @@ AllocateMemory(u64 size)
   return memory;
 }
 
-void
+internal void
 DeallocateMemory(void *memory)
 {
   if (!memory)
