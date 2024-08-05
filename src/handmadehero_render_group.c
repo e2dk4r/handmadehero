@@ -341,7 +341,7 @@ DEBUGReset(struct game_assets *assets, u32 width, u32 height)
 
   fontScale = 1.0f;
   RenderGroupOrthographic(DEBUG_TEXT_RENDER_GROUP, width, height, 1.0f);
-  leftEdge = (-0.5f * (f32)width) + (0.5f * fontScale);
+  leftEdge = -0.5f * (f32)width;
 
   struct hha_font *fontInfo = FontInfoGet(assets, fontId);
   atY = (0.5f * (f32)height) - (FontGetLineAdvance(fontInfo) * fontScale);
@@ -397,7 +397,6 @@ DEBUGTextLine(char *line)
       u32 codepoint = (u32)*character;
       f32 advanceX = fontScale * FontGetHorizontalAdvanceForPair(fontInfo, font, prevCodepoint, codepoint);
       atX += advanceX;
-      assert(advanceX != 0);
 
       if (codepoint != ' ') {
         struct bitmap_id bitmapId = FontGetBitmapGlyph(assets, fontInfo, font, codepoint);

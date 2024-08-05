@@ -1104,7 +1104,9 @@ LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable)
   stbtt_GetFontBoundingBox(font, &x0, &y0, &x1, &y1);
   f32 defaultHorizontalAdvance = (f32)(x1 - x0) * loadedFont->scale;
 
-  for (u32 codepointIndex = 0; codepointIndex < codepointCount; codepointIndex++) {
+  // started from 1 because 0 is used for empty,
+  // for this to work horizontalAdvanceTable must be initialized to zero
+  for (u32 codepointIndex = 1; codepointIndex < codepointCount; codepointIndex++) {
     int advance;
     stbtt_GetCodepointHMetrics(font, (int)codepointIndex, &advance, 0);
     f32 horizontalAdvance = (f32)advance * loadedFont->scale;
