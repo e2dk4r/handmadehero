@@ -344,7 +344,7 @@ DEBUGReset(struct game_assets *assets, u32 width, u32 height)
   leftEdge = -0.5f * (f32)width;
 
   struct hha_font *fontInfo = FontInfoGet(assets, fontId);
-  atY = (0.5f * (f32)height) - (FontGetLineAdvance(fontInfo) * fontScale);
+  atY = (0.5f * (f32)height) - (FontGetStartingBaselineY(fontInfo) * fontScale);
 }
 
 inline void

@@ -208,6 +208,9 @@ f32
 FontGetLineAdvance(struct hha_font *fontInfo);
 
 f32
+FontGetStartingBaselineY(struct hha_font *fontInfo);
+
+f32
 FontGetHorizontalAdvanceForPair(struct hha_font *fontInfo, struct font *font, u32 prevCodepoint, u32 codepoint);
 
 struct hha_font *

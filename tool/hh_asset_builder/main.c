@@ -922,7 +922,9 @@ onError:
 
 struct loaded_font {
   void *_filememory;
-  f32 lineAdvance;
+  f32 ascent;
+  f32 descent;
+  f32 lineGap;
 
 #if TRUETYPE_BACKEND_FREETYPE
   FT_Library library;
@@ -1098,7 +1100,9 @@ LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable)
   int ascent, descent, lineGap;
   stbtt_GetFontVMetrics(font, &ascent, &descent, &lineGap);
   loadedFont->baseline = (s32)((f32)descent * loadedFont->scale);
-  loadedFont->lineAdvance = (f32)(ascent - descent + lineGap) * loadedFont->scale;
+  loadedFont->ascent = (f32)ascent * loadedFont->scale;
+  loadedFont->descent = (f32)-descent * loadedFont->scale;
+  loadedFont->lineGap = (f32)lineGap * loadedFont->scale;
 
   int x0, x1, y0, y1;
   stbtt_GetFontBoundingBox(font, &x0, &y0, &x1, &y1);
@@ -1483,7 +1487,9 @@ WriteHHAFile(char *filename, struct asset_context *context)
 
       struct loaded_font *loadedFont = loadFontResult.loadedFont;
       dest->font.codepointCount = fontInfo->codepointCount;
-      dest->font.lineAdvance = loadedFont->lineAdvance;
+      dest->font.ascent = loadedFont->ascent;
+      dest->font.descent = loadedFont->descent;
+      dest->font.lineGap = loadedFont->lineGap;
 
       u32 codepointsSize = fontInfo->codepointCount * sizeof(struct bitmap_id);
       writtenBytes = write(outFd, fontInfo->codepoints, codepointsSize);

@@ -871,7 +871,15 @@ FontGetBitmapGlyph(struct game_assets *assets, struct hha_font *fontInfo, struct
 f32
 FontGetLineAdvance(struct hha_font *fontInfo)
 {
-  return fontInfo->lineAdvance;
+  f32 result = fontInfo->ascent + fontInfo->descent + fontInfo->lineGap;
+  return result;
+}
+
+f32
+FontGetStartingBaselineY(struct hha_font *fontInfo)
+{
+  f32 result = fontInfo->ascent;
+  return result;
 }
 
 f32
