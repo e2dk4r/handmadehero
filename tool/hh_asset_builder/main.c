@@ -1095,10 +1095,10 @@ LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable)
   }
 
   loadedFont->scale = stbtt_ScaleForPixelHeight(font, 128.0f);
-  int descent, lineGap;
-  stbtt_GetFontVMetrics(font, 0, &descent, &lineGap);
+  int ascent, descent, lineGap;
+  stbtt_GetFontVMetrics(font, &ascent, &descent, &lineGap);
   loadedFont->baseline = (s32)((f32)descent * loadedFont->scale);
-  loadedFont->lineAdvance = (f32)lineGap;
+  loadedFont->lineAdvance = (f32)(ascent - descent + lineGap) * loadedFont->scale;
 
   int x0, x1, y0, y1;
   stbtt_GetFontBoundingBox(font, &x0, &y0, &x1, &y1);
