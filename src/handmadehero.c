@@ -960,7 +960,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 #if HANDMADEHERO_INTERNAL
   DEBUG_TEXT_RENDER_GROUP = memory->DEBUGtextRenderGroup;
   RenderBegin(DEBUG_TEXT_RENDER_GROUP);
-  DEBUGReset(backbuffer->width, backbuffer->height);
+  DEBUGReset(DEBUG_TEXT_RENDER_GROUP->assets, backbuffer->width, backbuffer->height);
 #endif
 
 #if HANDMADEHERO_DEBUG

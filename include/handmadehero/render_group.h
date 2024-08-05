@@ -180,7 +180,7 @@ void
 RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, struct v4 color);
 
 void
-DEBUGReset(u32 width, u32 height);
+DEBUGReset(struct game_assets *assets, u32 width, u32 height);
 
 void
 DEBUGTextLine(char *line);

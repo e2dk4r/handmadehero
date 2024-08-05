@@ -330,14 +330,21 @@ RectOutline(struct render_group *renderGroup, struct v3 offset, struct v2 dim, s
 global_variable f32 atY;
 global_variable f32 leftEdge;
 global_variable f32 fontScale;
+global_variable struct font_id fontId;
 
 void
-DEBUGReset(u32 width, u32 height)
+DEBUGReset(struct game_assets *assets, u32 width, u32 height)
 {
+  struct asset_vector matchVector = {};
+  struct asset_vector weightVector = {};
+  fontId = BestMatchFont(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
+
   fontScale = 1.0f;
   RenderGroupOrthographic(DEBUG_TEXT_RENDER_GROUP, width, height, 1.0f);
-  atY = (0.5f * (f32)height) - (0.5f * fontScale);
   leftEdge = (-0.5f * (f32)width) + (0.5f * fontScale);
+
+  struct hha_font *fontInfo = FontInfoGet(assets, fontId);
+  atY = (0.5f * (f32)height) - (FontGetLineAdvance(fontInfo) * fontScale);
 }
 
 inline void
