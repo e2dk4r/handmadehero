@@ -1,5 +1,6 @@
 fs = import('fs')
 
+wayland_protocols = dependency('wayland-protocols', native: true)
 wl_protocol_dir = wayland_protocols.get_variable('pkgdatadir')
 
 wayland_scanner_dep = dependency('wayland-scanner', native: true)

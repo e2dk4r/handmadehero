@@ -115,7 +115,6 @@ elif host_machine.system() == 'linux'
   #  \___)=(___/
   #################################################################
   wayland_client = dependency('wayland-client')
-  wayland_protocols = dependency('wayland-protocols', native: true)
   xkbcommon = dependency('xkbcommon')
   libevdev = dependency('libevdev')
   liburing = dependency('liburing')
