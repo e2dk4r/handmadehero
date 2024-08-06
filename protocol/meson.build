@@ -1,3 +1,5 @@
+fs = import('fs')
+
 wl_protocol_dir = wayland_protocols.get_variable('pkgdatadir')
 
 wayland_scanner_dep = dependency('wayland-scanner', native: true)
@@ -10,12 +12,17 @@ protocols = [
   wl_protocol_dir / 'stable/xdg-shell/xdg-shell.xml',
   wl_protocol_dir / 'stable/viewporter/viewporter.xml',
   wl_protocol_dir / 'stable/presentation-time/presentation-time.xml',
+  wl_protocol_dir / 'staging/content-type/content-type-v1.xml',
   # wl_protocol_dir / 'unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml',
 ]
 
 wl_protocols_src = []
 
 foreach xml : protocols
+  if not fs.exists(xml)
+    xml = fs.name(xml)
+  endif
+
   wl_protocols_src += custom_target(
     xml.underscorify() + '_c',
     input: xml,

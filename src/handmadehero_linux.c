@@ -38,6 +38,7 @@
 #define POLLIN 0x001 /* There is data to read.  */
 
 /* generated */
+#include "content-type-v1-client-protocol.h"
 #include "presentation-time-client-protocol.h"
 #include "viewporter-client-protocol.h"
 #include "xdg-shell-client-protocol.h"
@@ -496,6 +497,7 @@ struct linux_state {
   struct xdg_toplevel *xdg_toplevel;
   struct wl_buffer *wl_buffer;
   struct wp_presentation *wp_presentation;
+  struct wp_content_type_manager_v1 *wp_content_type_manager_v1;
 
   struct wl_keyboard *wl_keyboard;
   struct wl_pointer *wl_pointer;
@@ -1422,6 +1424,12 @@ wl_registry_global(void *data, struct wl_registry *wl_registry, u32 name, const 
         wl_registry_bind(wl_registry, name, &wp_presentation_interface, WP_PRESENTATION_MINIMUM_REQUIRED_VERSION);
     debug("[wl_registry::global] binded to wp_presentation_interface\n");
   }
+
+  else if (strcmp(interface, wp_content_type_manager_v1_interface.name) == 0) {
+    state->wp_content_type_manager_v1 =
+        wl_registry_bind(wl_registry, name, &wp_content_type_manager_v1_interface, version);
+    debug("[wl_registry::global] binded to wp_content_type_manager_v1_interface\n");
+  }
 }
 
 comptime struct wl_registry_listener registry_listener = {
@@ -1787,6 +1795,16 @@ main(int argc, char *argv[])
 
   /* wayland: create surface */
   state.wl_surface = wl_compositor_create_surface(state.wl_compositor);
+
+  if (state.wp_content_type_manager_v1) {
+    struct wp_content_type_v1 *wp_content_type_v1 =
+        wp_content_type_manager_v1_get_surface_content_type(state.wp_content_type_manager_v1, state.wl_surface);
+    wp_content_type_v1_set_content_type(wp_content_type_v1, WP_CONTENT_TYPE_V1_TYPE_GAME);
+
+    // cleanup
+    wp_content_type_manager_v1_destroy(state.wp_content_type_manager_v1);
+    state.wp_content_type_manager_v1 = 0;
+  }
 
   /* wayland: application window */
   xdg_wm_base_add_listener(state.xdg_wm_base, &xdg_wm_base_listener, &state);
