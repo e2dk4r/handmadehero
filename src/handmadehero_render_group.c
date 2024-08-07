@@ -353,10 +353,6 @@ DEBUGTextLine(char *line)
   struct render_group *renderGroup = DEBUG_TEXT_RENDER_GROUP;
   struct game_assets *assets = renderGroup->assets;
 
-  struct asset_vector matchVector = {};
-  struct asset_vector weightVector = {};
-  struct font_id fontId = BestMatchFont(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
-
   struct font *font = Font(renderGroup, fontId);
   if (!font)
     return;
