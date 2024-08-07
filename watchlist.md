@@ -559,7 +559,7 @@
 - [x] Handmade Hero Day 172 - Extracting Kerning Tables from Windows
       https://www.youtube.com/watch?v=xUQRWBpYcsk
 
-- [ ] Handmade Hero Day 173 - Precise Font Alignment
+- [x] Handmade Hero Day 173 - Precise Font Alignment
       https://www.youtube.com/watch?v=xSDhhfcwt4E
 
 - [ ] Handmade Hero Day 174 - Adding Sparse Unicode Support
