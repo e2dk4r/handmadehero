@@ -2012,7 +2012,7 @@ WriteFonts(void)
 
   // fonts
   BeginAssetType(context, ASSET_TYPE_FONT);
-  char *fontPath = "/usr/share/fonts/liberation-fonts/LiberationSerif-Regular.ttf";
+  char *fontPath = "Roboto/Roboto-Regular.ttf";
   struct font_id fontId = AddFontAsset(context, fontPath, ('~' + 1));
   EndAssetType(context);
 

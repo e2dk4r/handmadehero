@@ -53,8 +53,12 @@ jobs:
         output=handmadehero-day-$day
         file=$output.tar.zst
 
+        wget https://github.com/googlefonts/roboto/releases/download/v2.138/roboto-android.zip
+        unzip roboto-android.zip Roboto-Regular.ttf; rm roboto-android.zip;
+
         mkdir $output
         cp script/extract_art build/tool/hh_asset_builder build/handmadehero build/libhandmadehero.so $output
+        mkdir $output/Roboto; mv Roboto-Regular.ttf $output/Roboto;
         tar cf - $output | zstd --ultra -22 -T0 -o $file
 
         echo **Workflow run**: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID >> notes
