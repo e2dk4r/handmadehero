@@ -1211,9 +1211,10 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
   }
 
   // transform
+  u32 padding = 1;
   struct loaded_bitmap loadedBitmap = {};
-  loadedBitmap.width = (u32)width;
-  loadedBitmap.height = (u32)height;
+  loadedBitmap.width = (u32)width + (padding * 2);
+  loadedBitmap.height = (u32)height + (padding * 2);
   loadedBitmap.stride = loadedBitmap.width * sizeof(u32);
   loadedBitmap.memory = AllocateMemory(loadedBitmap.height * loadedBitmap.stride);
   if (!loadedBitmap.memory) {
@@ -1225,10 +1226,20 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
   s32 srcStride = -width;                                // go up
   u8 *destRow = loadedBitmap.memory;
   u32 destStride = loadedBitmap.stride;
-  for (u32 y = 0; y < loadedBitmap.height; y++) {
+  for (u32 y = 0; y < loadedBitmap.height - padding; y++) {
+    if (y < padding) {
+      destRow += destStride;
+      continue;
+    }
+
     u8 *src = srcRow;
     u32 *dest = (u32 *)destRow;
-    for (u32 x = 0; x < loadedBitmap.width; x++) {
+    for (u32 x = 0; x < loadedBitmap.width - padding; x++) {
+      if (x < padding) {
+        dest++;
+        continue;
+      }
+
       f32 a = (f32)*src++;
 
       // texel = sRGB255toLinear1(texel);
