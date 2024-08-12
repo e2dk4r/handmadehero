@@ -878,7 +878,7 @@ FontGetLineAdvance(struct hha_font *fontInfo)
 f32
 FontGetStartingBaselineY(struct hha_font *fontInfo)
 {
-  f32 result = fontInfo->ascent;
+  f32 result = fontInfo->ascent + fontInfo->lineGap;
   return result;
 }
 
