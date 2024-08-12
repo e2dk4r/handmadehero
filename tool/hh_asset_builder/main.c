@@ -950,6 +950,7 @@ struct load_font_glyph_result {
 
 // loadedFont is allocated on heap, after used call DeallocateMemory() on it.
 // loadedFont._filememory is allocated on heap, after used call DeallocateMemory() on it.
+// horizontalAdvanceTable[codepointCount * codepointCount] must be initialized to zero
 internal struct load_font_result
 LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable);
 
@@ -1149,25 +1150,55 @@ LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable)
   loadedFont->descent = (f32)-descent * loadedFont->scale;
   loadedFont->lineGap = (f32)lineGap * loadedFont->scale;
 
-  // started from 1 because 0 is used for empty,
-  // for this to work horizontalAdvanceTable must be initialized to zero
+  f32 padding = 1.0f;
+  loadedFont->ascent += padding;
+  loadedFont->descent += padding;
+  loadedFont->lineGap += padding;
+
+  // started from 1 because 0 is used for empty
   for (u32 codepointIndex = 1; codepointIndex < codepointCount; codepointIndex++) {
-    int advance;
-    stbtt_GetCodepointHMetrics(font, (int)codepointIndex, &advance, 0);
-    f32 horizontalAdvance = (f32)advance * loadedFont->scale;
+    int horizontalAdvance, codepointLeftSideBearing;
+    stbtt_GetCodepointHMetrics(font, (int)codepointIndex, &horizontalAdvance, &codepointLeftSideBearing);
+    if (horizontalAdvance == 0)
+      continue;
+    f32 horizontalAdvanceScaled = (f32)horizontalAdvance * loadedFont->scale;
+    horizontalAdvanceScaled -= padding;
+
+    if (codepointLeftSideBearing != 0) {
+      // align codepoint to the left edge
+      f32 codepointLeftSideBearingScaled = (f32)codepointLeftSideBearing * loadedFont->scale;
+
+      // TODO: is padding even in this calculation ?
+      // codepointLeftSideBearingScaled -= padding;
+
+      u32 offset = codepointIndex;
+      *(horizontalAdvanceTable + offset) -= codepointLeftSideBearingScaled;
+    }
 
     for (u32 otherCodepointIndex = 0; otherCodepointIndex < codepointCount; otherCodepointIndex++) {
+      // codepoint a other p
+      // a, p += a's horizontal advance
       u32 offset = (codepointIndex * codepointCount) + otherCodepointIndex;
-      *(horizontalAdvanceTable + offset) = horizontalAdvance;
+      *(horizontalAdvanceTable + offset) += horizontalAdvanceScaled;
+
+      // TODO: Is this included? This make glyphs butt to each other
+      // // a, p -= p's left side bearing
+      // int otherCodepointLeftSideBearing;
+      // stbtt_GetCodepointHMetrics(font, (int)otherCodepointIndex, 0, &otherCodepointLeftSideBearing);
+      // if (otherCodepointLeftSideBearing == 0)
+      //   continue;
+      // f32 otherCodepointLeftSideBearingScaled = (f32)otherCodepointLeftSideBearing * loadedFont->scale;
+      // *(horizontalAdvanceTable + offset) -= otherCodepointLeftSideBearingScaled;
     }
   }
 
   for (u32 codepointIndex = 0; codepointIndex < codepointCount; codepointIndex++) {
     for (u32 otherCodepointIndex = 0; otherCodepointIndex < codepointCount; otherCodepointIndex++) {
-      int kerningAdvance = stbtt_GetCodepointKernAdvance(font, (int)otherCodepointIndex, (int)codepointIndex);
+      int kerningAdvance = stbtt_GetCodepointKernAdvance(font, (int)codepointIndex, (int)otherCodepointIndex);
       if (kerningAdvance == 0)
         continue;
       f32 kerningAdvanceScaled = (f32)kerningAdvance * loadedFont->scale;
+      kerningAdvanceScaled -= padding;
 
       u32 offset = (codepointIndex * codepointCount) + otherCodepointIndex;
       *(horizontalAdvanceTable + offset) += kerningAdvanceScaled;
