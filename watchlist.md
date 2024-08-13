@@ -562,7 +562,7 @@
 - [x] Handmade Hero Day 173 - Precise Font Alignment
       https://www.youtube.com/watch?v=xSDhhfcwt4E
 
-- [ ] Handmade Hero Day 174 - Adding Sparse Unicode Support
+- [x] Handmade Hero Day 174 - Adding Sparse Unicode Support
       https://www.youtube.com/watch?v=pkaKQzq-hrM
 
 - [ ] Handmade Hero Day 175 - Finishing Sparse Unicode Support
