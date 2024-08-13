@@ -270,16 +270,20 @@ struct audio_info {
   enum hha_audio_chain chain;
 };
 
+#define MAX_FONT_CODEPOINT 0x10ffff
+
 struct font_info {
   char *fontPath;
-  u32 codepointCount;
 
-  struct bitmap_id *codepoints; // codepoints[codepointCount]
-  f32 *horizontalAdvanceTable;  // horizontalAdvanceTable[codepointCount][codepointCount]
+  u32 maxGlyphCount;
+  u32 glyphCount;
+
+  struct hha_font_glyph *glyphs; // glyphs[maxGlyphCount]
+  f32 *horizontalAdvanceTable;   // horizontalAdvanceTable[maxGlyphCount][maxGlyphCount]
 
   // to be used with font_glyph_info
   struct loaded_font *loadedFont;
-  u32 writtenCodepointCount;
+  u32 writtenGlyphCount;
 };
 
 struct font_glyph_info {
@@ -415,10 +419,10 @@ AddAudioAsset(struct asset_context *context, char *filename)
   return AddAudioAssetTrimmed(context, filename, 0, 0);
 }
 
-// fontInfo.codepoints is allocated on heap, after used call DeallocateMemory() on it.
+// fontInfo.glyphs is allocated on heap, after used call DeallocateMemory() on it.
 // fontInfo.horizontalAdvanceTable is allocated on heap, after used call DeallocateMemory() on it.
 internal struct font_id
-AddFontAsset(struct asset_context *context, char *fontPath, u32 codepointCount)
+AddFontAsset(struct asset_context *context, char *fontPath)
 {
   struct added_asset asset = AddAsset(context);
   struct asset_metadata *metadata = asset.metadata;
@@ -427,12 +431,15 @@ AddFontAsset(struct asset_context *context, char *fontPath, u32 codepointCount)
   struct font_id id = {asset.id};
   struct font_info *fontInfo = &metadata->fontInfo;
   fontInfo->fontPath = fontPath;
-  fontInfo->codepointCount = codepointCount;
 
-  u32 codepointsSize = fontInfo->codepointCount * sizeof(struct bitmap_id);
-  fontInfo->codepoints = AllocateMemory(codepointsSize);
+  // NOTE: 5k characters should be enough for one font
+  fontInfo->maxGlyphCount = 5000;
+  fontInfo->glyphCount = 0;
 
-  u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount * sizeof(f32);
+  u32 glyphsSize = fontInfo->maxGlyphCount * sizeof(*fontInfo->glyphs);
+  fontInfo->glyphs = AllocateMemory(glyphsSize);
+
+  u32 horizontalAdvanceTableSize = fontInfo->maxGlyphCount * fontInfo->maxGlyphCount * sizeof(f32);
   fontInfo->horizontalAdvanceTable = AllocateMemory(horizontalAdvanceTableSize);
 
   return id;
@@ -445,12 +452,20 @@ AddFontGlyphAsset(struct asset_context *context, struct font_id fontId, u32 code
   struct asset_metadata *metadata = asset.metadata;
   metadata->type = ASSET_METADATA_TYPE_FONT_GLYPH;
 
-  struct bitmap_id id = {asset.id};
+  struct bitmap_id bitmapId = {asset.id};
   struct font_glyph_info *fontGlyphInfo = &metadata->fontGlyphInfo;
   fontGlyphInfo->fontId = fontId;
   fontGlyphInfo->codepoint = codepoint;
 
-  return id;
+  struct font_info *fontInfo = &(context->assetMetadatas + fontId.value)->fontInfo;
+
+  assert(fontInfo->glyphCount < fontInfo->maxGlyphCount);
+  u32 glyphIndex = fontInfo->glyphCount++;
+  struct hha_font_glyph *glyph = fontInfo->glyphs + glyphIndex;
+  glyph->codepoint = codepoint;
+  glyph->bitmapId = bitmapId;
+
+  return bitmapId;
 }
 
 internal void
@@ -952,7 +967,7 @@ struct load_font_glyph_result {
 // loadedFont._filememory is allocated on heap, after used call DeallocateMemory() on it.
 // horizontalAdvanceTable[codepointCount * codepointCount] must be initialized to zero
 internal struct load_font_result
-LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable);
+LoadFont(char *fontPath, u32 glyphCount, struct hha_font_glyph *glyphs, f32 *horizontalAdvanceTable);
 
 // loadedBitmap.memory is allocated on heap, after used call DeallocateMemory() on it.
 internal struct load_font_glyph_result
@@ -961,7 +976,7 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint);
 #if TRUETYPE_BACKEND_FREETYPE
 
 internal struct load_font_result
-LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable)
+LoadFont(char *fontPath, u32 glyphCount, struct hha_font_glyph *glyphs, f32 *horizontalAdvanceTable)
 {
   struct load_font_result result = {};
 
@@ -1117,7 +1132,7 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
 #elif TRUETYPE_BACKEND_STBTT
 
 internal struct load_font_result
-LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable)
+LoadFont(char *fontPath, u32 glyphCount, struct hha_font_glyph *glyphs, f32 *horizontalAdvanceTable)
 {
   struct load_font_result result = {};
   struct read_file_result ttfFile = ReadEntireFile(fontPath);
@@ -1156,51 +1171,56 @@ LoadFont(char *fontPath, u32 codepointCount, f32 *horizontalAdvanceTable)
   loadedFont->lineGap += padding;
 
   // started from 1 because 0 is used for empty
-  for (u32 codepointIndex = 1; codepointIndex < codepointCount; codepointIndex++) {
-    int horizontalAdvance, codepointLeftSideBearing;
-    stbtt_GetCodepointHMetrics(font, (int)codepointIndex, &horizontalAdvance, &codepointLeftSideBearing);
+  for (u32 leftGlyphIndex = 1; leftGlyphIndex < glyphCount; leftGlyphIndex++) {
+    struct hha_font_glyph *leftGlyph = glyphs + leftGlyphIndex;
+
+    int horizontalAdvance, leftGlyphLeftSideBearing;
+    stbtt_GetCodepointHMetrics(font, (int)leftGlyph->codepoint, &horizontalAdvance, &leftGlyphLeftSideBearing);
     if (horizontalAdvance == 0)
       continue;
     f32 horizontalAdvanceScaled = (f32)horizontalAdvance * loadedFont->scale;
     horizontalAdvanceScaled -= padding;
 
-    if (codepointLeftSideBearing != 0) {
+    if (leftGlyphLeftSideBearing != 0) {
       // align codepoint to the left edge
-      f32 codepointLeftSideBearingScaled = (f32)codepointLeftSideBearing * loadedFont->scale;
+      f32 leftGlyphLeftSideBearingScaled = (f32)leftGlyphLeftSideBearing * loadedFont->scale;
 
       // TODO: is padding even in this calculation ?
-      // codepointLeftSideBearingScaled -= padding;
+      // leftGlyphLeftSideBearingScaled -= padding;
 
-      u32 offset = codepointIndex;
-      *(horizontalAdvanceTable + offset) -= codepointLeftSideBearingScaled;
+      *(horizontalAdvanceTable + leftGlyphIndex) -= leftGlyphLeftSideBearingScaled;
     }
 
-    for (u32 otherCodepointIndex = 0; otherCodepointIndex < codepointCount; otherCodepointIndex++) {
-      // codepoint a other p
+    for (u32 rightGlyphIndex = 0; rightGlyphIndex < glyphCount; rightGlyphIndex++) {
+      // left a right p
       // a, p += a's horizontal advance
-      u32 offset = (codepointIndex * codepointCount) + otherCodepointIndex;
+      u32 offset = (leftGlyphIndex * glyphCount) + rightGlyphIndex;
       *(horizontalAdvanceTable + offset) += horizontalAdvanceScaled;
 
       // TODO: Is this included? This make glyphs butt to each other
       // // a, p -= p's left side bearing
-      // int otherCodepointLeftSideBearing;
-      // stbtt_GetCodepointHMetrics(font, (int)otherCodepointIndex, 0, &otherCodepointLeftSideBearing);
-      // if (otherCodepointLeftSideBearing == 0)
-      //   continue;
-      // f32 otherCodepointLeftSideBearingScaled = (f32)otherCodepointLeftSideBearing * loadedFont->scale;
-      // *(horizontalAdvanceTable + offset) -= otherCodepointLeftSideBearingScaled;
+      // struct hha_font_glyph *rightGlyph = glyphs + rightGlyphIndex;
+      // int rightGlyphLeftSideBearing;
+      // stbtt_GetCodepointHMetrics(font, (int)rightGlyph->codepoint, 0, &rightGlyphLeftSideBearing);
+      // if (rightGlyphLeftSideBearing == 0)
+      //  continue;
+      // f32 rightGlyphLeftSideBearingScaled = (f32)rightGlyphLeftSideBearing * loadedFont->scale;
+      // *(horizontalAdvanceTable + offset) -= rightGlyphLeftSideBearingScaled;
     }
   }
 
-  for (u32 codepointIndex = 0; codepointIndex < codepointCount; codepointIndex++) {
-    for (u32 otherCodepointIndex = 0; otherCodepointIndex < codepointCount; otherCodepointIndex++) {
-      int kerningAdvance = stbtt_GetCodepointKernAdvance(font, (int)codepointIndex, (int)otherCodepointIndex);
+  for (u32 leftGlyphIndex = 0; leftGlyphIndex < glyphCount; leftGlyphIndex++) {
+    for (u32 rightGlyphIndex = 0; rightGlyphIndex < glyphCount; rightGlyphIndex++) {
+      struct hha_font_glyph *leftGlyph = glyphs + leftGlyphIndex;
+      struct hha_font_glyph *rightGlyph = glyphs + rightGlyphIndex;
+
+      int kerningAdvance = stbtt_GetCodepointKernAdvance(font, (int)leftGlyph->codepoint, (int)rightGlyph->codepoint);
       if (kerningAdvance == 0)
         continue;
       f32 kerningAdvanceScaled = (f32)kerningAdvance * loadedFont->scale;
       kerningAdvanceScaled -= padding;
 
-      u32 offset = (codepointIndex * codepointCount) + otherCodepointIndex;
+      u32 offset = (leftGlyphIndex * glyphCount) + rightGlyphIndex;
       *(horizontalAdvanceTable + offset) += kerningAdvanceScaled;
     }
   }
@@ -1529,7 +1549,7 @@ WriteHHAFile(char *filename, struct asset_context *context)
     case ASSET_METADATA_TYPE_FONT: {
       struct font_info *fontInfo = &src->fontInfo;
       struct load_font_result loadFontResult =
-          LoadFont(fontInfo->fontPath, fontInfo->codepointCount, fontInfo->horizontalAdvanceTable);
+          LoadFont(fontInfo->fontPath, fontInfo->glyphCount, fontInfo->glyphs, fontInfo->horizontalAdvanceTable);
 
       if (loadFontResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
         switch (loadFontResult.error) {
@@ -1569,20 +1589,21 @@ WriteHHAFile(char *filename, struct asset_context *context)
       }
 
       struct loaded_font *loadedFont = loadFontResult.loadedFont;
-      dest->font.codepointCount = fontInfo->codepointCount;
+      dest->font.glyphCount = fontInfo->glyphCount;
       dest->font.ascent = loadedFont->ascent;
       dest->font.descent = loadedFont->descent;
       dest->font.lineGap = loadedFont->lineGap;
 
-      u32 codepointsSize = fontInfo->codepointCount * sizeof(struct bitmap_id);
-      writtenBytes = write(outFd, fontInfo->codepoints, codepointsSize);
+      u32 glyphsSize = fontInfo->glyphCount * sizeof(*fontInfo->glyphs);
+      writtenBytes = write(outFd, fontInfo->glyphs, glyphsSize);
       assert(writtenBytes > 0);
 
-      u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount * sizeof(f32);
+      u32 horizontalAdvanceTableSize =
+          fontInfo->glyphCount * fontInfo->glyphCount * sizeof(*fontInfo->horizontalAdvanceTable);
       writtenBytes = write(outFd, fontInfo->horizontalAdvanceTable, horizontalAdvanceTableSize);
       assert(writtenBytes > 0);
 
-      DeallocateMemory(fontInfo->codepoints);
+      DeallocateMemory(fontInfo->glyphs);
       DeallocateMemory(fontInfo->horizontalAdvanceTable);
 
       fontInfo->loadedFont = loadedFont;
@@ -1627,12 +1648,12 @@ WriteHHAFile(char *filename, struct asset_context *context)
 
       DeallocateMemory(loadedBitmap->memory);
 
-      if (fontInfo->writtenCodepointCount == fontInfo->codepointCount) {
+      if (fontInfo->writtenGlyphCount == fontInfo->glyphCount) {
         // on last codepoint from file close it
         DeallocateMemory(fontInfo->loadedFont->_filememory);
         DeallocateMemory(fontInfo->loadedFont);
       }
-      fontInfo->writtenCodepointCount++;
+      fontInfo->writtenGlyphCount++;
     } break;
     }
   }
@@ -2048,15 +2069,22 @@ WriteFonts(void)
   // fonts
   BeginAssetType(context, ASSET_TYPE_FONT);
   char *fontPath = "Roboto/Roboto-Regular.ttf";
-  struct font_id fontId = AddFontAsset(context, fontPath, ('~' + 1));
+  struct font_id fontId = AddFontAsset(context, fontPath);
   EndAssetType(context);
 
   BeginAssetType(context, ASSET_TYPE_FONT_GLYPH);
-  struct font_info *fontInfo = &(context->assetMetadatas + fontId.value)->fontInfo;
+
+  // ascii
   for (u32 codepoint = '!'; codepoint <= '~'; codepoint++) {
-    struct bitmap_id bitmapId = AddFontGlyphAsset(context, fontId, codepoint);
-    fontInfo->codepoints[codepoint] = bitmapId;
+    AddFontGlyphAsset(context, fontId, codepoint);
   }
+
+  // Kanji Owl
+  AddFontGlyphAsset(context, fontId, 0x5c0f);
+  AddFontGlyphAsset(context, fontId, 0x8033);
+  AddFontGlyphAsset(context, fontId, 0x6728);
+  AddFontGlyphAsset(context, fontId, 0x514e);
+
   EndAssetType(context);
 
   /*----------------------------------------------------------------

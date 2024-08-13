@@ -16,7 +16,7 @@ struct audio {
 };
 
 struct font {
-  struct bitmap_id *codepoints;
+  struct hha_font_glyph *glyphs;
   f32 *horizontalAdvanceTable;
   u32 bitmapIdOffset;
 };

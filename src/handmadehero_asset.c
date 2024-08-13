@@ -815,9 +815,9 @@ FontLoad(struct game_assets *assets, struct font_id id)
     assert(info->dataOffset && "asset not setup properly");
     struct hha_font *fontInfo = &info->font;
 
-    u32 codepointsSize = fontInfo->codepointCount * sizeof(struct bitmap_id);
-    u32 horizontalAdvanceTableSize = fontInfo->codepointCount * fontInfo->codepointCount * sizeof(f32);
-    u32 dataSize = codepointsSize + horizontalAdvanceTableSize; // size of data in file
+    u32 glyphsSize = fontInfo->glyphCount * sizeof(struct hha_font_glyph);
+    u32 horizontalAdvanceTableSize = fontInfo->glyphCount * fontInfo->glyphCount * sizeof(f32);
+    u32 dataSize = glyphsSize + horizontalAdvanceTableSize; // size of data in file
     u32 totalSize = dataSize + sizeof(*asset->header);
     asset->header = AcquireAssetMemory(assets, totalSize, id.value);
     void *memory = (asset->header + 1);
@@ -826,8 +826,8 @@ FontLoad(struct game_assets *assets, struct font_id id)
     struct font *font = &asset->header->font;
     struct asset_file *file = AssetFileGet(assets, asset->fileIndex);
     font->bitmapIdOffset = file->fontBitmapIdOffset;
-    font->codepoints = memory;
-    font->horizontalAdvanceTable = (f32 *)((u8 *)font->codepoints + codepointsSize);
+    font->glyphs = memory;
+    font->horizontalAdvanceTable = (f32 *)(font->glyphs + fontInfo->glyphCount);
 
     // setup work
     struct load_asset_work *work = MemoryArenaPush(&task->arena, sizeof(*work));
@@ -848,22 +848,27 @@ FontLoad(struct game_assets *assets, struct font_id id)
 }
 
 internal inline u32
-FontGetClampedCodepoint(struct hha_font *fontInfo, u32 desiredCodepoint)
+FontGetGlyphIndex(struct hha_font *fontInfo, struct font *font, u32 codepoint)
 {
-  u32 codepoint = desiredCodepoint;
-  if (codepoint >= fontInfo->codepointCount)
-    // when codepoint is not in font, give default
-    codepoint = 0;
+  u32 result = 0;
 
-  return codepoint;
+  for (u32 glyphIndex = 0; glyphIndex < fontInfo->glyphCount; glyphIndex++) {
+    struct hha_font_glyph *glyph = font->glyphs + glyphIndex;
+    if (glyph->codepoint == codepoint) {
+      result = glyphIndex;
+      break;
+    }
+  }
+
+  return result;
 }
 
 struct bitmap_id
 FontGetBitmapGlyph(struct game_assets *assets, struct hha_font *fontInfo, struct font *font, u32 desiredCodepoint)
 {
-  u32 codepoint = FontGetClampedCodepoint(fontInfo, desiredCodepoint);
-  struct bitmap_id bitmapIdInFile = *(font->codepoints + codepoint);
-  struct bitmap_id bitmapId = {font->bitmapIdOffset + bitmapIdInFile.value};
+  u32 glyphIndex = FontGetGlyphIndex(fontInfo, font, desiredCodepoint);
+  struct hha_font_glyph *glyph = font->glyphs + glyphIndex;
+  struct bitmap_id bitmapId = {font->bitmapIdOffset + glyph->bitmapId.value};
   assert(bitmapId.value < assets->assetCount);
   return bitmapId;
 }
@@ -883,14 +888,13 @@ FontGetStartingBaselineY(struct hha_font *fontInfo)
 }
 
 f32
-FontGetHorizontalAdvanceForPair(struct hha_font *fontInfo, struct font *font, u32 desiredPrevCodepoint,
-                                u32 desiredCodepoint)
+FontGetHorizontalAdvanceForPair(struct hha_font *fontInfo, struct font *font, u32 prevCodepoint, u32 codepoint)
 {
-  u32 prevCodepoint = FontGetClampedCodepoint(fontInfo, desiredPrevCodepoint);
-  u32 codepoint = FontGetClampedCodepoint(fontInfo, desiredCodepoint);
+  u32 prevGlyphIndex = FontGetGlyphIndex(fontInfo, font, prevCodepoint);
+  u32 glyphIndex = FontGetGlyphIndex(fontInfo, font, codepoint);
 
-  u32 offset = (prevCodepoint * fontInfo->codepointCount) + codepoint;
-  assert(offset < fontInfo->codepointCount * fontInfo->codepointCount);
+  u32 offset = (prevGlyphIndex * fontInfo->glyphCount) + glyphIndex;
+  assert(offset < fontInfo->glyphCount * fontInfo->glyphCount);
   f32 result = *(font->horizontalAdvanceTable + offset);
   return result;
 }

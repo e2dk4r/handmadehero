@@ -119,15 +119,20 @@ struct hha_audio {
    */
 };
 
+struct hha_font_glyph {
+  u32 codepoint;
+  struct bitmap_id bitmapId;
+};
+
 struct hha_font {
-  u32 codepointCount;
+  u32 glyphCount;
   f32 ascent;
   f32 descent;
   f32 lineGap;
   /*
    * NOTE: data is:
-   *   struct bitmap_id codepoints[codepointCount];
-   *   f32 horizontalAdvanceTable[codepointCount * codepointCount];
+   *   struct hha_font_glyph codepoints[glyphCount];
+   *   f32 horizontalAdvanceTable[glyphCount * glyphCount];
    */
 };
 
