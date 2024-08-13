@@ -1591,6 +1591,10 @@ WriteHHAFile(char *filename, struct asset_context *context)
     case ASSET_METADATA_TYPE_FONT_GLYPH: {
       struct font_glyph_info *fontGlyphInfo = &src->fontGlyphInfo;
       struct font_info *fontInfo = &(context->assetMetadatas + fontGlyphInfo->fontId.value)->fontInfo;
+      if (!fontInfo->loadedFont) {
+        continue;
+      }
+
       struct load_font_glyph_result loadFontGlyphResult = LoadFontGlyph(fontInfo->loadedFont, fontGlyphInfo->codepoint);
       if (loadFontGlyphResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
         switch (loadFontGlyphResult.error) {
