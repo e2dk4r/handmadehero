@@ -653,6 +653,7 @@ OverlayCycleCounters(struct game_memory *memory)
     DEBUGTextLine(counterNameTable[counterIndex]);
 #endif
   }
+  DEBUGTextLine("/5c0f/8033/6728/514e");
 #endif
 }
 
