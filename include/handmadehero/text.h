@@ -79,32 +79,64 @@ PathHasExtension(struct string path, struct string extension)
   return 1;
 }
 
-internal inline u8
-HexStringToU8(struct string hexString)
-{
-  u8 value = 0;
-
-  assert(hexString.length == 2);
-  for (u64 index = 0; index < 2; index++) {
-    u64 multiplier = 16;
-    if (index != 0)
-      multiplier /= 16;
-
-    u8 character = hexString.value[index];
-    u8 number = 0; // 0-15
-    if (character >= '0' && character <= '9')
-      number = character - '0';
-    else if (character >= 'A' && character <= 'F')
-      number = character - 'A' + 10;
-    else if (character >= 'a' && character <= 'f')
-      number = character - 'a' + 10;
-    else
-      assert(0 && "hex invalid");
-
-    value += (u8)(number * multiplier);
+#define HexStringToX(postfix, type)                                                                                    \
+  internal inline type HexStringTo##postfix(struct string hexString)                                                   \
+  {                                                                                                                    \
+    type value = 0;                                                                                                    \
+                                                                                                                       \
+    assert(hexString.length == sizeof(type) * 2);                                                                      \
+                                                                                                                       \
+    u64 multiplier = 1;                                                                                                \
+    for (u64 index = 0; index < sizeof(type) * 2 - 1; index++) {                                                       \
+      multiplier *= 16;                                                                                                \
+    }                                                                                                                  \
+                                                                                                                       \
+    for (u64 index = 0; index < sizeof(type) * 2; index++) {                                                           \
+      if (index != 0)                                                                                                  \
+        multiplier /= 16;                                                                                              \
+                                                                                                                       \
+      u8 character = hexString.value[index];                                                                           \
+      u8 number = 0;                                                                                                   \
+      if (character >= '0' && character <= '9')                                                                        \
+        number = character - '0';                                                                                      \
+      else if (character >= 'A' && character <= 'F')                                                                   \
+        number = 0xa + character - 'A';                                                                                \
+      else if (character >= 'a' && character <= 'f')                                                                   \
+        number = 0xa + character - 'a';                                                                                \
+      else                                                                                                             \
+        assert(0 && "hex invalid");                                                                                    \
+                                                                                                                       \
+      value += (type)(number * multiplier);                                                                            \
+    }                                                                                                                  \
+                                                                                                                       \
+    return value;                                                                                                      \
   }
 
-  return value;
+HexStringToX(U8, u8);
+HexStringToX(U16, u16);
+
+internal inline u8
+IsHex(char character)
+{
+  return (character >= '0' && character <= '9') || (character >= 'A' && character <= 'F') ||
+         (character >= 'a' && character <= 'f');
+}
+
+internal inline u8
+GetHex(char character)
+{
+  u8 number = 0;
+
+  if (character >= '0' && character <= '9')
+    number = (u8)character - '0';
+  else if (character >= 'A' && character <= 'F')
+    number = 0xa + (u8)character - 'A';
+  else if (character >= 'a' && character <= 'f')
+    number = 0xa + (u8)character - 'a';
+  else
+    assert(0 && "hex invalid");
+
+  return number;
 }
 
 #endif /* HANDMADEHERO_TEXT_H */

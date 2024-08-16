@@ -11,6 +11,12 @@ enum text_test_error {
   TEXT_TEST_ERROR_PATH_HAS_EXTENSION,
   TEXT_TEST_ERROR_PATH_HAS_EXTENSION_EXPECTED_FALSE,
   TEXT_TEST_ERROR_PATH_HAS_EXTENSION_WHEN_EXTENSION_IS_BIGGER,
+  TEXT_TEST_ERROR_HEX_U8,
+  TEXT_TEST_ERROR_HEX_U16,
+  TEXT_TEST_ERROR_HEX_U32,
+  TEXT_TEST_ERROR_IS_HEX_MUST_BE_FALSE,
+  TEXT_TEST_ERROR_IS_HEX_MUST_BE_TRUE,
+  TEXT_TEST_ERROR_GET_HEX,
 };
 
 int
@@ -107,6 +113,60 @@ main(void)
     b32 expected = 0;
     if (result != expected) {
       errorCode = TEXT_TEST_ERROR_PATH_HAS_EXTENSION_WHEN_EXTENSION_IS_BIGGER;
+      goto end;
+    }
+  }
+
+  // HexStringToX
+  {
+    // u8
+    struct string hex = StringFromZeroTerminated((u8 *)"fa", 1024);
+    u8 result = HexStringToU8(hex);
+    u8 expected = 0xfa;
+    if (result != expected) {
+      errorCode = TEXT_TEST_ERROR_HEX_U8;
+      goto end;
+    }
+  }
+
+  {
+    struct string hex = StringFromZeroTerminated((u8 *)"5c0f", 1024);
+    u16 result = HexStringToU16(hex);
+    u16 expected = 0x5c0f;
+    if (result != expected) {
+      errorCode = TEXT_TEST_ERROR_HEX_U16;
+      goto end;
+    }
+  }
+
+  // IsHex
+  {
+    char character = 'a';
+    u8 result = IsHex(character);
+    u8 expected = 1;
+    if (result != expected) {
+      errorCode = TEXT_TEST_ERROR_IS_HEX_MUST_BE_TRUE;
+      goto end;
+    }
+  }
+
+  {
+    char character = 'g';
+    u8 result = IsHex(character);
+    u8 expected = 0;
+    if (result != expected) {
+      errorCode = TEXT_TEST_ERROR_IS_HEX_MUST_BE_FALSE;
+      goto end;
+    }
+  }
+
+  // GetHex
+  {
+    char character = 'a';
+    u8 result = GetHex(character);
+    u8 expected = 0xa;
+    if (result != expected) {
+      errorCode = TEXT_TEST_ERROR_GET_HEX;
       goto end;
     }
   }

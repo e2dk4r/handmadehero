@@ -366,15 +366,15 @@ DEBUGTextLine(char *line)
   struct v4 color = v4(1.0f, 1.0f, 1.0f, 1.0f);
   for (char *character = line; *character; /* handled in if */) {
     // color mode
-    if (character[0] == '#' && character[1] && character[2] && character[3] && character[4] && character[5] &&
-        character[6] && character[7] == '#') {
-      struct string rHexString = StringFrom((u8 *)(character + 1), 2);
-      struct string gHexString = StringFrom((u8 *)(character + 3), 2);
-      struct string bHexString = StringFrom((u8 *)(character + 5), 2);
+    if (character[0] == '#' && IsHex(character[1]) && IsHex(character[2]) && IsHex(character[3]) &&
+        IsHex(character[4]) && IsHex(character[5]) && IsHex(character[6]) && character[7] == '#') {
+      u8 rHex = (u8)(GetHex(character[1]) << 4 | GetHex(character[2]) << 0);
+      u8 gHex = (u8)(GetHex(character[3]) << 4 | GetHex(character[4]) << 0);
+      u8 bHex = (u8)(GetHex(character[5]) << 4 | GetHex(character[6]) << 0);
 
-      f32 r = (f32)HexStringToU8(rHexString) / 255.0f;
-      f32 g = (f32)HexStringToU8(gHexString) / 255.0f;
-      f32 b = (f32)HexStringToU8(bHexString) / 255.0f;
+      f32 r = (f32)rHex / 255.0f;
+      f32 g = (f32)gHex / 255.0f;
+      f32 b = (f32)bHex / 255.0f;
       color = v4(r, g, b, 1.0f);
       character += 8;
     }
@@ -391,6 +391,14 @@ DEBUGTextLine(char *line)
     // character mode
     else {
       u32 codepoint = (u32)*character;
+
+      if (character[0] == '/' && IsHex(character[1]) && IsHex(character[2]) && IsHex(character[3]) &&
+          IsHex(character[4])) {
+        codepoint = (u32)(GetHex(character[1]) << 12 | GetHex(character[2]) << 8 | GetHex(character[3]) << 4 |
+                          GetHex(character[4]) << 0);
+        character += 4;
+      }
+
       f32 advanceX = fontScale * FontGetHorizontalAdvanceForPair(fontInfo, font, prevCodepoint, codepoint);
       atX += advanceX;
 
