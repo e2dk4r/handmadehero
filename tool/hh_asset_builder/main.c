@@ -434,7 +434,9 @@ AddFontAsset(struct asset_context *context, char *fontPath)
 
   // NOTE: 5k characters should be enough for one font
   fontInfo->maxGlyphCount = 5000;
-  fontInfo->glyphCount = 0;
+
+  // NOTE: glyph index 0 is null glyph
+  fontInfo->glyphCount = 1;
 
   u32 glyphsSize = fontInfo->maxGlyphCount * sizeof(*fontInfo->glyphs);
   fontInfo->glyphs = AllocateMemory(glyphsSize);
@@ -1240,6 +1242,9 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
 
   int x0, y0, x1, y1;
   stbtt_GetCodepointBitmapBox(font, (int)codepoint, scale, scale, &x0, &y0, &x1, &y1);
+  if (x0 == x1 || y0 == y1)
+    // when codepoint is space(0x20)
+    return result;
 
   // stbtt renders bitmap in top down left right, we pack in bottom up left right order.
   // Y axis operations are flipped.
@@ -1643,10 +1648,12 @@ WriteHHAFile(char *filename, struct asset_context *context)
       dest->bitmap.alignPercentage[0] = loadFontGlyphResult.alignPercentageX;
       dest->bitmap.alignPercentage[1] = loadFontGlyphResult.alignPercentageY;
 
-      writtenBytes = write(outFd, loadedBitmap->memory, (size_t)(loadedBitmap->stride * loadedBitmap->height));
-      assert(writtenBytes > 0);
+      if (loadedBitmap->width) {
+        writtenBytes = write(outFd, loadedBitmap->memory, (size_t)(loadedBitmap->stride * loadedBitmap->height));
+        assert(writtenBytes > 0);
 
-      DeallocateMemory(loadedBitmap->memory);
+        DeallocateMemory(loadedBitmap->memory);
+      }
 
       if (fontInfo->writtenGlyphCount == fontInfo->glyphCount) {
         // on last codepoint from file close it
@@ -2074,6 +2081,7 @@ WriteFonts(void)
 
   BeginAssetType(context, ASSET_TYPE_FONT_GLYPH);
 
+  AddFontGlyphAsset(context, fontId, ' ');
   // ascii
   for (u32 codepoint = '!'; codepoint <= '~'; codepoint++) {
     AddFontGlyphAsset(context, fontId, codepoint);
