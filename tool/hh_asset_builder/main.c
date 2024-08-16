@@ -1396,6 +1396,13 @@ WriteHHAFile(char *filename, struct asset_context *context)
   info(logBuffer, (u64)logLength);
 
   // 3 - assets
+  // Writing assets to file is more complicated than writing tags.
+  //
+  // We first write assets data, and remember the offset,
+  // so that we can point it in header.
+  //
+  // Then we write assets header
+  //
   u64 assetArraySize = sizeof(struct hha_asset) * header.assetCount;
   s64 seekResult = lseek64(outFd, (s64)assetArraySize, SEEK_CUR);
   assert(seekResult != -1 && "file seek failed");
