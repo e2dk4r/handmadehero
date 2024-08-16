@@ -565,7 +565,7 @@
 - [x] Handmade Hero Day 174 - Adding Sparse Unicode Support
       https://www.youtube.com/watch?v=pkaKQzq-hrM
 
-- [ ] Handmade Hero Day 175 - Finishing Sparse Unicode Support
+- [x] Handmade Hero Day 175 - Finishing Sparse Unicode Support
       https://www.youtube.com/watch?v=kXQMyg4Prfo
 
 - [ ] Handmade Hero Day 176 - Introduction to Debug Infrastructure
