@@ -700,7 +700,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   assert(Platform->AllocateMemory && "platform layer NOT implemented PlatformAllocateMemory");
   assert(Platform->DeallocateMemory && "platform layer NOT implemented PlatformDeallocateMemory");
 
-  BEGIN_TIMER_BLOCK(GameUpdateAndRender);
+  BEGIN_TIMED_BLOCK(GameUpdateAndRender);
 
   assert(sizeof(struct game_state) <= memory->permanentStorageSize);
   struct game_state *state = memory->permanentStorage;
@@ -1591,7 +1591,7 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   MemoryArenaCheck(&state->worldArena);
   MemoryArenaCheck(&transientState->transientArena);
 
-  END_TIMER_BLOCK(GameUpdateAndRender);
+  END_TIMED_BLOCK(GameUpdateAndRender);
 
 #if HANDMADEHERO_INTERNAL
   OverlayCycleCounters(memory);

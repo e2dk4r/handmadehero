@@ -614,7 +614,7 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
                     struct bitmap *texture, struct bitmap *normalMap, struct environment_map *top,
                     struct environment_map *middle, struct environment_map *bottom, f32 pixelsToMeters)
 {
-  BEGIN_TIMER_BLOCK(DrawRectangleSlowly);
+  BEGIN_TIMED_BLOCK(DrawRectangleSlowly);
 
   f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
   f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
@@ -806,8 +806,6 @@ DrawRectangleSlowly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, st
     }
     row += buffer->stride;
   }
-
-  END_TIMER_BLOCK(DrawRectangleSlowly);
 }
 
 #if COMPILER_GCC
@@ -818,7 +816,7 @@ internal inline void
 DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                      struct bitmap *texture, f32 pixelsToMeters, struct rect2s clipRect, b32 even)
 {
-  BEGIN_TIMER_BLOCK(DrawRectangleQuickly);
+  TIMED_BLOCK(DrawRectangleQuickly);
 
   f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
   f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
@@ -871,7 +869,6 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
   }
 
   if (!HasRect2sArea(fillRect)) {
-    END_TIMER_BLOCK(DrawRectangleQuickly);
     return;
   }
 
@@ -915,7 +912,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
 
   f32 inv255 = 1.0f / 255.0f;
 
-  BEGIN_TIMER_BLOCK(ProcessPixel);
+  TIMED_BLOCK_COUNTED(ProcessPixel, Rect2sArea(fillRect) / 2);
   for (s32 y = fillRect.minY; y < fillRect.maxY; y += 2) {
     u32 *pixel = (u32 *)row;
 
@@ -1092,10 +1089,6 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
 
     row += rowAdvance;
   }
-
-  END_TIMER_BLOCK_COUNTED(ProcessPixel, Rect2sArea(fillRect) / 2);
-
-  END_TIMER_BLOCK(DrawRectangleQuickly);
 }
 #if COMPILER_GCC
 #pragma GCC diagnostic pop
@@ -1260,7 +1253,7 @@ internal inline void
 DrawRenderGroupInterleaved(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2s clipRect,
                            b32 even)
 {
-  BEGIN_TIMER_BLOCK(DrawRenderGroup);
+  TIMED_BLOCK(DrawRenderGroup);
 
   f32 pixelsToMeters = 1.0f / renderGroup->transform.metersToPixels;
 
@@ -1329,6 +1322,4 @@ DrawRenderGroupInterleaved(struct render_group *renderGroup, struct bitmap *outp
       assert(0 && "this renderer does not know how to handle render group entry type");
     }
   }
-
-  END_TIMER_BLOCK(DrawRenderGroup);
 }

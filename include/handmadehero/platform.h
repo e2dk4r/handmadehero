@@ -67,24 +67,8 @@ struct cycle_counter {
 
 u64
 rdtsc(void);
+
 extern struct game_memory *DEBUG_GLOBAL_MEMORY;
-#define BEGIN_TIMER_BLOCK(tag) u64 startCycleCount##tag = rdtsc()
-#define END_TIMER_BLOCK(tag)                                                                                           \
-  if (DEBUG_GLOBAL_MEMORY) {                                                                                           \
-    DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;                   \
-    DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].hitCount += 1;                                                  \
-  }
-#define END_TIMER_BLOCK_COUNTED(tag, count)                                                                            \
-  if (DEBUG_GLOBAL_MEMORY) {                                                                                           \
-    DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].cycleCount += rdtsc() - startCycleCount##tag;                   \
-    DEBUG_GLOBAL_MEMORY->counters[CYCLE_COUNTER_##tag].hitCount += (count);                                            \
-  }
-
-#else
-
-#define BEGIN_TIMER_BLOCK(tag)
-#define END_TIMER_BLOCK(tag)
-#define END_TIMER_BLOCK_COUNTED(tag, count)
 
 #endif /* HANDMADEHERO_INTERNAL */
 
@@ -221,5 +205,44 @@ struct game_audio_buffer {
 b32
 GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *buffer);
 typedef b32 (*pfnGameOutputAudio)(struct game_memory *memory, struct game_audio_buffer *buffer);
+
+#if HANDMADEHERO_INTERNAL
+
+struct timed_block {
+  u64 tag;
+  u64 count;
+  u64 start;
+};
+
+internal inline struct timed_block
+BeginTimedBlock(u64 tag, u64 count)
+{
+  return (struct timed_block){.tag = tag, .count = count, .start = rdtsc()};
+}
+
+internal inline void
+EndTimedBlock(struct timed_block *timedBlock)
+{
+  if (!DEBUG_GLOBAL_MEMORY)
+    return;
+
+  DEBUG_GLOBAL_MEMORY->counters[timedBlock->tag].cycleCount += rdtsc() - timedBlock->start;
+  DEBUG_GLOBAL_MEMORY->counters[timedBlock->tag].hitCount += timedBlock->count;
+}
+
+// TODO: MSVC?
+#define TIMED_BLOCK(tag) __attribute__((cleanup(EndTimedBlock))) BEGIN_TIMED_BLOCK(tag)
+#define TIMED_BLOCK_COUNTED(tag, count)                                                                                \
+  __attribute((cleanup(EndTimedBlock))) struct timed_block timedBlock##tag = BeginTimedBlock(CYCLE_COUNTER_##tag, count)
+
+#define BEGIN_TIMED_BLOCK(tag) struct timed_block timedBlock##tag = BeginTimedBlock(CYCLE_COUNTER_##tag, 1)
+#define END_TIMED_BLOCK(tag) EndTimedBlock(&timedBlock##tag)
+
+#else
+
+#define BEGIN_TIMED_BLOCK(tag)
+#define END_TIMED_BLOCK(tag)
+
+#endif
 
 #endif /* HANDMADEHERO_PLATFORM_H */
