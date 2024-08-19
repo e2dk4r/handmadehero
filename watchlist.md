@@ -568,7 +568,7 @@
 - [x] Handmade Hero Day 175 - Finishing Sparse Unicode Support
       https://www.youtube.com/watch?v=kXQMyg4Prfo
 
-- [ ] Handmade Hero Day 176 - Introduction to Debug Infrastructure
+- [x] Handmade Hero Day 176 - Introduction to Debug Infrastructure
       https://www.youtube.com/watch?v=vhSIwxAWDIY
 
 - [ ] Handmade Hero Day 177 - Automatic Performance Counters
