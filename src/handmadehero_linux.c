@@ -211,8 +211,6 @@ LinuxGetAllFilesOfTypeBegin(enum platform_file_type type)
   }
   platformFileGroup.data = fileGroup;
 
-  ZeroMemory(fileGroup, sizeof(*fileGroup));
-
   fileGroup->dir = opendir("./");
   if (fileGroup->dir == 0) {
     // TODO: directory cannot opened
