@@ -19,7 +19,6 @@ jobs:
     - name: install packages
       run: sudo apt-get install -y --no-install-recommends --no-install-suggests
            wget unzip libarchive-tools
-           nasm
            pkg-config
            libevdev-dev liburing-dev
            libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev

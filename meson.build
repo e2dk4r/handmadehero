@@ -1,7 +1,6 @@
 project(
   'handmadehero',
   'c',
-  'nasm',
   version: '0.1-dev',
   default_options: [
     'c_std=c99',
@@ -59,7 +58,6 @@ common_src = [
 if is_build_debug
   common_src += [
     'src/debug.c',
-    'src/rdtsc.asm',
   ]
 endif
 

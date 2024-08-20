@@ -65,8 +65,13 @@ struct cycle_counter {
   u64 hitCount;
 };
 
-u64
-rdtsc(void);
+static __inline__ u64
+rdtsc(void)
+{
+  u64 hi, lo;
+  __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+  return lo | hi << 32;
+}
 
 extern struct game_memory *DEBUG_GLOBAL_MEMORY;
 
