@@ -1,12 +1,15 @@
+#include "handmadehero_asset.c"
+#include "handmadehero_audio.c"
+#include "handmadehero_entity.c"
+#include "handmadehero_memory_arena.c"
+#include "handmadehero_random.c"
+#include "handmadehero_render_group.c"
+#include "handmadehero_sim_region.c"
+#include "handmadehero_world.c"
 #include <handmadehero/assert.h>
-#include <handmadehero/atomic.h>
 #include <handmadehero/color.h>
-#include <handmadehero/entity.h>
 #include <handmadehero/handmadehero.h>
 #include <handmadehero/math.h>
-#include <handmadehero/random.h>
-#include <handmadehero/render_group.h>
-#include <handmadehero/world.h>
 
 comptime u32 TILES_PER_WIDTH = 17;
 comptime u32 TILES_PER_HEIGHT = 9;

@@ -1,6 +1,7 @@
 #include <handmadehero/assert.h>
 #include <handmadehero/math.h>
 #include <handmadehero/memory_arena.h>
+#include <handmadehero/text.h>
 
 inline void
 MemoryArenaInit(struct memory_arena *mem, void *data, memory_arena_size_t size)
@@ -160,30 +161,21 @@ MemoryArenaCheck(struct memory_arena *arena)
   assert(arena->tempCount == 0);
 }
 
-internal inline u64
-strlen(const char *str)
-{
-  u64 length = 0;
-  while (*str++)
-    length++;
-  return length;
-}
-
 internal void *
-memcpy(void *dest, const void *src, u64 size)
+MemoryCopy(void *dest, const void *src, u64 size)
 {
   while (size--)
     *(u8 *)dest++ = *(u8 *)src++;
   return dest;
 }
 
-inline char *
-MemoryArenaPushString(struct memory_arena *mem, char *string)
+char *
+MemoryArenaPushString(struct memory_arena *mem, char *zeroTerminatedString)
 {
-  u64 length = strlen(string) + 1;
-  u64 size = ALIGN(length, 4);
+  struct string string = StringFromZeroTerminated((u8 *)zeroTerminatedString, 1024);
+  u64 size = ALIGN(string.length, 4);
   char *dest = MemoryArenaPush(mem, size);
-  memcpy(dest, string, length);
-  dest[length] = 0;
+  MemoryCopy(dest, string.value, string.length);
+  dest[string.length] = 0;
   return dest;
 }

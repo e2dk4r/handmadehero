@@ -7,8 +7,7 @@ on:
     branches: [ "master" ]
 
 env:
-  NINJA_VERSION: '1.12.1'
-  MUON_VERSION: '0.2.0'
+  CC: gcc
 
 jobs:
   build:
@@ -20,27 +19,17 @@ jobs:
 
     - name: install packages
       run: sudo apt-get install -y --no-install-recommends --no-install-suggests
-           wget unzip libarchive-tools
            pkg-config
            libevdev-dev liburing-dev
            libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev
            libpipewire-0.3-dev;
 
-           sudo ln -sf /usr/bin/bsdtar /usr/bin/tar;
-
-           wget https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip;
-           unzip ninja-linux.zip; rm ninja-linux.zip;
-           sudo mv ninja /usr/bin/;
-
-           wget https://muon.build/releases/v$MUON_VERSION/muon-$MUON_VERSION-amd64-linux-static;
-           chmod 755 muon-$MUON_VERSION-amd64-linux-static;
-           sudo mv muon-$MUON_VERSION-amd64-linux-static /usr/bin/meson;
-
     - name: configure
-      run: meson setup build -Ddefault_library=shared
+      run: sed -i 's/IsTestsEnabled=1/IsTestsEnabled=0/' build.sh;
+           sed -i 's/IsToolEnabled_hh_asset_builder=0/IsToolEnabled_hh_asset_builder=1/' build.sh;
 
-    - name: ninja
-      run: ninja -C build
+    - name: compile
+      run: ./build.sh
 
     - name: release
       env:
@@ -48,15 +37,17 @@ jobs:
       if: ${{ startsWith(github.event.head_commit.message, 'watchlist:') }}
       continue-on-error: true
       run: |
+        sudo ln -sf /usr/bin/bsdtar /usr/bin/tar;
+
         day=$(echo ${{ github.event.head_commit.message }} | tr ' ' '\n' | tail -n 1)
         output=handmadehero-day-$day
         file=$output.tar.zst
 
         wget https://github.com/googlefonts/roboto/releases/download/v2.138/roboto-android.zip
-        unzip roboto-android.zip Roboto-Regular.ttf; rm roboto-android.zip;
+        tar xf roboto-android.zip Roboto-Regular.ttf; rm roboto-android.zip;
 
         mkdir $output
-        cp script/extract_art build/tool/hh_asset_builder build/handmadehero build/libhandmadehero.so $output
+        cp script/extract_art build/hh_asset_builder build/handmadehero build/libhandmadehero.so $output
         mkdir $output/Roboto; mv Roboto-Regular.ttf $output/Roboto;
         tar cf - $output | zstd --ultra -22 -T0 -o $file
 

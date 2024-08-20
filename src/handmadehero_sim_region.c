@@ -203,9 +203,9 @@ EndSimRegion(struct sim_region *simRegion, struct game_state *state)
     StoreEntityReference(&stored->sim.sword);
 
     struct world_position *newPosition = 0;
+    struct world_position relativePositionFromOrigin = {};
     if (!EntityIsFlagSet(entity, ENTITY_FLAG_NONSPACIAL)) {
-      struct world_position relativePositionFromOrigin =
-          WorldPositionCalculate(state->world, &simRegion->origin, entity->position);
+      relativePositionFromOrigin = WorldPositionCalculate(state->world, &simRegion->origin, entity->position);
       newPosition = &relativePositionFromOrigin;
     }
 

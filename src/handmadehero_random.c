@@ -1,5 +1,5 @@
 #include <handmadehero/assert.h>
-#include <handmadehero/math.h>
+#include <handmadehero/math.h> // Lerp()
 #include <handmadehero/random.h>
 
 comptime u32 RandomNumberTable[] = {

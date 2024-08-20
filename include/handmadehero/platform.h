@@ -214,33 +214,54 @@ typedef b32 (*pfnGameOutputAudio)(struct game_memory *memory, struct game_audio_
 #if HANDMADEHERO_INTERNAL
 
 struct timed_block {
-  u64 tag;
-  u64 count;
-  u64 start;
+  u64 cycles;
+
+  char *filename;
+  char *function;
+  u32 line;
+
+  u32 count;
 };
 
-internal inline struct timed_block
-BeginTimedBlock(u64 tag, u64 count)
+global_variable struct timed_block TIMED_BLOCKS[10000];
+
+internal inline struct timed_block *
+BeginTimedBlock(u32 count, char *filename, u32 line, char *function)
 {
-  return (struct timed_block){.tag = tag, .count = count, .start = rdtsc()};
+  u32 timedBlockIndex = __COUNTER__;
+
+  struct timed_block *timedBlock = TIMED_BLOCKS + timedBlockIndex;
+  assert(timedBlockIndex < ARRAY_COUNT(TIMED_BLOCKS));
+
+  timedBlock->filename = filename;
+  timedBlock->function = function;
+  timedBlock->line = line;
+  timedBlock->count = count;
+  timedBlock->cycles = rdtsc();
+
+  return timedBlock;
 }
 
 internal inline void
-EndTimedBlock(struct timed_block *timedBlock)
+EndTimedBlock(struct timed_block **timedBlockPtr)
 {
   if (!DEBUG_GLOBAL_MEMORY)
     return;
 
-  DEBUG_GLOBAL_MEMORY->counters[timedBlock->tag].cycleCount += rdtsc() - timedBlock->start;
-  DEBUG_GLOBAL_MEMORY->counters[timedBlock->tag].hitCount += timedBlock->count;
+  struct timed_block *timedBlock = *timedBlockPtr;
+
+  // DEBUG_GLOBAL_MEMORY->counters[timedBlock->tag].cycleCount += rdtsc() - timedBlock->start;
+  // DEBUG_GLOBAL_MEMORY->counters[timedBlock->tag].hitCount += timedBlock->count;
 }
 
 // TODO: MSVC?
-#define TIMED_BLOCK(tag) __attribute__((cleanup(EndTimedBlock))) BEGIN_TIMED_BLOCK(tag)
-#define TIMED_BLOCK_COUNTED(tag, count)                                                                                \
-  __attribute((cleanup(EndTimedBlock))) struct timed_block timedBlock##tag = BeginTimedBlock(CYCLE_COUNTER_##tag, count)
+#define TIMED_BLOCK() __attribute__((cleanup(EndTimedBlock))) BEGIN_TIMED_BLOCK(__LINE__)
+#define TIMED_BLOCK_COUNTED(count)                                                                                     \
+  __attribute((cleanup(EndTimedBlock))) struct timed_block *timedBlock##tag =                                          \
+      BeginTimedBlock(count, __FILE__, __LINE__, (char *)__FUNCTION__)
 
-#define BEGIN_TIMED_BLOCK(tag) struct timed_block timedBlock##tag = BeginTimedBlock(CYCLE_COUNTER_##tag, 1)
+#define BEGIN_TIMED_BLOCK(tag)                                                                                         \
+  struct timed_block *timedBlock##tag = BeginTimedBlock(1, __FILE__, __LINE__, (char *)__FUNCTION__)
 #define END_TIMED_BLOCK(tag) EndTimedBlock(&timedBlock##tag)
 
 #else

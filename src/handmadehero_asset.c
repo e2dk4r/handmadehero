@@ -87,7 +87,7 @@ AssetGet(struct game_assets *assets, u32 assetIndex, u32 generationId)
   return header;
 }
 
-inline struct bitmap *
+struct bitmap *
 BitmapGet(struct game_assets *assets, struct bitmap_id id, u32 generationId)
 {
   struct asset_memory_header *header = AssetGet(assets, id.value, generationId);
@@ -95,7 +95,7 @@ BitmapGet(struct game_assets *assets, struct bitmap_id id, u32 generationId)
   return bitmap;
 }
 
-inline struct audio *
+struct audio *
 AudioGet(struct game_assets *assets, struct audio_id id, u32 generationId)
 {
   struct asset_memory_header *header = AssetGet(assets, id.value, generationId);
@@ -330,7 +330,7 @@ AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size, u32 ass
   return result;
 }
 
-inline struct game_assets *
+struct game_assets *
 GameAssetsAllocate(struct memory_arena *arena, memory_arena_size_t size, struct transient_state *transientState)
 {
   struct game_assets *assets = MemoryArenaPush(arena, sizeof(*assets));
@@ -688,7 +688,7 @@ BitmapInfoGet(struct game_assets *assets, struct bitmap_id id)
   return &info->bitmap;
 }
 
-inline void
+void
 AudioLoad(struct game_assets *assets, struct audio_id id)
 {
   if (id.value == 0)
@@ -792,7 +792,7 @@ IsAudioIdValid(struct audio_id id)
   return id.value != 0;
 }
 
-inline void
+void
 FontLoad(struct game_assets *assets, struct font_id id)
 {
   if (id.value == 0)
@@ -910,7 +910,7 @@ FontInfoGet(struct game_assets *assets, struct font_id id)
   return &info->font;
 }
 
-inline u32
+u32
 BeginGeneration(struct game_assets *assets)
 {
   BeginAssetLock(assets);
@@ -924,7 +924,7 @@ BeginGeneration(struct game_assets *assets)
   return generationId;
 }
 
-inline void
+void
 EndGeneration(struct game_assets *assets, u32 generationId)
 {
   BeginAssetLock(assets);

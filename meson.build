@@ -22,7 +22,7 @@ add_project_arguments(
 
 add_project_arguments(
   cc.get_supported_arguments([
-    '-O3',
+    #'-O3',
     '-march=x86-64-v3',
     '-funroll-loops',
     '-fomit-frame-pointer',
@@ -57,14 +57,14 @@ common_src = [
 ]
 if is_build_debug
   common_src += [
-    'src/debug.c',
+    'src/handmadehero_debug.c',
   ]
 endif
 
 # debug builds have handmadehero as dynamic library
 # and does not need to link with because of hot reload logic
 handmadehero_sources = [
-  'src/random.c',
+  'src/handmadehero_random.c',
   'src/handmadehero_asset.c',
   'src/handmadehero_audio.c',
   'src/handmadehero_entity.c',

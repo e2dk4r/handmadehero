@@ -1,13 +1,14 @@
-#include <handmadehero/assert.h>
 #include <handmadehero/debug.h>
-#include <handmadehero/types.h>
-#include <pthread.h>
 
 #if HANDMADEHERO_DEBUG
 
-#include <handmadehero/text.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
+
+#include <handmadehero/assert.h>
+#include <handmadehero/text.h>
+#include <handmadehero/types.h>
 
 void
 debug(const char *zeroTerminatedString)

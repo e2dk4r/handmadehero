@@ -347,7 +347,7 @@ DEBUGReset(struct game_assets *assets, u32 width, u32 height)
   atY = (0.5f * (f32)height) - (FontGetStartingBaselineY(fontInfo) * fontScale);
 }
 
-inline void
+void
 DEBUGTextLine(char *line)
 {
   struct render_group *renderGroup = DEBUG_TEXT_RENDER_GROUP;
@@ -816,7 +816,7 @@ internal inline void
 DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                      struct bitmap *texture, f32 pixelsToMeters, struct rect2s clipRect, b32 even)
 {
-  TIMED_BLOCK(DrawRectangleQuickly);
+  TIMED_BLOCK();
 
   f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
   f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
@@ -912,7 +912,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
 
   f32 inv255 = 1.0f / 255.0f;
 
-  TIMED_BLOCK_COUNTED(ProcessPixel, Rect2sArea(fillRect) / 2);
+  TIMED_BLOCK_COUNTED(Rect2sArea(fillRect) / 2);
   for (s32 y = fillRect.minY; y < fillRect.maxY; y += 2) {
     u32 *pixel = (u32 *)row;
 
@@ -1178,7 +1178,7 @@ DoTiledRenderWork(struct platform_work_queue *queue, void *data)
   DrawRenderGroupInterleaved(work->renderGroup, work->outputTarget, work->clipRect, 1);
 }
 
-inline void
+void
 TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_group *renderGroup,
                      struct bitmap *outputTarget)
 {
@@ -1253,7 +1253,7 @@ internal inline void
 DrawRenderGroupInterleaved(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2s clipRect,
                            b32 even)
 {
-  TIMED_BLOCK(DrawRenderGroup);
+  TIMED_BLOCK();
 
   f32 pixelsToMeters = 1.0f / renderGroup->transform.metersToPixels;
 
