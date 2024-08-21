@@ -19,7 +19,6 @@ jobs:
 
     - name: install packages
       run: sudo apt-get install -y --no-install-recommends --no-install-suggests
-           pkg-config
            libevdev-dev liburing-dev
            libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev
            libpipewire-0.3-dev;
