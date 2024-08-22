@@ -571,7 +571,7 @@
 - [x] Handmade Hero Day 176 - Introduction to Debug Infrastructure
       https://www.youtube.com/watch?v=vhSIwxAWDIY
 
-- [ ] Handmade Hero Day 177 - Automatic Performance Counters
+- [x] Handmade Hero Day 177 - Automatic Performance Counters
       https://www.youtube.com/watch?v=uHSLHvWFkto
 
 - [ ] Handmade Hero Day 178 - Thread-safe Performance Counters
