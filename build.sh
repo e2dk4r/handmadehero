@@ -126,8 +126,14 @@ cc="${CC:-clang}"
 IsCompilerGCC=$(StringStartsWith "$("$cc" --version | head -n 1 -c 32)" "gcc")
 IsCompilerClang=$(StringStartsWith "$("$cc" --version | head -n 1 -c 32)" "clang")
 if [ $IsCompilerGCC -eq 0 ] && [ $IsCompilerClang -eq 0 ]; then
-  echo "unsupported compiler $cc"
-  exit 1
+  echo "unsupported compiler $cc. continue (y/n)?"
+  read input
+  if [ "$input" != 'y' ] && [ "$input" != 'Y' ]; then
+    exit 1
+  fi
+
+  echo "Assuming $cc as GCC"
+  IsCompilerGCC=1
 fi
 
 IsTruetypeBackendFreetype=$(test $TruetypeBackend = 'freetype' && echo 1 || echo 0)
