@@ -36,7 +36,8 @@ jobs:
       if: ${{ startsWith(github.event.head_commit.message, 'watchlist:') }}
       continue-on-error: true
       run: |
-        sudo ln -sf /usr/bin/bsdtar /usr/bin/tar;
+        sudo apt-get install -y --no-install-recommends --no-install-suggests libarchive-tools
+        sudo ln -sf /usr/bin/bsdtar /usr/bin/tar
 
         day=$(echo ${{ github.event.head_commit.message }} | tr ' ' '\n' | tail -n 1)
         output=handmadehero-day-$day
