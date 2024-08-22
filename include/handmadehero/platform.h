@@ -220,24 +220,22 @@ struct timed_block {
   char *function;
   u32 line;
 
-  u32 count;
+  u32 hitCount;
 };
 
-global_variable struct timed_block TIMED_BLOCKS[10000];
+extern struct timed_block TIMED_BLOCKS[];
 
 internal inline struct timed_block *
-BeginTimedBlock(u32 count, char *filename, u32 line, char *function)
+BeginTimedBlock(u32 timedBlockIndex, u32 count, char *filename, u32 line, char *function)
 {
-  u32 timedBlockIndex = __COUNTER__;
-
   struct timed_block *timedBlock = TIMED_BLOCKS + timedBlockIndex;
-  assert(timedBlockIndex < ARRAY_COUNT(TIMED_BLOCKS));
 
   timedBlock->filename = filename;
   timedBlock->function = function;
   timedBlock->line = line;
-  timedBlock->count = count;
-  timedBlock->cycles = rdtsc();
+  timedBlock->hitCount += count;
+  timedBlock->cycles -= rdtsc();
+  timedBlock->hitCount++;
 
   return timedBlock;
 }
@@ -245,23 +243,19 @@ BeginTimedBlock(u32 count, char *filename, u32 line, char *function)
 internal inline void
 EndTimedBlock(struct timed_block **timedBlockPtr)
 {
-  if (!DEBUG_GLOBAL_MEMORY)
-    return;
-
   struct timed_block *timedBlock = *timedBlockPtr;
 
-  // DEBUG_GLOBAL_MEMORY->counters[timedBlock->tag].cycleCount += rdtsc() - timedBlock->start;
-  // DEBUG_GLOBAL_MEMORY->counters[timedBlock->tag].hitCount += timedBlock->count;
+  timedBlock->cycles += rdtsc();
 }
 
 // TODO: MSVC?
 #define TIMED_BLOCK() __attribute__((cleanup(EndTimedBlock))) BEGIN_TIMED_BLOCK(__LINE__)
 #define TIMED_BLOCK_COUNTED(count)                                                                                     \
   __attribute((cleanup(EndTimedBlock))) struct timed_block *timedBlock##tag =                                          \
-      BeginTimedBlock(count, __FILE__, __LINE__, (char *)__FUNCTION__)
+      BeginTimedBlock(__COUNTER__, count, __FILE__, __LINE__, (char *)__FUNCTION__)
 
 #define BEGIN_TIMED_BLOCK(tag)                                                                                         \
-  struct timed_block *timedBlock##tag = BeginTimedBlock(1, __FILE__, __LINE__, (char *)__FUNCTION__)
+  struct timed_block *timedBlock##tag = BeginTimedBlock(__COUNTER__, 1, __FILE__, __LINE__, (char *)__FUNCTION__)
 #define END_TIMED_BLOCK(tag) EndTimedBlock(&timedBlock##tag)
 
 #else

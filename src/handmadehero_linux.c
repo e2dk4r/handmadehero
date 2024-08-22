@@ -364,7 +364,7 @@ PlatformFreeMemory(void *address)
 internal void
 HandleCycleCounters(struct game_memory *memory)
 {
-#if HANDMADEHERO_INTERNAL
+#if 0 && HANDMADEHERO_INTERNAL
   debugf("CYCLE COUNTS:\n");
 
   char *counterNameTable[] = {"GameUpdateAndRender", "DrawRenderGroup",      "DrawRectangleSlowly",

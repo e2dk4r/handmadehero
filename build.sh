@@ -137,7 +137,7 @@ cflags="$CFLAGS"
 # standard
 cflags="$cflags -std=c99"
 # performance
-#cflags="$cflags -O3"
+cflags="$cflags -O3"
 if [ $(StringContains "$cflags" '-march=') -eq 0 ]; then
   cflags="$cflags -march=x86-64-v3"
 fi
@@ -154,7 +154,7 @@ cflags="$cflags -DCOMPILER_GCC=$IsCompilerGCC"
 cflags="$cflags -DCOMPILER_CLANG=$IsCompilerClang"
 
 if [ $IsBuildDebug -eq 1 ]; then
-  cflags="$cflags -g -O0"
+  #cflags="$cflags -g -O0"
   cflags="$cflags -DHANDMADEHERO_DEBUG=1"
   cflags="$cflags -DHANDMADEHERO_INTERNAL=1"
   cflags="$cflags -Wno-unused-but-set-variable"

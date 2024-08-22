@@ -634,32 +634,6 @@ FillGroundChunk(struct transient_state *transientState, struct game_state *state
   Platform->WorkQueueAddEntry(transientState->lowPriorityQueue, DoFillGroundChunkWork, work);
 }
 
-internal void
-OverlayCycleCounters(struct game_memory *memory)
-{
-#if HANDMADEHERO_INTERNAL
-  DEBUGTextLine("#7f1d1d#CYCLE #10b981#COUNTS:");
-
-  char *counterNameTable[] = {"GameUpdateAndRender", "DrawRenderGroup",      "DrawRectangleSlowly",
-                              "ProcessPixel",        "DrawRectangleQuickly", "AudioMixer"};
-  static_assert(ARRAY_COUNT(counterNameTable) == CYCLE_COUNTER_COUNT);
-  for (u32 counterIndex = 0; counterIndex < ARRAY_COUNT(memory->counters); counterIndex++) {
-    struct cycle_counter *counter = memory->counters + counterIndex;
-
-    if (counter->hitCount == 0)
-      continue;
-
-#if 0
-    debugf("  %s: %" PRIu64 "cy %" PRIu64 "h %" PRIu64 "cy/h\n", counterNameTable[counterIndex], counter->cycleCount,
-           counter->hitCount, counter->cycleCount / counter->hitCount);
-#else
-    DEBUGTextLine(counterNameTable[counterIndex]);
-#endif
-  }
-  DEBUGTextLine("/5c0f/8033/6728/514e");
-#endif
-}
-
 #if HANDMADEHERO_INTERNAL
 struct game_memory *DEBUG_GLOBAL_MEMORY;
 struct render_group *DEBUG_TEXT_RENDER_GROUP;
@@ -682,6 +656,11 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
 }
 
 struct platform_api *Platform;
+
+// needed by GameUpdateAndRender()
+internal void
+OverlayCycleCounters(struct game_memory *memory);
+
 void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer)
 {
@@ -1600,5 +1579,32 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
   OverlayCycleCounters(memory);
   TiledDrawRenderGroup(renderQueue, DEBUG_TEXT_RENDER_GROUP, &drawBuffer);
   RenderEnd(DEBUG_TEXT_RENDER_GROUP);
+#endif
+}
+
+#if HANDMADEHERO_INTERNAL
+struct timed_block TIMED_BLOCKS[__COUNTER__];
+#endif
+
+internal void
+OverlayCycleCounters(struct game_memory *memory)
+{
+#if HANDMADEHERO_INTERNAL
+  DEBUGTextLine("#7f1d1d#CYCLE #10b981#COUNTS:");
+
+  for (u32 timedBlockIndex = 0; timedBlockIndex < ARRAY_COUNT(TIMED_BLOCKS); timedBlockIndex++) {
+    struct timed_block *timedBlock = TIMED_BLOCKS + timedBlockIndex;
+
+    if (timedBlock->hitCount == 0)
+      continue;
+
+#if 0
+    debugf("  %s: %" PRIu64 "cy %" PRIu64 "h %" PRIu64 "cy/h\n", counterNameTable[counterIndex], counter->cycleCount,
+           counter->hitCount, counter->cycleCount / counter->hitCount);
+#else
+    DEBUGTextLine(timedBlock->function);
+#endif
+  }
+  DEBUGTextLine("/5c0f/8033/6728/514e");
 #endif
 }
