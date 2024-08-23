@@ -43,12 +43,17 @@ jobs:
         output=handmadehero-day-$day
         file=$output.tar.zst
 
+        # fonts
         wget https://github.com/googlefonts/roboto/releases/download/v2.138/roboto-android.zip
         tar xf roboto-android.zip Roboto-Regular.ttf; rm roboto-android.zip;
+
+        wget https://github.com/microsoft/cascadia-code/releases/download/v2404.23/CascadiaCode-2404.23.zip
+        tar xf CascadiaCode-2404.23.zip ttf/CascadiaMono.ttf; mv ttf/CascadiaMono.ttf ./; rmdir ttf; rm CascadiaCode-2404.23.zip;
 
         mkdir $output
         cp script/extract_art build/hh_asset_builder build/handmadehero build/libhandmadehero.so $output
         mkdir $output/Roboto; mv Roboto-Regular.ttf $output/Roboto;
+        mkdir $output/CascadiaCode; mv CascadiaMono.ttf $output/CascadiaCode;
         tar cf - $output | zstd --ultra -22 -T0 -o $file
 
         echo **Workflow run**: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID >> notes

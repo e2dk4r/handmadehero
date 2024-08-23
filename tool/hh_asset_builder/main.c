@@ -2082,23 +2082,40 @@ WriteFonts(void)
 
   // fonts
   BeginAssetType(context, ASSET_TYPE_FONT);
+
   char *fontPath = "Roboto/Roboto-Regular.ttf";
-  struct font_id fontId = AddFontAsset(context, fontPath);
+  struct font_id defaultFontId = AddFontAsset(context, fontPath);
+  AddAssetTag(context, ASSET_TAG_FONT_TYPE, ASSET_FONT_TYPE_DEFAULT);
+
+  fontPath = "CascadiaCode/CascadiaMono.ttf";
+  struct font_id debugFontId = AddFontAsset(context, fontPath);
+  AddAssetTag(context, ASSET_TAG_FONT_TYPE, ASSET_FONT_TYPE_DEBUG);
+
   EndAssetType(context);
 
+  // font glyphs
   BeginAssetType(context, ASSET_TYPE_FONT_GLYPH);
 
+  // -- DEFAULT FONT
+  struct font_id fontId = defaultFontId;
   AddFontGlyphAsset(context, fontId, ' ');
   // ascii
   for (u32 codepoint = '!'; codepoint <= '~'; codepoint++) {
     AddFontGlyphAsset(context, fontId, codepoint);
   }
-
   // Kanji Owl
   AddFontGlyphAsset(context, fontId, 0x5c0f);
   AddFontGlyphAsset(context, fontId, 0x8033);
   AddFontGlyphAsset(context, fontId, 0x6728);
   AddFontGlyphAsset(context, fontId, 0x514e);
+
+  // -- DEBUG FONT
+  fontId = debugFontId;
+  AddFontGlyphAsset(context, fontId, ' ');
+  // ascii
+  for (u32 codepoint = '!'; codepoint <= '~'; codepoint++) {
+    AddFontGlyphAsset(context, fontId, codepoint);
+  }
 
   EndAssetType(context);
 

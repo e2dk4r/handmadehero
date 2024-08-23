@@ -337,6 +337,8 @@ DEBUGReset(struct game_assets *assets, u32 width, u32 height)
 {
   struct asset_vector matchVector = {};
   struct asset_vector weightVector = {};
+  matchVector.e[ASSET_TAG_FONT_TYPE] = ASSET_FONT_TYPE_DEBUG;
+  weightVector.e[ASSET_TAG_FONT_TYPE] = 1.0f;
   fontId = BestMatchFont(assets, ASSET_TYPE_FONT, &matchVector, &weightVector);
 
   fontScale = 1.0f;

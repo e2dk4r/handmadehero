@@ -39,11 +39,17 @@ enum asset_type_id {
   ASSET_TYPE_COUNT
 };
 
+enum asset_font_type {
+  ASSET_FONT_TYPE_DEFAULT,
+  ASSET_FONT_TYPE_DEBUG,
+};
+
 enum asset_tag_id {
   ASSET_TAG_SMOOTHNESS,
   ASSET_TAG_FLATNESS,
   ASSET_TAG_FACING_DIRECTION, // angle in radians clockwise
   ASSET_TAG_UNICODE_CODEPOINT,
+  ASSET_TAG_FONT_TYPE, // see @asset_font_type
 
   ASSET_TAG_COUNT
 };
