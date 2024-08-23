@@ -274,6 +274,7 @@ struct audio_info {
 
 struct font_info {
   char *fontPath;
+  u32 pixelHeight;
 
   u32 maxGlyphCount;
   u32 glyphCount;
@@ -422,7 +423,7 @@ AddAudioAsset(struct asset_context *context, char *filename)
 // fontInfo.glyphs is allocated on heap, after used call DeallocateMemory() on it.
 // fontInfo.horizontalAdvanceTable is allocated on heap, after used call DeallocateMemory() on it.
 internal struct font_id
-AddFontAsset(struct asset_context *context, char *fontPath)
+AddFontAsset(struct asset_context *context, char *fontPath, u32 pixelHeight)
 {
   struct added_asset asset = AddAsset(context);
   struct asset_metadata *metadata = asset.metadata;
@@ -431,6 +432,7 @@ AddFontAsset(struct asset_context *context, char *fontPath)
   struct font_id id = {asset.id};
   struct font_info *fontInfo = &metadata->fontInfo;
   fontInfo->fontPath = fontPath;
+  fontInfo->pixelHeight = pixelHeight;
 
   // NOTE: 5k characters should be enough for one font
   fontInfo->maxGlyphCount = 5000;
@@ -969,7 +971,7 @@ struct load_font_glyph_result {
 // loadedFont._filememory is allocated on heap, after used call DeallocateMemory() on it.
 // horizontalAdvanceTable[codepointCount * codepointCount] must be initialized to zero
 internal struct load_font_result
-LoadFont(char *fontPath, u32 glyphCount, struct hha_font_glyph *glyphs, f32 *horizontalAdvanceTable);
+LoadFont(char *fontPath, u32 pixelHeight, u32 glyphCount, struct hha_font_glyph *glyphs, f32 *horizontalAdvanceTable);
 
 // loadedBitmap.memory is allocated on heap, after used call DeallocateMemory() on it.
 internal struct load_font_glyph_result
@@ -1134,7 +1136,7 @@ LoadFontGlyph(struct loaded_font *loadedFont, u32 codepoint)
 #elif TRUETYPE_BACKEND_STBTT
 
 internal struct load_font_result
-LoadFont(char *fontPath, u32 glyphCount, struct hha_font_glyph *glyphs, f32 *horizontalAdvanceTable)
+LoadFont(char *fontPath, u32 pixelHeight, u32 glyphCount, struct hha_font_glyph *glyphs, f32 *horizontalAdvanceTable)
 {
   struct load_font_result result = {};
   struct read_file_result ttfFile = ReadEntireFile(fontPath);
@@ -1159,7 +1161,7 @@ LoadFont(char *fontPath, u32 glyphCount, struct hha_font_glyph *glyphs, f32 *hor
     return result;
   }
 
-  loadedFont->scale = stbtt_ScaleForPixelHeight(font, 128.0f);
+  loadedFont->scale = stbtt_ScaleForPixelHeight(font, (f32)pixelHeight);
   int ascent, descent, lineGap;
   stbtt_GetFontVMetrics(font, &ascent, &descent, &lineGap);
   loadedFont->baseline = (s32)((f32)descent * loadedFont->scale);
@@ -1560,8 +1562,8 @@ WriteHHAFile(char *filename, struct asset_context *context)
 
     case ASSET_METADATA_TYPE_FONT: {
       struct font_info *fontInfo = &src->fontInfo;
-      struct load_font_result loadFontResult =
-          LoadFont(fontInfo->fontPath, fontInfo->glyphCount, fontInfo->glyphs, fontInfo->horizontalAdvanceTable);
+      struct load_font_result loadFontResult = LoadFont(fontInfo->fontPath, fontInfo->pixelHeight, fontInfo->glyphCount,
+                                                        fontInfo->glyphs, fontInfo->horizontalAdvanceTable);
 
       if (loadFontResult.error != HH_ASSET_BUILDER_ERROR_NONE) {
         switch (loadFontResult.error) {
@@ -2084,11 +2086,11 @@ WriteFonts(void)
   BeginAssetType(context, ASSET_TYPE_FONT);
 
   char *fontPath = "Roboto/Roboto-Regular.ttf";
-  struct font_id defaultFontId = AddFontAsset(context, fontPath);
+  struct font_id defaultFontId = AddFontAsset(context, fontPath, 128);
   AddAssetTag(context, ASSET_TAG_FONT_TYPE, ASSET_FONT_TYPE_DEFAULT);
 
-  fontPath = "CascadiaCode/CascadiaMono.ttf";
-  struct font_id debugFontId = AddFontAsset(context, fontPath);
+  fontPath = "liberation-fonts/LiberationMono-Regular.ttf";
+  struct font_id debugFontId = AddFontAsset(context, fontPath, 32);
   AddAssetTag(context, ASSET_TAG_FONT_TYPE, ASSET_FONT_TYPE_DEBUG);
 
   EndAssetType(context);
