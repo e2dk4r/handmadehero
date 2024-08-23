@@ -240,6 +240,7 @@ inline void
 EntityChangeLocation(struct memory_arena *arena, struct world *world, struct stored_entity *stored,
                      struct world_position *newPosition)
 {
+  TIMED_BLOCK();
   struct entity *entity = &stored->sim;
 
   struct world_position *oldPosition = 0;

@@ -136,6 +136,7 @@ struct sim_region *
 BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct world *world,
                struct world_position origin, struct rect bounds, f32 dt)
 {
+  TIMED_BLOCK();
   struct sim_region *simRegion = MemoryArenaPush(simArena, sizeof(*simRegion));
   ZeroMemory(simRegion->hashTable, sizeof(simRegion->hashTable));
 
@@ -194,6 +195,8 @@ BeginSimRegion(struct memory_arena *simArena, struct game_state *state, struct w
 void
 EndSimRegion(struct sim_region *simRegion, struct game_state *state)
 {
+  TIMED_BLOCK();
+
   for (u32 entityIndex = 0; entityIndex < simRegion->entityCount; entityIndex++) {
     struct entity *entity = simRegion->entities + entityIndex;
     struct stored_entity *stored = state->storedEntities + entity->storageIndex;
@@ -295,6 +298,7 @@ ShouldEntitiesOverlap(struct entity *moving, struct entity *against)
 internal inline u8
 AreEntitiesOverlapping(struct entity *entity, struct entity *testEntity)
 {
+  TIMED_BLOCK();
   u8 overlapping = 0;
 
   for (u32 entityVolumeIndex = 0; !overlapping && entityVolumeIndex < entity->collision->volumeCount;
@@ -386,6 +390,8 @@ void
 EntityMove(struct game_state *state, struct sim_region *simRegion, struct entity *entity, f32 dt,
            const struct move_spec *moveSpec, struct v3 ddPosition)
 {
+  TIMED_BLOCK();
+
   if (entity->type & ENTITY_TYPE_HERO) {
     u32 breakHere = 1;
   }

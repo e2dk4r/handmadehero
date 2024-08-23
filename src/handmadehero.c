@@ -1586,6 +1586,8 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 struct timed_block TIMED_BLOCKS[__COUNTER__];
 #endif
 
+#include <stdio.h>
+
 internal void
 OverlayCycleCounters(struct game_memory *memory)
 {
@@ -1598,12 +1600,18 @@ OverlayCycleCounters(struct game_memory *memory)
     if (timedBlock->hitCount == 0)
       continue;
 
-#if 0
-    debugf("  %s: %" PRIu64 "cy %" PRIu64 "h %" PRIu64 "cy/h\n", counterNameTable[counterIndex], counter->cycleCount,
-           counter->hitCount, counter->cycleCount / counter->hitCount);
+#if 1
+    char buf[64];
+    // TODO: replace this! and remove <stdio.h>
+    snprintf(buf, sizeof(buf), "%s: %lucy %uh %lucy/h", timedBlock->function, timedBlock->cycles, timedBlock->hitCount,
+             timedBlock->cycles / timedBlock->hitCount);
+    DEBUGTextLine(buf);
 #else
     DEBUGTextLine(timedBlock->function);
 #endif
+
+    timedBlock->cycles = 0;
+    timedBlock->hitCount = 0;
   }
   DEBUGTextLine("/5c0f/8033/6728/514e");
 #endif

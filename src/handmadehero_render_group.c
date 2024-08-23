@@ -818,8 +818,6 @@ internal inline void
 DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, struct v2 yAxis, struct v4 color,
                      struct bitmap *texture, f32 pixelsToMeters, struct rect2s clipRect, b32 even)
 {
-  TIMED_BLOCK();
-
   f32 InvXAxisLengthSq = 1.0f / v2_length_square(xAxis);
   f32 InvYAxisLengthSq = 1.0f / v2_length_square(yAxis);
 
@@ -914,7 +912,7 @@ DrawRectangleQuickly(struct bitmap *buffer, struct v2 origin, struct v2 xAxis, s
 
   f32 inv255 = 1.0f / 255.0f;
 
-  TIMED_BLOCK_COUNTED(Rect2sArea(fillRect) / 2);
+  // TIMED_BLOCK_COUNTED(Rect2sArea(fillRect) / 2);
   for (s32 y = fillRect.minY; y < fillRect.maxY; y += 2) {
     u32 *pixel = (u32 *)row;
 
@@ -1184,6 +1182,8 @@ void
 TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_group *renderGroup,
                      struct bitmap *outputTarget)
 {
+  TIMED_BLOCK();
+
   /* TODO(e2dk4r):
    *
    *   - make sure that tiles are cache-aligned
@@ -1242,6 +1242,8 @@ TiledDrawRenderGroup(struct platform_work_queue *renderQueue, struct render_grou
 void
 DrawRenderGroup(struct render_group *renderGroup, struct bitmap *outputTarget)
 {
+  TIMED_BLOCK();
+
   struct rect2s clipRect = {
       .maxX = (s32)outputTarget->width,
       .maxY = (s32)outputTarget->height,
@@ -1255,8 +1257,6 @@ internal inline void
 DrawRenderGroupInterleaved(struct render_group *renderGroup, struct bitmap *outputTarget, struct rect2s clipRect,
                            b32 even)
 {
-  TIMED_BLOCK();
-
   f32 pixelsToMeters = 1.0f / renderGroup->transform.metersToPixels;
 
   for (u32 pushBufferIndex = 0; pushBufferIndex < renderGroup->pushBufferSize;) {
