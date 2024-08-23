@@ -5,4 +5,4 @@ lib=""
 
 StartTimer
 "$cc" $cflags $ldflags $inc -o "$output" $src $lib
-[ $? -eq 0 ] && Log "hh_record_read compiled in $(StopTimer) seconds."
+[ $? -eq 0 ] && echo "hh_record_read compiled in $(StopTimer) seconds."

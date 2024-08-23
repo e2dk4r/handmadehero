@@ -22,4 +22,4 @@ cflagsSpecial="$cflagsSpecial -DTRUETYPE_BACKEND_STBTT=$IsTruetypeBackendSTBTT"
 cflagsSpecial="${cflagsSpecial# }"
 
 "$cc" $cflags $cflagsSpecial $ldflags $inc -o "$output" $src $lib
-[ $? -eq 0 ] && Log "hh_asset_builder compiled in $(StopTimer) seconds."
+[ $? -eq 0 ] && echo "hh_asset_builder compiled in $(StopTimer) seconds."
