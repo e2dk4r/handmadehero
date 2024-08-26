@@ -212,9 +212,11 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *buffer);
 typedef b32 (*pfnGameOutputAudio)(struct game_memory *memory, struct game_audio_buffer *buffer);
 
 #if HANDMADEHERO_INTERNAL
+#include "atomic.h"
 
 struct timed_block {
   u64 cycles;
+  u64 startCycles;
 
   char *filename;
   char *function;
@@ -233,9 +235,9 @@ BeginTimedBlock(u32 timedBlockIndex, u32 count, char *filename, u32 line, char *
   timedBlock->filename = filename;
   timedBlock->function = function;
   timedBlock->line = line;
-  timedBlock->hitCount += count;
-  timedBlock->cycles -= rdtsc();
-  timedBlock->hitCount++;
+  timedBlock->startCycles = rdtsc();
+
+  AtomicFetchAdd(&timedBlock->hitCount, count);
 
   return timedBlock;
 }
@@ -245,7 +247,8 @@ EndTimedBlock(struct timed_block **timedBlockPtr)
 {
   struct timed_block *timedBlock = *timedBlockPtr;
 
-  timedBlock->cycles += rdtsc();
+  u64 elapsedCycles = rdtsc() - timedBlock->startCycles;
+  AtomicFetchAdd(&timedBlock->cycles, elapsedCycles);
 }
 
 // TODO: MSVC?
