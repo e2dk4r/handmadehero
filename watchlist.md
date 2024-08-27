@@ -574,7 +574,7 @@
 - [x] Handmade Hero Day 177 - Automatic Performance Counters
       https://www.youtube.com/watch?v=uHSLHvWFkto
 
-- [ ] Handmade Hero Day 178 - Thread-safe Performance Counters
+- [x] Handmade Hero Day 178 - Thread-safe Performance Counters
       https://www.youtube.com/watch?v=oDZ-sh0cKoY
 
 - [ ] Handmade Hero Day 179 - Tracking Debug Information Over Time
