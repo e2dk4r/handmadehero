@@ -1597,21 +1597,21 @@ OverlayCycleCounters(struct game_memory *memory)
   for (u32 timedBlockIndex = 0; timedBlockIndex < ARRAY_COUNT(TIMED_BLOCKS); timedBlockIndex++) {
     struct timed_block *timedBlock = TIMED_BLOCKS + timedBlockIndex;
 
-    if (timedBlock->hitCount == 0)
+    u64 hitCount_cycleCount = AtomicExchange(&timedBlock->hitCount_cycleCount, 0);
+    u32 hitCount = (u32)(hitCount_cycleCount >> 32);
+    u32 cycleCount = (u32)(hitCount_cycleCount & U32_MAX);
+    if (hitCount == 0)
       continue;
 
 #if 1
     char buf[64];
     // TODO: replace this! and remove <stdio.h>
-    snprintf(buf, sizeof(buf), "%s: %lucy %uh %lucy/h", timedBlock->function, timedBlock->cycles, timedBlock->hitCount,
-             timedBlock->cycles / timedBlock->hitCount);
+    snprintf(buf, sizeof(buf), "%s@%u %ucy %uh %ucy/h", timedBlock->function, timedBlock->line, cycleCount, hitCount,
+             cycleCount / hitCount);
     DEBUGTextLine(buf);
 #else
     DEBUGTextLine(timedBlock->function);
 #endif
-
-    timedBlock->cycles = 0;
-    timedBlock->hitCount = 0;
   }
   DEBUGTextLine("/5c0f/8033/6728/514e");
 #endif

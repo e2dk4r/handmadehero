@@ -4,6 +4,7 @@
 #if COMPILER_GCC || COMPILER_CLANG
 
 #define AtomicStore(ptr, value) __atomic_store_n(ptr, value, __ATOMIC_RELEASE)
+#define AtomicExchange(ptr, value) __atomic_exchange_n(ptr, value, __ATOMIC_ACQ_REL)
 #define AtomicCompareExchange(ptr, expected, desired)                                                                  \
   __atomic_compare_exchange_n(ptr, expected, desired, 1, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)
 #define AtomicCompareExchangeExplicit(ptr, expected, desired, weak, successMemOrder, failureMemOrder)                  \

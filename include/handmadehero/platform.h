@@ -215,14 +215,15 @@ typedef b32 (*pfnGameOutputAudio)(struct game_memory *memory, struct game_audio_
 #include "atomic.h"
 
 struct timed_block {
-  u64 cycles;
   u64 startCycles;
+  // hitCount stored in high 32 bits, and cycleCount in low
+  u64 hitCount_cycleCount;
 
   char *filename;
   char *function;
-  u32 line;
 
   u32 hitCount;
+  u32 line;
 };
 
 extern struct timed_block TIMED_BLOCKS[];
@@ -236,8 +237,7 @@ BeginTimedBlock(u32 timedBlockIndex, u32 count, char *filename, u32 line, char *
   timedBlock->function = function;
   timedBlock->line = line;
   timedBlock->startCycles = rdtsc();
-
-  AtomicFetchAdd(&timedBlock->hitCount, count);
+  timedBlock->hitCount = count;
 
   return timedBlock;
 }
@@ -248,7 +248,8 @@ EndTimedBlock(struct timed_block **timedBlockPtr)
   struct timed_block *timedBlock = *timedBlockPtr;
 
   u64 elapsedCycles = rdtsc() - timedBlock->startCycles;
-  AtomicFetchAdd(&timedBlock->cycles, elapsedCycles);
+  u64 shiftedHitCount = (u64)timedBlock->hitCount << 32;
+  AtomicFetchAdd(&timedBlock->hitCount_cycleCount, elapsedCycles | shiftedHitCount);
 }
 
 // TODO: MSVC?
