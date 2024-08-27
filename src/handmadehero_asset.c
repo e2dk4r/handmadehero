@@ -228,6 +228,8 @@ FindMemoryBlockForSize(struct game_assets *assets, memory_arena_size_t size)
 internal b32
 MergeMemoryBlock(struct game_assets *assets, struct asset_memory_block *first, struct asset_memory_block *second)
 {
+  TIMED_BLOCK();
+
   b32 isMerged = 0;
   if (first == &assets->memorySentiel || second == &assets->memorySentiel)
     return isMerged;
@@ -270,6 +272,8 @@ HasGenerationCompleted(struct game_assets *assets, u32 generationId)
 internal struct asset_memory_header *
 AcquireAssetMemory(struct game_assets *assets, memory_arena_size_t size, u32 assetIndex)
 {
+  TIMED_BLOCK();
+
   struct asset_memory_header *result = 0;
 
   BeginAssetLock(assets);
@@ -668,6 +672,8 @@ BitmapLoad(struct game_assets *assets, struct bitmap_id id)
 inline void
 BitmapLoadImmediate(struct game_assets *assets, struct bitmap_id id)
 {
+  TIMED_BLOCK();
+
   _BitmapLoad(assets, id, 1);
 }
 
@@ -693,6 +699,8 @@ AudioLoad(struct game_assets *assets, struct audio_id id)
 {
   if (id.value == 0)
     return;
+
+  TIMED_BLOCK();
 
   struct asset *asset = assets->assets + id.value;
 
