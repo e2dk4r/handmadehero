@@ -1604,15 +1604,15 @@ OverlayCycleCounters(struct game_memory *memory)
       continue;
 
 #if 1
-    char buf[64];
+    char buf[128];
     // TODO: replace this! and remove <stdio.h>
-    snprintf(buf, sizeof(buf), "%s@%u %ucy %uh %ucy/h", timedBlock->function, timedBlock->line, cycleCount, hitCount,
-             cycleCount / hitCount);
+    snprintf(buf, sizeof(buf), "%32s(%4u): %10ucy %8uh %10ucy/h", timedBlock->function, timedBlock->line, cycleCount,
+             hitCount, cycleCount / hitCount);
     DEBUGTextLine(buf);
 #else
     DEBUGTextLine(timedBlock->function);
 #endif
   }
-  DEBUGTextLine("/5c0f/8033/6728/514e");
+  // DEBUGTextLine("/5c0f/8033/6728/514e");
 #endif
 }
