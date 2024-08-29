@@ -1,3 +1,4 @@
+# vi: set et ft=sh ts=2 sw=2 fenc=utf-8 :vi
 WaylandProtocolsDir=$(pkg-config --variable=pkgdatadir wayland-protocols)
 WaylandProtocolsDir=${WaylandProtocolsDir%/}
 if [ -z "$WaylandProtocolsDir" ]; then

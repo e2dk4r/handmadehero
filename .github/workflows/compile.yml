@@ -23,12 +23,8 @@ jobs:
            libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev
            libpipewire-0.3-dev;
 
-    - name: configure
-      run: sed -i 's/IsTestsEnabled=1/IsTestsEnabled=0/' build.sh;
-           sed -i 's/IsToolEnabled_hh_asset_builder=0/IsToolEnabled_hh_asset_builder=1/' build.sh;
-
     - name: compile
-      run: ./build.sh
+      run: ./build.sh hh_asset_builder
 
     - name: release
       env:

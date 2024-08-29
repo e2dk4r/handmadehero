@@ -21,8 +21,5 @@ jobs:
            libwayland-dev libwayland-client0 wayland-protocols libxkbcommon-dev
            libpipewire-0.3-dev;
 
-    - name: configure
-      run: sed -i 's/IsBuildEnabled=1/IsBuildEnabled=0/' build.sh
-
     - name: test
-      run: CC=gcc ./build.sh
+      run: ./build.sh test

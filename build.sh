@@ -1,15 +1,104 @@
 #!/bin/sh
+# vi: set et ft=sh ts=2 sw=2 fenc=utf-8 :vi
 export LC_ALL=C
 export TZ=UTC
 
 IsBuildDebug=1
 IsBuildEnabled=1
-IsTestsEnabled=1
+IsTestsEnabled=0
 IsToolEnabled_hh_record_read=0
 IsToolEnabled_hh_asset_builder=0
 
 # Possible values: stbtt, freetype
 TruetypeBackend='stbtt'
+IsTruetypeBackendSTBTT=1
+IsTruetypeBackendFreetype=0
+
+usage() {
+  cat <<EOF
+  NAME
+    build.sh [OPTIONS]
+  
+  DESCRIPTION
+    Build script of handmadehero.
+  
+  OPTIONS
+    --disable-handmadehero
+      Do not build handmadehero binary.
+
+    --truetype-backend=stbtt|freetype
+      Which library used for font rendering.
+      Relevant for hh_asset_builder.
+
+    test
+      Run tests.
+
+    hh_record_read
+      Build hh_record_read tool.
+
+    hh_asset_builder
+      Build hh_asset_builder tool.
+
+    -h, --help
+      Display help page.
+
+  EXAMPLES
+     $ ./build.sh
+     Build only the handmadehero
+
+     $ ./build.sh --disable-handmadehero hh_asset_builder
+     Build only the hh_asset_builder tool.
+EOF
+}
+
+for i in "$@"; do
+  case $i in
+    --debug)
+      IsBuildDebug=1
+    ;;
+    --truetype-backend=*)
+      TruetypeBackend="${i#*=}"
+
+      IsTruetypeBackendSTBTT=0
+      IsTruetypeBackendFreetype=0
+      if [ "$TruetypeBackend" = 'freetype' ]; then
+        IsTruetypeBackendFreetype=1
+      elif [ "$TruetypeBackend" = 'stbtt' ]; then
+        IsTruetypeBackendSTBTT=1
+      fi
+
+      if [ $IsTruetypeBackendFreetype -eq 0 ] && [ $IsTruetypeBackendSTBTT -eq 0 ]; then
+        echo "truetype backend '$TruetypeBackend' is not recognized"
+        echo "possible values:"
+        echo "  - stbtt"
+        echo "  - freetype"
+        exit 1
+      fi
+      ;;
+    --disable-handmadehero)
+      IsBuildEnabled=0
+      ;;
+    test|tests)
+      IsBuildEnabled=0
+      IsTestsEnabled=1
+      ;;
+    tool/hh_record_read/|tool/hh_record_read|hh_record_read)
+      IsToolEnabled_hh_record_read=1
+      ;;
+    tool/hh_asset_builder/|tool/hh_asset_builder|hh_asset_builder)
+      IsToolEnabled_hh_asset_builder=1
+    ;;
+    -h|-help|--help)
+      usage
+      exit 0
+    ;;
+    *)
+      echo "argument $i not recognized"
+      usage
+      exit 1
+    ;;
+  esac
+done
 
 ################################################################
 # TEXT FUNCTIONS
@@ -135,9 +224,6 @@ if [ $IsCompilerGCC -eq 0 ] && [ $IsCompilerClang -eq 0 ]; then
   echo "Assuming $cc as GCC"
   IsCompilerGCC=1
 fi
-
-IsTruetypeBackendFreetype=$(test $TruetypeBackend = 'freetype' && echo 1 || echo 0)
-IsTruetypeBackendSTBTT=$(test $TruetypeBackend = 'stbtt' && echo 1 || echo 0)
 
 cflags="$CFLAGS"
 # standard

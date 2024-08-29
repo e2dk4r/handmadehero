@@ -1,3 +1,4 @@
+# vi: set et ft=sh ts=2 sw=2 fenc=utf-8 :vi
 inc="-I$ProjectRoot/include"
 src="$ProjectRoot/tool/hh_record_read/main.c"
 output="$OutputDir/hh_record_read"
