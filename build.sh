@@ -23,6 +23,13 @@ usage() {
     Build script of handmadehero.
   
   OPTIONS
+    --debug
+      Build with debugging information.
+
+    --build-directory=path
+      Build executables in this folder. If directory not exists, one will be
+      created.
+
     --disable-handmadehero
       Do not build handmadehero binary.
 
@@ -55,6 +62,9 @@ for i in "$@"; do
   case $i in
     --debug)
       IsBuildDebug=1
+    ;;
+    --build-directory=*)
+      OutputDir="${i#*=}"
     ;;
     --truetype-backend=*)
       TruetypeBackend="${i#*=}"
@@ -198,7 +208,7 @@ if [ "$(pwd)" != "$ProjectRoot" ]; then
   exit 1
 fi
 
-OutputDir="$ProjectRoot/build"
+OutputDir="${OutputDir:-$ProjectRoot/build}"
 if [ ! -e "$OutputDir" ]; then
   mkdir "$OutputDir"
 
