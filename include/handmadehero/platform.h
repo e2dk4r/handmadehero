@@ -168,6 +168,9 @@ struct game_memory {
   u64 transientStorageSize;
   void *transientStorage;
 
+  u64 debugStorageSize;
+  void *debugStorage;
+
   struct platform_work_queue *highPriorityQueue;
   struct platform_work_queue *lowPriorityQueue;
 
@@ -194,6 +197,17 @@ struct game_audio_buffer {
 b32
 GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *buffer);
 typedef b32 (*pfnGameOutputAudio)(struct game_memory *memory, struct game_audio_buffer *buffer);
+
+struct game_frame_info {
+};
+
+void
+GameFrameEnd(struct game_memory *memory, struct game_frame_info *info);
+typedef void (*pfnGameFrameEnd)(struct game_memory *memory, struct game_frame_info *info);
+
+/*****************************************************************
+ * DEBUG TIMERS
+ *****************************************************************/
 
 #if HANDMADEHERO_INTERNAL
 #include "atomic.h"
@@ -252,5 +266,23 @@ EndTimedBlock(struct timed_block **timedBlockPtr)
 #define END_TIMED_BLOCK(tag)
 
 #endif
+
+struct debug_counter_snapshot {
+  u32 hitCount;
+  u32 cycleCount;
+};
+
+struct debug_counter_state {
+  char *filename;
+  char *function;
+  u32 line;
+
+  struct debug_counter_snapshot snapshots[128];
+};
+
+struct debug_state {
+  struct debug_counter_state counterStates[512];
+  u32 counterCount;
+};
 
 #endif /* HANDMADEHERO_PLATFORM_H */

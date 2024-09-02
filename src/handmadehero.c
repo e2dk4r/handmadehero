@@ -657,9 +657,31 @@ GameOutputAudio(struct game_memory *memory, struct game_audio_buffer *audioBuffe
 
 struct platform_api *Platform;
 
-// needed by GameUpdateAndRender()
+// TODO: stop using sprintf()
+#include <stdio.h>
+
 internal void
-OverlayCycleCounters(struct game_memory *memory);
+OverlayCycleCounters(struct game_memory *memory)
+{
+  struct debug_state *debugState = memory->debugStorage;
+  if (!debugState)
+    return;
+
+  DEBUGTextLine("#7f1d1d#CYCLE #10b981#COUNTS:");
+  for (u32 counterIndex = 0; counterIndex < debugState->counterCount; counterIndex++) {
+    struct debug_counter_state *counterState = debugState->counterStates + counterIndex;
+
+    // TODO: consider multiple snapshots
+    struct debug_counter_snapshot *snapshot = counterState->snapshots + 0;
+    if (snapshot->hitCount == 0)
+      continue;
+
+    char buf[128];
+    snprintf(buf, sizeof(buf), "%32s(%4u): %10ucy %8uh %10ucy/h", counterState->function, counterState->line,
+             snapshot->cycleCount, snapshot->hitCount, snapshot->cycleCount / snapshot->hitCount);
+    DEBUGTextLine(buf);
+  }
+}
 
 void
 GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct game_backbuffer *backbuffer)
@@ -1586,33 +1608,33 @@ GameUpdateAndRender(struct game_memory *memory, struct game_input *input, struct
 struct timed_block TIMED_BLOCKS[__COUNTER__];
 #endif
 
-#include <stdio.h>
-
-internal void
-OverlayCycleCounters(struct game_memory *memory)
+void
+GameFrameEnd(struct game_memory *memory, struct game_frame_info *info)
 {
-#if HANDMADEHERO_INTERNAL
-  DEBUGTextLine("#7f1d1d#CYCLE #10b981#COUNTS:");
+  struct debug_state *debugState = memory->debugStorage;
+  if (!debugState)
+    return;
 
+  debugState->counterCount = 0;
+
+  // update timed blocks
   for (u32 timedBlockIndex = 0; timedBlockIndex < ARRAY_COUNT(TIMED_BLOCKS); timedBlockIndex++) {
-    struct timed_block *timedBlock = TIMED_BLOCKS + timedBlockIndex;
+    struct timed_block *src = TIMED_BLOCKS + timedBlockIndex;
 
-    u64 hitCount_cycleCount = AtomicExchange(&timedBlock->hitCount_cycleCount, 0);
+    u64 hitCount_cycleCount = AtomicExchange(&src->hitCount_cycleCount, 0);
     u32 hitCount = (u32)(hitCount_cycleCount >> 32);
     u32 cycleCount = (u32)(hitCount_cycleCount & U32_MAX);
-    if (hitCount == 0)
-      continue;
 
-#if 1
-    char buf[128];
-    // TODO: replace this! and remove <stdio.h>
-    snprintf(buf, sizeof(buf), "%32s(%4u): %10ucy %8uh %10ucy/h", timedBlock->function, timedBlock->line, cycleCount,
-             hitCount, cycleCount / hitCount);
-    DEBUGTextLine(buf);
-#else
-    DEBUGTextLine(timedBlock->function);
-#endif
+    struct debug_counter_state *dest = debugState->counterStates + debugState->counterCount;
+    dest->filename = src->filename;
+    dest->function = src->function;
+    dest->line = src->line;
+
+    // TODO: consider multiple snapshots
+    struct debug_counter_snapshot *destSnapshot = dest->snapshots + 0;
+    destSnapshot->hitCount = hitCount;
+    destSnapshot->cycleCount = cycleCount;
+
+    debugState->counterCount++;
   }
-  // DEBUGTextLine("/5c0f/8033/6728/514e");
-#endif
 }

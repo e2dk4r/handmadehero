@@ -391,16 +391,21 @@ HandleCycleCounters(struct game_memory *memory)
  *****************************************************************/
 
 internal u8
-game_memory_allocation(struct game_memory *memory, u64 permanentStorageSize, u64 transientStorageSize)
+game_memory_allocation(struct game_memory *memory, u64 permanentStorageSize, u64 transientStorageSize,
+                       u64 debugStorageSize)
 {
   memory->permanentStorageSize = permanentStorageSize;
   memory->transientStorageSize = transientStorageSize;
-  u64 len = memory->permanentStorageSize + memory->transientStorageSize;
+  memory->debugStorageSize = debugStorageSize;
+  u64 len = memory->permanentStorageSize + memory->transientStorageSize + memory->debugStorageSize;
 
   void *data = mmap(0, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
   memory->permanentStorage = data;
   memory->transientStorage = data + permanentStorageSize;
+
+  if (debugStorageSize)
+    memory->debugStorage = data + permanentStorageSize + transientStorageSize;
 
   u8 is_allocation_failed = data == (void *)-1;
   return is_allocation_failed;
@@ -427,6 +432,7 @@ struct game_code {
 
   pfnGameUpdateAndRender GameUpdateAndRender;
   pfnGameOutputAudio GameOutputAudio;
+  pfnGameFrameEnd GameFrameEnd;
 };
 
 internal u8
@@ -467,6 +473,9 @@ ReloadGameCode(struct game_code *lib)
 
   lib->GameOutputAudio = dlsym(lib->module, "GameOutputAudio");
   assert(lib->GameOutputAudio != 0 && "wrong module format");
+
+  lib->GameFrameEnd = dlsym(lib->module, "GameFrameEnd");
+  // assert(lib->GameFrame != 0 && "wrong module format"); not required
 
   // update module time
   lib->time = sb.st_mtime;
@@ -1228,6 +1237,7 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
 
     // game layer
     pfnGameUpdateAndRender GameUpdateAndRender = state->lib.GameUpdateAndRender;
+    pfnGameFrameEnd GameFrameEnd = state->lib.GameFrameEnd;
 #endif
 
     struct game_backbuffer *backbuffer = &state->backbuffer;
@@ -1248,6 +1258,11 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
     struct game_input *newInputToBe = oldInput;
     newInputToBe->gameCodeReloaded = (u8)(ReloadGameCode(&state->lib) & 0x1);
 #endif
+
+    if (GameFrameEnd) {
+      struct game_frame_info frameInfo;
+      GameFrameEnd(&state->game_memory, &frameInfo);
+    }
   }
 }
 
@@ -1657,7 +1672,11 @@ main(int argc, char *argv[])
 
   /* game: mem allocation */
   struct game_memory *game_memory = &state.game_memory;
-  if (game_memory_allocation(game_memory, 256 * MEGABYTES, 1 * GIGABYTES)) {
+  u64 debugStorageSize = 0;
+#if HANDMADEHERO_DEBUG
+  debugStorageSize = 32 * MEGABYTES;
+#endif
+  if (game_memory_allocation(game_memory, 256 * MEGABYTES, 1 * GIGABYTES, debugStorageSize)) {
     comptime char msg[] = "error: cannot allocate memory!\n";
     comptime u64 msgLength = sizeof(msg) - 1;
     write(STDERR_FILENO, msg, msgLength);
