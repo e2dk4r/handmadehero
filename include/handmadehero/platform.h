@@ -283,6 +283,7 @@ struct debug_counter_state {
 struct debug_state {
   struct debug_counter_state counterStates[512];
   u32 counterCount;
+  u32 snapshotCount;
 };
 
 #endif /* HANDMADEHERO_PLATFORM_H */

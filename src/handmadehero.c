@@ -1616,6 +1616,7 @@ GameFrameEnd(struct game_memory *memory, struct game_frame_info *info)
     return;
 
   debugState->counterCount = 0;
+  u32 snapshotIndex = debugState->snapshotCount++;
 
   // update timed blocks
   for (u32 timedBlockIndex = 0; timedBlockIndex < ARRAY_COUNT(TIMED_BLOCKS); timedBlockIndex++) {
@@ -1630,11 +1631,13 @@ GameFrameEnd(struct game_memory *memory, struct game_frame_info *info)
     dest->function = src->function;
     dest->line = src->line;
 
-    // TODO: consider multiple snapshots
-    struct debug_counter_snapshot *destSnapshot = dest->snapshots + 0;
+    struct debug_counter_snapshot *destSnapshot = dest->snapshots + snapshotIndex;
     destSnapshot->hitCount = hitCount;
     destSnapshot->cycleCount = cycleCount;
 
     debugState->counterCount++;
   }
+
+  if (debugState->snapshotCount == ARRAY_COUNT(((struct debug_counter_state *)0)->snapshots))
+    debugState->snapshotCount = 0;
 }
