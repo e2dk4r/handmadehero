@@ -50,21 +50,6 @@ void
 PlatformFreeMemory(void *address);
 typedef void (*pfnPlatformFreeMemory)(void *address);
 
-enum {
-  CYCLE_COUNTER_GameUpdateAndRender,
-  CYCLE_COUNTER_DrawRenderGroup,
-  CYCLE_COUNTER_DrawRectangleSlowly,
-  CYCLE_COUNTER_ProcessPixel,
-  CYCLE_COUNTER_DrawRectangleQuickly,
-  CYCLE_COUNTER_AudioMixer,
-  CYCLE_COUNTER_COUNT
-};
-
-struct cycle_counter {
-  u64 cycleCount;
-  u64 hitCount;
-};
-
 static __inline__ u64
 rdtsc(void)
 {
@@ -189,7 +174,6 @@ struct game_memory {
   struct platform_api platform;
 
 #if HANDMADEHERO_INTERNAL
-  struct cycle_counter counters[CYCLE_COUNTER_COUNT];
   struct render_group *DEBUGtextRenderGroup;
 #endif
 };
