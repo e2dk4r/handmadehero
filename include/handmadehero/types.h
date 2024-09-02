@@ -33,8 +33,12 @@ typedef u32 b32;
 #define U32_MAX (4294967295U)
 #define U64_MAX (18446744073709551615UL)
 
-#define F32_MIN __FLT_MIN__;
-#define F32_MAX __FLT_MAX__;
+#define F32_MIN __FLT_MIN__
+#define F32_MAX __FLT_MAX__
+#define F32_LOWEST (-F32_MAX)
+#define F64_MIN __DBL_MIN__
+#define F64_MAX __DBL_MAX__
+#define F64_LOWEST (-F64_MAX)
 
 #define comptime static const
 #define internal static
