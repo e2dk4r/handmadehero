@@ -51,7 +51,7 @@
 #include <handmadehero/platform.h>
 #include <handmadehero/text.h>
 
-#include "handmadehero_debug.c"
+#include "handmadehero_debugf.c"
 #include "handmadehero_memory_arena.c"
 
 #define PAUSE_WHEN_SURFACE_OUT_OF_FOCUS 0

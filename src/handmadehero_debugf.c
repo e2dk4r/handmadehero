@@ -1,4 +1,4 @@
-#include <handmadehero/debug.h>
+#include <handmadehero/debugf.h>
 
 #if HANDMADEHERO_DEBUG
 
