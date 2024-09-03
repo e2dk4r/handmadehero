@@ -267,23 +267,4 @@ EndTimedBlock(struct timed_block **timedBlockPtr)
 
 #endif
 
-struct debug_counter_snapshot {
-  u32 hitCount;
-  u32 cycleCount;
-};
-
-struct debug_counter_state {
-  char *filename;
-  char *function;
-  u32 line;
-
-  struct debug_counter_snapshot snapshots[128];
-};
-
-struct debug_state {
-  struct debug_counter_state counterStates[512];
-  u32 counterCount;
-  u32 snapshotCount;
-};
-
 #endif /* HANDMADEHERO_PLATFORM_H */
