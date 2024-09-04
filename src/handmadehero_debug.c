@@ -93,9 +93,6 @@ OverlayCycleCounters(struct game_memory *memory)
     DebugStatisticsEnd(&cycleCount);
     DebugStatisticsEnd(&cyclesPerHit);
 
-    if (hitCount.max <= 0.0f)
-      continue;
-
     char buf[128];
     snprintf(buf, sizeof(buf), "%32s(%4u): %10ucy %8uh %10ucy/h", counterState->function, counterState->line,
              (u32)cycleCount.avg, (u32)hitCount.avg, (u32)cyclesPerHit.avg);
