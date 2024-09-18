@@ -200,6 +200,7 @@ OverlayCycleCounters(struct game_memory *memory)
 
     // draw graph
     if (cycleCount.max > 0.0f) {
+      f32 barWidth = 4.0f;
       f32 chartLeft = 275.0f;
       f32 chartMinY = atY;
       f32 chartHeight = fontInfo->ascent * fontScale;
@@ -214,8 +215,8 @@ OverlayCycleCounters(struct game_memory *memory)
         f32 thisProportion = scale * (f32)snapshot->cycleCount;
         f32 thisHeight = chartHeight * thisProportion;
 
-        Rect(renderGroup, v3(chartLeft + (f32)snapshotIndex, chartMinY + thisHeight * 0.5f, 0.0f), v2(1.0f, thisHeight),
-             v4(thisProportion, 1.0f, 0.0f, 1.0f));
+        Rect(renderGroup, v3(chartLeft + barWidth * (f32)snapshotIndex + 0.5f * barWidth, chartMinY + thisHeight * 0.5f, 0.0f),
+             v2(barWidth, thisHeight), v4(thisProportion, 1.0f, 0.0f, 1.0f));
       }
     }
 
