@@ -199,6 +199,9 @@ OverlayCycleCounters(struct game_memory *memory)
     DebugStatisticsEnd(&cyclesPerHit);
 
     // draw graph
+    if (!counterState->function)
+      continue;
+
     if (cycleCount.max > 0.0f) {
       f32 barWidth = 4.0f;
       f32 chartLeft = 275.0f;
