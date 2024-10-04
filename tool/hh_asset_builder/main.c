@@ -1,7 +1,3 @@
-#define _LARGEFILE64_SOURCE
-#define _GNU_SOURCE
-#define _XOPEN_SOURCE 700
-
 #pragma GCC diagnostic push
 
 // caused by: stb_ds.h

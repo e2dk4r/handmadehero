@@ -264,6 +264,12 @@ if [ $IsBuildDebug -eq 1 ]; then
   cflags="$cflags -Wno-unused-variable"
 fi
 
+if [ $IsOSLinux -eq 1 ]; then
+  # needed by c libraries
+  cflags="$cflags -D_GNU_SOURCE=1"
+  cflags="$cflags -D_XOPEN_SOURCE=700"
+fi
+
 ldflags="${LDFLAGS}"
 ldflags="$ldflags -Wl,--as-needed"
 ldflags="${ldflags# }"
@@ -338,10 +344,6 @@ if [ $IsBuildEnabled -eq 1 ]; then
     src="$src $WaylandProtocolsSrc"
     src="$src $ProjectRoot/src/handmadehero_linux.c"
     src="${src# }"
-
-    # c libraries
-    cflags="$cflags -D_GNU_SOURCE=1"
-    cflags="$cflags -D_XOPEN_SOURCE=700"
 
     output="$OutputDir/handmadehero"
     inc="-I$ProjectRoot/include $INC_LIBURING $INC_LIBEVDEV $INC_WAYLAND_CLIENT $INC_XKBCOMMON $INC_LIBPIPEWIRE $WaylandProtocolsInc"
