@@ -1,7 +1,3 @@
-#define _LARGEFILE64_SOURCE
-#define _GNU_SOURCE
-#define _XOPEN_SOURCE 700
-
 /* system */
 #pragma GCC diagnostic push
 

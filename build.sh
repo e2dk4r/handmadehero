@@ -339,6 +339,10 @@ if [ $IsBuildEnabled -eq 1 ]; then
     src="$src $ProjectRoot/src/handmadehero_linux.c"
     src="${src# }"
 
+    # c libraries
+    cflags="$cflags -D_GNU_SOURCE=1"
+    cflags="$cflags -D_XOPEN_SOURCE=700"
+
     output="$OutputDir/handmadehero"
     inc="-I$ProjectRoot/include $INC_LIBURING $INC_LIBEVDEV $INC_WAYLAND_CLIENT $INC_XKBCOMMON $INC_LIBPIPEWIRE $WaylandProtocolsInc"
     lib="$LIB_M $LIB_PTHREAD $LIB_LIBURING $LIB_LIBEVDEV $LIB_WAYLAND_CLIENT $LIB_XKBCOMMON $LIB_LIBPIPEWIRE"
