@@ -487,6 +487,14 @@ ReloadGameCode(struct game_code *lib)
 /*****************************************************************
  * structures
  *****************************************************************/
+struct game_update_config {
+  b32 isSyncedWithDisplay : 1;
+  struct io_uring *ring;
+  u64 waitOp;                            // used by io_uring_prep_timeout_update
+  struct __kernel_timespec waitTimespec; // wait time for next
+  u64 lastRefresh;
+};
+
 struct linux_state {
   /* WAYLAND */
   struct wl_compositor *wl_compositor;
@@ -508,6 +516,8 @@ struct linux_state {
   struct xkb_context *xkb_context;
   struct xkb_keymap *xkb_keymap;
   struct xkb_state *xkb_state;
+
+  struct game_update_config gameUpdateConfig;
 
   /* PIPEWIRE */
   struct pw_thread_loop *pw_thread_loop;
@@ -1170,6 +1180,26 @@ wp_presentation_feedback_presented(void *data, struct wp_presentation_feedback *
   wp_presentation_feedback_destroy(wp_presentation_feedback);
   struct linux_state *state = data;
 
+  assert(refresh != 0);
+  struct game_update_config *gameUpdateConfig = &state->gameUpdateConfig;
+  if (!gameUpdateConfig->isSyncedWithDisplay) {
+    struct __kernel_timespec *ts = &(struct __kernel_timespec){
+        .tv_sec = ((__kernel_time64_t)tv_sec_hi << 32 | tv_sec_lo),
+        .tv_nsec = tv_nsec + refresh,
+    };
+    gameUpdateConfig->waitTimespec = (struct __kernel_timespec){
+        .tv_nsec = refresh,
+    };
+
+    struct io_uring_sqe *sqe = io_uring_get_sqe(gameUpdateConfig->ring);
+    io_uring_prep_timeout_update(sqe, ts, gameUpdateConfig->waitOp, IORING_TIMEOUT_ABS);
+    io_uring_submit(gameUpdateConfig->ring);
+
+    gameUpdateConfig->isSyncedWithDisplay = 1;
+  }
+
+  return;
+
   struct game_input *newInput = state->gameInputs + 0;
   struct game_input *oldInput = state->gameInputs + 1;
   /*
@@ -1588,6 +1618,15 @@ LinuxWorkQueueInit(struct linux_work_queue *queue, u32 threadCount)
   return 0;
 }
 
+u64
+Now(void)
+{
+  const u64 nanosecondsPerSecond = 1e9;
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return ((u64)ts.tv_sec * nanosecondsPerSecond) + (u64)ts.tv_nsec;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -1885,7 +1924,7 @@ main(int argc, char *argv[])
   /* io_uring */
   struct io_uring_sqe *sqe;
   struct io_uring ring;
-  if (io_uring_queue_init(4, &ring, 0)) {
+  if (io_uring_queue_init(8, &ring, 0)) {
     error_code = HANDMADEHERO_ERROR_IO_URING_SETUP;
     goto shm_exit;
   }
@@ -1993,6 +2032,22 @@ main(int argc, char *argv[])
     libevdev_free(evdev);
   }
   closedir(dir);
+
+  /* game update config */
+  struct game_update_config *gameUpdateConfig = &state.gameUpdateConfig;
+  gameUpdateConfig->ring = &ring;
+  gameUpdateConfig->waitOp = (u64) & (struct op){};
+  gameUpdateConfig->waitTimespec = (struct __kernel_timespec){
+      /* 1ms = 1000000ns */
+      .tv_nsec = 33333333, /* 33.3333ms */
+                           // .tv_nsec = 16666666, /* 16.6666ms */
+  };
+  gameUpdateConfig->lastRefresh = Now();
+
+  sqe = io_uring_get_sqe(&ring);
+  io_uring_prep_timeout(sqe, &gameUpdateConfig->waitTimespec, 0, 0);
+  io_uring_sqe_set_data64(sqe, gameUpdateConfig->waitOp);
+
   /* submit any work */
   io_uring_submit(&ring);
 
@@ -2019,8 +2074,80 @@ main(int argc, char *argv[])
       goto cqe_seen;
     }
 
+    if (!(op->type & OP_WAYLAND)) {
+      wl_display_cancel_read(wl_display);
+    }
+
+    /* on game update events */
+    if (op == (struct op *)gameUpdateConfig->waitOp) {
+      struct game_input *newInput = state.gameInputs + 0;
+      struct game_input *oldInput = state.gameInputs + 1;
+
+      u64 nanosecondsPerSecond = 1e9;
+      u64 now = Now();
+      u64 elapsed = now - gameUpdateConfig->lastRefresh;
+
+      u64 framesPerSecond = 30;
+      u64 nanosecondsPerFrame = nanosecondsPerSecond / framesPerSecond;
+      debugf("now: %lu elapsed: %lu perFrame: %lu\n", now, elapsed, nanosecondsPerFrame);
+      if (elapsed > (u64)nanosecondsPerFrame) {
+        state.input = newInput;
+        newInput->dtPerFrame = (f32)elapsed / (f32)nanosecondsPerSecond;
+        debugf("∆t = %.3f\n", newInput->dtPerFrame);
+
+#if HANDMADEHERO_DEBUG
+        // record & playback
+        if (RecordInputStarted(&state)) {
+          RecordInput(&state, state.input);
+        }
+
+        if (PlaybackInputStarted(&state)) {
+          PlaybackInput(&state, state.input);
+        }
+
+        // game layer
+        while (state.lib.isReloading)
+          ; // spin lock, supposed to be quick
+
+        pfnGameUpdateAndRender GameUpdateAndRender = state.lib.GameUpdateAndRender;
+        pfnGameFrameEnd GameFrameEnd = state.lib.GameFrameEnd;
+#endif
+
+        struct game_backbuffer *backbuffer = &state.backbuffer;
+        GameUpdateAndRender(&state.game_memory, newInput, backbuffer);
+        HandleCycleCounters(&state.game_memory);
+        wl_surface_attach(state.wl_surface, state.wl_buffer, 0, 0);
+        wl_surface_damage_buffer(state.wl_surface, 0, 0, (s32)backbuffer->width, (s32)backbuffer->height);
+        wl_surface_commit(state.wl_surface);
+
+        // swap inputs
+        struct game_input *tempInput = newInput;
+        newInput = oldInput;
+        oldInput = tempInput;
+
+#if HANDMADEHERO_DEBUG
+        // hot reloading
+        struct game_input *newInputToBe = oldInput;
+        newInputToBe->gameCodeReloaded = (u8)(ReloadGameCode(&state.lib) & 0x1);
+#endif
+
+        if (GameFrameEnd) {
+          struct game_frame_info frameInfo;
+          GameFrameEnd(&state.game_memory, &frameInfo);
+        }
+
+        gameUpdateConfig->lastRefresh = Now();
+      }
+
+      // continue game update events
+      sqe = io_uring_get_sqe(&ring);
+      io_uring_prep_timeout(sqe, &gameUpdateConfig->waitTimespec, 0, 0);
+      io_uring_sqe_set_data64(sqe, gameUpdateConfig->waitOp);
+      io_uring_submit(&ring);
+    }
+
     /* on wayland events */
-    if (op->type & OP_WAYLAND) {
+    else if (op->type & OP_WAYLAND) {
       int revents = cqe->res;
 
       if (revents & POLLIN) {
@@ -2032,8 +2159,6 @@ main(int argc, char *argv[])
 
     /* on inotify events */
     else if (op->type & OP_INOTIFY_WATCH) {
-      wl_display_cancel_read(wl_display);
-
       /* on inotify watch error, finish the program */
       if (cqe->res < 0) {
         debug("inotify watch\n");
@@ -2094,8 +2219,6 @@ main(int argc, char *argv[])
 
     /* on device open events */
     else if (op->type & OP_DEVICE_OPEN) {
-      wl_display_cancel_read(wl_display);
-
       if (cqe->res < 0 && cqe->res != -ETIME) {
         debug("waiting for device initialiation failed\n");
         MemoryChunkPop(MemoryForDeviceOpenEvents, op);
@@ -2149,7 +2272,6 @@ main(int argc, char *argv[])
 
     /* on joystick events */
     else if (op->type & OP_JOYSTICK_READ) {
-      wl_display_cancel_read(wl_display);
       /* on joystick read error (eg. joystick removed), close the fd */
       if (cqe->res < 0) {
         /* TODO: when joystick disconnected reset controller */
